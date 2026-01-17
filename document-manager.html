@@ -756,7 +756,7 @@ textarea {
             <span>💡</span>
             <span>ברוכים הבאים למערכת ניהול המסמכים</span>
         </h2>
-        <p>כאן תוכלו להסיר מסמכים לא רלוונטים ללקוח ולהוסיף מסמכים שחסרים לו</p>
+        <p>כאן תוכלו להסיר מסמכים לא רלוונטיים ללקוח ולהוסיף מסמכים שחסרים לו</p>
     </div>
 
     <!-- Alert -->
@@ -769,7 +769,7 @@ textarea {
             <span>איך להשתמש במערכת?</span>
         </h3>
         <ol class="instruction-steps">
-            <li><strong>ויתור על מסמכים:</strong> סמן את התיבות ליד מסמכים שאינם רלוונטיים - הסטטוס שלהם ישתנה ל-"לא נדרש"</li>
+            <li><strong>הסרת מסמכים:</strong> סמן את התיבות ליד מסמכים שאינם רלוונטיים - הם יוסרו מרשימת המסמכים של הלקוח</li>
             <li><strong>הוסף מסמכים חדשים:</strong> בחר מסמכים מהרשימה הנפתחת או הזן שם מסמך מותאם אישית</li>
             <li><strong>הוסף הערות:</strong> אם יש הערות נוספות, הוסף אותן בשדה ההערות</li>
             <li><strong>שמור שינויים:</strong> לחץ על כפתור "שמור שינויים" - אימייל יישלח אוטומטית למשרד</li>
@@ -839,7 +839,7 @@ textarea {
                 </span>
             </h2>
             <div class="section-subtitle">
-                💡 סמן את התיבה ליד מסמכים שאינם רלוונטיים. סטטוס המסמכים ישתנה ל-"לא נדרש" ולא יידרשו יותר.
+                💡 סמן את התיבה ליד מסמכים שאינם רלוונטיים. המסמכים יוסרו מהרשימה ולא יידרשו יותר.
             </div>
             <div id="existingDocs" class="document-list"></div>
         </div>
@@ -1075,29 +1075,35 @@ document.getElementById('docTypeSelect').addEventListener('change', function(e) 
 // Update selected documents display
 function updateSelectedDocs() {
     const container = document.getElementById('selectedDocs');
-    
+
     if (docsToAdd.size === 0) {
         container.className = 'selected-docs empty';
         container.innerHTML = '';
-    } else {
-        container.className = 'selected-docs';
-        container.innerHTML = Array.from(docsToAdd).map(doc => `
-            <div class="doc-tag">
-                <span>${doc}</span>
-                <button onclick="removeSelectedDoc('${escapeHtml(doc)}')" 
-                        type="button"
-                        aria-label="הסר">×</button>
-            </div>
-        `).join('');
+        return;
     }
+
+    container.className = 'selected-docs';
+
+    container.innerHTML = Array.from(docsToAdd).map(doc => {
+        const safeArg = encodeURIComponent(doc);
+        return `
+            <div class="doc-tag">
+                <span>${escapeHtml(doc)}</span>
+                <button onclick="removeSelectedDoc('${safeArg}')"
+                        type="button"
+                        aria-label="remove">×</button>
+            </div>
+        `;
+    }).join('');
 }
 
-// Remove selected document
-function removeSelectedDoc(doc) {
+function removeSelectedDoc(encodedDoc) {
+    const doc = decodeURIComponent(encodedDoc);
     docsToAdd.delete(doc);
     updateSelectedDocs();
     updateStats();
 }
+
 
 // Update statistics
 function updateStats() {
@@ -1108,56 +1114,72 @@ function updateStats() {
 
 // Open confirmation modal
 function openConfirmation() {
-    const customDoc = document.getElementById('customDoc').value.trim();
-    const notes = document.getElementById('notes').value.trim();
-    
+    const TXT_NO_CHANGES = "\u05dc\u05d0 \u05d1\u05d5\u05e6\u05e2\u05d5 \u05e9\u05d9\u05e0\u05d5\u05d9\u05d9\u05dd. \u05d0\u05e0\u05d0 \u05d1\u05e6\u05e2 \u05e9\u05d9\u05e0\u05d5\u05d9\u05d9\u05dd \u05dc\u05e4\u05e0\u05d9 \u05d4\u05e9\u05de\u05d9\u05e8\u05d4.";
+    const TXT_REMOVE_PREFIX = "\u{1f6ab} \u05de\u05e1\u05de\u05db\u05d9\u05dd \u05e9\u05d9\u05d5\u05e1\u05e8\u05d5 \u05de\u05e8\u05e9\u05d9\u05de\u05ea \u05d4\u05dc\u05e7\u05d5\u05d7 (";
+    const TXT_ADD_PREFIX = "\u2795 \u05de\u05e1\u05de\u05db\u05d9\u05dd \u05e9\u05d9\u05ea\u05d5\u05d5\u05e1\u05e4\u05d5 (";
+    const TXT_NOTES_TITLE = "\u{1f4ac} \u05d4\u05e2\u05e8\u05d5\u05ea:";
+
+    const customDocRaw = (document.getElementById('customDoc')?.value ?? '').trim();
+    const notes = (document.getElementById('notes')?.value ?? '').trim();
+
     const docsToRemove = currentDocuments
         .filter(doc => markedForRemoval.has(doc.id))
         .map(doc => doc.name);
-    
+
     const docsToAddArray = Array.from(docsToAdd);
-    
-    // Add custom document only if it's not empty and not already in the list
-    
-    // Remove duplicates
+
+    // Include custom docs in the confirmation preview (supports multiple lines)
+    if (customDocRaw) {
+        const customDocs = customDocRaw
+            .split(/\r?\n/)
+            .map(s => s.trim())
+            .filter(Boolean);
+
+        for (const cd of customDocs) {
+            if (!docsToAddArray.includes(cd)) {
+                docsToAddArray.push(cd);
+            }
+        }
+    }
+
     const uniqueDocsToAdd = [...new Set(docsToAddArray)];
-    
+
     if (docsToRemove.length === 0 && uniqueDocsToAdd.length === 0 && !notes) {
-        showAlert('לא בוצעו שינויים. אנא בצע שינויים לפני השמירה.', 'error');
+        showAlert(TXT_NO_CHANGES, 'error');
         return;
     }
-    
-    // Build summary
+
     let summary = '<div>';
-    
+
     if (docsToRemove.length > 0) {
-        summary += '<h4>🚫 מסמכים שיסומנו כלא רלוונטיים (' + docsToRemove.length + '):</h4>';
+        summary += '<h4>' + TXT_REMOVE_PREFIX + docsToRemove.length + '):</h4>';
         summary += '<ul class="changes-list">';
         docsToRemove.forEach(doc => {
-            summary += `<li class="change-remove">🚫 ${doc}</li>`;
+            summary += `<li class="change-remove">\u{1f6ab} ${escapeHtml(doc)}</li>`;
         });
         summary += '</ul>';
     }
-    
+
     if (uniqueDocsToAdd.length > 0) {
-        summary += '<h4>➕ מסמכים שיתווספו (' + uniqueDocsToAdd.length + '):</h4>';
+        summary += '<h4>' + TXT_ADD_PREFIX + uniqueDocsToAdd.length + '):</h4>';
         summary += '<ul class="changes-list">';
         uniqueDocsToAdd.forEach(doc => {
-            summary += `<li class="change-add">✓ ${doc}</li>`;
+            summary += `<li class="change-add">\u2713 ${escapeHtml(doc)}</li>`;
         });
         summary += '</ul>';
     }
-    
+
     if (notes) {
-        summary += '<h4>💬 הערות:</h4>';
+        summary += '<h4>' + TXT_NOTES_TITLE + '</h4>';
         summary += '<ul class="changes-list"><li>' + escapeHtml(notes) + '</li></ul>';
     }
-    
+
     summary += '</div>';
-    
+
     document.getElementById('changesSummary').innerHTML = summary;
     document.getElementById('confirmModal').classList.add('show');
 }
+
 
 // Close confirmation
 function closeConfirmation() {
@@ -1171,7 +1193,6 @@ async function confirmSubmit() {
 }
 
 // Submit changes
-// NOTE: Documents marked for "removal" are not deleted - their status is changed to "Waived"
 // The backend should handle updating the document status to "Waived" based on the 
 // 'מסמכים לשינוי סטטוס ל-Waived' field in the payload
 async function submitChanges() {
@@ -1185,9 +1206,19 @@ async function submitChanges() {
     const docsToAddArray = Array.from(docsToAdd);
     
     // Add custom document only if it's not empty and not already in the list
-    if (customDoc && !docsToAddArray.includes(customDoc)) {
-        docsToAddArray.push(customDoc);
+    if (customDoc) {
+    const customDocs = customDoc
+        .split(/\r?\n/)
+        .map(s => s.trim())
+        .filter(Boolean);
+
+    for (const cd of customDocs) {
+        if (!docsToAddArray.includes(cd)) {
+            docsToAddArray.push(cd);
+        }
     }
+}
+
     
     // Remove duplicates (just in case)
     const uniqueDocsToAdd = [...new Set(docsToAddArray)];
