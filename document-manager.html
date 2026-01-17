@@ -601,6 +601,9 @@ textarea {
     border-radius: 16px;
     max-width: 600px;
     width: 90%;
+    /* FIX: Added scrolling for small screens */
+    max-height: 90vh;
+    overflow-y: auto;
     box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
     animation: slideUp 0.3s ease;
 }
@@ -744,13 +747,11 @@ textarea {
 </head>
 <body>
 <div class="container">
-    <!-- Header -->
     <div class="header">
         <h1>🗂️ ניהול מסמכים</h1>
         <p>משרד רו״ח Client Name</p>
     </div>
 
-    <!-- Help Banner -->
     <div class="help-banner">
         <h2>
             <span>💡</span>
@@ -759,10 +760,8 @@ textarea {
         <p>כאן תוכלו להסיר מסמכים לא רלוונטיים ללקוח ולהוסיף מסמכים שחסרים לו</p>
     </div>
 
-    <!-- Alert -->
     <div id="alert" class="alert"></div>
 
-    <!-- Instructions -->
     <div class="instructions">
         <h3>
             <span>📝</span>
@@ -776,7 +775,6 @@ textarea {
         </ol>
     </div>
 
-    <!-- Client Info -->
     <div class="client-info">
         <h2>👤 פרטי לקוח</h2>
         <div class="info-grid">
@@ -804,15 +802,12 @@ textarea {
         </div>
     </div>
 
-    <!-- Loading -->
     <div id="loading" class="loading">
         <div class="spinner"></div>
         <p>טוען מסמכים...</p>
     </div>
 
-    <!-- Main Content -->
     <div id="content" style="display:none;">
-        <!-- Stats -->
         <div class="section">
             <div class="stats">
                 <div class="stat-box">
@@ -829,7 +824,6 @@ textarea {
                 </div>
             </div>
 
-            <!-- Existing Documents -->
             <h2 class="section-title">
                 <span>📋</span>
                 <span>מסמכים קיימים</span>
@@ -844,7 +838,6 @@ textarea {
             <div id="existingDocs" class="document-list"></div>
         </div>
 
-        <!-- Add Documents -->
         <div class="section">
             <h2 class="section-title">
                 <span>➕</span>
@@ -855,7 +848,6 @@ textarea {
             </div>
             
             <div class="add-section">
-                <!-- Document Type Select -->
                 <div class="form-group">
                     <label class="form-label">
                         <span>📑</span>
@@ -897,10 +889,8 @@ textarea {
                     </select>
                 </div>
 
-                <!-- Selected Documents Display -->
                 <div id="selectedDocs" class="selected-docs empty"></div>
 
-                <!-- Custom Document -->
                 <div class="form-group">
                     <label class="form-label">
                         <span>✏️</span>
@@ -918,7 +908,6 @@ textarea {
                     </div>
                 </div>
 
-                <!-- Notes -->
                 <div class="form-group">
                     <label class="form-label">
                         <span>💬</span>
@@ -931,7 +920,6 @@ textarea {
                 </div>
             </div>
 
-            <!-- Actions -->
             <div class="actions">
                 <button class="button" onclick="openConfirmation()">
                     <span style="position: relative; z-index: 1;">💾 שמור שינויים</span>
@@ -942,9 +930,16 @@ textarea {
             </div>
         </div>
     </div>
+    
+    <div id="success-message" class="empty-state" style="display: none; padding-top: 50px;">
+        <div style="font-size: 80px; margin-bottom: 20px;">✅</div>
+        <h2 style="color: #2c5282; margin-bottom: 15px;">הבקשה נשלחה בהצלחה!</h2>
+        <p style="font-size: 18px; color: #555;">רשימת המסמכים עודכנה והודעה נשלחה למשרד.</p>
+        <p style="font-size: 16px; color: #777; margin-top: 10px;">אתה יכול לסגור את הדף כעת.</p>
+    </div>
+    
 </div>
 
-<!-- Confirmation Modal -->
 <div id="confirmModal" class="modal">
     <div class="modal-content">
         <div class="modal-header">
@@ -1189,13 +1184,7 @@ function closeConfirmation() {
 // Confirm and submit
 async function confirmSubmit() {
     closeConfirmation();
-    await submitChanges();
-}
-
-// Submit changes
-// The backend should handle updating the document status to "Waived" based on the 
-// 'מסמכים לשינוי סטטוס ל-Waived' field in the payload
-async function submitChanges() {
+    
     const customDoc = document.getElementById('customDoc').value.trim();
     const notes = document.getElementById('notes').value.trim();
     
@@ -1207,18 +1196,17 @@ async function submitChanges() {
     
     // Add custom document only if it's not empty and not already in the list
     if (customDoc) {
-    const customDocs = customDoc
-        .split(/\r?\n/)
-        .map(s => s.trim())
-        .filter(Boolean);
+        const customDocs = customDoc
+            .split(/\r?\n/)
+            .map(s => s.trim())
+            .filter(Boolean);
 
-    for (const cd of customDocs) {
-        if (!docsToAddArray.includes(cd)) {
-            docsToAddArray.push(cd);
+        for (const cd of customDocs) {
+            if (!docsToAddArray.includes(cd)) {
+                docsToAddArray.push(cd);
+            }
         }
     }
-}
-
     
     // Remove duplicates (just in case)
     const uniqueDocsToAdd = [...new Set(docsToAddArray)];
@@ -1236,7 +1224,8 @@ async function submitChanges() {
                     }
                 },
                 {
-                    label: 'מסמכים לשינוי סטטוס ל-"לא נדרש"',
+                    // FIX: Changed label to match n8n expectation exactly
+                    label: 'מסמכים לשינוי סטטוס ל-Waived', 
                     type: 'CHECKBOXES',
                     value: docsToRemove.map((_, idx) => `opt${idx}`),
                     options: docsToRemove.map((name, idx) => ({
@@ -1275,11 +1264,10 @@ async function submitChanges() {
         });
         
         if (response.ok) {
-            showAlert('✅ השינויים נשמרו בהצלחה! אימייל נשלח למשרד רו"ח.', 'success');
-            setTimeout(() => {
-                resetForm();
-                loadDocuments();
-            }, 2000);
+            // FIX: Show success message instead of resetting
+            document.getElementById('content').style.display = 'none';
+            document.getElementById('success-message').style.display = 'block';
+            window.scrollTo(0, 0);
         } else {
             throw new Error('Server error');
         }
