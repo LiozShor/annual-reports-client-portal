@@ -285,7 +285,7 @@ body {
 }
 
 .document-item.marked-for-removal::before {
-    content: "🚫 Waived - לא נדרש";
+    content: "🚫 לא נדרש";
     position: absolute;
     left: 20px;
     background: #dc3545;
@@ -756,7 +756,7 @@ textarea {
             <span>💡</span>
             <span>ברוכים הבאים למערכת ניהול המסמכים</span>
         </h2>
-        <p>כאן תוכלו לסמן מסמכים קיימים כ-"Waived" (ויתור - לא נדרשים) ולהוסיף מסמכים חדשים לרשימת המסמכים הנדרשים</p>
+        <p>כאן תוכלו להסיר מסמכים לא רלוונטים ללקוח ולהוסיף מסמכים שחסרים לו</p>
     </div>
 
     <!-- Alert -->
@@ -769,7 +769,7 @@ textarea {
             <span>איך להשתמש במערכת?</span>
         </h3>
         <ol class="instruction-steps">
-            <li><strong>ויתור על מסמכים:</strong> סמן את התיבות ליד מסמכים שאינם רלוונטיים - הסטטוס שלהם ישתנה ל-"Waived"</li>
+            <li><strong>ויתור על מסמכים:</strong> סמן את התיבות ליד מסמכים שאינם רלוונטיים - הסטטוס שלהם ישתנה ל-"לא נדרש"</li>
             <li><strong>הוסף מסמכים חדשים:</strong> בחר מסמכים מהרשימה הנפתחת או הזן שם מסמך מותאם אישית</li>
             <li><strong>הוסף הערות:</strong> אם יש הערות נוספות, הוסף אותן בשדה ההערות</li>
             <li><strong>שמור שינויים:</strong> לחץ על כפתור "שמור שינויים" - אימייל יישלח אוטומטית למשרד</li>
@@ -821,7 +821,7 @@ textarea {
                 </div>
                 <div class="stat-box removal">
                     <div class="stat-number" id="markedDocs">0</div>
-                    <div class="stat-label">🚫 מסומנים ל-Waived</div>
+                    <div class="stat-label">🚫 מסומנים להסרה</div>
                 </div>
                 <div class="stat-box addition">
                     <div class="stat-number" id="addedDocs">0</div>
@@ -835,11 +835,11 @@ textarea {
                 <span>מסמכים קיימים</span>
                 <span class="tooltip" style="margin-right: 10px;">
                     <span style="font-size: 18px; cursor: help;">ℹ️</span>
-                    <span class="tooltiptext">מסמכים שתסמן יקבלו סטטוס "Waived" - כלומר, הם נשארים במערכת אבל לא נדרשים עוד. המשרד יקבל הודעה על השינוי.</span>
+                    <span class="tooltiptext">מסמכים שתסמן יקבלו סטטוס "לא נדרש" - כלומר, הם נשארים במערכת אבל לא נדרשים עוד. המשרד יקבל הודעה על השינוי.</span>
                 </span>
             </h2>
             <div class="section-subtitle">
-                💡 סמן את התיבה ליד מסמכים שאינם רלוונטיים. סטטוס המסמכים ישתנה ל-"Waived" (ויתור) ולא יידרשו יותר.
+                💡 סמן את התיבה ליד מסמכים שאינם רלוונטיים. סטטוס המסמכים ישתנה ל-"לא נדרש" ולא יידרשו יותר.
             </div>
             <div id="existingDocs" class="document-list"></div>
         </div>
@@ -955,8 +955,7 @@ textarea {
             <p style="margin-bottom: 20px;">אנא אשר את השינויים הבאים:</p>
             <div id="changesSummary" class="changes-summary"></div>
             <p style="margin-top: 20px; padding: 12px; background: #fff3cd; border-radius: 8px; border-right: 4px solid #ffc107;">
-                <strong>💡 הבהרה:</strong> מסמכים המסומנים ל-Waived לא נמחקים - הסטטוס שלהם משתנה ל-"Waived" (ויתור) והם לא יידרשו עוד.
-            </p>
+                <strong>💡 הבהרה:</strong> הסרת מסמכים: סמן את התיבות ליד מסמכים לא רלוונטיים — הם יוסרו מרשימת המסמכים של הלקוח            </p>
             <p style="margin-top: 15px; color: #666;">
                 <strong>שים לב:</strong> לאחר שמירת השינויים, יישלח אימייל אוטומטי למשרד הרואה חשבון עם פירוט השינויים.
             </p>
@@ -1034,7 +1033,7 @@ function displayDocuments() {
             <input type="checkbox" 
                    onchange="toggleRemoval('${doc.id}')" 
                    id="checkbox-${doc.id}"
-                   aria-label="סמן ל-Waived (לא נדרש)">
+                   aria-label="סמן להסרה">
             <span class="document-icon">📄</span>
             <span class="document-name">${doc.name}</span>
         </div>
@@ -1119,9 +1118,6 @@ function openConfirmation() {
     const docsToAddArray = Array.from(docsToAdd);
     
     // Add custom document only if it's not empty and not already in the list
-    if (customDoc && !docsToAddArray.includes(customDoc)) {
-        docsToAddArray.push(customDoc);
-    }
     
     // Remove duplicates
     const uniqueDocsToAdd = [...new Set(docsToAddArray)];
@@ -1135,7 +1131,7 @@ function openConfirmation() {
     let summary = '<div>';
     
     if (docsToRemove.length > 0) {
-        summary += '<h4>🚫 מסמכים שסטטוסם ישתנה ל-Waived (' + docsToRemove.length + '):</h4>';
+        summary += '<h4>🚫 מסמכים שיסומנו כלא רלוונטיים (' + docsToRemove.length + '):</h4>';
         summary += '<ul class="changes-list">';
         docsToRemove.forEach(doc => {
             summary += `<li class="change-remove">🚫 ${doc}</li>`;
@@ -1209,7 +1205,7 @@ async function submitChanges() {
                     }
                 },
                 {
-                    label: 'מסמכים לשינוי סטטוס ל-Waived',
+                    label: 'מסמכים לשינוי סטטוס ל-"לא נדרש"',
                     type: 'CHECKBOXES',
                     value: docsToRemove.map((_, idx) => `opt${idx}`),
                     options: docsToRemove.map((name, idx) => ({
