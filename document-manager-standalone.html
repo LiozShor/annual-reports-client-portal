@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="he">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ניהול מסמכים</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);min-height:100vh;padding:20px}.container{max-width:900px;margin:0 auto;background:white;border-radius:16px;box-shadow:0 20px 60px rgba(0,0,0,0.3);overflow:hidden}.header{background:linear-gradient(135deg,#1e3a5f,#2c5282);color:white;padding:30px;text-align:center}.header h1{font-size:28px;margin-bottom:10px}.client-info{background:#f8f9fa;padding:20px;border-bottom:2px solid #dee2e6}.client-info h2{color:#2c5282;margin-bottom:15px;font-size:20px}.info-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:15px}.info-item{background:white;padding:12px;border-radius:8px;border-right:4px solid #667eea}.info-label{font-weight:bold;color:#555;font-size:14px;margin-bottom:5px}.info-value{color:#1e3a5f;font-size:16px}.section{padding:30px}.section-title{color:#2c5282;font-size:22px;margin-bottom:20px;padding-bottom:10px;border-bottom:3px solid #667eea}.loading{text-align:center;padding:40px;color:#666}.spinner{border:3px solid #f3f3f3;border-top:3px solid #667eea;border-radius:50%;width:40px;height:40px;animation:spin 1s linear infinite;margin:0 auto 20px}@keyframes spin{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}.document-list{display:flex;flex-direction:column;gap:10px}.document-item{background:#f8f9fa;padding:15px;border-radius:8px;display:flex;align-items:center;transition:all 0.3s ease;border:2px solid transparent}.document-item:hover{background:#e9ecef;border-color:#667eea}.document-item.marked-for-removal{background:#ffe0e0;border-color:#dc3545;opacity:0.7}.document-item input[type="checkbox"]{width:20px;height:20px;margin-left:15px;cursor:pointer}.document-name{flex:1;font-size:16px;color:#333}.document-item.marked-for-removal .document-name{text-decoration:line-through;color:#999}.add-section{background:#e8f5e9;padding:20px;border-radius:8px;margin-top:20px}.form-group{margin-bottom:20px}.form-label{display:block;font-weight:bold;color:#333;margin-bottom:8px}select,input[type="text"],textarea{width:100%;padding:12px;border:2px solid #dee2e6;border-radius:8px;font-size:16px;font-family:inherit;transition:border-color 0.3s}select:focus,input[type="text"]:focus,textarea:focus{outline:none;border-color:#667eea}textarea{min-height:100px;resize:vertical}.selected-docs{display:flex;flex-wrap:wrap;gap:10px;margin-top:15px}.doc-tag{background:#4caf50;color:white;padding:8px 15px;border-radius:20px;display:flex;align-items:center;gap:8px;font-size:14px}.doc-tag button{background:none;border:none;color:white;cursor:pointer;font-size:18px;font-weight:bold;padding:0;width:20px;height:20px;display:flex;align-items:center;justify-content:center;border-radius:50%;transition:background 0.3s}.doc-tag button:hover{background:rgba(255,255,255,0.3)}.button{background:linear-gradient(135deg,#667eea,#764ba2);color:white;border:none;padding:15px 40px;border-radius:8px;font-size:18px;font-weight:bold;cursor:pointer;transition:all 0.3s;box-shadow:0 4px 15px rgba(102,126,234,0.4)}.button:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(102,126,234,0.6)}.button:active{transform:translateY(0)}.button:disabled{background:#ccc;cursor:not-allowed;box-shadow:none}.actions{display:flex;gap:15px;margin-top:30px;justify-content:center}.empty-state{text-align:center;padding:40px;color:#999}.empty-state-icon{font-size:48px;margin-bottom:15px}.stats{display:flex;gap:20px;margin-bottom:20px;flex-wrap:wrap}.stat-box{flex:1;min-width:150px;background:white;padding:15px;border-radius:8px;text-align:center;border-right:4px solid #4caf50}.stat-box.removal{border-right-color:#dc3545}.stat-number{font-size:32px;font-weight:bold;color:#2c5282}.stat-label{color:#666;margin-top:5px}.alert{padding:15px;border-radius:8px;margin:20px;display:none}.alert.show{display:block}.alert-success{background:#d4edda;border:2px solid #28a745;color:#155724}.alert-error{background:#f8d7da;border:2px solid #dc3545;color:#721c24}
+</style>
+</head>
+<body>
+<div class="container">
+<div class="header"><h1>🗂️ ניהול מסמכים</h1><p>משרד רו״ח Client Name</p></div>
+<div id="alert" class="alert"></div>
+<div class="client-info">
+<h2>פרטי לקוח</h2>
+<div class="info-grid">
+<div class="info-item"><div class="info-label">שם לקוח</div><div class="info-value" id="clientName"></div></div>
+<div class="info-item"><div class="info-label">בן/בת זוג</div><div class="info-value" id="spouseName">-</div></div>
+<div class="info-item"><div class="info-label">שנת מס</div><div class="info-value" id="year"></div></div>
+</div>
+</div>
+<div id="loading" class="loading"><div class="spinner"></div><p>טוען מסמכים...</p></div>
+<div id="content" style="display:none;">
+<div class="section">
+<div class="stats">
+<div class="stat-box"><div class="stat-number" id="totalDocs">0</div><div class="stat-label">מסמכים נדרשים</div></div>
+<div class="stat-box removal"><div class="stat-number" id="markedDocs">0</div><div class="stat-label">מסומנים להסרה</div></div>
+<div class="stat-box"><div class="stat-number" id="addedDocs">0</div><div class="stat-label">מסומנים להוספה</div></div>
+</div>
+<h2 class="section-title">📋 מסמכים קיימים</h2>
+<div id="existingDocs" class="document-list"></div>
+</div>
+<div class="section">
+<h2 class="section-title">➕ הוספת מסמכים</h2>
+<div class="add-section">
+<div class="form-group">
+<label class="form-label">בחר מסמכים להוספה</label>
+<select id="docTypeSelect">
+<option value="">-- בחר מסמך --</option>
+<option value="אישור תושבות מהרשות המקומית">אישור תושבות מהרשות המקומית</option>
+<option value="ספח ת.ז מעודכן">ספח ת.ז מעודכן</option>
+<option value="ספח ת.ז כולל פרטי ילדים">ספח ת.ז כולל פרטי ילדים</option>
+<option value="אישור ועדת השמה/שילוב">אישור ועדת השמה/שילוב</option>
+<option value="אישור קצבת נכות לילד">אישור קצבת נכות לילד</option>
+<option value="פסק דין / הסכם גירושין (מזונות)">פסק דין / הסכם גירושין (מזונות)</option>
+<option value="טופס 106">טופס 106</option>
+<option value="טופס 106 - בן/בת זוג">טופס 106 - בן/בת זוג</option>
+<option value="אישור משיכת כספים (פנסיה/גמל/ביטוח)">אישור משיכת כספים (פנסיה/גמל/ביטוח)</option>
+<option value="אישור שנתי מביטוח לאומי">אישור שנתי מביטוח לאומי</option>
+<option value="אישור שנתי מביטוח לאומי - בן/בת זוג">אישור שנתי מביטוח לאומי - בן/בת זוג</option>
+<option value="טופס 867">טופס 867</option>
+<option value="טופס 867 - בן/בת זוג">טופס 867 - בן/בת זוג</option>
+<option value="אישור דיבידנד">אישור דיבידנד</option>
+<option value="טופס 1399 (קריפטו)">טופס 1399 (קריפטו)</option>
+<option value="אסמכתא הימורים/פרסים">אסמכתא הימורים/פרסים</option>
+<option value="אסמכתא הכנסות מחו״ל">אסמכתא הכנסות מחו״ל</option>
+<option value="חוזה שכירות (הכנסה)">חוזה שכירות (הכנסה)</option>
+<option value="חוזה שכירות (הוצאה)">חוזה שכירות (הוצאה)</option>
+<option value="רשימת ספירת מלאי">רשימת ספירת מלאי</option>
+<option value="אישור מס שנתי מחברת ביטוח">אישור מס שנתי מחברת ביטוח</option>
+<option value="אישור שחרור מצה״ל/שירות לאומי">אישור שחרור מצה״ל/שירות לאומי</option>
+<option value="קבלות ומסמכי הנצחה">קבלות ומסמכי הנצחה</option>
+<option value="מסמך רשמי - החזקת קרוב במוסד">מסמך רשמי - החזקת קרוב במוסד</option>
+<option value="אישור זכאות לתואר">אישור זכאות לתואר</option>
+<option value="מסמך רפואי/ועדה רפואית">מסמך רפואי/ועדה רפואית</option>
+<option value="קבלות תרומות מרוכזות (סעיף 46)">קבלות תרומות מרוכזות (סעיף 46)</option>
+<option value="אישור ניכוי מס במקור">אישור ניכוי מס במקור</option>
+</select>
+</div>
+<div id="selectedDocs" class="selected-docs"></div>
+<div class="form-group">
+<label class="form-label">מסמך מותאם אישית</label>
+<input type="text" id="customDoc" placeholder="הזן שם מסמך...">
+</div>
+<div class="form-group">
+<label class="form-label">הערות נוספות</label>
+<textarea id="notes" placeholder="הוסף הערות..."></textarea>
+</div>
+</div>
+<div class="actions"><button class="button" onclick="submitChanges()">💾 שמור שינויים</button></div>
+</div>
+</div>
+</div>
+<script>
+const params=new URLSearchParams(window.location.search);
+const REPORT_ID=params.get('report_id');
+const CLIENT_NAME=params.get('client_name');
+const SPOUSE_NAME=params.get('spouse_name')||'';
+const YEAR=params.get('year');
+const API_BASE='https://liozshor.app.n8n.cloud/webhook';
+let currentDocuments=[];
+let markedForRemoval=new Set();
+let docsToAdd=new Set();
+document.getElementById('clientName').textContent=CLIENT_NAME;
+document.getElementById('spouseName').textContent=SPOUSE_NAME||'-';
+document.getElementById('year').textContent=YEAR;
+function showAlert(msg,type='success'){
+const a=document.getElementById('alert');
+a.className=`alert alert-${type} show`;
+a.textContent=msg;
+setTimeout(()=>a.classList.remove('show'),5000);
+}
+async function loadDocuments(){
+try{
+const r=await fetch(`${API_BASE}/get-documents?report_id=${REPORT_ID}`);
+const d=await r.json();
+currentDocuments=d.documents||[];
+displayDocuments();
+updateStats();
+document.getElementById('loading').style.display='none';
+document.getElementById('content').style.display='block';
+}catch(e){
+console.error(e);
+showAlert('שגיאה בטעינת מסמכים','error');
+}
+}
+function displayDocuments(){
+const c=document.getElementById('existingDocs');
+if(currentDocuments.length===0){
+c.innerHTML='<div class="empty-state"><div class="empty-state-icon">📭</div><p>אין מסמכים נדרשים כרגע</p></div>';
+return;
+}
+c.innerHTML=currentDocuments.map(doc=>`<div class="document-item" id="doc-${doc.id}"><input type="checkbox" onchange="toggleRemoval('${doc.id}')" id="checkbox-${doc.id}"><span class="document-name">${doc.name}</span></div>`).join('');
+}
+function toggleRemoval(id){
+const cb=document.getElementById(`checkbox-${id}`);
+const di=document.getElementById(`doc-${id}`);
+if(cb.checked){
+markedForRemoval.add(id);
+di.classList.add('marked-for-removal');
+}else{
+markedForRemoval.delete(id);
+di.classList.remove('marked-for-removal');
+}
+updateStats();
+}
+document.getElementById('docTypeSelect').addEventListener('change',function(e){
+const v=e.target.value;
+if(v&&!docsToAdd.has(v)){
+docsToAdd.add(v);
+updateSelectedDocs();
+updateStats();
+e.target.value='';
+}
+});
+function updateSelectedDocs(){
+const c=document.getElementById('selectedDocs');
+c.innerHTML=Array.from(docsToAdd).map(doc=>`<div class="doc-tag"><span>${doc}</span><button onclick="removeSelectedDoc('${doc}')" type="button">×</button></div>`).join('');
+}
+function removeSelectedDoc(doc){
+docsToAdd.delete(doc);
+updateSelectedDocs();
+updateStats();
+}
+function updateStats(){
+document.getElementById('totalDocs').textContent=currentDocuments.length;
+document.getElementById('markedDocs').textContent=markedForRemoval.size;
+document.getElementById('addedDocs').textContent=docsToAdd.size;
+}
+async function submitChanges(){
+const customDoc=document.getElementById('customDoc').value.trim();
+const notes=document.getElementById('notes').value.trim();
+const docsToRemove=currentDocuments.filter(doc=>markedForRemoval.has(doc.id)).map(doc=>doc.name);
+const docsToAddArray=Array.from(docsToAdd);
+if(customDoc)docsToAddArray.push(customDoc);
+if(docsToRemove.length===0&&docsToAddArray.length===0&&!notes){
+showAlert('לא בוצעו שינויים','error');
+return;
+}
+const payload={
+data:{
+fields:[
+{type:'HIDDEN_FIELDS',value:{report_record_id:REPORT_ID,client_name:CLIENT_NAME,spouse_name:SPOUSE_NAME,year:YEAR}},
+{label:'מסמכים להסרה',type:'CHECKBOXES',value:docsToRemove.map((_,idx)=>`opt${idx}`),options:docsToRemove.map((name,idx)=>({id:`opt${idx}`,text:name}))},
+{label:'מסמכים להוספה',type:'CHECKBOXES',value:docsToAddArray.map((_,idx)=>`opt${idx}`),options:docsToAddArray.map((name,idx)=>({id:`opt${idx}`,text:name}))},
+{label:'מסמך מותאם אישית',type:'INPUT_TEXT',value:customDoc},
+{label:'הערות נוספות',type:'TEXTAREA',value:notes}
+]
+}
+};
+try{
+const r=await fetch(`${API_BASE}/tally-edit-documents`,{
+method:'POST',
+headers:{'Content-Type':'application/json'},
+body:JSON.stringify(payload)
+});
+if(r.ok){
+showAlert('✅ השינויים נשמרו בהצלחה! אימייל נשלח למשרד.','success');
+setTimeout(()=>{
+markedForRemoval.clear();
+docsToAdd.clear();
+document.getElementById('customDoc').value='';
+document.getElementById('notes').value='';
+loadDocuments();
+},2000);
+}else{
+throw new Error('Server error');
+}
+}catch(e){
+console.error(e);
+showAlert('שגיאה בשמירת השינויים. אנא נסה שוב.','error');
+}
+}
+window.addEventListener('DOMContentLoaded',loadDocuments);
+</script>
+</body>
+</html>
