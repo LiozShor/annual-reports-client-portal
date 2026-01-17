@@ -1188,9 +1188,12 @@ async function confirmSubmit() {
     const customDoc = document.getElementById('customDoc').value.trim();
     const notes = document.getElementById('notes').value.trim();
     
-    const docsToRemove = currentDocuments
-        .filter(doc => markedForRemoval.has(doc.id))
-        .map(doc => doc.name);
+    // CHANGED: Get Full Objects, NOT just names
+    const docsToRemoveObjs = currentDocuments.filter(doc => markedForRemoval.has(doc.id));
+    const docsToRemoveNames = docsToRemoveObjs.map(d => d.name);
+    
+    // IDs to send as VALUES
+    const docsToRemoveIds = docsToRemoveObjs.map(d => d.id);
     
     const docsToAddArray = Array.from(docsToAdd);
     
@@ -1224,13 +1227,13 @@ async function confirmSubmit() {
                     }
                 },
                 {
-                    // FIX: Changed label to match n8n expectation exactly
                     label: 'מסמכים לשינוי סטטוס ל-Waived', 
                     type: 'CHECKBOXES',
-                    value: docsToRemove.map((_, idx) => `opt${idx}`),
-                    options: docsToRemove.map((name, idx) => ({
-                        id: `opt${idx}`,
-                        text: name
+                    // KEY CHANGE: Send Record IDs as the value!
+                    value: docsToRemoveIds,
+                    options: docsToRemoveObjs.map(doc => ({
+                        id: doc.id, // Record ID as Option ID
+                        text: doc.name // Name for Display
                     }))
                 },
                 {
@@ -1264,7 +1267,6 @@ async function confirmSubmit() {
         });
         
         if (response.ok) {
-            // FIX: Show success message instead of resetting
             document.getElementById('content').style.display = 'none';
             document.getElementById('success-message').style.display = 'block';
             window.scrollTo(0, 0);
