@@ -87,36 +87,18 @@ body {
 
 .instruction-steps {
     list-style: none;
-    counter-reset: step-counter;
 }
 
 .instruction-steps li {
-    counter-increment: step-counter;
-    padding: 12px 20px 12px 60px;
+    padding: 12px 20px;
     margin-bottom: 10px;
     background: white;
     border-radius: 8px;
-    position: relative;
     border-right: 4px solid #ffc107;
 }
 
-.instruction-steps li::before {
-    content: counter(step-counter);
-    position: absolute;
-    right: 15px;
-    top: 50%;
-    transform: translateY(-50%);
-    background: #ffc107;
+.instruction-steps li strong {
     color: #856404;
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: bold;
-    font-size: 16px;
-    flex-shrink: 0;
 }
 
 /* Client Info */
@@ -383,6 +365,65 @@ textarea {
     resize: vertical;
 }
 
+/* Detail Input */
+.detail-input {
+    display: none;
+    margin-top: 15px;
+    padding: 15px;
+    background: white;
+    border-radius: 8px;
+    border: 2px solid #2196f3;
+    animation: slideDown 0.3s ease;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.detail-input.show {
+    display: block;
+}
+
+.detail-input label {
+    display: block;
+    font-weight: bold;
+    color: #2196f3;
+    margin-bottom: 8px;
+    font-size: 14px;
+}
+
+.detail-input input {
+    margin-bottom: 10px;
+}
+
+.detail-input button {
+    background: #4caf50;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 6px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.detail-input button:hover {
+    background: #45a049;
+    transform: translateY(-2px);
+}
+
+.detail-input button:disabled {
+    background: #ccc;
+    cursor: not-allowed;
+}
+
 /* Selected Docs */
 .selected-docs {
     display: flex;
@@ -542,17 +583,6 @@ textarea {
     animation: slideDown 0.5s ease;
 }
 
-@keyframes slideDown {
-    from {
-        opacity: 0;
-        transform: translateY(-20px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
 .alert.show {
     display: block;
 }
@@ -601,7 +631,6 @@ textarea {
     border-radius: 16px;
     max-width: 600px;
     width: 90%;
-    /* FIX: Added scrolling for small screens */
     max-height: 90vh;
     overflow-y: auto;
     box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
@@ -767,12 +796,12 @@ textarea {
             <span>📝</span>
             <span>איך להשתמש במערכת?</span>
         </h3>
-        <ol class="instruction-steps">
+        <ul class="instruction-steps">
             <li><strong>הסרת מסמכים:</strong> סמן את התיבות ליד מסמכים שאינם רלוונטיים - הם יוסרו מרשימת המסמכים של הלקוח</li>
             <li><strong>הוסף מסמכים חדשים:</strong> בחר מסמכים מהרשימה הנפתחת או הזן שם מסמך מותאם אישית</li>
             <li><strong>הוסף הערות:</strong> אם יש הערות נוספות, הוסף אותן בשדה ההערות</li>
             <li><strong>שמור שינויים:</strong> לחץ על כפתור "שמור שינויים" - אימייל יישלח אוטומטית למשרד</li>
-        </ol>
+        </ul>
     </div>
 
     <div class="client-info">
@@ -858,35 +887,42 @@ textarea {
                     </div>
                     <select id="docTypeSelect">
                         <option value="">-- בחר מסמך מהרשימה --</option>
-                        <option value="אישור תושבות מהרשות המקומית">אישור תושבות מהרשות המקומית</option>
-                        <option value="ספח ת.ז מעודכן">ספח ת.ז מעודכן</option>
-                        <option value="ספח ת.ז כולל פרטי ילדים">ספח ת.ז כולל פרטי ילדים</option>
-                        <option value="אישור ועדת השמה/שילוב">אישור ועדת השמה/שילוב</option>
+                        <option value="אישור דיבידנד">אישור דיבידנד</option>
+                        <option value="אישור זכאות לתואר">אישור זכאות לתואר</option>
+                        <option value="אישור מס שנתי מחברת ביטוח|REQUIRES_DETAIL">אישור מס שנתי מחברת ביטוח</option>
+                        <option value="אישור משיכת כספים (פנסיה/גמל/ביטוח)|REQUIRES_DETAIL">אישור משיכת כספים (פנסיה/גמל/ביטוח)</option>
+                        <option value="אישור ניכוי מס במקור|REQUIRES_DETAIL">אישור ניכוי מס במקור</option>
                         <option value="אישור קצבת נכות לילד">אישור קצבת נכות לילד</option>
-                        <option value="פסק דין / הסכם גירושין (מזונות)">פסק דין / הסכם גירושין (מזונות)</option>
-                        <option value="טופס 106">טופס 106</option>
-                        <option value="טופס 106 - בן/בת זוג">טופס 106 - בן/בת זוג</option>
-                        <option value="אישור משיכת כספים (פנסיה/גמל/ביטוח)">אישור משיכת כספים (פנסיה/גמל/ביטוח)</option>
+                        <option value="אישור שחרור מצה״ל/שירות לאומי">אישור שחרור מצה״ל/שירות לאומי</option>
                         <option value="אישור שנתי מביטוח לאומי">אישור שנתי מביטוח לאומי</option>
                         <option value="אישור שנתי מביטוח לאומי - בן/בת זוג">אישור שנתי מביטוח לאומי - בן/בת זוג</option>
-                        <option value="טופס 867">טופס 867</option>
-                        <option value="טופס 867 - בן/בת זוג">טופס 867 - בן/בת זוג</option>
-                        <option value="אישור דיבידנד">אישור דיבידנד</option>
-                        <option value="טופס 1399 (קריפטו)">טופס 1399 (קריפטו)</option>
+                        <option value="אישור תושבות מהרשות המקומית">אישור תושבות מהרשות המקומית</option>
                         <option value="אסמכתא הימורים/פרסים">אסמכתא הימורים/פרסים</option>
                         <option value="אסמכתא הכנסות מחו״ל">אסמכתא הכנסות מחו״ל</option>
-                        <option value="חוזה שכירות (הכנסה)">חוזה שכירות (הכנסה)</option>
-                        <option value="חוזה שכירות (הוצאה)">חוזה שכירות (הוצאה)</option>
-                        <option value="רשימת ספירת מלאי">רשימת ספירת מלאי</option>
-                        <option value="אישור מס שנתי מחברת ביטוח">אישור מס שנתי מחברת ביטוח</option>
-                        <option value="אישור שחרור מצה״ל/שירות לאומי">אישור שחרור מצה״ל/שירות לאומי</option>
-                        <option value="קבלות ומסמכי הנצחה">קבלות ומסמכי הנצחה</option>
+                        <option value="טופס 106|REQUIRES_DETAIL">טופס 106</option>
+                        <option value="טופס 106 - בן/בת זוג|REQUIRES_DETAIL">טופס 106 - בן/בת זוג</option>
+                        <option value="טופס 1399 (קריפטו)">טופס 1399 (קריפטו)</option>
+                        <option value="טופס 867|REQUIRES_DETAIL">טופס 867</option>
+                        <option value="טופס 867 - בן/בת זוג|REQUIRES_DETAIL">טופס 867 - בן/בת זוג</option>
+                        <option value="מסמך רופא/ועדה רפואית">מסמך רפואי/ועדה רפואית</option>
                         <option value="מסמך רשמי - החזקת קרוב במוסד">מסמך רשמי - החזקת קרוב במוסד</option>
-                        <option value="אישור זכאות לתואר">אישור זכאות לתואר</option>
-                        <option value="מסמך רפואי/ועדה רפואית">מסמך רפואי/ועדה רפואית</option>
+                        <option value="פסק דין / הסכם גירושין (מזונות)">פסק דין / הסכם גירושין (מזונות)</option>
+                        <option value="קבלות ומסמכי הנצחה">קבלות ומסמכי הנצחה</option>
                         <option value="קבלות תרומות מרוכזות (סעיף 46)">קבלות תרומות מרוכזות (סעיף 46)</option>
-                        <option value="אישור ניכוי מס במקור">אישור ניכוי מס במקור</option>
+                        <option value="רשימת ספירת מלאי">רשימת ספירת מלאי</option>
+                        <option value="ספח ת.ז כולל פרטי ילדים">ספח ת.ז כולל פרטי ילדים</option>
+                        <option value="ספח ת.ז מעודכן">ספח ת.ז מעודכן</option>
+                        <option value="חוזה שכירות (הוצאה)">חוזה שכירות (הוצאה)</option>
+                        <option value="חוזה שכירות (הכנסה)">חוזה שכירות (הכנסה)</option>
+                        <option value="אישור ועדת השמה/שילוב">אישור ועדת השמה/שילוב</option>
                     </select>
+                    
+                    <!-- Detail Input Section -->
+                    <div id="detailInput" class="detail-input">
+                        <label id="detailLabel">פרטים נוספים:</label>
+                        <input type="text" id="detailValue" placeholder="לדוגמה: שם המעסיק, שם הבנק, וכו'">
+                        <button onclick="addDocumentWithDetail()">➕ הוסף מסמך</button>
+                    </div>
                 </div>
 
                 <div id="selectedDocs" class="selected-docs empty"></div>
@@ -979,6 +1015,39 @@ const API_BASE = 'https://liozshor.app.n8n.cloud/webhook';
 let currentDocuments = [];
 let markedForRemoval = new Set();
 let docsToAdd = new Set();
+let pendingDocWithDetail = null; // For documents requiring detail
+
+// Document types that require additional details
+const DOCS_REQUIRING_DETAILS = {
+    'טופס 106': {
+        label: 'שם המעסיק',
+        placeholder: 'לדוגמה: חברת ABC בע"מ'
+    },
+    'טופס 106 - בן/בת זוג': {
+        label: 'שם המעסיק של בן/בת הזוג',
+        placeholder: 'לדוגמה: חברת XYZ בע"מ'
+    },
+    'טופס 867': {
+        label: 'שם הבנק / המוסד הפיננסי',
+        placeholder: 'לדוגמה: בנק הפועלים, מיטב דש'
+    },
+    'טופס 867 - בן/בת זוג': {
+        label: 'שם הבנק / המוסד הפיננסי - בן/בת זוג',
+        placeholder: 'לדוגמה: בנק לאומי'
+    },
+    'אישור משיכת כספים (פנסיה/גמל/ביטוח)': {
+        label: 'סוג המשיכה',
+        placeholder: 'לדוגמה: פיצויי פיטורין, מענק פרישה, קצבה'
+    },
+    'אישור מס שנתי מחברת ביטוח': {
+        label: 'סוג הביטוח ושם החברה',
+        placeholder: 'לדוגמה: פנסיה - מיטב דש, קרן השתלמות - אלטשולר שחם'
+    },
+    'אישור ניכוי מס במקור': {
+        label: 'מקור ההכנסה',
+        placeholder: 'לדוגמה: דמי שכירות, דיבידנד מחברה פרטית'
+    }
+};
 
 // Initialize
 document.getElementById('clientName').textContent = CLIENT_NAME || '-';
@@ -1053,19 +1122,63 @@ function toggleRemoval(id) {
 
 // Handle document selection
 document.getElementById('docTypeSelect').addEventListener('change', function(e) {
-    const value = e.target.value;
-    if (value) {
-        if (docsToAdd.has(value)) {
+    const fullValue = e.target.value;
+    if (!fullValue) return;
+    
+    const parts = fullValue.split('|');
+    const docType = parts[0];
+    const requiresDetail = parts[1] === 'REQUIRES_DETAIL';
+    
+    if (requiresDetail && DOCS_REQUIRING_DETAILS[docType]) {
+        // Show detail input
+        pendingDocWithDetail = docType;
+        const detailConfig = DOCS_REQUIRING_DETAILS[docType];
+        
+        document.getElementById('detailLabel').textContent = detailConfig.label + ':';
+        document.getElementById('detailValue').placeholder = detailConfig.placeholder;
+        document.getElementById('detailValue').value = '';
+        document.getElementById('detailInput').classList.add('show');
+        document.getElementById('detailValue').focus();
+    } else {
+        // Add directly without detail
+        if (docsToAdd.has(docType)) {
             showAlert('מסמך זה כבר נמצא ברשימה', 'error');
-            e.target.value = '';
-            return;
+        } else {
+            docsToAdd.add(docType);
+            updateSelectedDocs();
+            updateStats();
         }
-        docsToAdd.add(value);
-        updateSelectedDocs();
-        updateStats();
         e.target.value = '';
     }
 });
+
+// Add document with detail
+function addDocumentWithDetail() {
+    const detail = document.getElementById('detailValue').value.trim();
+    
+    if (!detail) {
+        showAlert('יש להזין את הפרטים הנדרשים', 'error');
+        return;
+    }
+    
+    if (!pendingDocWithDetail) return;
+    
+    const fullDocName = `${pendingDocWithDetail} - ${detail}`;
+    
+    if (docsToAdd.has(fullDocName)) {
+        showAlert('מסמך זה כבר נמצא ברשימה', 'error');
+        return;
+    }
+    
+    docsToAdd.add(fullDocName);
+    updateSelectedDocs();
+    updateStats();
+    
+    // Reset
+    document.getElementById('detailInput').classList.remove('show');
+    document.getElementById('docTypeSelect').value = '';
+    pendingDocWithDetail = null;
+}
 
 // Update selected documents display
 function updateSelectedDocs() {
@@ -1099,7 +1212,6 @@ function removeSelectedDoc(encodedDoc) {
     updateStats();
 }
 
-
 // Update statistics
 function updateStats() {
     document.getElementById('totalDocs').textContent = currentDocuments.length;
@@ -1109,10 +1221,10 @@ function updateStats() {
 
 // Open confirmation modal
 function openConfirmation() {
-    const TXT_NO_CHANGES = "\u05dc\u05d0 \u05d1\u05d5\u05e6\u05e2\u05d5 \u05e9\u05d9\u05e0\u05d5\u05d9\u05d9\u05dd. \u05d0\u05e0\u05d0 \u05d1\u05e6\u05e2 \u05e9\u05d9\u05e0\u05d5\u05d9\u05d9\u05dd \u05dc\u05e4\u05e0\u05d9 \u05d4\u05e9\u05de\u05d9\u05e8\u05d4.";
-    const TXT_REMOVE_PREFIX = "\u{1f6ab} \u05de\u05e1\u05de\u05db\u05d9\u05dd \u05e9\u05d9\u05d5\u05e1\u05e8\u05d5 \u05de\u05e8\u05e9\u05d9\u05de\u05ea \u05d4\u05dc\u05e7\u05d5\u05d7 (";
-    const TXT_ADD_PREFIX = "\u2795 \u05de\u05e1\u05de\u05db\u05d9\u05dd \u05e9\u05d9\u05ea\u05d5\u05d5\u05e1\u05e4\u05d5 (";
-    const TXT_NOTES_TITLE = "\u{1f4ac} \u05d4\u05e2\u05e8\u05d5\u05ea:";
+    const TXT_NO_CHANGES = "לא בוצעו שינויים. אנא בצע שינויים לפני השמירה.";
+    const TXT_REMOVE_PREFIX = "🚫 מסמכים שיוסרו מרשימת הלקוח (";
+    const TXT_ADD_PREFIX = "➕ מסמכים שיתווספו (";
+    const TXT_NOTES_TITLE = "💬 הערות:";
 
     const customDocRaw = (document.getElementById('customDoc')?.value ?? '').trim();
     const notes = (document.getElementById('notes')?.value ?? '').trim();
@@ -1123,7 +1235,6 @@ function openConfirmation() {
 
     const docsToAddArray = Array.from(docsToAdd);
 
-    // Include custom docs in the confirmation preview (supports multiple lines)
     if (customDocRaw) {
         const customDocs = customDocRaw
             .split(/\r?\n/)
@@ -1150,7 +1261,7 @@ function openConfirmation() {
         summary += '<h4>' + TXT_REMOVE_PREFIX + docsToRemove.length + '):</h4>';
         summary += '<ul class="changes-list">';
         docsToRemove.forEach(doc => {
-            summary += `<li class="change-remove">\u{1f6ab} ${escapeHtml(doc)}</li>`;
+            summary += `<li class="change-remove">🚫 ${escapeHtml(doc)}</li>`;
         });
         summary += '</ul>';
     }
@@ -1159,7 +1270,7 @@ function openConfirmation() {
         summary += '<h4>' + TXT_ADD_PREFIX + uniqueDocsToAdd.length + '):</h4>';
         summary += '<ul class="changes-list">';
         uniqueDocsToAdd.forEach(doc => {
-            summary += `<li class="change-add">\u2713 ${escapeHtml(doc)}</li>`;
+            summary += `<li class="change-add">✓ ${escapeHtml(doc)}</li>`;
         });
         summary += '</ul>';
     }
@@ -1175,7 +1286,6 @@ function openConfirmation() {
     document.getElementById('confirmModal').classList.add('show');
 }
 
-
 // Close confirmation
 function closeConfirmation() {
     document.getElementById('confirmModal').classList.remove('show');
@@ -1188,16 +1298,12 @@ async function confirmSubmit() {
     const customDoc = document.getElementById('customDoc').value.trim();
     const notes = document.getElementById('notes').value.trim();
     
-    // CHANGED: Get Full Objects, NOT just names
     const docsToRemoveObjs = currentDocuments.filter(doc => markedForRemoval.has(doc.id));
     const docsToRemoveNames = docsToRemoveObjs.map(d => d.name);
-    
-    // IDs to send as VALUES
     const docsToRemoveIds = docsToRemoveObjs.map(d => d.id);
     
     const docsToAddArray = Array.from(docsToAdd);
     
-    // Add custom document only if it's not empty and not already in the list
     if (customDoc) {
         const customDocs = customDoc
             .split(/\r?\n/)
@@ -1211,7 +1317,6 @@ async function confirmSubmit() {
         }
     }
     
-    // Remove duplicates (just in case)
     const uniqueDocsToAdd = [...new Set(docsToAddArray)];
     
     const payload = {
@@ -1229,11 +1334,10 @@ async function confirmSubmit() {
                 {
                     label: 'מסמכים לשינוי סטטוס ל-Waived', 
                     type: 'CHECKBOXES',
-                    // KEY CHANGE: Send Record IDs as the value!
                     value: docsToRemoveIds,
                     options: docsToRemoveObjs.map(doc => ({
-                        id: doc.id, // Record ID as Option ID
-                        text: doc.name // Name for Display
+                        id: doc.id,
+                        text: doc.name
                     }))
                 },
                 {
@@ -1285,6 +1389,10 @@ function resetForm() {
     docsToAdd.clear();
     document.getElementById('customDoc').value = '';
     document.getElementById('notes').value = '';
+    document.getElementById('detailInput').classList.remove('show');
+    document.getElementById('docTypeSelect').value = '';
+    pendingDocWithDetail = null;
+    
     document.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = false);
     document.querySelectorAll('.document-item').forEach(item => {
         item.classList.remove('marked-for-removal');
@@ -1315,6 +1423,20 @@ function escapeHtml(text) {
 
 // Load on page load
 window.addEventListener('DOMContentLoaded', loadDocuments);
+
+// Close detail input when clicking outside
+document.addEventListener('click', function(e) {
+    const detailInput = document.getElementById('detailInput');
+    const select = document.getElementById('docTypeSelect');
+    
+    if (detailInput.classList.contains('show') && 
+        !detailInput.contains(e.target) && 
+        !select.contains(e.target)) {
+        detailInput.classList.remove('show');
+        select.value = '';
+        pendingDocWithDetail = null;
+    }
+});
 </script>
 </body>
 </html>
