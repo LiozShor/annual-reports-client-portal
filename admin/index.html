@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html dir="rtl" lang="he">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -278,11 +279,25 @@
             transform: translateY(-5px);
         }
 
-        .stat-card.stage-1 { border-right-color: #9ca3af; }
-        .stat-card.stage-2 { border-right-color: #f59e0b; }
-        .stat-card.stage-3 { border-right-color: #3b82f6; }
-        .stat-card.stage-4 { border-right-color: #8b5cf6; }
-        .stat-card.stage-5 { border-right-color: #10b981; }
+        .stat-card.stage-1 {
+            border-right-color: #9ca3af;
+        }
+
+        .stat-card.stage-2 {
+            border-right-color: #f59e0b;
+        }
+
+        .stat-card.stage-3 {
+            border-right-color: #3b82f6;
+        }
+
+        .stat-card.stage-4 {
+            border-right-color: #8b5cf6;
+        }
+
+        .stat-card.stage-5 {
+            border-right-color: #10b981;
+        }
 
         .stat-number {
             font-size: 42px;
@@ -307,7 +322,8 @@
             transition: all 0.3s;
         }
 
-        .upload-zone:hover, .upload-zone.dragover {
+        .upload-zone:hover,
+        .upload-zone.dragover {
             border-color: var(--accent);
             background: #f0f4ff;
         }
@@ -375,7 +391,8 @@
             border-collapse: collapse;
         }
 
-        th, td {
+        th,
+        td {
             padding: 14px 16px;
             text-align: right;
             border-bottom: 1px solid #e5e7eb;
@@ -407,9 +424,20 @@
             font-weight: 600;
         }
 
-        .status-badge.valid { background: #d1fae5; color: #065f46; }
-        .status-badge.error { background: #fee2e2; color: #991b1b; }
-        .status-badge.duplicate { background: #fef3c7; color: #92400e; }
+        .status-badge.valid {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .status-badge.error {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .status-badge.duplicate {
+            background: #fef3c7;
+            color: #92400e;
+        }
 
         /* Stage badges */
         .stage-badge {
@@ -420,11 +448,30 @@
             font-weight: 600;
         }
 
-        .stage-1 { background: #f3f4f6; color: #4b5563; }
-        .stage-2 { background: #fef3c7; color: #92400e; }
-        .stage-3 { background: #dbeafe; color: #1e40af; }
-        .stage-4 { background: #ede9fe; color: #5b21b6; }
-        .stage-5 { background: #d1fae5; color: #065f46; }
+        .stage-1 {
+            background: #f3f4f6;
+            color: #4b5563;
+        }
+
+        .stage-2 {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .stage-3 {
+            background: #dbeafe;
+            color: #1e40af;
+        }
+
+        .stage-4 {
+            background: #ede9fe;
+            color: #5b21b6;
+        }
+
+        .stage-5 {
+            background: #d1fae5;
+            color: #065f46;
+        }
 
         /* Progress bar */
         .progress-bar {
@@ -462,7 +509,8 @@
             font-size: 14px;
         }
 
-        select, input[type="text"] {
+        select,
+        input[type="text"] {
             padding: 10px 14px;
             border: 2px solid #e5e7eb;
             border-radius: 8px;
@@ -470,7 +518,8 @@
             min-width: 180px;
         }
 
-        select:focus, input[type="text"]:focus {
+        select:focus,
+        input[type="text"]:focus {
             outline: none;
             border-color: var(--accent);
         }
@@ -540,8 +589,13 @@
         }
 
         @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
         }
 
         /* Result modal */
@@ -684,12 +738,14 @@
                 font-size: 14px;
             }
 
-            th, td {
+            th,
+            td {
                 padding: 10px 8px;
             }
         }
     </style>
 </head>
+
 <body>
     <!-- Login Screen -->
     <div id="loginScreen" class="login-screen">
@@ -722,7 +778,7 @@
 
         <div class="tabs">
             <div class="tab active" onclick="switchTab('dashboard')">📊 לוח בקרה</div>
-            <div class="tab" onclick="switchTab('import')">📤 ייבוא לקוחות</div>
+            <div class="tab" onclick="switchTab('import')">📤 הוספת לקוחות</div>
             <div class="tab" onclick="switchTab('send')">📧 שליחת שאלונים</div>
         </div>
 
@@ -767,7 +823,8 @@
                         <div class="filters">
                             <div class="filter-group">
                                 <label>🔍 חיפוש:</label>
-                                <input type="text" id="searchInput" placeholder="שם או אימייל..." oninput="filterClients()">
+                                <input type="text" id="searchInput" placeholder="שם או אימייל..."
+                                    oninput="filterClients()">
                             </div>
                             <div class="filter-group">
                                 <label>📊 שלב:</label>
@@ -803,97 +860,135 @@
             <div id="tab-import" class="tab-content">
                 <div class="card">
                     <div class="card-header">
-                        <h2>📤 ייבוא לקוחות מאקסל</h2>
+                        <h2>📤 הוספת לקוחות</h2>
+                        <div class="header-actions">
+                            <button class="btn btn-outline" id="btn-mode-manual" onclick="setAddMode('manual')">➕ הוספה
+                                ידנית</button>
+                            <button class="btn btn-primary" id="btn-mode-import" onclick="setAddMode('import')"
+                                disabled>📤 ייבוא מאקסל</button>
+                        </div>
                     </div>
                     <div class="card-body">
-                        <div class="upload-zone" id="uploadZone" onclick="document.getElementById('fileInput').click()">
-                            <div class="upload-zone-icon">📁</div>
-                            <h3>גרור קובץ Excel לכאן</h3>
-                            <p>או לחץ לבחירת קובץ</p>
-                            <button class="btn btn-primary">📎 בחר קובץ</button>
-                            <input type="file" id="fileInput" accept=".xlsx,.xls,.csv" onchange="handleFileSelect(event)">
-                        </div>
-
-                        <div class="import-options" style="margin-top: 20px;">
-                            <h4>📋 פורמט נדרש:</h4>
-                            <p>קובץ Excel עם שתי עמודות:</p>
-                            <table style="margin-top: 10px;">
-                                <thead>
-                                    <tr>
-                                        <th>name</th>
-                                        <th>email</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <tr>
-                                        <td>משה כהן</td>
-                                        <td>moshe@example.com</td>
-                                    </tr>
-                                    <tr>
-                                        <td>שרה לוי</td>
-                                        <td>sara@example.com</td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
-
-                        <div id="previewSection" class="preview-section">
-                            <div class="card-header" style="padding: 0; border: none; margin-bottom: 20px;">
-                                <h2>👁️ תצוגה מקדימה</h2>
-                            </div>
-
-                            <div class="preview-stats">
-                                <div class="preview-stat">
-                                    <strong id="preview-total">0</strong>
-                                    <span> שורות נמצאו</span>
+                        <!-- Manual Section -->
+                        <div id="section-manual" style="display: none; padding: 20px;">
+                            <div class="filters"
+                                style="flex-direction: column; align-items: stretch; max-width: 500px; margin: 0 auto; gap: 20px;">
+                                <div class="filter-group" style="flex-direction: column; align-items: start;">
+                                    <label>שם מלא:</label>
+                                    <input type="text" id="manualName" placeholder="ישראל ישראלי" style="width: 100%;">
                                 </div>
-                                <div class="preview-stat">
-                                    <strong id="preview-valid">0</strong>
-                                    <span> תקינים</span>
+                                <div class="filter-group" style="flex-direction: column; align-items: start;">
+                                    <label>אימייל:</label>
+                                    <input type="text" id="manualEmail" placeholder="israel@example.com"
+                                        style="width: 100%;">
                                 </div>
-                                <div class="preview-stat error">
-                                    <strong id="preview-errors">0</strong>
-                                    <span> שגיאות</span>
-                                </div>
-                                <div class="preview-stat warning">
-                                    <strong id="preview-duplicates">0</strong>
-                                    <span> כפולים (יידלגו)</span>
-                                </div>
-                            </div>
-
-                            <div class="import-options">
-                                <h4>⚙️ הגדרות ייבוא:</h4>
-                                <div class="option-row">
-                                    <label>📅 שנת דוח:</label>
-                                    <select id="importYear">
-                                        <option value="2025" selected>2025</option>
+                                <div class="filter-group" style="flex-direction: column; align-items: start;">
+                                    <label>שנת דוח:</label>
+                                    <select id="manualYear" style="width: 100%;">
+                                        <option value="2024" selected>2024</option>
+                                        <option value="2025">2025</option>
                                     </select>
                                 </div>
+                                <button class="btn btn-success" onclick="addManualClient()"
+                                    style="margin-top: 10px; width: 100%; justify-content: center;">
+                                    🚀 הוסף למערכת
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Import Section -->
+                        <div id="section-import">
+                            <div class="upload-zone" id="uploadZone"
+                                onclick="document.getElementById('fileInput').click()">
+                                <div class="upload-zone-icon">📁</div>
+                                <h3>גרור קובץ Excel לכאן</h3>
+                                <p>או לחץ לבחירת קובץ</p>
+                                <button class="btn btn-primary">📎 בחר קובץ</button>
+                                <input type="file" id="fileInput" accept=".xlsx,.xls,.csv"
+                                    onchange="handleFileSelect(event)">
                             </div>
 
-                            <div style="overflow-x: auto; margin-top: 20px;">
-                                <table id="previewTable">
+                            <div class="import-options" style="margin-top: 20px;">
+                                <h4>📋 פורמט נדרש:</h4>
+                                <p>קובץ Excel עם שתי עמודות:</p>
+                                <table style="margin-top: 10px;">
                                     <thead>
                                         <tr>
-                                            <th>#</th>
-                                            <th>שם</th>
-                                            <th>אימייל</th>
-                                            <th>סטטוס</th>
+                                            <th>name</th>
+                                            <th>email</th>
                                         </tr>
                                     </thead>
-                                    <tbody id="previewTableBody"></tbody>
+                                    <tbody>
+                                        <tr>
+                                            <td>משה כהן</td>
+                                            <td>moshe@example.com</td>
+                                        </tr>
+                                        <tr>
+                                            <td>שרה לוי</td>
+                                            <td>sara@example.com</td>
+                                        </tr>
+                                    </tbody>
                                 </table>
                             </div>
 
-                            <div style="margin-top: 25px; display: flex; gap: 15px; justify-content: center;">
-                                <button class="btn btn-success" id="importBtn" onclick="startImport()">
-                                    🚀 ייבא <span id="importCount">0</span> לקוחות
-                                </button>
-                                <button class="btn btn-outline" onclick="clearPreview()">
-                                    ❌ בטל
-                                </button>
+                            <div id="previewSection" class="preview-section">
+                                <div class="card-header" style="padding: 0; border: none; margin-bottom: 20px;">
+                                    <h2>👁️ תצוגה מקדימה</h2>
+                                </div>
+
+                                <div class="preview-stats">
+                                    <div class="preview-stat">
+                                        <strong id="preview-total">0</strong>
+                                        <span> שורות נמצאו</span>
+                                    </div>
+                                    <div class="preview-stat">
+                                        <strong id="preview-valid">0</strong>
+                                        <span> תקינים</span>
+                                    </div>
+                                    <div class="preview-stat error">
+                                        <strong id="preview-errors">0</strong>
+                                        <span> שגיאות</span>
+                                    </div>
+                                    <div class="preview-stat warning">
+                                        <strong id="preview-duplicates">0</strong>
+                                        <span> כפולים (יידלגו)</span>
+                                    </div>
+                                </div>
+
+                                <div class="import-options">
+                                    <h4>⚙️ הגדרות ייבוא:</h4>
+                                    <div class="option-row">
+                                        <label>📅 שנת דוח:</label>
+                                        <select id="importYear">
+                                            <option value="2025" selected>2025</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div style="overflow-x: auto; margin-top: 20px;">
+                                    <table id="previewTable">
+                                        <thead>
+                                            <tr>
+                                                <th>#</th>
+                                                <th>שם</th>
+                                                <th>אימייל</th>
+                                                <th>סטטוס</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="previewTableBody"></tbody>
+                                    </table>
+                                </div>
+
+                                <div style="margin-top: 25px; display: flex; gap: 15px; justify-content: center;">
+                                    <button class="btn btn-success" id="importBtn" onclick="startImport()">
+                                        🚀 ייבא <span id="importCount">0</span> לקוחות
+                                    </button>
+                                    <button class="btn btn-outline" onclick="clearPreview()">
+                                        ❌ בטל
+                                    </button>
+                                </div>
                             </div>
-                        </div>
+                        </div> <!-- End Import Section -->
                     </div>
                 </div>
             </div>
@@ -961,7 +1056,7 @@
         // Configuration
         const API_BASE = 'https://liozshor.app.n8n.cloud/webhook';
         const ADMIN_TOKEN_KEY = 'admin_portal_token';
-        
+
         // State
         let authToken = localStorage.getItem(ADMIN_TOKEN_KEY) || '';
         let clientsData = [];
@@ -969,7 +1064,7 @@
         let existingEmails = new Set();
 
         // ==================== AUTH ====================
-        
+
         async function login() {
             const password = document.getElementById('passwordInput').value;
             if (!password) return;
@@ -1039,7 +1134,7 @@
         function switchTab(tabName) {
             document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
             document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
-            
+
             event.target.classList.add('active');
             document.getElementById(`tab-${tabName}`).classList.add('active');
         }
@@ -1144,9 +1239,9 @@
                         </td>
                         <td>
                             <button class="action-btn view" onclick="viewClient('${client.report_id}')">👁️</button>
-                            ${client.stage === '1-Send_Questionnaire' ? 
-                                `<button class="action-btn send" onclick="sendSingle('${client.report_id}')">📧</button>` : 
-                                ''}
+                            ${client.stage === '1-Send_Questionnaire' ?
+                        `<button class="action-btn send" onclick="sendSingle('${client.report_id}')">📧</button>` :
+                        ''}
                         </td>
                     </tr>
                 `;
@@ -1164,8 +1259,8 @@
             let filtered = clientsData;
 
             if (search) {
-                filtered = filtered.filter(c => 
-                    c.name?.toLowerCase().includes(search) || 
+                filtered = filtered.filter(c =>
+                    c.name?.toLowerCase().includes(search) ||
                     c.email?.toLowerCase().includes(search)
                 );
             }
@@ -1196,7 +1291,7 @@
 
         // Drag and drop
         const uploadZone = document.getElementById('uploadZone');
-        
+
         uploadZone.addEventListener('dragover', (e) => {
             e.preventDefault();
             uploadZone.classList.add('dragover');
@@ -1302,13 +1397,8 @@
             document.getElementById('fileInput').value = '';
         }
 
-        async function startImport() {
-            const validClients = importData.filter(c => c.status === 'valid');
-            if (validClients.length === 0) return;
-
-            const year = document.getElementById('importYear').value;
-
-            showLoading(`מייבא ${validClients.length} לקוחות...`);
+        async function performServerImport(clients, year, successMessage) {
+            showLoading(clients.length > 1 ? `מייבא ${clients.length} לקוחות...` : 'מוסיף לקוח...');
 
             try {
                 const response = await fetch(`${API_BASE}/admin-bulk-import`, {
@@ -1317,7 +1407,7 @@
                     body: JSON.stringify({
                         token: authToken,
                         year: parseInt(year),
-                        clients: validClients.map(c => ({ name: c.name, email: c.email }))
+                        clients: clients
                     })
                 });
 
@@ -1328,17 +1418,86 @@
                     throw new Error(data.error || 'Import failed');
                 }
 
-                showModal('success', 'הייבוא הושלם!', 
-                    `הלקוחות נוספו בהצלחה למערכת.`,
+                showModal('success', 'הפעולה הושלמה!',
+                    successMessage || `הנתונים נשמרו בהצלחה.`,
                     { created: data.created, skipped: data.skipped }
                 );
 
-                clearPreview();
-                loadDashboard(); // Refresh
+                return true;
 
             } catch (error) {
                 hideLoading();
-                showModal('error', 'שגיאה', 'לא ניתן לייבא את הלקוחות: ' + error.message);
+                showModal('error', 'שגיאה', 'שגיאה בשמירת הנתונים: ' + error.message);
+                return false;
+            }
+        }
+
+        async function startImport() {
+            const validClients = importData.filter(c => c.status === 'valid');
+            if (validClients.length === 0) return;
+
+            const year = document.getElementById('importYear').value;
+
+            const success = await performServerImport(
+                validClients.map(c => ({ name: c.name, email: c.email })),
+                year,
+                'הלקוחות נוספו בהצלחה למערכת.'
+            );
+
+            if (success) {
+                clearPreview();
+                loadDashboard();
+            }
+        }
+
+        function setAddMode(mode) {
+            document.getElementById('section-import').style.display = mode === 'import' ? 'block' : 'none';
+            document.getElementById('section-manual').style.display = mode === 'manual' ? 'block' : 'none';
+
+            const btnImport = document.getElementById('btn-mode-import');
+            const btnManual = document.getElementById('btn-mode-manual');
+
+            if (mode === 'import') {
+                btnImport.className = 'btn btn-primary';
+                btnImport.disabled = true;
+                btnManual.className = 'btn btn-outline';
+                btnManual.disabled = false;
+            } else {
+                btnImport.className = 'btn btn-outline';
+                btnImport.disabled = false;
+                btnManual.className = 'btn btn-primary';
+                btnManual.disabled = true;
+            }
+        }
+
+        async function addManualClient() {
+            const name = document.getElementById('manualName').value.trim();
+            const email = document.getElementById('manualEmail').value.trim().toLowerCase();
+            const year = document.getElementById('manualYear').value;
+
+            if (!name || !email) {
+                showModal('warning', 'חסרים נתונים', 'נא להזין שם ואימייל');
+                return;
+            }
+            if (!isValidEmail(email)) {
+                showModal('warning', 'אימייל לא תקין', 'כתובת האימייל אינה תקינה');
+                return;
+            }
+            // Optional: warning if already exists in dashboard list
+            if (existingEmails.has(email)) {
+                if (!confirm('כתובת המייל הזו כבר קיימת ברשימת הלקוחות. האם להוסיף בכל זאת?')) return;
+            }
+
+            const success = await performServerImport(
+                [{ name, email }],
+                year,
+                'הלקוח נוסף בהצלחה למערכת.'
+            );
+
+            if (success) {
+                document.getElementById('manualName').value = '';
+                document.getElementById('manualEmail').value = '';
+                loadDashboard();
             }
         }
 
@@ -1457,7 +1616,7 @@
 
                 if (!data.ok) throw new Error(data.error);
 
-                showModal('success', 'נשלח בהצלחה!', 
+                showModal('success', 'נשלח בהצלחה!',
                     `השאלונים נשלחו ללקוחות.`,
                     { sent: data.sent }
                 );
@@ -1547,4 +1706,5 @@
         checkAuth();
     </script>
 </body>
+
 </html>
