@@ -696,7 +696,9 @@
         <div class="login-box">
             <h1>🔐 פורטל ניהול</h1>
             <p>משרד רו"ח Client Name</p>
-            <input type="password" id="passwordInput" placeholder="הזן סיסמה" autocomplete="current-password">
+            <form onsubmit="login(); return false;">
+                <input type="password" id="passwordInput" placeholder="הזן סיסמה" autocomplete="current-password">
+            </form>
             <div id="loginError" class="login-error">סיסמה שגויה</div>
             <button class="btn btn-primary" onclick="login()" style="width: 100%;">
                 🚀 כניסה
@@ -782,8 +784,7 @@
                                 <label>📅 שנה:</label>
                                 <select id="yearFilter" onchange="filterClients()">
                                     <option value="">הכל</option>
-                                    <option value="2024" selected>2024</option>
-                                    <option value="2023">2023</option>
+                                    <option value="2025" selected>2025</option>
                                 </select>
                             </div>
                         </div>
