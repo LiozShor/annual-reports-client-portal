@@ -1438,27 +1438,27 @@
                     status = 'error';
                     statusText = 'אימייל לא תקין';
                     errorCount++;
-                    if (existingEmails.has(email)) {
-                        status = 'duplicate';
-                        statusText = 'קיים במערכת';
-                        duplicateCount++;
-                    } else {
-                        validCount++;
-                    }
-
-                    importData.push({ name, email, status, statusText });
+                } else if (existingEmails.has(email)) {
+                    status = 'duplicate';
+                    statusText = 'קיים במערכת';
+                    duplicateCount++;
+                } else {
+                    validCount++;
                 }
 
-                // Update preview stats
-                document.getElementById('preview-total').textContent = importData.length;
-                document.getElementById('preview-valid').textContent = validCount;
-                document.getElementById('preview-errors').textContent = errorCount;
-                document.getElementById('preview-duplicates').textContent = duplicateCount;
-                document.getElementById('importCount').textContent = validCount;
+                importData.push({ name, email, status, statusText });
+            }
 
-                // Render preview table
-                const tbody = document.getElementById('previewTableBody');
-                tbody.innerHTML = importData.map((row, idx) => `
+            // Update preview stats
+            document.getElementById('preview-total').textContent = importData.length;
+            document.getElementById('preview-valid').textContent = validCount;
+            document.getElementById('preview-errors').textContent = errorCount;
+            document.getElementById('preview-duplicates').textContent = duplicateCount;
+            document.getElementById('importCount').textContent = validCount;
+
+            // Render preview table
+            const tbody = document.getElementById('previewTableBody');
+            tbody.innerHTML = importData.map((row, idx) => `
                 <tr class="${row.status}">
                     <td>${idx + 1}</td>
                     <td>${escapeHtml(row.name) || '<em style="color:#999">חסר</em>'}</td>
@@ -1467,161 +1467,161 @@
                 </tr>
             `).join('');
 
-                // Show preview section
-                document.getElementById('previewSection').classList.add('visible');
-                document.getElementById('importBtn').disabled = validCount === 0;
-            }
+            // Show preview section
+            document.getElementById('previewSection').classList.add('visible');
+            document.getElementById('importBtn').disabled = validCount === 0;
+        }
 
-            function clearPreview() {
-                importData = [];
-                document.getElementById('previewSection').classList.remove('visible');
-                document.getElementById('fileInput').value = '';
-            }
+        function clearPreview() {
+            importData = [];
+            document.getElementById('previewSection').classList.remove('visible');
+            document.getElementById('fileInput').value = '';
+        }
 
-            async function performServerImport(clients, year, successMessage) {
-                showLoading(clients.length > 1 ? `מייבא ${clients.length} לקוחות...` : 'מוסיף לקוח...');
+        async function performServerImport(clients, year, successMessage) {
+            showLoading(clients.length > 1 ? `מייבא ${clients.length} לקוחות...` : 'מוסיף לקוח...');
 
-                try {
-                    const response = await fetch(`${API_BASE}/admin-bulk-import`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            token: authToken,
-                            year: parseInt(year),
-                            clients: clients
-                        })
-                    });
+            try {
+                const response = await fetch(`${API_BASE}/admin-bulk-import`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        token: authToken,
+                        year: parseInt(year),
+                        clients: clients
+                    })
+                });
 
-                    const data = await response.json();
-                    hideLoading();
+                const data = await response.json();
+                hideLoading();
 
-                    if (!data.ok) {
-                        throw new Error(data.error || 'Import failed');
-                    }
-
-                    showModal('success', 'הפעולה הושלמה!',
-                        successMessage || `הנתונים נשמרו בהצלחה.`,
-                        { created: data.created, skipped: data.skipped }
-                    );
-
-                    return true;
-
-                } catch (error) {
-                    hideLoading();
-                    showModal('error', 'שגיאה', 'שגיאה בשמירת הנתונים: ' + error.message);
-                    return false;
+                if (!data.ok) {
+                    throw new Error(data.error || 'Import failed');
                 }
-            }
 
-            async function startImport() {
-                const validClients = importData.filter(c => c.status === 'valid');
-                if (validClients.length === 0) return;
-
-                const year = document.getElementById('importYear').value;
-
-                const success = await performServerImport(
-                    validClients.map(c => ({ name: c.name, email: c.email })),
-                    year,
-                    'הלקוחות נוספו בהצלחה למערכת.'
+                showModal('success', 'הפעולה הושלמה!',
+                    successMessage || `הנתונים נשמרו בהצלחה.`,
+                    { created: data.created, skipped: data.skipped }
                 );
 
-                if (success) {
-                    clearPreview();
-                    loadDashboard();
-                }
+                return true;
+
+            } catch (error) {
+                hideLoading();
+                showModal('error', 'שגיאה', 'שגיאה בשמירת הנתונים: ' + error.message);
+                return false;
+            }
+        }
+
+        async function startImport() {
+            const validClients = importData.filter(c => c.status === 'valid');
+            if (validClients.length === 0) return;
+
+            const year = document.getElementById('importYear').value;
+
+            const success = await performServerImport(
+                validClients.map(c => ({ name: c.name, email: c.email })),
+                year,
+                'הלקוחות נוספו בהצלחה למערכת.'
+            );
+
+            if (success) {
+                clearPreview();
+                loadDashboard();
+            }
+        }
+
+        function setAddMode(mode) {
+            document.getElementById('section-import').style.display = mode === 'import' ? 'block' : 'none';
+            document.getElementById('section-manual').style.display = mode === 'manual' ? 'block' : 'none';
+
+            const btnImport = document.getElementById('btn-mode-import');
+            const btnManual = document.getElementById('btn-mode-manual');
+
+            if (mode === 'import') {
+                btnImport.className = 'btn btn-primary';
+                btnImport.disabled = true;
+                btnManual.className = 'btn btn-outline';
+                btnManual.disabled = false;
+            } else {
+                btnImport.className = 'btn btn-outline';
+                btnImport.disabled = false;
+                btnManual.className = 'btn btn-primary';
+                btnManual.disabled = true;
+            }
+        }
+
+        async function addManualClient() {
+            const name = document.getElementById('manualName').value.trim();
+            const email = document.getElementById('manualEmail').value.trim().toLowerCase();
+            const year = document.getElementById('manualYear').value;
+
+            if (!name || !email) {
+                showModal('warning', 'חסרים נתונים', 'נא להזין שם ואימייל');
+                return;
+            }
+            if (!isValidEmail(email)) {
+                showModal('warning', 'אימייל לא תקין', 'כתובת האימייל אינה תקינה');
+                return;
+            }
+            // Optional: warning if already exists in dashboard list
+            if (existingEmails.has(email)) {
+                if (!confirm('כתובת המייל הזו כבר קיימת ברשימת הלקוחות. האם להוסיף בכל זאת?')) return;
             }
 
-            function setAddMode(mode) {
-                document.getElementById('section-import').style.display = mode === 'import' ? 'block' : 'none';
-                document.getElementById('section-manual').style.display = mode === 'manual' ? 'block' : 'none';
+            const success = await performServerImport(
+                [{ name, email }],
+                year,
+                'הלקוח נוסף בהצלחה למערכת.'
+            );
 
-                const btnImport = document.getElementById('btn-mode-import');
-                const btnManual = document.getElementById('btn-mode-manual');
-
-                if (mode === 'import') {
-                    btnImport.className = 'btn btn-primary';
-                    btnImport.disabled = true;
-                    btnManual.className = 'btn btn-outline';
-                    btnManual.disabled = false;
-                } else {
-                    btnImport.className = 'btn btn-outline';
-                    btnImport.disabled = false;
-                    btnManual.className = 'btn btn-primary';
-                    btnManual.disabled = true;
-                }
+            if (success) {
+                document.getElementById('manualName').value = '';
+                document.getElementById('manualEmail').value = '';
+                loadDashboard();
             }
+        }
 
-            async function addManualClient() {
-                const name = document.getElementById('manualName').value.trim();
-                const email = document.getElementById('manualEmail').value.trim().toLowerCase();
-                const year = document.getElementById('manualYear').value;
+        // ==================== SEND QUESTIONNAIRES ====================
 
-                if (!name || !email) {
-                    showModal('warning', 'חסרים נתונים', 'נא להזין שם ואימייל');
-                    return;
-                }
-                if (!isValidEmail(email)) {
-                    showModal('warning', 'אימייל לא תקין', 'כתובת האימייל אינה תקינה');
-                    return;
-                }
-                // Optional: warning if already exists in dashboard list
-                if (existingEmails.has(email)) {
-                    if (!confirm('כתובת המייל הזו כבר קיימת ברשימת הלקוחות. האם להוסיף בכל זאת?')) return;
-                }
+        let pendingClients = [];
 
-                const success = await performServerImport(
-                    [{ name, email }],
-                    year,
-                    'הלקוח נוסף בהצלחה למערכת.'
-                );
+        async function loadPendingClients() {
+            showLoading('טוען לקוחות ממתינים...');
 
-                if (success) {
-                    document.getElementById('manualName').value = '';
-                    document.getElementById('manualEmail').value = '';
-                    loadDashboard();
-                }
+            try {
+                const year = document.getElementById('sendYearFilter').value;
+                const response = await fetch(`${API_BASE}/admin-pending?token=${authToken}&year=${year}`);
+                const data = await response.json();
+
+                hideLoading();
+
+                if (!data.ok) throw new Error(data.error);
+
+                pendingClients = data.clients || [];
+                renderPendingClients();
+
+            } catch (error) {
+                hideLoading();
+                showModal('error', 'שגיאה', 'לא ניתן לטעון את הרשימה');
             }
+        }
 
-            // ==================== SEND QUESTIONNAIRES ====================
+        function renderPendingClients() {
+            const container = document.getElementById('pendingClientsContainer');
 
-            let pendingClients = [];
-
-            async function loadPendingClients() {
-                showLoading('טוען לקוחות ממתינים...');
-
-                try {
-                    const year = document.getElementById('sendYearFilter').value;
-                    const response = await fetch(`${API_BASE}/admin-pending?token=${authToken}&year=${year}`);
-                    const data = await response.json();
-
-                    hideLoading();
-
-                    if (!data.ok) throw new Error(data.error);
-
-                    pendingClients = data.clients || [];
-                    renderPendingClients();
-
-                } catch (error) {
-                    hideLoading();
-                    showModal('error', 'שגיאה', 'לא ניתן לטעון את הרשימה');
-                }
-            }
-
-            function renderPendingClients() {
-                const container = document.getElementById('pendingClientsContainer');
-
-                if (pendingClients.length === 0) {
-                    container.innerHTML = `
+            if (pendingClients.length === 0) {
+                container.innerHTML = `
                     <div class="empty-state">
                         <div class="empty-state-icon"><i class="fa-solid fa-check-circle"></i></div>
                         <p>אין לקוחות ממתינים לשליחת שאלון</p>
                     </div>
                 `;
-                    document.getElementById('sendActions').style.display = 'none';
-                    return;
-                }
+                document.getElementById('sendActions').style.display = 'none';
+                return;
+            }
 
-                let html = `
+            let html = `
                 <table>
                     <thead>
                         <tr>
@@ -1633,158 +1633,158 @@
                     <tbody>
             `;
 
-                for (const client of pendingClients) {
-                    html += `
+            for (const client of pendingClients) {
+                html += `
                     <tr>
                         <td><input type="checkbox" class="client-checkbox" value="${client.report_id}" onchange="updateSelectedCount()"></td>
                         <td>${escapeHtml(client.name)}</td>
                         <td>${escapeHtml(client.email)}</td>
                     </tr>
                 `;
+            }
+
+            html += '</tbody></table>';
+            container.innerHTML = html;
+            document.getElementById('sendActions').style.display = 'block';
+            updateSelectedCount();
+        }
+
+        function toggleSelectAll() {
+            const selectAll = document.getElementById('selectAll').checked;
+            document.querySelectorAll('.client-checkbox').forEach(cb => cb.checked = selectAll);
+            updateSelectedCount();
+        }
+
+        function updateSelectedCount() {
+            const selected = document.querySelectorAll('.client-checkbox:checked').length;
+            document.getElementById('selectedCount').textContent = selected;
+        }
+
+        async function sendToSelected() {
+            const selected = Array.from(document.querySelectorAll('.client-checkbox:checked')).map(cb => cb.value);
+            if (selected.length === 0) {
+                showModal('warning', 'שגיאה', 'יש לבחור לפחות לקוח אחד');
+                return;
+            }
+            await sendQuestionnaires(selected);
+        }
+
+        async function sendToAll() {
+            const reportIds = pendingClients.map(c => c.report_id);
+            if (!confirm(`האם לשלוח שאלון ל-${reportIds.length} לקוחות?`)) return;
+            await sendQuestionnaires(reportIds);
+        }
+
+        async function sendSingle(reportId) {
+            await sendQuestionnaires([reportId]);
+        }
+
+        async function sendQuestionnaires(reportIds) {
+            showLoading(`שולח ${reportIds.length} שאלונים...`);
+
+            try {
+                const response = await fetch(`${API_BASE}/admin-send-questionnaires`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        token: authToken,
+                        report_ids: reportIds
+                    })
+                });
+
+                const data = await response.json();
+                hideLoading();
+
+                if (!data.ok) throw new Error(data.error);
+
+                showModal('success', 'נשלח בהצלחה!',
+                    `השאלונים נשלחו ללקוחות.`,
+                    { sent: data.sent }
+                );
+
+                loadDashboard();
+                loadPendingClients();
+
+            } catch (error) {
+                hideLoading();
+                showModal('error', 'שגיאה', 'לא ניתן לשלוח: ' + error.message);
+            }
+        }
+
+        // ==================== UTILITIES ====================
+
+        function viewClient(reportId) {
+            window.open(`https://liozshor.github.io/annual-reports-client-portal/view-documents.html?report_id=${reportId}`, '_blank');
+        }
+
+        function exportToExcel() {
+            if (!clientsData.length) return;
+
+            const exportData = clientsData.map(c => ({
+                'שם': c.name,
+                'אימייל': c.email,
+                'שנה': c.year,
+                'שלב': c.stage,
+                'מסמכים שהתקבלו': c.docs_received,
+                'סה"כ מסמכים': c.docs_total
+            }));
+
+            const ws = XLSX.utils.json_to_sheet(exportData);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'לקוחות');
+            XLSX.writeFile(wb, `clients_export_${new Date().toISOString().split('T')[0]}.xlsx`);
+        }
+
+        function showLoading(text) {
+            document.getElementById('loadingText').textContent = text || 'מעבד...';
+            document.getElementById('loadingOverlay').classList.add('visible');
+        }
+
+        function hideLoading() {
+            document.getElementById('loadingOverlay').classList.remove('visible');
+        }
+
+        function showModal(type, title, body, stats = null) {
+            const icons = { success: '<i class="fa-solid fa-check-circle"></i>', error: '<i class="fa-solid fa-circle-exclamation"></i>', warning: '<i class="fa-solid fa-triangle-exclamation"></i>' };
+            document.getElementById('modalIcon').innerHTML = icons[type] || '<i class="fa-solid fa-check-circle"></i>';
+            document.getElementById('modalTitle').textContent = title;
+            document.getElementById('modalBody').textContent = body;
+
+            if (stats) {
+                let statsHtml = '';
+                if (stats.created !== undefined) {
+                    statsHtml += `<div class="modal-stat"><div class="modal-stat-number">${stats.created}</div><div class="modal-stat-label">נוצרו</div></div>`;
                 }
-
-                html += '</tbody></table>';
-                container.innerHTML = html;
-                document.getElementById('sendActions').style.display = 'block';
-                updateSelectedCount();
-            }
-
-            function toggleSelectAll() {
-                const selectAll = document.getElementById('selectAll').checked;
-                document.querySelectorAll('.client-checkbox').forEach(cb => cb.checked = selectAll);
-                updateSelectedCount();
-            }
-
-            function updateSelectedCount() {
-                const selected = document.querySelectorAll('.client-checkbox:checked').length;
-                document.getElementById('selectedCount').textContent = selected;
-            }
-
-            async function sendToSelected() {
-                const selected = Array.from(document.querySelectorAll('.client-checkbox:checked')).map(cb => cb.value);
-                if (selected.length === 0) {
-                    showModal('warning', 'שגיאה', 'יש לבחור לפחות לקוח אחד');
-                    return;
+                if (stats.skipped !== undefined) {
+                    statsHtml += `<div class="modal-stat"><div class="modal-stat-number" style="color: #f59e0b">${stats.skipped}</div><div class="modal-stat-label">נדלגו</div></div>`;
                 }
-                await sendQuestionnaires(selected);
-            }
-
-            async function sendToAll() {
-                const reportIds = pendingClients.map(c => c.report_id);
-                if (!confirm(`האם לשלוח שאלון ל-${reportIds.length} לקוחות?`)) return;
-                await sendQuestionnaires(reportIds);
-            }
-
-            async function sendSingle(reportId) {
-                await sendQuestionnaires([reportId]);
-            }
-
-            async function sendQuestionnaires(reportIds) {
-                showLoading(`שולח ${reportIds.length} שאלונים...`);
-
-                try {
-                    const response = await fetch(`${API_BASE}/admin-send-questionnaires`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            token: authToken,
-                            report_ids: reportIds
-                        })
-                    });
-
-                    const data = await response.json();
-                    hideLoading();
-
-                    if (!data.ok) throw new Error(data.error);
-
-                    showModal('success', 'נשלח בהצלחה!',
-                        `השאלונים נשלחו ללקוחות.`,
-                        { sent: data.sent }
-                    );
-
-                    loadDashboard();
-                    loadPendingClients();
-
-                } catch (error) {
-                    hideLoading();
-                    showModal('error', 'שגיאה', 'לא ניתן לשלוח: ' + error.message);
+                if (stats.sent !== undefined) {
+                    statsHtml += `<div class="modal-stat"><div class="modal-stat-number">${stats.sent}</div><div class="modal-stat-label">נשלחו</div></div>`;
                 }
+                document.getElementById('modalStats').innerHTML = statsHtml;
+            } else {
+                document.getElementById('modalStats').innerHTML = '';
             }
 
-            // ==================== UTILITIES ====================
+            document.getElementById('resultModal').classList.add('visible');
+        }
 
-            function viewClient(reportId) {
-                window.open(`https://liozshor.github.io/annual-reports-client-portal/view-documents.html?report_id=${reportId}`, '_blank');
-            }
+        function closeModal() {
+            document.getElementById('resultModal').classList.remove('visible');
+        }
 
-            function exportToExcel() {
-                if (!clientsData.length) return;
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text || '';
+            return div.innerHTML;
+        }
 
-                const exportData = clientsData.map(c => ({
-                    'שם': c.name,
-                    'אימייל': c.email,
-                    'שנה': c.year,
-                    'שלב': c.stage,
-                    'מסמכים שהתקבלו': c.docs_received,
-                    'סה"כ מסמכים': c.docs_total
-                }));
+        function isValidEmail(email) {
+            return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+        }
 
-                const ws = XLSX.utils.json_to_sheet(exportData);
-                const wb = XLSX.utils.book_new();
-                XLSX.utils.book_append_sheet(wb, ws, 'לקוחות');
-                XLSX.writeFile(wb, `clients_export_${new Date().toISOString().split('T')[0]}.xlsx`);
-            }
-
-            function showLoading(text) {
-                document.getElementById('loadingText').textContent = text || 'מעבד...';
-                document.getElementById('loadingOverlay').classList.add('visible');
-            }
-
-            function hideLoading() {
-                document.getElementById('loadingOverlay').classList.remove('visible');
-            }
-
-            function showModal(type, title, body, stats = null) {
-                const icons = { success: '<i class="fa-solid fa-check-circle"></i>', error: '<i class="fa-solid fa-circle-exclamation"></i>', warning: '<i class="fa-solid fa-triangle-exclamation"></i>' };
-                document.getElementById('modalIcon').innerHTML = icons[type] || '<i class="fa-solid fa-check-circle"></i>';
-                document.getElementById('modalTitle').textContent = title;
-                document.getElementById('modalBody').textContent = body;
-
-                if (stats) {
-                    let statsHtml = '';
-                    if (stats.created !== undefined) {
-                        statsHtml += `<div class="modal-stat"><div class="modal-stat-number">${stats.created}</div><div class="modal-stat-label">נוצרו</div></div>`;
-                    }
-                    if (stats.skipped !== undefined) {
-                        statsHtml += `<div class="modal-stat"><div class="modal-stat-number" style="color: #f59e0b">${stats.skipped}</div><div class="modal-stat-label">נדלגו</div></div>`;
-                    }
-                    if (stats.sent !== undefined) {
-                        statsHtml += `<div class="modal-stat"><div class="modal-stat-number">${stats.sent}</div><div class="modal-stat-label">נשלחו</div></div>`;
-                    }
-                    document.getElementById('modalStats').innerHTML = statsHtml;
-                } else {
-                    document.getElementById('modalStats').innerHTML = '';
-                }
-
-                document.getElementById('resultModal').classList.add('visible');
-            }
-
-            function closeModal() {
-                document.getElementById('resultModal').classList.remove('visible');
-            }
-
-            function escapeHtml(text) {
-                const div = document.createElement('div');
-                div.textContent = text || '';
-                return div.innerHTML;
-            }
-
-            function isValidEmail(email) {
-                return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-            }
-
-            // Initialize
-            checkAuth();
+        // Initialize
+        checkAuth();
     </script>
 </body>
 
