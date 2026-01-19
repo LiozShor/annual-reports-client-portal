@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Annual Tax Report Questionnaire</title>
+  <style>
+    :root {
+      --primary: #4F46E5; /* Indigo */
+      --primary-hover: #4338ca;
+      --bg-gradient: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
+      --surface: #ffffff;
+      --text-main: #1f2937;
+      --text-muted: #6b7280;
+      --danger: #ef4444;
+      --success: #10b981;
+      --radius: 16px;
+      --shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      background: var(--bg-gradient);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      color: var(--text-main);
+    }
+
+    .container {
+      background: var(--surface);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      max-width: 550px;
+      width: 100%;
+      overflow: hidden;
+      position: relative;
+      animation: fadeIn 0.5s ease-out;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Header styling */
+    .header {
+      background: #fff;
+      padding: 40px 30px 20px;
+      text-align: center;
+      border-bottom: 1px solid #f0f0f0;
+    }
+
+    .header-icon {
+      font-size: 40px;
+      margin-bottom: 15px;
+      display: block;
+    }
+
+    .header h1 {
+      font-size: 22px;
+      font-weight: 700;
+      margin-bottom: 8px;
+      color: var(--text-main);
+    }
+
+    .header p {
+      font-size: 14px;
+      color: var(--text-muted);
+      font-weight: 500;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+    }
+
+    .content {
+      padding: 30px;
+    }
+
+    /* Loading Spinner */
+    .loading {
+      text-align: center;
+      padding: 40px 20px;
+      color: var(--text-muted);
+    }
+    .spinner {
+      border: 3px solid #e5e7eb;
+      border-top: 3px solid var(--primary);
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      animation: spin 0.8s linear infinite;
+      margin: 0 auto 20px;
+    }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+    /* Alert / Warning Sections */
+    .alert-box {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+    .alert-icon {
+      font-size: 48px;
+      margin-bottom: 15px;
+    }
+    .alert-title {
+      font-size: 18px;
+      font-weight: 600;
+      margin-bottom: 10px;
+    }
+    .alert-text {
+      font-size: 15px;
+      line-height: 1.6;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+    }
+
+    .doc-badge {
+      display: inline-flex;
+      align-items: center;
+      background: #e0e7ff;
+      color: var(--primary);
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-size: 14px;
+      font-weight: 600;
+      margin: 15px 0;
+    }
+
+    /* Buttons & Actions */
+    .actions {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      padding: 16px;
+      border: none;
+      border-radius: 12px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      text-align: center;
+      line-height: 1.2;
+    }
+
+    .btn:active { transform: scale(0.98); }
+
+    .btn-primary {
+      background: var(--primary);
+      color: white;
+      box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
+    }
+    .btn-primary:hover { background: var(--primary-hover); }
+
+    .btn-outline-danger {
+      background: white;
+      border: 2px solid #fee2e2;
+      color: var(--danger);
+    }
+    .btn-outline-danger:hover {
+      background: #fef2f2;
+      border-color: var(--danger);
+    }
+
+    .btn-ghost {
+      background: transparent;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+    .btn-ghost:hover {
+      color: var(--text-main);
+      background: #f3f4f6;
+    }
+
+    /* Language Selection Cards */
+    .lang-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 15px;
+      margin-top: 20px;
+    }
+    .lang-card {
+      background: white;
+      border: 2px solid #e5e7eb;
+      border-radius: 12px;
+      padding: 20px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .lang-card:hover {
+      border-color: var(--primary);
+      background: #f5f3ff;
+      transform: translateY(-2px);
+    }
+    .lang-flag { font-size: 32px; display: block; margin-bottom: 10px; }
+    .lang-name { font-weight: 700; color: var(--text-main); }
+
+    /* Utility */
+    .bilingual { direction: rtl; }
+    .bilingual .en {
+      display: block;
+      direction: ltr;
+      font-size: 0.85em;
+      opacity: 0.8;
+      font-weight: 400;
+      margin-top: 4px;
+    }
+    .text-sm { font-size: 13px; }
+
+    /* Error State */
+    .error-state {
+      background: #fef2f2;
+      color: #991b1b;
+      padding: 20px;
+      border-radius: 12px;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <div class="header">
+      <span class="header-icon">📑</span>
+      <h1 id="headerTitle"></h1>
+      <p>Annual Tax Report Questionnaire</p>
+    </div>
+
+    <div class="content" id="content">
+      <div class="loading">
+        <div class="spinner"></div>
+        <p id="loadingText"></p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // --- Config & Params ---
+    const params = new URLSearchParams(window.location.search);
+    const reportId = params.get('report_id');
+    const clientId = params.get('client_id');
+    const year = params.get('year');
+    const token = params.get('token');
+    const fullName = params.get('full_name');
+    const email = params.get('email');
+
+    const FORM_HE = '1AkYKb';
+    const FORM_EN = '1AkopM';
+    const CHECK_ENDPOINT = 'https://liozshor.app.n8n.cloud/webhook/check-existing-submission';
+    const RESET_ENDPOINT = 'https://liozshor.app.n8n.cloud/webhook/reset-submission';
+
+    // --- Localization ---
+    // Base64 stored to avoid encoding issues in some editors
+    const HE_B64 = {
+      header_title: "8J+TiyDXqdeQ15zXldefINeT15XXlyDXqdeg16rXmQ==",
+      loading_check: "15HXldeT16cg16DXqteV16DXmdedINen15nXmdee15nXnS4uLg==",
+
+      // ✅ Updated alert copy (no "override" language)
+      warning_title: "157XpteQ16DXlSDXoNeq15XXoNeZ150g16fXmdeZ157XmdedINec15PXldeXINeU15bXlA==",
+      warn_existing_flow: "16DXqNeQ15Qg16nXm9eR16gg157Xmdec15DXqiDXkNeqINeU16nXkNec15XXnyDXkdei15HXqCDXoteR15XXqCDXlNeT15XXlyDXlNeW15Qu",
+      warn_docs_present: "15nXqSDXnteh157Xm9eZ150g16fXmdeZ157XmdedINec15PXldeXINeU15bXlC4=",
+      warn_doc_count_label: "157Xodee15vXmdedINen15nXmdee15nXnQ==",
+      warn_options: "15DXpNep16gg15zXlNee16nXmdeaINeV15zXlNep15zXmdedINeQ16og15TXqdeQ15zXldefINei150g15TXoNeq15XXoNeZ150g15TXp9eZ15nXnteZ150sINeQ15Ug15zXnteX15XXpyDXlNeb15wg15XXnNeU16rXl9eZ15wg16nXkNec15XXnyDXl9eT16kg157XlNeU16rXl9ec15Qu",
+
+      btn_continue: "15TXntep15ogKNec16nXnteV16gg16DXqteV16DXmdedKQ==",
+      btn_reset: "157Xl9enINeV15TXqteX15wg157Xl9eT16k=",
+      btn_cancel: "15HXmdeY15XXnA==",
+
+      ready_title: "4pyFINee15XXm9efINec15TXqteX15nXnA==",
+      choose_language: "15HXl9eoINeQ16og15TXqdek15Qg15TXnteV16LXk9ek16og16LXnNeZ15o6",
+      reset_loading: "157XkNek16Eg16DXqteV16DXmdedLi4u",
+      reset_done: "4pyFINeU16DXqteV16DXmdedINeQ15XXpNeh15U=",
+      cancel_title: "4oS577iPINek16LXldec15Qg15HXldeY15zXlA==",
+      cancel_msg: "15DXnSDXkdeo16bXldeg15og15zXoteT15vXnyDXkNeqINeU157Xodee15vXmdedINeU16fXmdeZ157XmdedLCDXkNeg15Ag16bXldeoINen16nXqCDXotedINeU157Xqdeo15M6",
+      err_loading: "16nXkteZ15DXlCDXkdeY16LXmdeg16og15TXoNeq15XXoNeZ150=",
+      err_reset: "16nXkteZ15DXlCDXkdeQ15nXpNeV16Eg15TXoNeq15XXoNeZ150=",
+      err_missing_params: "16TXqNee15jXqNeZ150g15fXodeo15nXnSDXkden15nXqdeV16g="
+    };
+
+    function b64ToUtf8(b64) {
+      try {
+        const binary = atob(b64);
+        const bytes = Uint8Array.from(binary, c => c.charCodeAt(0));
+        return new TextDecoder('utf-8').decode(bytes);
+      } catch (e) { return ''; }
+    }
+    function t(key) { return b64ToUtf8(HE_B64[key] || ''); }
+
+    // --- Logic ---
+
+    // Stage rank (logic only, not displayed)
+    const STAGE_ORDER = {
+      '1-Send_Questionnaire': 1, '2-Waiting_For_Answers': 2,
+      '3-Collecting_Docs': 3, '4-Review': 4, '5-Completed': 5
+    };
+    function stageRank(s) { return STAGE_ORDER[s] || 0; }
+
+    async function checkExistingSubmission() {
+      try {
+        const url = `${CHECK_ENDPOINT}?report_id=${encodeURIComponent(reportId)}`;
+        const response = await fetch(url, { cache: 'no-store' });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+        const data = await response.json();
+        if (data && data.ok === false) {
+          showError('Invalid link or report not found. Please contact the office.');
+          return;
+        }  
+
+        const stage = data.stage || '1-Send_Questionnaire';
+        const docCount = Number(data.document_count || 0);
+        const hasDocs = docCount > 0;
+        const rank = stageRank(stage);
+
+        // ✅ FIXED: warn only if questionnaire was actually submitted before (stage >= 3) OR documents exist
+        // Prefer server flag if provided
+        const treatAsExisting = (typeof data.has_submission === 'boolean')
+          ? data.has_submission
+          : ((rank >= 3) || hasDocs);
+
+        if (!treatAsExisting) {
+          showLanguageSelection();
+        } else {
+          showExistingProcessOptions({ docCount, hasDocs });
+        }
+      } catch (error) {
+        showError(`${t('err_loading')}`);
+      }
+    }
+
+    function showExistingProcessOptions({ docCount, hasDocs }) {
+      const content = document.getElementById('content');
+
+      content.innerHTML = `
+        <div class="alert-box bilingual">
+          <div class="alert-icon">✋</div>
+          <div class="alert-title">${t('warning_title')}</div>
+          <div class="en text-sm">Existing data found for this report</div>
+
+          <p class="alert-text" style="margin-top:15px">
+            ${t('warn_existing_flow')}
+          </p>
+
+          ${hasDocs ? `
+            <div class="doc-badge">
+              📎 ${docCount} ${t('warn_doc_count_label')}
+            </div>
+            <p class="alert-text text-sm">
+              ${t('warn_docs_present')}
+            </p>
+          ` : ''}
+
+          <p class="alert-text text-sm" style="margin-top: 10px;">
+            ${t('warn_options')}
+          </p>
+          <div class="en text-sm text-muted">Continue to keep existing data, or Delete and start a new questionnaire.</div>
+        </div>
+
+        <div class="actions">
+          <button class="btn btn-primary" onclick="continueWithoutReset()">
+            <div class="bilingual">
+              <span>${t('btn_continue')}</span>
+              <span class="en text-sm" style="color:rgba(255,255,255,0.8)">Continue (Keep Data)</span>
+            </div>
+          </button>
+
+          <button class="btn btn-outline-danger" onclick="resetAndContinue()">
+            <div class="bilingual">
+              <span>${t('btn_reset')}</span>
+              <span class="en text-sm">Delete & Start New</span>
+            </div>
+          </button>
+
+          <button class="btn btn-ghost" onclick="cancel()">
+            <span>${t('btn_cancel')}</span>
+          </button>
+        </div>
+      `;
+    }
+
+    function showLanguageSelection() {
+      const content = document.getElementById('content');
+      content.innerHTML = `
+        <div class="alert-box bilingual">
+          <div class="alert-title" style="font-size: 22px;">${t('ready_title')}</div>
+          <p class="alert-text">${t('choose_language')}</p>
+        </div>
+
+        <div class="lang-grid">
+          <div class="lang-card" onclick="goToForm('he')">
+            <span class="lang-flag">🇮🇱</span>
+            <span class="lang-name">עברית</span>
+          </div>
+          <div class="lang-card" onclick="goToForm('en')">
+            <span class="lang-flag">🇬🇧</span>
+            <span class="lang-name">English</span>
+          </div>
+        </div>
+      `;
+    }
+
+    function continueWithoutReset() {
+      showLanguageSelection();
+    }
+
+    async function resetAndContinue() {
+      const content = document.getElementById('content');
+      content.innerHTML = `
+        <div class="loading">
+          <div class="spinner"></div>
+          <p>${t('reset_loading')}</p>
+        </div>
+      `;
+
+      try {
+        const url = `${RESET_ENDPOINT}?report_id=${encodeURIComponent(reportId)}`;
+        const res = await fetch(url, { cache: 'no-store' });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+        content.innerHTML = `
+          <div class="alert-box bilingual">
+            <div class="alert-icon">✅</div>
+            <div class="alert-title" style="color:var(--success)">${t('reset_done')}</div>
+            <p class="alert-text">${t('choose_language')}</p>
+          </div>
+
+          <div class="lang-grid">
+            <div class="lang-card" onclick="goToForm('he')">
+              <span class="lang-flag">🇮🇱</span>
+              <span class="lang-name">עברית</span>
+            </div>
+            <div class="lang-card" onclick="goToForm('en')">
+              <span class="lang-flag">🇬🇧</span>
+              <span class="lang-name">English</span>
+            </div>
+          </div>
+        `;
+      } catch (error) {
+        showError(`${t('err_reset')}`);
+      }
+    }
+
+    function cancel() {
+      const content = document.getElementById('content');
+      content.innerHTML = `
+        <div class="alert-box bilingual">
+          <div class="alert-icon">🛑</div>
+          <div class="alert-title">${t('cancel_title')}</div>
+          <p class="alert-text">${t('cancel_msg')}</p>
+          <div class="en text-sm" style="margin-top:5px">If you wish to update documents manually, please contact us.</div>
+
+          <div style="margin-top: 25px; background: #f9fafb; padding: 15px; border-radius: 8px; font-family: monospace;">
+             reports@moshe-atsits.co.il
+          </div>
+        </div>
+      `;
+    }
+
+    function goToForm(lang) {
+      const formId = lang === 'he' ? FORM_HE : FORM_EN;
+      const qs = new URLSearchParams({
+        report_record_id: reportId,
+        client_id: clientId,
+        year: year,
+        questionnaire_token: token,
+        full_name: fullName || '',
+        email: email || ''
+      }).toString();
+      window.location.href = `https://tally.so/r/${formId}?${qs}`;
+    }
+
+    function showError(msg) {
+      const content = document.getElementById('content');
+      content.innerHTML = `
+        <div class="error-state bilingual">
+          <div style="font-size:30px; margin-bottom:10px">⚠️</div>
+          <h3>Error</h3>
+          <p>${msg}</p>
+        </div>
+      `;
+    }
+
+    function init() {
+      document.getElementById('headerTitle').textContent = t('header_title') || 'Tax Questionnaire';
+      document.getElementById('loadingText').innerHTML = t('loading_check');
+
+      if (!reportId || !clientId || !year || !token) {
+        showError(t('err_missing_params'));
+      } else {
+        checkExistingSubmission();
+      }
+    }
+
+    init();
+  </script>
+</body>
+</html>
