@@ -866,8 +866,7 @@
                                 <div class="option-row">
                                     <label>📅 שנת דוח:</label>
                                     <select id="importYear">
-                                        <option value="2024" selected>2024</option>
-                                        <option value="2025">2025</option>
+                                        <option value="2025" selected>2025</option>
                                     </select>
                                 </div>
                             </div>
@@ -910,8 +909,7 @@
                             <div class="filter-group">
                                 <label>📅 שנה:</label>
                                 <select id="sendYearFilter">
-                                    <option value="2024" selected>2024</option>
-                                    <option value="2023">2023</option>
+                                    <option value="2025" selected>2025</option>
                                 </select>
                             </div>
                             <button class="btn btn-primary" onclick="loadPendingClients()">
@@ -1052,7 +1050,7 @@
             showLoading('טוען נתונים...');
 
             try {
-                const year = document.getElementById('yearFilter')?.value || '2024';
+                const year = document.getElementById('yearFilter')?.value || '2025';
                 const response = await fetch(`${API_BASE}/admin-dashboard?token=${authToken}&year=${year}`);
                 const data = await response.json();
 
