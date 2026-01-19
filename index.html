@@ -411,8 +411,9 @@
     }
 
     function continueWithoutReset() {
-      showLanguageSelection();
-    }
+  // Redirect to view documents page
+  window.location.href = `view-documents.html?report_id=${reportId}`;
+}
 
     async function resetAndContinue() {
       const content = document.getElementById('content');
