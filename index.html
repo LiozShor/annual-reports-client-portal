@@ -218,6 +218,18 @@
     }
     .text-sm { font-size: 13px; }
 
+    /* Dev badge */
+    .dev-badge {
+      display: inline-block;
+      background: #fef3c7;
+      color: #92400e;
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 4px;
+      margin-top: 4px;
+      font-weight: 500;
+    }
+
     /* Error State */
     .error-state {
       background: #fef2f2;
@@ -266,23 +278,21 @@
       header_title: "8J+TiyDXqdeQ15zXldefINeT15XXlyDXqdeg16rXmQ==",
       loading_check: "15HXldeT16cg16DXqteV16DXmdedINen15nXmdee15nXnS4uLg==",
 
-      // ✅ Updated alert copy (no "override" language)
+      // Alert messages
       warning_title: "157XpteQ16DXlSDXoNeq15XXoNeZ150g16fXmdeZ157XmdedINec15PXldeXINeU15bXlA==",
       warn_existing_flow: "16DXqNeQ15Qg16nXm9eR16gg157Xmdec15DXqiDXkNeqINeU16nXkNec15XXnyDXkdei15HXqCDXoteR15XXqCDXlNeT15XXlyDXlNeW15Qu",
       warn_docs_present: "15nXqSDXnteh157Xm9eZ150g16fXmdeZ157XmdedINec15PXldeXINeU15bXlC4=",
       warn_doc_count_label: "157Xodee15vXmdedINen15nXmdee15nXnQ==",
-      warn_options: "15DXpNep16gg15zXlNee16nXmdeaINeV15zXlNep15zXmdedINeQ16og15TXqdeQ15zXldefINei150g15TXoNeq15XXoNeZ150g15TXp9eZ15nXnteZ150sINeQ15Ug15zXnteX15XXpyDXlNeb15wg15XXnNeU16rXl9eZ15wg16nXkNec15XXnyDXl9eT16kg157XlNeU16rXl9ec15Qu",
 
-      btn_continue: "15TXntep15ogKNec16nXnteV16gg16DXqteV16DXmdedKQ==",
-      btn_reset: "157Xl9enINeV15TXqteX15wg157Xl9eT16k=",
-      btn_cancel: "15HXmdeY15XXnA==",
+      // Buttons - UPDATED
+      btn_view_docs: "16bXpNeUINeR157Xodee15vXmdedINeU16DXk9eo16nXmded",
+      btn_reset: "157Xl9enINeV15TXqteX15wg157XlNeU16rXl9ec15Q=",
+      btn_reset_dev_note: "KNeW157XoNeZIC0g15zXpNeZ16rXldeXINeR15zXkdeTKQ==",
 
       ready_title: "4pyFINee15XXm9efINec15TXqteX15nXnA==",
       choose_language: "15HXl9eoINeQ16og15TXqdek15Qg15TXnteV16LXk9ek16og16LXnNeZ15o6",
       reset_loading: "157XkNek16Eg16DXqteV16DXmdedLi4u",
       reset_done: "4pyFINeU16DXqteV16DXmdedINeQ15XXpNeh15U=",
-      cancel_title: "4oS577iPINek16LXldec15Qg15HXldeY15zXlA==",
-      cancel_msg: "15DXnSDXkdeo16bXldeg15og15zXoteT15vXnyDXkNeqINeU157Xodee15vXmdedINeU16fXmdeZ157XmdedLCDXkNeg15Ag16bXldeoINen16nXqCDXotedINeU157Xqdeo15M6",
       err_loading: "16nXkteZ15DXlCDXkdeY16LXmdeg16og15TXoNeq15XXoNeZ150=",
       err_reset: "16nXkteZ15DXlCDXkdeQ15nXpNeV16Eg15TXoNeq15XXoNeZ150=",
       err_missing_params: "16TXqNee15jXqNeZ150g15fXodeo15nXnSDXkden15nXqdeV16g="
@@ -323,8 +333,7 @@
         const hasDocs = docCount > 0;
         const rank = stageRank(stage);
 
-        // ✅ FIXED: warn only if questionnaire was actually submitted before (stage >= 3) OR documents exist
-        // Prefer server flag if provided
+        // Warn only if questionnaire was actually submitted before (stage >= 3) OR documents exist
         const treatAsExisting = (typeof data.has_submission === 'boolean')
           ? data.has_submission
           : ((rank >= 3) || hasDocs);
@@ -360,30 +369,23 @@
               ${t('warn_docs_present')}
             </p>
           ` : ''}
-
-          <p class="alert-text text-sm" style="margin-top: 10px;">
-            ${t('warn_options')}
-          </p>
-          <div class="en text-sm text-muted">Continue to keep existing data, or Delete and start a new questionnaire.</div>
         </div>
 
         <div class="actions">
-          <button class="btn btn-primary" onclick="continueWithoutReset()">
+          <button class="btn btn-primary" onclick="viewDocuments()">
             <div class="bilingual">
-              <span>${t('btn_continue')}</span>
-              <span class="en text-sm" style="color:rgba(255,255,255,0.8)">Continue (Keep Data)</span>
+              <span>📄 ${t('btn_view_docs')}</span>
+              <span class="en text-sm" style="color:rgba(255,255,255,0.8)">View Required Documents</span>
             </div>
           </button>
 
           <button class="btn btn-outline-danger" onclick="resetAndContinue()">
             <div class="bilingual">
               <span>${t('btn_reset')}</span>
-              <span class="en text-sm">Delete & Start New</span>
+              <span class="dev-badge">${t('btn_reset_dev_note')}</span>
+              <span class="en text-sm">Delete & Start Over</span>
+              <span class="en dev-badge">temporary - dev only</span>
             </div>
-          </button>
-
-          <button class="btn btn-ghost" onclick="cancel()">
-            <span>${t('btn_cancel')}</span>
           </button>
         </div>
       `;
@@ -410,10 +412,10 @@
       `;
     }
 
-    function continueWithoutReset() {
-  // Redirect to view documents page
-  window.location.href = `view-documents.html?report_id=${reportId}`;
-}
+    function viewDocuments() {
+      // Redirect to view documents page
+      window.location.href = `view-documents.html?report_id=${reportId}`;
+    }
 
     async function resetAndContinue() {
       const content = document.getElementById('content');
@@ -450,22 +452,6 @@
       } catch (error) {
         showError(`${t('err_reset')}`);
       }
-    }
-
-    function cancel() {
-      const content = document.getElementById('content');
-      content.innerHTML = `
-        <div class="alert-box bilingual">
-          <div class="alert-icon">🛑</div>
-          <div class="alert-title">${t('cancel_title')}</div>
-          <p class="alert-text">${t('cancel_msg')}</p>
-          <div class="en text-sm" style="margin-top:5px">If you wish to update documents manually, please contact us.</div>
-
-          <div style="margin-top: 25px; background: #f9fafb; padding: 15px; border-radius: 8px; font-family: monospace;">
-             reports@moshe-atsits.co.il
-          </div>
-        </div>
-      `;
     }
 
     function goToForm(lang) {
