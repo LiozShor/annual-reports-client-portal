@@ -55,7 +55,7 @@ export const DOCUMENT_TYPES = {
       { key: "institution", type: "text", label_he: "בנק / בית השקעות", label_en: "Bank / Broker",
         placeholder_he: "לדוגמה: לאומי / מיטב", placeholder_en: "e.g.: Leumi / Meitav" }
     ],
-    // Change #1: Deduplication by same form + same institution
+    // Deduplication by same form + same institution
     deduplication_key: ["id", "institution"],
   },
 
@@ -64,7 +64,6 @@ export const DOCUMENT_TYPES = {
     id: "crypto_report",
     category: "crypto",
     aliases: ["Crypto_Report"],
-    // Change #15
     name_he: 'דוח על הרווחים / הפסדים והמס שנוכה (במידה ונוכה) לשנת {year} מ{platform}',
     name_en: "Report of gains/losses and tax withheld (if any) for {year} from {platform}",
     details: [
@@ -78,7 +77,6 @@ export const DOCUMENT_TYPES = {
     id: "residency_cert",
     category: "identity",
     aliases: ["Residency_Cert"],
-    // Change #8 (already cleaned)
     name_he: "אישור תושבות לשנת המס מהרשות המקומית",
     name_en: "Municipality residency certificate for the tax year",
   },
@@ -95,7 +93,6 @@ export const DOCUMENT_TYPES = {
     id: "army_release_cert",
     category: "identity",
     aliases: ["Army_Release_Cert"],
-    // Change #12
     name_he: 'אישור שחרור משירות סדיר (ניתן להוציא את האישור מאתר "אישורים")',
     name_en: 'Regular service discharge certificate (can be issued via the "Certificates" site)',
   },
@@ -105,7 +102,6 @@ export const DOCUMENT_TYPES = {
     id: "child_id_appendix",
     category: "family",
     aliases: ["Child_ID_Appendix"],
-    // Change #13
     name_he: "ספח תז בו מופיע הילד/ה שהצטרפו למשפחה",
     name_en: "ID appendix showing the child added to the family",
   },
@@ -122,7 +118,6 @@ export const DOCUMENT_TYPES = {
     id: "child_disability_approval",
     category: "family",
     aliases: ["Child_Disability_Approval"],
-    // Change #10
     name_he: "אישור שנתי לשנת {year} על תקבולי קצבת נכות מביטוח לאומי עבור הילד/ה",
     name_en: "Annual certificate for {year} of child disability allowance from NII",
   },
@@ -140,7 +135,6 @@ export const DOCUMENT_TYPES = {
     id: "nii_disability_allowance_cert",
     category: "benefits",
     aliases: ["NII_Allowance_Cert"],
-    // Change #7
     name_he: "אישור שנתי לשנת {year} על תקבולי דמי נכות שהתקבלו מביטוח לאומי - {name}",
     name_en: "Annual certificate for {year} of disability payments from NII - {name}",
     details: [
@@ -164,7 +158,6 @@ export const DOCUMENT_TYPES = {
   nii_maternity_allowance_cert: {
     id: "nii_maternity_allowance_cert",
     category: "benefits",
-    // Change #4 (new type)
     name_he: "אישור שנתי לשנת {year} על תקבולי דמי לידה מביטוח לאומי עבור - {name}",
     name_en: "Annual certificate for {year} of maternity payments from NII for - {name}",
     details: [
@@ -178,7 +171,6 @@ export const DOCUMENT_TYPES = {
     id: "insurance_tax_cert",
     category: "insurance",
     aliases: ["Insurance_Tax_Cert"],
-    // Change #3 + #6 (bold via markdown)
     name_he: 'אישור שנתי למס הכנסה לשנת {year} (נקרא גם **דוח שנתי מקוצר**) על ההפקדות ל{product} ב"{company}"',
     name_en: 'Annual tax certificate for {year} (also called a shortened annual report) for contributions to {product} at "{company}"',
     details: [
@@ -194,7 +186,6 @@ export const DOCUMENT_TYPES = {
     id: "pension_withdrawal",
     category: "insurance",
     aliases: ["Pension_Withdrawal"],
-    // Change #2 + #5 (supports specific withdrawal types)
     name_he: 'אישור על משיכת {withdrawal_type} לשנת {year} והמס שנוכה בעת המשיכה',
     name_en: "Certificate of {withdrawal_type} withdrawal for {year} and tax withheld at withdrawal",
     details: [
@@ -238,7 +229,6 @@ export const DOCUMENT_TYPES = {
     id: "degree_cert",
     category: "education",
     aliases: ["Degree_Cert"],
-    // Change #9
     name_he: "אישור זכאות לתואר אקדמי מ{institution}",
     name_en: "Academic degree eligibility certificate from {institution}",
     details: [
@@ -252,7 +242,6 @@ export const DOCUMENT_TYPES = {
     id: "donation_receipts",
     category: "other",
     aliases: ["Donation_Receipts"],
-    // Change #14
     name_he: "קבלות תרומות מרוכזות (יש לשלוח קבלות רק ממוסדות שלהם יש סעיף 46. ניתן לראות זאת בקבלה)",
     name_en: "Consolidated donation receipts (only from institutions with Section 46; appears on the receipt)",
   },
@@ -261,7 +250,6 @@ export const DOCUMENT_TYPES = {
     id: "memorial_receipts",
     category: "other",
     aliases: ["Memorial_Receipts"],
-    // Change #11 (bold)
     name_he: "קבלות ומסמכים **רלוונטיים** על הוצאות הנצחה",
     name_en: "Relevant receipts and documents for memorial expenses",
   },
