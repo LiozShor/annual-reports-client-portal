@@ -1,0 +1,421 @@
+{
+  "name": "[Admin] Send Questionnaires",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "admin-send-questionnaires",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "007de1a4-a2d3-482d-bcf6-974cfb4a4be9",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -656,
+        112
+      ],
+      "webhookId": "admin-send-questionnaires-webhook"
+    },
+    {
+      "parameters": {
+        "jsCode": "// ============================================\n// TOKEN VERIFICATION & INPUT VALIDATION\n// ============================================\nconst SECRET_KEY = 'QKiwUBXVH@%#1gD7t@rB]<,dM.[NC5b_'; // ← MUST MATCH AUTH!\n\nconst crypto = require('crypto');\nconst body = $input.first().json.body || {};\nconst token = body.token || '';\nconst reportIds = body.report_ids || [];\n\nfunction verifyToken(token) {\n  try {\n    if (!token || !token.includes('.')) return false;\n    const [dataB64, signature] = token.split('.');\n    const data = Buffer.from(dataB64, 'base64').toString();\n    const expectedSig = crypto.createHmac('sha256', SECRET_KEY).update(data).digest('hex');\n    if (signature !== expectedSig) return false;\n    const payload = JSON.parse(data);\n    if (payload.exp < Date.now()) return false;\n    return true;\n  } catch (e) {\n    return false;\n  }\n}\n\nif (!verifyToken(token)) {\n  return {\n    json: {\n      ok: false,\n      error: 'unauthorized',\n      shouldContinue: false\n    }\n  };\n}\n\nif (!reportIds || reportIds.length === 0) {\n  return {\n    json: {\n      ok: false,\n      error: 'No report_ids provided',\n      shouldContinue: false\n    }\n  };\n}\n\n// Output each report_id as separate item\nconst items = reportIds.map(id => ({\n  json: {\n    report_id: id,\n    shouldContinue: true\n  }\n}));\n\nreturn items;"
+      },
+      "id": "3b8c53f9-747c-4068-8d05-aa062baaa3e0",
+      "name": "Verify & Split",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -448,
+        112
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "check-continue",
+              "leftValue": "={{ $json.shouldContinue }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "3cd114d0-3304-482c-b7c9-d8de459d8968",
+      "name": "If Valid",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        -224,
+        112
+      ]
+    },
+    {
+      "parameters": {
+        "base": {
+          "__rl": true,
+          "value": "appqBL5RWQN9cPOyh",
+          "mode": "id"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tbls7m3hmHC4hhQVy",
+          "mode": "id"
+        },
+        "id": "={{ $json.report_id }}",
+        "options": {}
+      },
+      "id": "01884140-7ef2-4716-8173-6e76589ff920",
+      "name": "Get Report",
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        0
+      ],
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "ODW07LgvsPQySQxh",
+          "name": "Airtable Personal Access Token account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "base": {
+          "__rl": true,
+          "mode": "id",
+          "value": "appqBL5RWQN9cPOyh"
+        },
+        "table": {
+          "__rl": true,
+          "mode": "id",
+          "value": "tblFFttFScDRZ7Ah5"
+        },
+        "id": "={{ $json.client[0] }}",
+        "options": {}
+      },
+      "id": "18326e45-0a1d-4f95-8d85-d75046fb2035",
+      "name": "Get Client",
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        224,
+        0
+      ],
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "ODW07LgvsPQySQxh",
+          "name": "Airtable Personal Access Token account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Build email data\nconst report = $('Get Report').item.json;\nconst client = $input.first().json;\n\nconst reportId = report.id;\nconst clientId = client.client_id || client.id;\nconst clientName = client.name || 'לקוח';\nconst clientEmail = client.email || '';\nconst year = report.year;\nconst token = report.questionnaire_token;\n\n// Build landing page URL\nconst landingPageUrl = `https://liozshor.github.io/annual-reports-client-portal/?report_id=${reportId}&client_id=${clientId}&year=${year}&token=${token}&full_name=${encodeURIComponent(clientName)}&email=${encodeURIComponent(clientEmail)}`;\n\nreturn {\n  json: {\n    report_id: reportId,\n    client_id: clientId,\n    name: clientName,\n    email: clientEmail,\n    year: year,\n    landing_page_link: landingPageUrl\n  }\n};"
+      },
+      "id": "c773bfd8-8e03-481b-b1c1-1824f9acf92f",
+      "name": "Build Email Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        448,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://graph.microsoft.com/v1.0/me/sendMail",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "oAuth2Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"message\": {\n    \"subject\": \"שאלון דוח שנתי {{ $json.year }} | {{ $json.name }}\",\n    \"body\": {\n      \"contentType\": \"HTML\",\n      \"content\": \"<div dir='rtl' style='font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden; color: #333;'> <div style='background-color: #f8f9fa; padding: 20px; text-align: center; border-bottom: 2px solid #0056b3;'> <h2 style='color: #0056b3; margin: 0;'>שאלון דוח שנתי {{ $json.year }}</h2> </div> <div style='padding: 30px; line-height: 1.6;'> <p style='font-size: 16px;'>שלום <strong>{{ $json.name }}</strong>,</p> <p style='font-size: 15px;'>לצורך הכנת הדוח השנתי לשנת <strong>{{ $json.year }}</strong>, נבקשך למלא את השאלון:</p> <div style='text-align: center; margin: 25px 0;'> <a href='{{ $json.landing_page_link }}' style='background-color: #0056b3; color: white; padding: 14px 30px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block; font-size: 16px;'>📋 מלא שאלון / Fill Questionnaire</a> </div> <p style='font-size: 14px; color: #777; text-align: center; margin-top: 15px;'>השאלון זמין בעברית ובאנגלית | Questionnaire available in Hebrew and English</p> <hr style='border: 0; border-top: 1px solid #eee; margin: 30px 0;'> <div dir='ltr' style='text-align: left;'> <p style='font-size: 15px;'>For the preparation of the <strong>{{ $json.year }}</strong> annual tax report, please fill out the questionnaire using the link above.</p> </div> <p style='font-size: 15px; margin-top: 40px;'>בברכה,<br><strong>משרד משה עציץ</strong></p> </div> <div style='background-color: #f1f1f1; padding: 15px; text-align: center; font-size: 12px; color: #777;'> זהו מייל אוטומטי שנשלח לצורך איסוף נתונים לדוח השנתי. </div> </div>\"\n    },\n    \"toRecipients\": [\n      {\n        \"emailAddress\": {\n          \"address\": \"{{ $json.email }}\"\n        }\n      }\n    ]\n  }\n}",
+        "options": {}
+      },
+      "id": "bc4aff20-9069-4046-91cd-d62f00c162e6",
+      "name": "Send Email",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        672,
+        0
+      ],
+      "credentials": {
+        "oAuth2Api": {
+          "id": "GcLQZwzH2xj41sV7",
+          "name": "MS_Graph_CPA_Automation"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "base": {
+          "__rl": true,
+          "value": "appqBL5RWQN9cPOyh",
+          "mode": "id"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tbls7m3hmHC4hhQVy",
+          "mode": "id"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "id": "={{ $('Build Email Data').item.json.report_id }}",
+            "stage": "2-Waiting_For_Answers",
+            "last_progress_check_at": "={{ $now }}"
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true
+            },
+            {
+              "id": "stage",
+              "displayName": "stage",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false
+            },
+            {
+              "id": "last_progress_check_at",
+              "displayName": "last_progress_check_at",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "2334ac6d-cec1-4f70-a3f7-651f427433c9",
+      "name": "Update Stage",
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        880,
+        0
+      ],
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "ODW07LgvsPQySQxh",
+          "name": "Airtable Personal Access Token account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Count sent emails\nconst sent = $input.all().length;\n\nreturn {\n  json: {\n    ok: true,\n    sent: sent\n  }\n};"
+      },
+      "id": "9f565432-d930-4a98-9d62-f860f64697d0",
+      "name": "Count Sent",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1104,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {
+          "responseCode": 200,
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Access-Control-Allow-Origin",
+                "value": "*"
+              }
+            ]
+          }
+        }
+      },
+      "id": "aafd167e-6992-473a-88fc-11c1ea7e33be",
+      "name": "Respond Success",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1328,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $('Verify & Split').first().json }}",
+        "options": {
+          "responseCode": 401,
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Access-Control-Allow-Origin",
+                "value": "*"
+              }
+            ]
+          }
+        }
+      },
+      "id": "f4f53a46-8f12-43b5-a9dc-74d72f24e8c0",
+      "name": "Respond Error",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        0,
+        208
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Verify & Split",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verify & Split": {
+      "main": [
+        [
+          {
+            "node": "If Valid",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If Valid": {
+      "main": [
+        [
+          {
+            "node": "Get Report",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Report": {
+      "main": [
+        [
+          {
+            "node": "Get Client",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Client": {
+      "main": [
+        [
+          {
+            "node": "Build Email Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Email Data": {
+      "main": [
+        [
+          {
+            "node": "Send Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Email": {
+      "main": [
+        [
+          {
+            "node": "Update Stage",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Stage": {
+      "main": [
+        [
+          {
+            "node": "Count Sent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Count Sent": {
+      "main": [
+        [
+          {
+            "node": "Respond Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": true,
+    "timeSavedMode": "fixed",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "staticData": null,
+  "pinData": {},
+  "triggerCount": 1,
+  "meta": {
+    "templateCredsSetupCompleted": true
+  }
+}

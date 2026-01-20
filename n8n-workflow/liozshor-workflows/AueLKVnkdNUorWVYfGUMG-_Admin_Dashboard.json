@@ -1,0 +1,237 @@
+{
+  "name": "[Admin] Dashboard",
+  "nodes": [
+    {
+      "parameters": {
+        "path": "admin-dashboard",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "446ff855-bf12-494f-ad15-f1fab41a6c4a",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -656,
+        112
+      ],
+      "webhookId": "admin-dashboard-webhook"
+    },
+    {
+      "parameters": {
+        "jsCode": "// ============================================\n// TOKEN VERIFICATION\n// ============================================\nconst SECRET_KEY = 'QKiwUBXVH@%#1gD7t@rB]<,dM.[NC5b_'; \n\nconst crypto = require('crypto');\nconst token = $input.first().json.query?.token || '';\nconst year = $input.first().json.query?.year || '2024';\n\nfunction verifyToken(token) {\n  try {\n    if (!token || !token.includes('.')) return false;\n    const [dataB64, signature] = token.split('.');\n    const data = Buffer.from(dataB64, 'base64').toString();\n    const expectedSig = crypto.createHmac('sha256', SECRET_KEY).update(data).digest('hex');\n    if (signature !== expectedSig) return false;\n    const payload = JSON.parse(data);\n    if (payload.exp < Date.now()) return false;\n    return true;\n  } catch (e) {\n    return false;\n  }\n}\n\nif (!verifyToken(token)) {\n  return {\n    json: {\n      ok: false,\n      error: 'unauthorized',\n      shouldQuery: false\n    }\n  };\n}\n\nreturn {\n  json: {\n    ok: true,\n    year: parseInt(year),\n    shouldQuery: true\n  }\n};"
+      },
+      "id": "2f451496-3a07-4711-9d32-41b760d570cd",
+      "name": "Verify Token",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -448,
+        112
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "check-auth",
+              "leftValue": "={{ $json.shouldQuery }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "68262dc6-7a7d-40a3-af1a-790e00a49a1a",
+      "name": "If Authorized",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        -224,
+        112
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "search",
+        "base": {
+          "__rl": true,
+          "value": "appqBL5RWQN9cPOyh",
+          "mode": "id"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tbls7m3hmHC4hhQVy",
+          "mode": "id"
+        },
+        "filterByFormula": "=AND({year}={{ $('Verify Token').item.json.year }})",
+        "options": {}
+      },
+      "id": "56f3f778-24ec-4e65-bcb6-3c82da35e935",
+      "name": "Get Reports",
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        0
+      ],
+      "alwaysOutputData": true,
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "ODW07LgvsPQySQxh",
+          "name": "Airtable Personal Access Token account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get all reports from previous node\nconst reports = $input.all().map(item => item.json);\n\n// Calculate stats\nconst stats = {\n  total: reports.length,\n  stage1: 0,\n  stage2: 0,\n  stage3: 0,\n  stage4: 0,\n  stage5: 0\n};\n\nconst clients = [];\n\nfor (const report of reports) {\n  const stage = report.stage || '1-Send_Questionnaire';\n  \n  // Count by stage\n  if (stage.includes('1-')) stats.stage1++;\n  else if (stage.includes('2-')) stats.stage2++;\n  else if (stage.includes('3-')) stats.stage3++;\n  else if (stage.includes('4-')) stats.stage4++;\n  else if (stage.includes('5-')) stats.stage5++;\n  \n  // Build client record\n  clients.push({\n    report_id: report.id,\n    name: report.client_name?.[0] || report.client_name || 'Unknown',\n    email: report.client_email?.[0] || report.client_email || '',\n    year: report.year,\n    stage: stage,\n    docs_received: parseInt(report.docs_received_count) || 0,\n    docs_total: parseInt(report.docs_total) || 0\n  });\n}\n\n// Sort by name\nclients.sort((a, b) => (a.name || '').localeCompare(b.name || '', 'he'));\n\nreturn {\n  json: {\n    ok: true,\n    stats: stats,\n    clients: clients\n  }\n};"
+      },
+      "id": "99f94a24-c51f-4f71-a23c-b64f18863215",
+      "name": "Format Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        224,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {
+          "responseCode": 200,
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Access-Control-Allow-Origin",
+                "value": "*"
+              }
+            ]
+          }
+        }
+      },
+      "id": "292e1122-d313-440a-beb5-67460f05c6e1",
+      "name": "Respond Success",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        448,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {
+          "responseCode": 401,
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Access-Control-Allow-Origin",
+                "value": "*"
+              }
+            ]
+          }
+        }
+      },
+      "id": "8e764b60-7761-4b42-b0b5-29053f584c0a",
+      "name": "Respond Unauthorized",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        0,
+        208
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Verify Token",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verify Token": {
+      "main": [
+        [
+          {
+            "node": "If Authorized",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If Authorized": {
+      "main": [
+        [
+          {
+            "node": "Get Reports",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond Unauthorized",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Reports": {
+      "main": [
+        [
+          {
+            "node": "Format Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Response": {
+      "main": [
+        [
+          {
+            "node": "Respond Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": true,
+    "timeSavedMode": "fixed",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "staticData": null,
+  "pinData": {},
+  "triggerCount": 1,
+  "meta": {
+    "templateCredsSetupCompleted": true
+  }
+}

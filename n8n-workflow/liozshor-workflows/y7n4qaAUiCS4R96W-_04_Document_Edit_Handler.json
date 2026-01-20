@@ -1,0 +1,1046 @@
+{
+  "name": "[04] Document Edit Handler",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "tally-edit-documents",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "id": "45abc37b-04e7-4072-9625-383765aca972",
+      "name": "Webhook - Tally Edit",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        1456,
+        -288
+      ],
+      "webhookId": "tally-edit-wh"
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "OK",
+        "options": {}
+      },
+      "id": "d910d738-5eef-4a0b-a5fe-189a2792bed7",
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1648,
+        -288
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// ========== EXTRACT TALLY DATA & PROCESS ALL CHANGES ==========\nconst crypto = require('crypto');\nconst input = $input.first()?.json;\nconst body = input?.body || {};\nconst data = body?.data || {};\nconst fields = Array.isArray(data?.fields) ? data.fields : [];\n\nfunction norm(v) { return String(v ?? '').trim(); }\n\nfunction getChoiceTexts(field) {\n  const v = field?.value;\n  const opts = Array.isArray(field?.options) ? field.options : [];\n  if (!v || !Array.isArray(v)) return [];\n  // Return texts for email display\n  const selected = new Set(v.map(x => norm(x)));\n  return opts.filter(o => selected.has(norm(o?.id))).map(o => norm(o?.text)).filter(Boolean);\n}\n\n// Map fields by label\nconst fieldsByLabel = {};\nfor (const f of fields) {\n  const label = norm(f?.label);\n  if (label) fieldsByLabel[label] = f;\n}\n\n// Extract hidden fields\nlet reportId = '', clientName = '', spouseName = '', year = '';\nfor (const f of fields) {\n  if (f?.type === 'HIDDEN_FIELDS') {\n    const hv = f?.value || {};\n    if (hv.report_record_id) reportId = norm(hv.report_record_id);\n    if (hv.client_name) clientName = norm(hv.client_name);\n    if (hv.spouse_name) spouseName = norm(hv.spouse_name);\n    if (hv.year) year = norm(hv.year);\n  }\n}\n\n// Extract form data\n// KEY CHANGE: Extract IDs directly from value\nconst removeField = fieldsByLabel['מסמכים לשינוי סטטוס ל-Waived'];\nconst rawRemoveIds = Array.isArray(removeField?.value) ? removeField.value : [];\n// Deduplicate + normalize so we never update the same Airtable record twice\nconst docsToRemoveIds = [...new Set(rawRemoveIds.map(norm).filter(Boolean))];\nconst docsToRemoveNames = getChoiceTexts(removeField);\n\nconst docsToAdd = getChoiceTexts(fieldsByLabel['מסמכים להוספה']);\n\nconst customDoc = norm(fieldsByLabel['מסמך מותאם אישית']?.value);\nconst notes = norm(fieldsByLabel['הערות נוספות']?.value);\nconst customLines = customDoc\n  ? customDoc.split('\\n').map(s => s.trim()).filter(Boolean)\n  : [];\nconst customLinesSet = new Set(customLines.map(s => s.toLowerCase()));\n// Prevent duplicates if the frontend accidentally sends the same doc in both places\nconst docsToAddUnique = Array.from(new Set(docsToAdd))\n  .filter(n => !customLinesSet.has(String(n).toLowerCase()));\n\n\n// Build new documents to create\nconst TYPE_MAP = {\n  'אישור תושבות מהרשות המקומית': 'Residency_Cert',\n  'ספח ת.ז מעודכן': 'ID_Appendix',\n  'ספח ת.ז כולל פרטי ילדים': 'Child_ID_Appendix',\n  'אישור ועדת השמה/שילוב': 'Special_Ed_Approval',\n  'אישור קצבת נכות לילד': 'Child_Disability_Approval',\n  'פסק דין / הסכם גירושין (מזונות)': 'Alimony_Judgment',\n  'טופס 106': 'Form_106',\n  'טופס 106 - בן/בת זוג': 'Form_106_Spouse',\n  'אישור משיכת כספים (פנסיה/גמל/ביטוח)': 'Pension_Withdrawal',\n  'אישור שנתי מביטוח לאומי': 'NII_Allowance_Cert',\n  'אישור שנתי מביטוח לאומי - בן/בת זוג': 'NII_Allowance_Cert_Spouse',\n  'טופס 867': 'Form_867',\n  'טופס 867 - בן/בת זוג': 'Form_867_Spouse',\n  'אישור דיבידנד': 'Dividend_Cert',\n  'טופס 1399 (קריפטו)': 'Crypto_Report',\n  'אסמכתא הימורים/פרסים': 'Gambling_Win_Cert',\n  'אסמכתא הכנסות מחו\"ל': 'Foreign_Income_Report',\n  'חוזה שכירות (הכנסה)': 'Rent_Contract_Income',\n  'חוזה שכירות (הוצאה)': 'Rent_Contract_Expense',\n  'רשימת ספירת מלאי': 'Inventory_List',\n  'אישור מס שנתי מחברת ביטוח': 'Insurance_Tax_Cert',\n  'אישור שחרור מצה\"ל/שירות לאומי': 'Army_Release_Cert',\n  'קבלות ומסמכי הנצחה': 'Memorial_Receipts',\n  'מסמך רשמי - החזקת קרוב במוסד': 'Institution_Approval',\n  'אישור זכאות לתואר': 'Degree_Cert',\n  'מסמך רפואי/ועדה רפואית': 'Medical_Committee',\n  'קבלות תרומות מרוכזות (סעיף 46)': 'Donation_Receipts',\n  'אישור ניכוי מס במקור': 'WHT_Approval_IncomeTax'\n};\n\nconst newDocs = [];\nfor (const name of docsToAddUnique) {\n  newDocs.push({\n    document_key: `${TYPE_MAP[name] || 'General_Doc'}_${reportId}_${Date.now()}_${Math.random().toString(36).substr(2,5)}`,\n    report: [reportId],\n    type: TYPE_MAP[name] || 'General_Doc',\n    status: 'Required_Missing',\n    issuer_name: name,\n    issuer_name_en: name\n  });\n}\n\nif (customDoc) {\n  for (const cd of customDoc.split('\\n').filter(d => d.trim())) {\n    newDocs.push({\n      document_key: `General_Doc_${reportId}_custom_${Date.now()}_${Math.random().toString(36).substr(2,5)}`,\n      report: [reportId],\n      type: 'General_Doc',\n      status: 'Required_Missing',\n      issuer_name: cd.trim(),\n      issuer_name_en: cd.trim()\n    });\n  }\n}\n\nreturn [{\n  json: {\n    report_record_id: reportId,\n    client_name: clientName,\n    spouse_name: spouseName,\n    year: year,\n    notes: notes,\n    // Updated fields\n    docs_to_remove_ids: docsToRemoveIds,\n    docs_to_remove_names: docsToRemoveNames,\n    docs_to_create: newDocs,\n    summary: {\n      removed_count: docsToRemoveIds.length,\n      added_count: newDocs.length,\n      removed_names: docsToRemoveNames,\n      added_names: docsToAddUnique.concat(customLines)\n    }\n  }\n}];"
+      },
+      "id": "5d04b372-d24a-41ed-b44c-df03a726f274",
+      "name": "Code - Extract & Prepare",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1856,
+        -288
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Use Record IDs directly - NO STRING MATCHING REQUIRED\nconst extracted = $('Code - Extract & Prepare').first().json;\nconst rawRemoveIds = Array.isArray(extracted.docs_to_remove_ids) ? extracted.docs_to_remove_ids : [];\n// Deduplicate + normalize so we never update the same Airtable record twice\nconst idsToRemove = [...new Set(rawRemoveIds.map(id => String(id ?? '').trim()).filter(Boolean))];\n\nif (idsToRemove.length === 0) {\n  return [{ json: { ...extracted, waives_done: true, waived_count: 0, waive_id: '' } }];\n}\n\n// Create items for each ID to trigger Airtable update multiple times if needed\nreturn idsToRemove.map(id => ({\n  json: { ...extracted, waive_id: id }\n}));"
+      },
+      "id": "3525d390-adfc-4e01-8a24-1590b5e27541",
+      "name": "Code - Find Waives",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2256,
+        -288
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.waive_id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              },
+              "id": "b4a10d75-63cf-48b3-979d-b213d3780374"
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "b8c38d58-a6c1-4517-a894-aa75caa6f270",
+      "name": "IF - Has Waive",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2448,
+        -288
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "base": {
+          "__rl": true,
+          "value": "appqBL5RWQN9cPOyh",
+          "mode": "id"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblcwptR63skeODPn",
+          "mode": "id"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {
+            "status": "Waived"
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": false
+            },
+            {
+              "id": "document_key",
+              "displayName": "document_key",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "report",
+              "displayName": "report",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "type",
+              "displayName": "type",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "Residency_Cert",
+                  "value": "Residency_Cert"
+                },
+                {
+                  "name": "ID_Appendix",
+                  "value": "ID_Appendix"
+                },
+                {
+                  "name": "Child_ID_Appendix",
+                  "value": "Child_ID_Appendix"
+                },
+                {
+                  "name": "Special_Ed_Approval",
+                  "value": "Special_Ed_Approval"
+                },
+                {
+                  "name": "Child_Disability_Approval",
+                  "value": "Child_Disability_Approval"
+                },
+                {
+                  "name": "Alimony_Judgment",
+                  "value": "Alimony_Judgment"
+                },
+                {
+                  "name": "Form_106",
+                  "value": "Form_106"
+                },
+                {
+                  "name": "Form_106_Spouse",
+                  "value": "Form_106_Spouse"
+                },
+                {
+                  "name": "Pension_Withdrawal",
+                  "value": "Pension_Withdrawal"
+                },
+                {
+                  "name": "NII_Allowance_Cert",
+                  "value": "NII_Allowance_Cert"
+                },
+                {
+                  "name": "NII_Allowance_Cert_Spouse",
+                  "value": "NII_Allowance_Cert_Spouse"
+                },
+                {
+                  "name": "Form_867",
+                  "value": "Form_867"
+                },
+                {
+                  "name": "Crypto_Report",
+                  "value": "Crypto_Report"
+                },
+                {
+                  "name": "Gambling_Win_Cert",
+                  "value": "Gambling_Win_Cert"
+                },
+                {
+                  "name": "Foreign_Income_Report",
+                  "value": "Foreign_Income_Report"
+                },
+                {
+                  "name": "Rent_Contract_Income",
+                  "value": "Rent_Contract_Income"
+                },
+                {
+                  "name": "Rent_Contract_Expense",
+                  "value": "Rent_Contract_Expense"
+                },
+                {
+                  "name": "Inventory_List",
+                  "value": "Inventory_List"
+                },
+                {
+                  "name": "Insurance_Tax_Cert",
+                  "value": "Insurance_Tax_Cert"
+                },
+                {
+                  "name": "Army_Release_Cert",
+                  "value": "Army_Release_Cert"
+                },
+                {
+                  "name": "Degree_Cert",
+                  "value": "Degree_Cert"
+                },
+                {
+                  "name": "Medical_Committee",
+                  "value": "Medical_Committee"
+                },
+                {
+                  "name": "Donation_Receipts",
+                  "value": "Donation_Receipts"
+                },
+                {
+                  "name": "Memorial_Receipts",
+                  "value": "Memorial_Receipts"
+                },
+                {
+                  "name": "Institution_Approval",
+                  "value": "Institution_Approval"
+                },
+                {
+                  "name": "General_Doc",
+                  "value": "General_Doc"
+                },
+                {
+                  "name": "Mortgage_Insurance_Cert",
+                  "value": "Mortgage_Insurance_Cert"
+                },
+                {
+                  "name": "WHT_Approval_IncomeTax",
+                  "value": "WHT_Approval_IncomeTax"
+                },
+                {
+                  "name": "WHT_Approval_NII",
+                  "value": "WHT_Approval_NII"
+                }
+              ],
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "status",
+              "displayName": "status",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "Required_Missing",
+                  "value": "Required_Missing"
+                },
+                {
+                  "name": "Received",
+                  "value": "Received"
+                },
+                {
+                  "name": "Requires_Fix",
+                  "value": "Requires_Fix"
+                },
+                {
+                  "name": "Waived",
+                  "value": "Waived"
+                },
+                {
+                  "name": "Not Required",
+                  "value": "Not Required"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "issuer_key",
+              "displayName": "issuer_key",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "issuer_name",
+              "displayName": "issuer_name",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "issuer_name_en",
+              "displayName": "issuer_name_en",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "file_url",
+              "displayName": "file_url",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "onedrive_item_id",
+              "displayName": "onedrive_item_id",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "expected_filename",
+              "displayName": "expected_filename",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "uploaded_at",
+              "displayName": "uploaded_at",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "source_message_id",
+              "displayName": "source_message_id",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "source_internet_message_id",
+              "displayName": "source_internet_message_id",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "source_attachment_name",
+              "displayName": "source_attachment_name",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "source_sender_email",
+              "displayName": "source_sender_email",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "ai_confidence",
+              "displayName": "ai_confidence",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "ai_reason",
+              "displayName": "ai_reason",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "created_at",
+              "displayName": "created_at",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "updated_at",
+              "displayName": "updated_at",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "is_missing",
+              "displayName": "is_missing",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "is_received",
+              "displayName": "is_received",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "email_events",
+              "displayName": "email_events",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "report_key_lookup",
+              "displayName": "report_key_lookup",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "document_uid",
+              "displayName": "document_uid",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "file_hash",
+              "displayName": "file_hash",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "report_record_id",
+              "displayName": "report_record_id",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "bookkeepers_notes",
+              "displayName": "bookkeepers_notes",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "65279d7a-6b15-4d6c-8153-5f4867d37a66",
+      "name": "Airtable - Waive",
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        2864,
+        -400
+      ],
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "ODW07LgvsPQySQxh",
+          "name": "Airtable Personal Access Token account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Prepare creation items - ONLY RUN FOR THE FIRST ITEM to avoid duplicates\nif ($itemIndex > 0) return []; \n\nconst extracted = $('Code - Extract & Prepare').first().json;\nconst toCreate = extracted.docs_to_create || [];\n\nif (toCreate.length === 0) {\n  return [{ json: { ...extracted, creations_done: true, created_count: 0 } }];\n}\n\nreturn toCreate.map(doc => ({ json: { original: extracted, ...doc } }));"
+      },
+      "id": "c29d5645-cc56-4a39-ab53-8da6315e20e6",
+      "name": "Code - Prep Creates",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3072,
+        -288
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.document_key }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              },
+              "id": "6dd1b29c-feb9-48f1-82d2-4e3eef63e6e9"
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "8cbd75e4-9a4d-42b2-a0b7-5fcc2e81d444",
+      "name": "IF - Has Create",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        3264,
+        -288
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "create",
+        "base": {
+          "__rl": true,
+          "value": "appqBL5RWQN9cPOyh",
+          "mode": "id"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblcwptR63skeODPn",
+          "mode": "id"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "document_key": "={{ $json.document_key }}",
+            "report": "={{ $json.report }}",
+            "type": "={{ $json.type }}",
+            "status": "={{ $json.status }}",
+            "issuer_name": "={{ $json.issuer_name }}",
+            "issuer_name_en": "={{ $json.issuer_name_en }}"
+          }
+        },
+        "options": {}
+      },
+      "id": "1e238a11-b7e7-49b0-8f14-8f58c23d3e8e",
+      "name": "Airtable - Create",
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        3472,
+        -400
+      ],
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "ODW07LgvsPQySQxh",
+          "name": "Airtable Personal Access Token account"
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get original data for email - ONLY RUN ONCE\nif ($itemIndex > 0) return [];\n\nreturn [{ json: $('Code - Extract & Prepare').first().json }];"
+      },
+      "id": "9e9db568-13d8-417e-b89d-b0279f7ae927",
+      "name": "Code - Get Original",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3664,
+        -288
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "search",
+        "base": {
+          "__rl": true,
+          "value": "appqBL5RWQN9cPOyh",
+          "mode": "id"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblcwptR63skeODPn",
+          "mode": "id"
+        },
+        "filterByFormula": "=AND({status}='Required_Missing', REGEX_MATCH(ARRAYJOIN({report_record_id}), '(^|,\\\\s*){{ $json.report_record_id }}($|,\\\\s*)'))",
+        "options": {}
+      },
+      "id": "b8faee61-e27f-4eca-82a2-f73c81c502f0",
+      "name": "Airtable - Final List",
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        3872,
+        -288
+      ],
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "ODW07LgvsPQySQxh",
+          "name": "Airtable Personal Access Token account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// ========== BUILD EMAIL FOR DOCUMENT CHANGES ==========\nconst crypto = require('crypto');\nconst orig = $('Code - Get Original').first().json;\nconst docs = $('Airtable - Final List').all();\nconst { \n  report_record_id: reportId, \n  client_name: clientName, \n  spouse_name: spouseName, \n  year, \n  notes, \n  summary \n} = orig;\n\n// ========== HELPER: SMART FORMATTING FOR DOCUMENT NAMES ==========\nfunction formatDocumentName(name) {\n  // Bold parts after dashes (names, companies, banks, etc.)\n  // Example: \"טופס 106 - ליעוז - קפה מעסיק\" \n  // Becomes: \"טופס 106 - <strong>ליעוז</strong> - <strong>קפה מעסיק</strong>\"\n  \n  const parts = String(name || '').split(' - ');\n  if (parts.length === 1) return name; // No dashes, return as-is\n  \n  // Keep first part plain, bold the rest\n  const formatted = [parts[0]];\n  for (let i = 1; i < parts.length; i++) {\n    formatted.push(`<strong>${parts[i]}</strong>`);\n  }\n  \n  return formatted.join(' - ');\n}\n\n// ========== GENERATE SECURE TOKEN (FIXED) ==========\nconst SECRET = 'MOSHE_1710'; // ✅ Must match Global Config in workflow [03]\nconst token = SECRET; // Simple token, not HMAC\n\n// ========== BUILD URLS ==========\nconst approveUrl = `https://liozshor.app.n8n.cloud/webhook/approve-and-send?report_id=${reportId}&token=${token}`;\nconst editUrl = `https://liozshor.github.io/annual-reports-client-portal/document-manager.html?report_id=${reportId}&client_name=${encodeURIComponent(clientName)}&spouse_name=${encodeURIComponent(spouseName)}&year=${year}`;\n\n\n\n// ========== DISPLAY NAME ==========\nconst displayName = spouseName ? `${clientName} ו${spouseName}` : clientName;\n\n// ========== CHANGES SECTION (WITH SMART FORMATTING) ==========\nlet changesHtml = '';\nif ((summary?.removed_count || 0) > 0 || (summary?.added_count || 0) > 0 || notes) {\n  let changesContent = '';\n  \n  // REMOVED DOCUMENTS - Clean Bulleted List with Smart Formatting\n  if (summary.removed_count > 0) {\n    changesContent += `\n      <div style=\"margin-bottom: 20px;\">\n        <h4 style=\"color: #dc3545; margin: 0 0 10px 0; font-size: 16px; border-bottom: 2px solid #dc3545; padding-bottom: 5px;\">\n          ❌ מסמכים שהוסרו (${summary.removed_count})\n        </h4>\n        <ul style=\"list-style: none; padding: 0; margin: 0;\">\n          ${summary.removed_names.map(name => `\n            <li style=\"padding: 6px 0; padding-right: 20px; color: #721c24; background: #f8d7da; margin-bottom: 4px; border-radius: 4px; padding: 8px 12px;\">\n              🚫 ${formatDocumentName(name)}\n            </li>\n          `).join('')}\n        </ul>\n      </div>\n    `;\n  }\n  \n  // ADDED DOCUMENTS - Clean Bulleted List with Smart Formatting\n  if (summary.added_count > 0) {\n    changesContent += `\n      <div style=\"margin-bottom: 20px;\">\n        <h4 style=\"color: #28a745; margin: 0 0 10px 0; font-size: 16px; border-bottom: 2px solid #28a745; padding-bottom: 5px;\">\n          ➕ מסמכים שנוספו (${summary.added_count})\n        </h4>\n        <ul style=\"list-style: none; padding: 0; margin: 0;\">\n          ${summary.added_names.map(name => `\n            <li style=\"padding: 6px 0; padding-right: 20px; color: #155724; background: #d4edda; margin-bottom: 4px; border-radius: 4px; padding: 8px 12px;\">\n              ✓ ${formatDocumentName(name)}\n            </li>\n          `).join('')}\n        </ul>\n      </div>\n    `;\n  }\n  \n  // NOTES SECTION\n  if (notes) {\n    changesContent += `\n      <div style=\"margin-bottom: 15px;\">\n        <h4 style=\"color: #2196f3; margin: 0 0 10px 0; font-size: 16px; border-bottom: 2px solid #2196f3; padding-bottom: 5px;\">\n          💬 הערות\n        </h4>\n        <div style=\"background: white; padding: 12px; border-radius: 6px; border-right: 4px solid #2196f3; color: #333;\">\n          ${notes}\n        </div>\n      </div>\n    `;\n  }\n  \n  changesHtml = `\n    <div style=\"margin-top: 20px; padding: 20px; background: #f8f9fa; border-radius: 8px; border: 2px solid #4caf50;\">\n      <h3 style=\"margin: 0 0 20px 0; color: #4caf50; font-size: 20px;\">\n        🔄 שינויים\n      </h3>\n      ${changesContent}\n    </div>\n  `;\n}\n\n// ========== UPDATED DOCUMENTS LIST (WITH SMART FORMATTING) ==========\nlet docsHtml = '';\nif (docs.length > 0) {\n  docsHtml = `\n    <div style=\"margin-top: 20px; padding: 20px; background: #fff3cd; border-radius: 8px; border: 2px solid #ff9800;\">\n      <h3 style=\"margin: 0 0 15px 0; color: #ff9800; font-size: 20px;\">\n        📄 רשימה מעודכנת (${docs.length})\n      </h3>\n      <ul style=\"list-style: none; padding: 0; margin: 0;\">\n        ${docs.map(d => `\n          <li style=\"padding: 6px 0; padding-right: 20px; border-bottom: 1px solid #ffe0b2; color: #856404;\">\n            • ${formatDocumentName(d.json.issuer_name)}\n          </li>\n        `).join('')}\n      </ul>\n    </div>\n  `;\n}\n\n// ========== ACTION BUTTONS SECTION ==========\nconst buttonsHtml = `\n  <div style=\"margin-top: 25px; padding: 20px; background: #e3f2fd; border-radius: 8px; text-align: center;\">\n    <h3 style=\"margin: 0 0 15px 0; color: #1976d2; font-size: 18px;\">\n      ✅ פעולות\n    </h3>\n    <div style=\"display: flex; gap: 15px; justify-content: center; flex-wrap: wrap;\">\n      <a href=\"${approveUrl}\" \n         style=\"display: inline-block; padding: 14px 30px; background: #4caf50; color: white; text-decoration: none; border-radius: 8px; font-weight: bold; box-shadow: 0 4px 8px rgba(76, 175, 80, 0.3);\">\n        ✅ אישור ושליחה ללקוח\n      </a>\n      <a href=\"${editUrl}\" \n         style=\"display: inline-block; padding: 14px 30px; background: #ff9800; color: white; text-decoration: none; border-radius: 8px; font-weight: bold; box-shadow: 0 4px 8px rgba(255, 152, 0, 0.3);\">\n        ✏️ עריכה נוספת\n      </a>\n    </div>\n  </div>\n`;\n\n// ========== COMPLETE EMAIL HTML ==========\nconst html = `\n  <div dir=\"rtl\" style=\"font-family: 'Segoe UI', Arial, sans-serif; max-width: 650px; margin: 0 auto; background: white;\">\n    <!-- Header -->\n    <div style=\"background: linear-gradient(135deg, #1e3a5f, #2c5282); color: white; padding: 30px; border-radius: 12px 12px 0 0; text-align: center;\">\n      <h1 style=\"margin: 0 0 10px 0; font-size: 26px;\">\n        🔄 רשימת מסמכים עודכנה\n      </h1>\n      <p style=\"margin: 0; opacity: 0.9; font-size: 16px;\">\n        משרד רו״ח משה עציץ\n      </p>\n    </div>\n    \n    <!-- Content -->\n    <div style=\"padding: 30px; background: #fafafa; border: 1px solid #dee2e6; border-top: none;\">\n      <!-- Client Info -->\n      <div style=\"background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);\">\n        <p style=\"margin: 0 0 8px 0; font-size: 16px;\">\n          <strong style=\"color: #667eea;\">👤 לקוח:</strong> ${displayName}\n        </p>\n        <p style=\"margin: 0; font-size: 16px;\">\n          <strong style=\"color: #667eea;\">📅 שנת מס:</strong> ${year}\n        </p>\n      </div>\n      \n      ${changesHtml}\n      ${docsHtml}\n      ${buttonsHtml}\n      \n      <!-- Footer -->\n      <div style=\"margin-top: 30px; padding-top: 20px; border-top: 2px solid #dee2e6; text-align: center; color: #999; font-size: 13px;\">\n        <p style=\"margin: 0;\">\n          מזהה דוח: ${reportId.slice(-8)} | מערכת ניהול דוחות שנתיים\n        </p>\n      </div>\n    </div>\n  </div>\n`;\n\n// ========== RETURN RESULT ==========\nreturn [{\n  json: {\n    email_subject: `🔄 עדכון רשימת מסמכים - ${displayName} - ${year}`,\n    email_html: html\n  }\n}];"
+      },
+      "id": "6f4d585a-95a6-4842-bcb7-b6b028eb1012",
+      "name": "Code - Build Email",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4064,
+        -288
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://graph.microsoft.com/v1.0/me/sendMail",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "oAuth2Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { \"message\": { \"subject\": $json.email_subject, \"body\": { \"contentType\": \"HTML\", \"content\": $json.email_html }, \"toRecipients\": [{ \"emailAddress\": { \"address\": \"reports@moshe-atsits.co.il\" } }] } } }}",
+        "options": {}
+      },
+      "id": "0dc39d34-9f15-481f-a856-657e31f439e3",
+      "name": "MS Graph - Send",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        4272,
+        -288
+      ],
+      "credentials": {
+        "oAuth2Api": {
+          "id": "GcLQZwzH2xj41sV7",
+          "name": "MS_Graph_CPA_Automation"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Transform data for Airtable update - process ALL items\nreturn $input.all().map(item => ({\n  json: {\n    id: item.json.waive_id,\n    status: \"Waived\"\n  }\n}));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2656,
+        -384
+      ],
+      "id": "f8510915-08e4-4db1-8614-7873ef70f804",
+      "name": "Code in JavaScript"
+    }
+  ],
+  "connections": {
+    "Webhook - Tally Edit": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Respond to Webhook": {
+      "main": [
+        [
+          {
+            "node": "Code - Extract & Prepare",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code - Extract & Prepare": {
+      "main": [
+        [
+          {
+            "node": "Code - Find Waives",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code - Find Waives": {
+      "main": [
+        [
+          {
+            "node": "IF - Has Waive",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF - Has Waive": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Code - Prep Creates",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Airtable - Waive": {
+      "main": [
+        [
+          {
+            "node": "Code - Prep Creates",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code - Prep Creates": {
+      "main": [
+        [
+          {
+            "node": "IF - Has Create",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF - Has Create": {
+      "main": [
+        [
+          {
+            "node": "Airtable - Create",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Code - Get Original",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Airtable - Create": {
+      "main": [
+        [
+          {
+            "node": "Code - Get Original",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code - Get Original": {
+      "main": [
+        [
+          {
+            "node": "Airtable - Final List",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Airtable - Final List": {
+      "main": [
+        [
+          {
+            "node": "Code - Build Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code - Build Email": {
+      "main": [
+        [
+          {
+            "node": "MS Graph - Send",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Airtable - Waive",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": true
+  },
+  "staticData": null,
+  "pinData": {
+    "Webhook - Tally Edit": [
+      {
+        "json": {
+          "headers": {
+            "host": "liozshor.app.n8n.cloud",
+            "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36",
+            "content-length": "1062",
+            "accept": "*/*",
+            "accept-encoding": "gzip, br",
+            "accept-language": "he-IL,he;q=0.9,en-US;q=0.8,en;q=0.7",
+            "cdn-loop": "cloudflare; loops=1; subreqs=1",
+            "cf-connecting-ip": "5.29.181.19",
+            "cf-ew-via": "15",
+            "cf-ipcountry": "IL",
+            "cf-ray": "9bfbe7c8726e09cd-HFA",
+            "cf-visitor": "{\"scheme\":\"https\"}",
+            "cf-worker": "n8n.cloud",
+            "content-type": "application/json",
+            "origin": "https://liozshor.github.io",
+            "priority": "u=1, i",
+            "referer": "https://liozshor.github.io/",
+            "sec-ch-ua": "\"Google Chrome\";v=\"143\", \"Chromium\";v=\"143\", \"Not A(Brand\";v=\"24\"",
+            "sec-ch-ua-mobile": "?0",
+            "sec-ch-ua-platform": "\"Windows\"",
+            "sec-fetch-dest": "empty",
+            "sec-fetch-mode": "cors",
+            "sec-fetch-site": "cross-site",
+            "x-forwarded-for": "5.29.181.19, 162.158.254.141",
+            "x-forwarded-host": "liozshor.app.n8n.cloud",
+            "x-forwarded-port": "443",
+            "x-forwarded-proto": "https",
+            "x-forwarded-server": "traefik-prod-users-gwc-15-6cb64f5ddc-g6lcc",
+            "x-is-trusted": "yes",
+            "x-real-ip": "5.29.181.19"
+          },
+          "params": {},
+          "query": {},
+          "body": {
+            "data": {
+              "fields": [
+                {
+                  "type": "HIDDEN_FIELDS",
+                  "value": {
+                    "report_record_id": "reci3TDgN6R42hhTl",
+                    "client_name": "לוי יצחק",
+                    "spouse_name": "ליעוז",
+                    "year": "2025"
+                  }
+                },
+                {
+                  "label": "מסמכים לשינוי סטטוס ל-Waived",
+                  "type": "CHECKBOXES",
+                  "value": [
+                    "recOXUsxFziuLvYah",
+                    "recctOHpWeCxCb5r9",
+                    "rece7uuRpMHsn2LWX",
+                    "rechuwmcAPokw5VL8"
+                  ],
+                  "options": [
+                    {
+                      "id": "recOXUsxFziuLvYah",
+                      "text": "טופס 106 לשנת 2025 - <b>לוי יצחק</b> - <b>קפה גרג</b>"
+                    },
+                    {
+                      "id": "recctOHpWeCxCb5r9",
+                      "text": "טופס 106 לשנת 2025 - <b>ליעוז</b> - <b>קפה מעסיק</b>"
+                    },
+                    {
+                      "id": "rece7uuRpMHsn2LWX",
+                      "text": "טופס 106 לשנת 2025 - <b>לוי יצחק</b> - <b>קפה קפה</b>"
+                    },
+                    {
+                      "id": "rechuwmcAPokw5VL8",
+                      "text": "אישור תושבות לשנת 2025 - <b>כרמיאל</b> - <b>למימוש הטבת מס ליישובים מזכים</b>"
+                    }
+                  ]
+                },
+                {
+                  "label": "מסמכים להוספה",
+                  "type": "CHECKBOXES",
+                  "value": [],
+                  "options": []
+                },
+                {
+                  "label": "מסמך מותאם אישית",
+                  "type": "INPUT_TEXT",
+                  "value": ""
+                },
+                {
+                  "label": "הערות נוספות",
+                  "type": "TEXTAREA",
+                  "value": ""
+                }
+              ]
+            }
+          },
+          "webhookUrl": "https://liozshor.app.n8n.cloud/webhook/tally-edit-documents",
+          "executionMode": "production"
+        },
+        "pairedItem": {
+          "item": 0
+        }
+      }
+    ]
+  },
+  "triggerCount": 1,
+  "meta": {
+    "templateCredsSetupCompleted": true
+  }
+}

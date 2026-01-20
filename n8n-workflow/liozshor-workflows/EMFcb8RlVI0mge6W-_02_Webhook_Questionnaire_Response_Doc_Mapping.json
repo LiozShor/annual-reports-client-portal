@@ -1,0 +1,2277 @@
+{
+  "name": "[02] Webhook: Questionnaire Response & Doc Mapping",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "tally-questionnaire-response",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        11888,
+        976
+      ],
+      "id": "7e6f0185-25e2-4217-96c0-17519705c24d",
+      "name": "Webhook",
+      "webhookId": "4a14dd0b-b0f1-4b9c-aa85-111ba0b16cc9"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.first()?.json;\n\n// ========== MAPPING CONFIGURATION (CSV BASED) ==========\nconst KEY_MAP = {\n  // HIDDEN FIELDS\n  \"question_WNRM5Q_21cb2748-23e4-4b6f-acbd-1b0ee32c0afe\": \"question_Ad2ZXW_eda95daa-e622-4fcb-98d6-3f0aa0649680\",\n  \"question_WNRM5Q_7bdf1402-3d31-4855-bf97-88a1f48c912d\": \"question_Ad2ZXW_07088289-7dc1-4173-97cb-855bc6655b0a\",\n  \"question_WNRM5Q_7da15418-e79a-4265-9726-0f92bdd4a2e9\": \"question_Ad2ZXW_45f853b0-2044-45f0-bca8-4cb0db3c538a\",\n  \"question_WNRM5Q_885e9fda-7bb7-4a09-af17-892ad4fe41fa\": \"question_Ad2ZXW_12245f33-980a-4def-8656-f87f7ed1f397\",\n  \"question_WNRM5Q_f154cc30-448c-4960-837a-b857542fa97a\": \"question_Ad2ZXW_5cf54aa8-32b8-47cc-b2c0-a2bcddabb689\",\n  \"question_WNRM5Q_dbe5baba-db73-4a05-bd58-eb953a3c308d\": \"question_Ad2ZXW_64644761-68e7-45eb-aac2-18c5471941fa\",\n\n  // VISIBLE FIELDS (English Key -> Hebrew Key)\n  \"question_R0oJPP\": \"question_vAekdl\", // First Name\n  \"question_oyR7GM\": \"question_K65baX\", // Email\n  \"question_GzpJlz\": \"question_Lb7l6l\", // Marital Status\n  \"question_J6lJA7\": \"question_67Kv1P\", // Qualifying Settlement\n  \"question_g0q7MK\": \"question_7WKvJP\", // Settlement Name\n  \"question_OzXJGA\": \"question_1ld8p1\", // Spouse Name\n  \"question_V0PMJl\": \"question_J6p7MK\", // Marital Change\n  \"question_P69XO0\": \"question_g0d2vD\", // Change Details\n  \"question_487oro\": \"question_8KaOMz\", // Children?\n  \"question_EXlJWL\": \"question_y62LzX\", // New Child?\n  \"question_r6OdPL\": \"question_XDJXzL\", // Birthdates\n  \"question_jyo7P9\": \"question_0xBXaB\", // Special Ed\n  \"question_a64DYy\": \"question_8Ka0Zl\", // Child Disability\n  \"question_kyG76j\": \"question_P69RpP\", // Alimony\n  \"question_2eAJPb\": \"question_zqylLM\", // Employee?\n  \"question_xpDPY9\": \"question_5zjRMZ\", // Employer List\n  \"question_ZNOzav\": \"question_d6arvd\", // Spouse Employee?\n  \"question_N6XJob\": \"question_YQ08kW\", // Spouse Employer List\n  \"question_qdGKVk\": \"question_DNkQMN\", // Withdrawals?\n  \"question_QDRJVk\": \"question_lyeQvN\", // Withdrawal Type\n  \"question_9WZEQ4\": \"question_R0Mpk4\", // Withdrawal Other\n  \"question_e6r7Ro\": \"question_oyeWvO\", // Disability NII\n  \"question_vADOy8\": \"question_XDoYDP\", // Survivors NII\n  \"question_K6xJlK\": \"question_8KL8Kl\", // Survivors Details\n  \"question_WNRMzQ\": \"question_Oz4vkY\", // Spouse NII Receipts\n  \"question_a64Ddy\": \"question_V0QgDM\", // Spouse NII Type\n  \"question_67KON5\": \"question_P61KkB\", // Spouse NII Other\n  \"question_LbKJW2\": \"question_0x8vx9\", // Spouse Survivors\n  \"question_pKo7BE\": \"question_zqMJqk\", // Spouse Survivors Details\n  \"question_7WKVxz\": \"question_r6a7v2\", // Securities?\n  \"question_b7e8dE\": \"question_48J5zA\", // Securities List\n  \"question_kyG7Ej\": \"question_xpMKvv\", // Deposits?\n  \"question_vADOY8\": \"question_ZNE0De\", // Deposits List\n  \"question_K6xJ1K\": \"question_N6lkdO\", // Crypto?\n  \"question_LbKJp2\": \"question_qdD6vg\", // Crypto Details\n  \"question_pKo7OE\": \"question_QDeLkX\", // Gambling?\n  \"question_1l4JVL\": \"question_9W9VM5\", // Gambling Details\n  \"question_MbaJR0\": \"question_e6Q4vl\", // Foreign Income?\n  \"question_J6lJz7\": \"question_WNEy1k\", // Country\n  \"question_g0q7GK\": \"question_a65VvX\", // Income Type\n  \"question_e6r79k\": \"question_487oPA\", // Foreign Tax Return?\n  \"question_XDoM0V\": \"question_7WLGM0\", // Rental Income?\n  \"question_7WKV2z\": \"question_K6xQyA\", // Rent Amount\n  \"question_67KO25\": \"question_zqya7k\", // Only Property?\n  \"question_8KLPQo\": \"question_Ad2Zye\", // Renting Expense?\n  \"question_0x8J6Q\": \"question_BXdN0R\", // Rent Expense Amount\n  \"question_zqMrDE\": \"question_kyeqvo\", // Real Estate Sale?\n  \"question_5z9G1b\": \"question_vAekKl\", // Sale Details\n  \"question_d60DxN\": \"question_K65bkX\", // Inventory?\n  \"question_YQGMW0\": \"question_pKyav8\", // Pension Indep?\n  \"question_DNpJdp\": \"question_1ld861\", // Pension List\n  \"question_lyO7d6\": \"question_MbNBMk\", // Study Fund Indep?\n  \"question_R0oJ5P\": \"question_J6p7oK\", // Study Fund List\n  \"question_oyR7MM\": \"question_g0d2zD\", // Disability Ins Indep?\n  \"question_GzpJdz\": \"question_y62L1X\", // Disability List\n  \"question_b7e8xE\": \"question_a64Q7E\", // Life Ins Indep?\n  \"question_AdpqLN\": \"question_67K8aO\", // Life Ins List\n  \"question_OzXJ5A\": \"question_XDJXQL\", // Mortgage?\n  \"question_V0PM5l\": \"question_8KaOrz\", // Mortgage Ins Company\n  \"question_BXpQkY\": \"question_oyR995\", // Army Release?\n  \"question_P69X50\": \"question_0xBXkB\", // Memorial?\n  \"question_EXlJQL\": \"question_zqyldM\", // Memorial Details\n  \"question_1l4J7L\": \"question_5z9vzN\", // Institution?\n  \"question_r6OdAL\": \"question_5zjRVZ\", // Degree?\n  \"question_487oxo\": \"question_d6arzd\", // Degree Details\n  \"question_jyo7Q9\": \"question_YQ089W\", // Institution Name\n  \"question_2eAJNb\": \"question_DNkQaN\", // Medical?\n  \"question_xpDPa9\": \"question_lyeQzN\", // Medical Details\n  \"question_ZNOz6v\": \"question_R0Mpj4\", // Donations?\n  \"question_N6XJWb\": \"question_Gz9WbL\", // WHT Income Tax?\n  \"question_qdGKAk\": \"question_Oz4vEY\", // WHT List\n  \"question_QDRJ5k\": \"question_V0QgNM\", // WHT NII?\n  \"question_9WZED4\": \"question_P61KrB\", // WHT NII List\n  \"question_e6r7eo\": \"question_EXd96B\"  // Other Income?\n};\n\n// CRITICAL VALUE TRANSLATIONS (For Logic Matches)\nconst VALUE_TRANSLATIONS = {\n  \"Severance pay\": \"פיצויי פיטורין\",\n  \"Retirement grant\": \"מענק פרישה\",\n  \"Lump-sum withdrawal\": \"משיכת תגמולים (הוני)\",\n  \"Lump-sum withdrawal of benefits (capital)\": \"משיכת תגמולים (הוני)\", // Tally variation\n  \"Pension / pension commutation\": \"קצבה / היוון קצבה\",\n  \"Study fund withdrawal\": \"משיכת קרן השתלמות\",\n  \"Disability\": \"נכות\",\n  \"Unemployment\": \"אבטלה\",\n  \"Reserve duty\": \"מילואים\",\n  \"Maternity benefits\": \"דמי לידה\",\n  \"Work injury\": \"פגיעה בעבודה\"\n};\n\n// ========== HELPER FUNCTIONS ==========\nfunction norm(v) {\n  return String(v ?? \"\").trim();\n}\n\nfunction htmlEscape(s) {\n  return norm(s)\n    .replace(/&/g, \"&amp;\")\n    .replace(/</g, \"&lt;\")\n    .replace(/>/g, \"&gt;\")\n    .replace(/\"/g, \"&quot;\")\n    .replace(/'/g, \"&#39;\");\n}\n\nfunction translateValue(val) {\n  const v = norm(val);\n  return VALUE_TRANSLATIONS[v] || v;\n}\n\nfunction asChoiceText(field) {\n  const v = field?.value;\n  const opts = Array.isArray(field?.options) ? field.options : [];\n  if (v === null || v === undefined) return \"\";\n\n  if (Array.isArray(v)) {\n    const selected = new Set(v.map(x => norm(x)));\n    const texts = opts\n      .filter(o => selected.has(norm(o?.id)))\n      .map(o => {\n        const txt = norm(o?.text);\n        return translateValue(txt); // TRANSLATE HERE\n      })\n      .filter(Boolean);\n    return texts.length ? texts.join(\", \") : v.map(x => norm(x)).filter(Boolean).join(\", \");\n  }\n\n  return norm(v);\n}\n\n// ========== MAIN LOGIC ==========\nconst body = input?.body || {};\nconst data = body?.data || {};\nconst fields = Array.isArray(data?.fields) ? data.fields : [];\n\n// DETECT LANGUAGE\nfunction detectFormLanguage(fields) {\n  // Check for unique English keys\n  const englishKeys = ['question_R0oJPP', 'question_oyR7GM', 'question_J6lJA7'];\n  const found = fields.some(f => englishKeys.includes(f.key));\n  return found ? 'en' : 'he';\n}\n\nconst formLanguage = detectFormLanguage(fields);\n\nconst answers_by_key = {};\nconst answers_by_label = {};\n\nlet report_record_id = \"\";\nlet client_id = \"\";\nlet client_name = \"\"; \nlet spouse_name = \"\";\nlet year = \"\";\nlet token = \"\";\nlet client_email = \"\";\n\nconst qaRows = [];\n\nfor (const f of fields) {\n  let key = norm(f?.key);\n  const label = norm(f?.label);\n  const type = norm(f?.type);\n\n  // KEY NORMALIZATION (Eng -> Heb)\n  if (KEY_MAP[key]) {\n    key = KEY_MAP[key];\n  }\n\n  let valueOut = \"\";\n\n  if (type === \"MULTIPLE_CHOICE\" || type === \"MULTI_SELECT\" || type === \"CHECKBOXES\") {\n    valueOut = asChoiceText(f);\n  } else {\n    valueOut = norm(f?.value);\n  }\n\n  if (key) answers_by_key[key] = valueOut;\n  if (label) answers_by_label[label] = valueOut;\n\n  // Metadata Extraction\n  if (label === \"report_record_id\") report_record_id = valueOut;\n  if (label === \"client_id\") client_id = valueOut;\n  if (label === \"year\") year = valueOut;\n  if (label === \"token\" || label === \"questionnaire_token\") token = valueOut;\n  \n  // Specific Fields\n  if (key === \"question_vAekdl\") client_name = valueOut; // Normalized key\n  if (key === \"question_K65baX\") client_email = valueOut; // Normalized key\n  if (key === \"question_1ld8p1\") spouse_name = valueOut; // Normalized key\n\n  if (type !== \"HIDDEN_FIELDS\") {\n    qaRows.push({ label, value: valueOut });\n  }\n}\n\n// Fallbacks\nif (!client_name) client_name = client_id;\nlet display_name = client_name;\nif (spouse_name) {\n  display_name = `${client_name} ו${spouse_name}`;\n}\n\nconst htmlRows = qaRows\n  .filter(r => r.label)\n  .map(r => {\n    const l = htmlEscape(r.label);\n    const v = htmlEscape(r.value || \"\");\n    return `<tr><td style=\"padding:6px 10px; border:1px solid #ddd; vertical-align:top; width:40%;\"><strong>${l}</strong></td><td style=\"padding:6px 10px; border:1px solid #ddd;\">${v || \"\"}</td></tr>`;\n  })\n  .join(\"\\n\");\n\nconst formName = norm(data?.formName);\nconst createdAt = norm(data?.createdAt);\n\nconst html_summary = `\n<div style=\"font-family: Arial, sans-serif; direction: rtl; text-align: right;\">\n  <h3 style=\"margin:0 0 8px 0;\">התקבלו תשובות חדשות לשאלון (${formLanguage === 'en' ? 'אנגלית' : 'עברית'})</h3>\n  <div style=\"margin:0 0 12px 0; color:#555;\">\n    <div><strong>טופס:</strong> ${htmlEscape(formName)}</div>\n    <div><strong>תאריך:</strong> ${htmlEscape(createdAt)}</div>\n    <div><strong>לקוח:</strong> ${htmlEscape(display_name)}</div>\n    <div><strong>שנה:</strong> ${htmlEscape(year)}</div>\n    <div><strong>אימייל:</strong> ${htmlEscape(client_email)}</div>\n  </div>\n  <table style=\"border-collapse: collapse; width:100%; direction: rtl;\">${htmlRows}</table>\n</div>`;\n\nreturn [\n  {\n    json: {\n      client_name,\n      spouse_name,\n      display_name,\n      client_id,\n      year,\n      token,\n      report_record_id,\n      html_summary,\n      formName,\n      answers_by_key, // Contains normalized Hebrew keys\n      answers_by_label,\n      client_email,\n      form_language: formLanguage,\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        12336,
+        976
+      ],
+      "id": "87a06ec4-3c4a-42bd-9f2b-07a01d94f9f9",
+      "name": "Code - Format & Extract"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "base": {
+          "__rl": true,
+          "value": "appqBL5RWQN9cPOyh",
+          "mode": "id"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tbls7m3hmHC4hhQVy",
+          "mode": "id"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "stage": "3-Collecting_Docs",
+            "spouse_name": "={{ $('Code - Add Docs to Email').item.json.spouse_name }}",
+            "source_language": "={{ $('Code - Add Docs to Email').item.json.form_language }}",
+            "last_progress_check_at": "2026-01-08T10:54:39"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "report_key",
+              "displayName": "report_key",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "client",
+              "displayName": "client",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "send_questionnaire",
+              "displayName": "send_questionnaire",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "year",
+              "displayName": "year",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "stage",
+              "displayName": "stage",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "1-Send_Questionnaire",
+                  "value": "1-Send_Questionnaire"
+                },
+                {
+                  "name": "2-Waiting_For_Answers",
+                  "value": "2-Waiting_For_Answers"
+                },
+                {
+                  "name": "3-Collecting_Docs",
+                  "value": "3-Collecting_Docs"
+                },
+                {
+                  "name": "4-Review",
+                  "value": "4-Review"
+                },
+                {
+                  "name": "5-Completed",
+                  "value": "5-Completed"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "questionnaire_token",
+              "displayName": "questionnaire_token",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "report_uid",
+              "displayName": "report_uid",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "questionnaire_link_he",
+              "displayName": "questionnaire_link_he",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "questionnaire_link_en",
+              "displayName": "questionnaire_link_en",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "notes",
+              "displayName": "notes",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "last_progress_check_at",
+              "displayName": "last_progress_check_at",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "documents",
+              "displayName": "documents",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "email_events",
+              "displayName": "email_events",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "docs_total",
+              "displayName": "docs_total",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "docs_missing_count",
+              "displayName": "docs_missing_count",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "docs_received_count",
+              "displayName": "docs_received_count",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "completion_percent",
+              "displayName": "completion_percent",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "completion_status_auto",
+              "displayName": "completion_status_auto",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "client_id",
+              "displayName": "client_id",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "record_id",
+              "displayName": "record_id",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "client_email",
+              "displayName": "client_email",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "client_name",
+              "displayName": "client_name",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "spouse_name",
+              "displayName": "spouse_name",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "source_language",
+              "displayName": "source_language",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "he",
+                  "value": "he"
+                },
+                {
+                  "name": "en",
+                  "value": "en"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        14128,
+        976
+      ],
+      "id": "083ab22d-8498-49dd-b0ae-29d562ead3c2",
+      "name": "Airtable - Update Annual Report",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "ODW07LgvsPQySQxh",
+          "name": "Airtable Personal Access Token account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "upsert",
+        "base": {
+          "__rl": true,
+          "value": "appqBL5RWQN9cPOyh",
+          "mode": "id"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblcwptR63skeODPn",
+          "mode": "id"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "document_key": "={{ $json.document_key }}",
+            "report": "={{ $json.report }}",
+            "type": "={{ $json.type }}",
+            "status": "={{ $json.status }}",
+            "issuer_key": "={{ $json.issuer_key }}",
+            "issuer_name": "={{ $json.issuer_name }}",
+            "issuer_name_en": "={{ $json.issuer_name_en }}"
+          },
+          "matchingColumns": [
+            "document_key"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "document_key",
+              "displayName": "document_key",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "report",
+              "displayName": "report",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "type",
+              "displayName": "type",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "Residency_Cert",
+                  "value": "Residency_Cert"
+                },
+                {
+                  "name": "ID_Appendix",
+                  "value": "ID_Appendix"
+                },
+                {
+                  "name": "Child_ID_Appendix",
+                  "value": "Child_ID_Appendix"
+                },
+                {
+                  "name": "Special_Ed_Approval",
+                  "value": "Special_Ed_Approval"
+                },
+                {
+                  "name": "Child_Disability_Approval",
+                  "value": "Child_Disability_Approval"
+                },
+                {
+                  "name": "Alimony_Judgment",
+                  "value": "Alimony_Judgment"
+                },
+                {
+                  "name": "Form_106",
+                  "value": "Form_106"
+                },
+                {
+                  "name": "Form_106_Spouse",
+                  "value": "Form_106_Spouse"
+                },
+                {
+                  "name": "Pension_Withdrawal",
+                  "value": "Pension_Withdrawal"
+                },
+                {
+                  "name": "NII_Allowance_Cert",
+                  "value": "NII_Allowance_Cert"
+                },
+                {
+                  "name": "NII_Allowance_Cert_Spouse",
+                  "value": "NII_Allowance_Cert_Spouse"
+                },
+                {
+                  "name": "Form_867",
+                  "value": "Form_867"
+                },
+                {
+                  "name": "Crypto_Report",
+                  "value": "Crypto_Report"
+                },
+                {
+                  "name": "Gambling_Win_Cert",
+                  "value": "Gambling_Win_Cert"
+                },
+                {
+                  "name": "Foreign_Income_Report",
+                  "value": "Foreign_Income_Report"
+                },
+                {
+                  "name": "Rent_Contract_Income",
+                  "value": "Rent_Contract_Income"
+                },
+                {
+                  "name": "Rent_Contract_Expense",
+                  "value": "Rent_Contract_Expense"
+                },
+                {
+                  "name": "Inventory_List",
+                  "value": "Inventory_List"
+                },
+                {
+                  "name": "Insurance_Tax_Cert",
+                  "value": "Insurance_Tax_Cert"
+                },
+                {
+                  "name": "Army_Release_Cert",
+                  "value": "Army_Release_Cert"
+                },
+                {
+                  "name": "Degree_Cert",
+                  "value": "Degree_Cert"
+                },
+                {
+                  "name": "Medical_Committee",
+                  "value": "Medical_Committee"
+                },
+                {
+                  "name": "Donation_Receipts",
+                  "value": "Donation_Receipts"
+                },
+                {
+                  "name": "Memorial_Receipts",
+                  "value": "Memorial_Receipts"
+                },
+                {
+                  "name": "Institution_Approval",
+                  "value": "Institution_Approval"
+                },
+                {
+                  "name": "General_Doc",
+                  "value": "General_Doc"
+                },
+                {
+                  "name": "Mortgage_Insurance_Cert",
+                  "value": "Mortgage_Insurance_Cert"
+                },
+                {
+                  "name": "WHT_Approval_IncomeTax",
+                  "value": "WHT_Approval_IncomeTax"
+                },
+                {
+                  "name": "WHT_Approval_NII",
+                  "value": "WHT_Approval_NII"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "status",
+              "displayName": "status",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "Required_Missing",
+                  "value": "Required_Missing"
+                },
+                {
+                  "name": "Received",
+                  "value": "Received"
+                },
+                {
+                  "name": "Requires_Fix",
+                  "value": "Requires_Fix"
+                },
+                {
+                  "name": "Waived",
+                  "value": "Waived"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "issuer_key",
+              "displayName": "issuer_key",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "issuer_name",
+              "displayName": "issuer_name",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "issuer_name_en",
+              "displayName": "issuer_name_en",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "file_url",
+              "displayName": "file_url",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "onedrive_item_id",
+              "displayName": "onedrive_item_id",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "expected_filename",
+              "displayName": "expected_filename",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "uploaded_at",
+              "displayName": "uploaded_at",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "source_message_id",
+              "displayName": "source_message_id",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "source_internet_message_id",
+              "displayName": "source_internet_message_id",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "source_attachment_name",
+              "displayName": "source_attachment_name",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "source_sender_email",
+              "displayName": "source_sender_email",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "ai_confidence",
+              "displayName": "ai_confidence",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "ai_reason",
+              "displayName": "ai_reason",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "created_at",
+              "displayName": "created_at",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "updated_at",
+              "displayName": "updated_at",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "is_missing",
+              "displayName": "is_missing",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "is_received",
+              "displayName": "is_received",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "email_events",
+              "displayName": "email_events",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "report_key_lookup",
+              "displayName": "report_key_lookup",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "document_uid",
+              "displayName": "document_uid",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "file_hash",
+              "displayName": "file_hash",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "report_record_id",
+              "displayName": "report_record_id",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        13008,
+        896
+      ],
+      "id": "0bfacd54-2fe1-495e-b9f8-5efe8440da3a",
+      "name": "Airtable - Upsert Documents",
+      "alwaysOutputData": true,
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "ODW07LgvsPQySQxh",
+          "name": "Airtable Personal Access Token account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "bc1e9b8d-2e92-469d-86ed-70b7d3b3a93e",
+              "name": "data",
+              "value": "<div dir=\"rtl\" style=\"font-family: 'Segoe UI', Tahoma, sans-serif; text-align: center; padding: 50px 20px; color: #1a237e; background-color: #f4f7f9; min-height: 100vh;\">   <div style=\"background: white; max-width: 500px; margin: auto; padding: 40px; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.05);\">     <div style=\"font-size: 60px; margin-bottom: 20px;\">🚀</div>     <h1 style=\"margin-bottom: 10px;\">השאלון נשלח בהצלחה!</h1>     <p style=\"font-size: 18px; color: #555;\">תודה, <b>{{ $node[\"Code - Format & Extract\"].json[\"client_name\"] }}</b>.</p>     <p style=\"font-size: 16px; color: #666; line-height: 1.5;\">       שלחנו לך כעת מייל מפורט עם רשימת המסמכים שעליך לאסוף.<br>       ברגע שתשלח אותם אלינו, נתחיל בעבודה על הדו\"ח.     </p>     <div style=\"margin-top: 30px; border-top: 1px solid #eee; padding-top: 20px;\">       <p style=\"font-size: 14px; color: #999;\">משרד רו\"ח משה עציץ</p>     </div>   </div> </div>",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        14352,
+        976
+      ],
+      "id": "a07b9292-eb93-4f22-8cdd-52a88e567b43",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get input from the previous node\nconst input = $input.item.json;\nconst answers = input.answers_by_key || {};\nconst reportId = input.report_record_id;\nconst tax_year = input.year;\n\n// --- 1. Client Name Logic (PLAIN TEXT) ---\nconst answerName = answers['question_vAekdl'];\nconst hiddenName = input.client_name;\nconst clientNamePlain = (answerName || hiddenName || \"הלקוח\").trim();\n\n// --- 2. Spouse Name Logic (PLAIN TEXT) ---\nconst SPOUSE_KEY = 'question_1ld8p1';\n\nlet rawSpouse = answers[SPOUSE_KEY] || input.spouse_name;\n\nconst placeholderValues = [\n    \"spouse's name\",\n    \"שם בן/בת הזוג\",\n    \"first and last name\",\n    \"שם מלא\"\n];\n\nlet cleanSpouse = String(rawSpouse || \"\").trim();\n\nconst isPlaceholder = placeholderValues.some(p => \n    cleanSpouse.toLowerCase() === p.toLowerCase()\n);\nconst isRealName = cleanSpouse.length > 1 && !isPlaceholder;\n\nconst spouseNamePlain = isRealName ? cleanSpouse : \"בן/בת הזוג\";\n\n// --- Helper Functions ---\n\nfunction norm(v) { return String(v ?? \"\").trim(); }\n\nfunction isTriggered(key) {\n  const val = answers[key];\n  if (val === null || val === undefined) return false;\n  if (Array.isArray(val)) return val.length > 0;\n  const s = norm(val);\n  return s === 'כן' || s.toLowerCase() === 'yes' || s.toLowerCase() === 'true';\n}\n\nfunction getListItems(key) {\n  const val = answers[key];\n  if (!val) return [];\n  return String(val).split(/[\\n,]/).map(x => x.trim()).filter(Boolean);\n}\n\nfunction isOtherItem(item) {\n  const s = norm(item).replace(/[\"']/g, \"\");\n  return s === 'אחר' || s.toLowerCase() === 'other';\n}\n\nfunction getOtherDetail(detailKey) {\n  const d = norm(answers[detailKey]);\n  return d || 'אחר (ללא פירוט)';\n}\n\nfunction cleanKeyPart(s) {\n  return String(s ?? \"\").trim().replace(/\\s+/g, \"_\").replace(/[^\\u0590-\\u05FFa-zA-Z0-9_]/g, \"\");\n}\n\n// WITHDRAWAL TYPE MAPPINGS\nconst WITHDRAWAL_TYPES = {\n  \"פיצויי פיטורין\": {\n    he: \"אישור על משיכת פיצויי פיטורין לשנת {year} והמס שנוכה\",\n    en: \"Severance Pay Withdrawal Certificate for {year} (with tax withheld)\"\n  },\n  \"מענק פרישה\": {\n    he: \"אישור על משיכת מענק פרישה לשנת {year} והמס שנוכה\",\n    en: \"Retirement Grant Withdrawal Certificate for {year} (with tax withheld)\"\n  },\n  \"משיכת תגמולים (הוני)\": {\n    he: \"אישור על משיכת תגמולים (הוני) לשנת {year} והמס שנוכה\",\n    en: \"Lump-Sum Benefits Withdrawal Certificate for {year} (with tax withheld)\"\n  },\n  \"קצבה / היוון קצבה\": {\n    he: \"אישור על קצבה / היוון קצבה לשנת {year} והמס שנוכה\",\n    en: \"Pension/Pension Commutation Certificate for {year} (with tax withheld)\"\n  },\n  \"משיכת קרן השתלמות\": {\n    he: \"אישור על משיכת קרן השתלמות לשנת {year} והמס שנוכה בעת המשיכה\",\n    en: \"Study Fund Withdrawal Certificate for {year} (with tax withheld)\"\n  },\n};\n\nfunction getWithdrawalNames(rawItem) {\n  const isOther = isOtherItem(rawItem);\n  const txt = isOther ? getOtherDetail('question_R0Mpk4') : rawItem;\n  \n  if (WITHDRAWAL_TYPES[txt]) {\n    return {\n      he: WITHDRAWAL_TYPES[txt].he.replace('{year}', tax_year),\n      en: WITHDRAWAL_TYPES[txt].en.replace('{year}', tax_year),\n      suffix: txt\n    };\n  }\n  \n  return {\n    he: `אישור על ${txt} לשנת ${tax_year} והמס שנוכה בעת המשיכה`,\n    en: `${txt} Withdrawal Certificate for ${tax_year} (with tax withheld)`,\n    suffix: txt\n  };\n}\n\n// --- Data Containers ---\nconst out = [];\nconst seen = new Set();\n\nfunction addDoc(step, issuer_name_he, issuer_name_en, itemRaw = \"static\") {\n  const stepKey = cleanKeyPart(step.dedupeKey || step.key || \"step\");\n  const itemKey = cleanKeyPart(itemRaw || \"static\");\n  const document_key = `${step.type}_${reportId}_${stepKey}_${itemKey}`;\n\n  if (seen.has(document_key)) return;\n  seen.add(document_key);\n\n  out.push({\n    document_key,\n    report: [reportId],\n    report_record_id: reportId, \n    type: step.type,\n    status: \"Required_Missing\",\n    issuer_key: step.key || \"\",\n    issuer_name: issuer_name_he,\n    issuer_name_en: issuer_name_en,\n    category: step.cat,\n  });\n}\n\n// --- MAPPING CONFIGURATION ---\nconst STEPS = [\n  // === Spouse Section ===\n  {\n    key: 'question_Oz4vkY',\n    mode: 'multi_expand',\n    list: 'question_V0QgDM',\n    detail: 'question_P61KkB',\n    type: 'NII_Allowance_Cert_Spouse',\n    cat: '🛡️ ביטוח, פנסיה וקצבאות',\n    makeName: (rawItem) => {\n      let coreName = rawItem;\n      if (isOtherItem(rawItem)) coreName = getOtherDetail('question_P61KkB');\n      return {\n        he: `אישור שנתי לשנת ${tax_year} על ${coreName} מביטוח לאומי - ${spouseNamePlain}`,\n        en: `National Insurance Annual Certificate for ${tax_year} - ${coreName} - ${spouseNamePlain}`,\n        suffix: coreName\n      };\n    }\n  },\n  {\n    key: 'question_0x8vx9',\n    mode: 'static',\n    type: 'NII_Allowance_Cert_Spouse',\n    cat: '🛡️ ביטוח, פנסיה וקצבאות',\n    name_he: `אישור שנתי לשנת ${tax_year} על קצבת שארים שהתקבלה מביטוח לאומי - ${spouseNamePlain}`,\n    name_en: `Survivors Benefits Certificate from National Insurance for ${tax_year} - ${spouseNamePlain}`\n  },\n  {\n    key: 'question_d6arvd',\n    mode: 'dynamic',\n    list: 'question_YQ08kW',\n    type: 'Form_106_Spouse',\n    cat: '💼 הכנסות מעבודה',\n    prefix_he: `טופס 106 לשנת ${tax_year} - ${spouseNamePlain} - `,\n    prefix_en: `Form 106 for ${tax_year} - ${spouseNamePlain}, `\n  },\n\n  // === Real Estate ===\n  {\n    key: 'question_67Kv1P',\n    mode: 'static',\n    type: 'Residency_Cert',\n    cat: '🏠 מגורים ונדל\"ן',\n    name_he: `אישור תושבות לשנת ${tax_year} - ${answers['question_7WKvJP'] || ''} - למימוש הטבת מס ליישובים מזכים`,\n    name_en: `Residency Certificate for ${tax_year} - ${answers['question_7WKvJP'] || ''} (for qualifying settlement tax benefit)`\n  },\n  {\n    key: 'question_7WLGM0',\n    mode: 'static',\n    type: 'Rent_Contract_Income',\n    cat: '🏠 מגורים ונדל\"ן',\n    name_he: 'חוזה שכירות של הדירה שהשכרת (הכנסה)',\n    name_en: 'Rental Income Lease Agreement'\n  },\n  {\n    key: 'question_Ad2Zye',\n    mode: 'static',\n    type: 'Rent_Contract_Expense',\n    cat: '🏠 מגורים ונדל\"ן',\n    name_he: 'חוזה שכירות של הדירה ששכרת למגורים (הוצאה)',\n    name_en: 'Rental Expense Lease Agreement (for residence)'\n  },\n\n  // === Personal & Donations ===\n  {\n    key: 'question_J6p7MK',\n    mode: 'static',\n    dedupeKey: 'ID_Appendix_Unified',\n    type: 'ID_Appendix',\n    cat: '📋 אישי ותרומות',\n    name_he: 'ספח תעודת זהות מעודכן (משמש גם לשינוי סטטוס וגם לילדים)',\n    name_en: 'Updated ID Appendix (for status changes and children)'\n  },\n  {\n    key: 'question_8KaOMz',\n    mode: 'static',\n    dedupeKey: 'ID_Appendix_Unified',\n    type: 'ID_Appendix',\n    cat: '📋 אישי ותרומות',\n    name_he: 'ספח תעודת זהות מעודכן (משמש גם לשינוי סטטוס וגם לילדים)',\n    name_en: 'Updated ID Appendix (for status changes and children)'\n  },\n  {\n    key: 'question_0xBXaB',\n    mode: 'static',\n    type: 'Special_Ed_Approval',\n    cat: '📋 אישי ותרומות',\n    name_he: `אישור ועדת השמה (חינוך מיוחד) לשנת ${tax_year} - לקבלת 2 נקודות זיכוי שנתיות`,\n    name_en: `Special Education Placement Committee Approval for ${tax_year} (for 2 annual credit points)`\n  },\n  {\n    key: 'question_8Ka0Zl',\n    mode: 'static',\n    type: 'Child_Disability_Approval',\n    cat: '📋 אישי ותרומות',\n    name_he: `אישור שנתי לשנת ${tax_year} על קצבת נכות מהביטוח הלאומי עבור הילד/ה`,\n    name_en: `Child Disability Allowance Certificate from National Insurance for ${tax_year}`\n  },\n  {\n    key: 'question_P69RpP',\n    mode: 'static',\n    type: 'Alimony_Judgment',\n    cat: '📋 אישי ותרומות',\n    name_he: 'פסק דין / הסכם גירושין (דמי מזונות)',\n    name_en: 'Divorce Agreement / Alimony Judgment'\n  },\n  {\n    key: 'question_oyR995',\n    mode: 'static',\n    type: 'Army_Release_Cert',\n    cat: '📋 אישי ותרומות',\n    name_he: 'תעודת שחרור משירות סדיר / לאומי - למימוש נקודות זיכוי לחיילים משוחררים',\n    name_en: 'Military Release Certificate (for discharged soldiers credit points)'\n  },\n  {\n    key: 'question_0xBXkB',\n    mode: 'static',\n    type: 'Memorial_Receipts',\n    cat: '📋 אישי ותרומות',\n    name_he: 'קבלות ומסמכים על הוצאות הנצחה',\n    name_en: 'Memorial Expense Receipts and Documentation'\n  },\n  {\n    key: 'question_5z9vzN',\n    mode: 'static',\n    type: 'Institution_Approval',\n    cat: '📋 אישי ותרומות',\n    name_he: `אישור רשמי על החזקת קרוב משפחה במוסד בשנת ${tax_year} - לקבלת זיכוי בגין נטולי יכולת`,\n    name_en: `Official confirmation of family member institutionalization in ${tax_year} (for dependent credit)`\n  },\n  {\n    key: 'question_5zjRVZ',\n    mode: 'static',\n    type: 'Degree_Cert',\n    cat: '📋 אישי ותרומות',\n    name_he: 'אישור זכאות לתואר אקדמי - לקבלת נקודות זיכוי אקדמיות',\n    name_en: 'Academic Degree Eligibility Certificate (for academic credit points)'\n  },\n  {\n    key: 'question_DNkQaN',\n    mode: 'static',\n    type: 'Medical_Committee',\n    cat: '📋 אישי ותרומות',\n    name_he: 'מסמכים רפואיים/ועדה רפואית - לבחינת פטור ממס או הקלות',\n    name_en: 'Medical Committee/Medical Documentation (for tax exemption or relief evaluation)'\n  },\n  {\n    key: 'question_R0Mpj4',\n    mode: 'static',\n    type: 'Donation_Receipts',\n    cat: '📋 אישי ותרומות',\n    name_he: `קבלות מקוריות מרוכזות על תרומות (סעיף 46) לשנת ${tax_year}`,\n    name_en: `Original Donation Receipts (Section 46) for ${tax_year}`\n  },\n\n  // === Client Work & Income ===\n  {\n    key: 'question_zqylLM',\n    mode: 'dynamic',\n    list: 'question_5zjRMZ',\n    type: 'Form_106',\n    cat: '💼 הכנסות מעבודה',\n    prefix_he: `טופס 106 לשנת ${tax_year} - ${clientNamePlain} - `,\n    prefix_en: `Form 106 for ${tax_year} - ${clientNamePlain}, `\n  },\n  {\n    key: 'question_K65bkX',\n    mode: 'static',\n    type: 'Inventory_List',\n    cat: '💼 הכנסות מעבודה',\n    name_he: `ספירת מלאי ל-31.12.${tax_year}`,\n    name_en: `Business Inventory List as of 31.12.${tax_year}`\n  },\n\n  // === Banks & Capital ===\n  {\n    key: 'question_r6a7v2',\n    mode: 'dynamic',\n    list: 'question_48J5zA',\n    type: 'Form_867',\n    cat: '🏦 בנקים ושוק ההון',\n    prefix_he: `טופס 867 לשנת ${tax_year} (ניירות ערך) - `,\n    prefix_en: `Form 867 for ${tax_year} (Securities) - `\n  },\n  {\n    key: 'question_xpMKvv',\n    mode: 'dynamic',\n    list: 'question_ZNE0De',\n    type: 'Form_867',\n    cat: '🏦 בנקים ושוק ההון',\n    prefix_he: `טופס 867 לשנת ${tax_year} (פיקדונות) - `,\n    prefix_en: `Form 867 for ${tax_year} (Deposits) - `\n  },\n  {\n    key: 'question_N6lkdO',\n    mode: 'static',\n    type: 'Crypto_Report',\n    cat: '🏦 בנקים ושוק ההון',\n    name_he: `ריכוז פעולות קריפטו בשנת ${tax_year} - לצורך קיזוז הפסדים כנגד רווחים`,\n    name_en: `Cryptocurrency Transaction Summary for ${tax_year} (for offsetting losses against gains)`\n  },\n\n  // === Withdrawals ===\n  {\n    key: 'question_DNkQMN',\n    mode: 'multi_expand',\n    list: 'question_lyeQvN',\n    detail: 'question_R0Mpk4',\n    type: 'Pension_Withdrawal',\n    cat: '🛡️ ביטוח, פנסיה וקצבאות',\n    makeName: (rawItem) => {\n      const names = getWithdrawalNames(rawItem);\n      return {\n        he: names.he,\n        en: names.en,\n        suffix: names.suffix\n      };\n    }\n  },\n\n  // === Client Insurance/NII ===\n  {\n    key: 'question_pKyav8',\n    mode: 'dynamic',\n    list: 'question_1ld861',\n    type: 'Insurance_Tax_Cert',\n    cat: '🛡️ ביטוח, פנסיה וקצבאות',\n    prefix_he: `אישור מס לשנת ${tax_year} (דו\"ח שנתי מקוצר) - פנסיה - `,\n    prefix_en: `Tax Certificate for ${tax_year} (Annual Summary) - Pension - `\n  },\n  {\n    key: 'question_MbNBMk',\n    mode: 'dynamic',\n    list: 'question_J6p7oK',\n    type: 'Insurance_Tax_Cert',\n    cat: '🛡️ ביטוח, פנסיה וקצבאות',\n    prefix_he: `אישור מס לשנת ${tax_year} (דו\"ח שנתי מקוצר) - קרן השתלמות - `,\n    prefix_en: `Tax Certificate for ${tax_year} (Annual Summary) - Study Fund - `\n  },\n  {\n    key: 'question_g0d2zD',\n    mode: 'dynamic',\n    list: 'question_y62L1X',\n    type: 'Insurance_Tax_Cert',\n    cat: '🛡️ ביטוח, פנסיה וקצבאות',\n    prefix_he: `אישור מס לשנת ${tax_year} (דו\"ח שנתי מקוצר) - אובדן כושר עבודה - `,\n    prefix_en: `Tax Certificate for ${tax_year} (Annual Summary) - Disability Insurance - `\n  },\n  {\n    key: 'question_a64Q7E',\n    mode: 'dynamic',\n    list: 'question_67K8aO',\n    type: 'Insurance_Tax_Cert',\n    cat: '🛡️ ביטוח, פנסיה וקצבאות',\n    prefix_he: `אישור מס לשנת ${tax_year} (דו\"ח שנתי מקוצר) - ביטוח חיים - `,\n    prefix_en: `Tax Certificate for ${tax_year} (Annual Summary) - Life Insurance - `\n  },\n  {\n    key: 'question_oyeWvO',\n    mode: 'static',\n    type: 'NII_Allowance_Cert',\n    cat: '🛡️ ביטוח, פנסיה וקצבאות',\n    name_he: `אישור שנתי לשנת ${tax_year} על נכות שהתקבלה מביטוח לאומי - ${clientNamePlain}`,\n    name_en: `Disability Benefits Certificate from National Insurance for ${tax_year} - ${clientNamePlain}`\n  },\n  {\n    key: 'question_XDoYDP',\n    mode: 'static',\n    type: 'NII_Allowance_Cert',\n    cat: '🛡️ ביטוח, פנסיה וקצבאות',\n    name_he: `אישור שנתי לשנת ${tax_year} על קצבת שארים שהתקבלה מביטוח לאומי - ${clientNamePlain}`,\n    name_en: `Survivors Benefits Certificate from National Insurance for ${tax_year} - ${clientNamePlain}`\n  },\n\n  // === Other Income ===\n  {\n    key: 'question_QDeLkX',\n    mode: 'static',\n    type: 'Gambling_Win_Cert',\n    cat: '💰 הכנסות נוספות',\n    name_he: 'אסמכתאות על זכייה בהימורים/פרסים',\n    name_en: 'Gambling/Prize Winnings Documentation'\n  },\n  {\n    key: 'question_e6Q4vl',\n    mode: 'custom_foreign_income',\n    type: 'Foreign_Income_Report',\n    cat: '💰 הכנסות נוספות'\n  },\n  {\n    key: 'question_Gz9WbL',\n    mode: 'dynamic',\n    list: 'question_Oz4vEY',\n    type: 'WHT_Approval_IncomeTax',\n    cat: '💰 הכנסות נוספות',\n    prefix_he: `אישור ניכוי מס במקור לשנת ${tax_year} (מס הכנסה) - `,\n    prefix_en: `Withholding Tax Certificate for ${tax_year} (Income Tax) - `\n  },\n  {\n    key: 'question_V0QgNM',\n    mode: 'dynamic',\n    list: 'question_P61KrB',\n    type: 'WHT_Approval_NII',\n    cat: '💰 הכנסות נוספות',\n    prefix_he: `אישור ניכוי מס במקור לשנת ${tax_year} (ביטוח לאומי) - `,\n    prefix_en: `Withholding Tax Certificate for ${tax_year} (National Insurance) - `\n  },\n  {\n    key: 'question_5zdaod',\n    mode: 'conditional_text',\n    yesNoKey: 'question_5zdaod',\n    textKey: 'question_d6YJXA',\n    type: 'General_Doc',\n    cat: '💰 הכנסות נוספות',\n    prefix_he: `מסמכים תומכים עבור: `,\n    prefix_en: `Supporting documentation for: `\n  }\n];\n\n// --- EXECUTION LOOP ---\nfor (const step of STEPS) {\n  if (!isTriggered(step.key)) continue;\n\n  if (step.mode === 'conditional_text') {\n    const textAnswer = norm(answers[step.textKey]);\n    \n    if (textAnswer.length > 0) {\n      const displayName_he = `${step.prefix_he}${textAnswer}`;\n      const displayName_en = `${step.prefix_en}${textAnswer}`;\n      addDoc(step, displayName_he, displayName_en, textAnswer);\n    }\n    continue;\n  }\n\n  if (step.mode === 'custom_foreign_income') {\n    const country = answers['question_WNEy1k'] || 'חו\"ל';\n    const name_he = `דוח מס שהוגש ב${country} / אסמכתאות על ההכנסה לשנת ${tax_year}`;\n    const name_en = `Tax Return Filed in ${country} / Income Documentation for ${tax_year}`;\n    addDoc(step, name_he, name_en, \"foreign_income_consolidated\");\n    continue;\n  }\n\n  if (step.mode === 'static') {\n    addDoc(step, step.name_he, step.name_en, \"static\");\n    continue;\n  }\n\n  if (step.mode === 'dynamic') {\n    const items = getListItems(step.list);\n    if (items.length === 0) {\n      const cleanName_he = step.prefix_he.replace(/ - |: /g, \"\");\n      const cleanName_en = step.prefix_en.replace(/ - |: /g, \"\");\n      addDoc(step, cleanName_he, cleanName_en, \"empty\");\n    } else {\n      items.forEach(it => {\n        const displayName_he = `${step.prefix_he}${it}`;\n        const displayName_en = `${step.prefix_en}${it}`;\n        addDoc(step, displayName_he, displayName_en, it);\n      });\n    }\n    continue;\n  }\n\n  if (step.mode === 'multi_expand') {\n    const items = getListItems(step.list);\n    if (items.length === 0) continue;\n    items.forEach(rawItem => {\n      const maker = step.makeName(rawItem);\n      addDoc(step, maker.he, maker.en, maker.suffix || rawItem);\n    });\n    continue;\n  }\n}\n\n// --- FINAL OUTPUT HANDLING ---\n\nif (out.length === 0) {\n  return [{\n    json: {\n      document_key: \"NO_DOCS\",\n      type: \"NO_DOCS\",\n      isEmpty: true,\n      report_record_id: reportId,\n      year: tax_year\n    }\n  }];\n}\n\nreturn out.map(d => ({ json: d }));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        12560,
+        976
+      ],
+      "id": "46a2209c-75f4-45a9-bc06-24881be1e43d",
+      "name": "Code - DocMapping",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const crypto = require('crypto');\n\n// 1. הגדרות\nconst SECRET = 'MOSHE_1710'; \n\n// 2. משיכת נתונים מהצמתים הקודמים\nlet airtableDocs = [];\ntry {\n    airtableDocs = $('Airtable - List Docs').all();\n} catch (e) {\n    console.log(\"No docs required\");\n}\n\nconst docMappingDocs = $('Code - DocMapping').all();\nconst formatItem = $('Code - Format & Extract').first().json;\nconst reportId = formatItem.report_record_id;\nconst clientName = formatItem.client_name;\nconst spouseName = formatItem.spouse_name;\nconst clientEmail = formatItem.client_email;\nconst year = formatItem.year;\n\n// ========== HELPER: SMART FORMATTING FOR DOCUMENT NAMES ==========\nfunction formatDocumentName(name) {\n  // Bold parts after dashes (names, companies, banks, etc.)\n  // Example: \"טופס 106 - ליעוז - קפה מעסיק\" \n  // Becomes: \"טופס 106 - <strong>ליעוז</strong> - <strong>קפה מעסיק</strong>\"\n  \n  const parts = String(name || '').split(' - ');\n  if (parts.length === 1) return name; // No dashes, return as-is\n  \n  // Keep first part plain, bold the rest\n  const formatted = [parts[0]];\n  for (let i = 1; i < parts.length; i++) {\n    formatted.push(`<strong>${parts[i]}</strong>`);\n  }\n  \n  return formatted.join(' - ');\n}\n\n// מיפוי קטגוריות\nconst categoryMap = {};\ndocMappingDocs.forEach(doc => {\n  if (doc.json.type !== 'NO_DOCS') {\n      categoryMap[doc.json.document_key] = doc.json.category;\n  }\n});\n\nconst docItems = airtableDocs.map(item => ({\n  json: {\n    category: categoryMap[item.json.document_key] || '📋 אחר',\n    issuer_name: item.json.issuer_name || item.json.type || \"מסמך נדרש\",\n    type: item.json.type\n  }\n}));\n\n// 3. בניית לינקים\nconst baseUrl = 'https://liozshor.app.n8n.cloud/webhook';\nconst approveUrl = `${baseUrl}/approve-and-send?report_id=${reportId}&token=${SECRET}`;\nconst editUrl = `https://liozshor.github.io/annual-reports-client-portal/document-manager.html?report_id=${reportId}&client_name=${encodeURIComponent(clientName)}&spouse_name=${encodeURIComponent(spouseName)}&year=${year}`;\n\n// 4. יצירת HTML למייל עם SMART FORMATTING\nconst isMarried = spouseName && spouseName.trim().length > 0;\nlet docsHtml = '';\n\nif (docItems && docItems.length > 0) {\n  const docsByCategory = {};\n  docItems.forEach(item => {\n    const cat = item.json.category || '📋 אחר';\n    if (!docsByCategory[cat]) docsByCategory[cat] = [];\n    docsByCategory[cat].push(item.json.issuer_name);\n  });\n\n  const categoryHtmlSections = Object.entries(docsByCategory).map(([category, docs]) => {\n    let docListHtml = '';\n    if (isMarried) {\n      const clientDocs = docs.filter(d => clientName && d.includes(clientName));\n      const spouseDocs = docs.filter(d => spouseName && d.includes(spouseName));\n      const sharedDocs = docs.filter(d => !clientDocs.includes(d) && !spouseDocs.includes(d));\n      \n      if (clientDocs.length > 0) {\n        docListHtml += `<div style=\"margin-bottom:8px;\">\n          <strong style=\"color:#1976d2;\">${clientName}:</strong>\n          <ul style=\"list-style:none;padding:0;margin:5px 0;\">\n            ${clientDocs.map(d => `<li>• ${formatDocumentName(d)}</li>`).join('')}\n          </ul>\n        </div>`;\n      }\n      \n      if (spouseDocs.length > 0) {\n        docListHtml += `<div style=\"margin-bottom:8px;\">\n          <strong style=\"color:#7b1fa2;\">${spouseName} (בן/בת זוג):</strong>\n          <ul style=\"list-style:none;padding:0;margin:5px 0;\">\n            ${spouseDocs.map(d => `<li>• ${formatDocumentName(d)}</li>`).join('')}\n          </ul>\n        </div>`;\n      }\n      \n      if (sharedDocs.length > 0) {\n        docListHtml += `<ul style=\"list-style:none;padding:0;margin:5px 0;\">\n          ${sharedDocs.map(d => `<li>• ${formatDocumentName(d)}</li>`).join('')}\n        </ul>`;\n      }\n    } else {\n      docListHtml = `<ul style=\"list-style:none;padding:0;margin:5px 0;\">\n        ${docs.map(d => `<li>• ${formatDocumentName(d)}</li>`).join('')}\n      </ul>`;\n    }\n    \n    return `<div style=\"margin-bottom:20px;\">\n      <h4 style=\"margin:0 0 10px 0;color:#ff9800;border-bottom:1px solid #ffe0b2;\">${category}</h4>\n      ${docListHtml}\n    </div>`;\n  }).join('');\n\n  docsHtml = `<div style=\"margin-top:20px;padding:15px;background:#fff3cd;border-radius:8px;border-right:5px solid #ff9800;\">\n    <h3>📄 מסמכים נדרשים</h3>\n    ${categoryHtmlSections}\n  </div>`;\n}\n\nconst buttonsHtml = `\n<div style=\"margin-top:30px;padding:20px;background:#e3f2fd;border-radius:8px;text-align:center;\">\n  <div style=\"margin-bottom:20px;\">\n    <a href=\"${approveUrl}\" style=\"display:inline-block;padding:12px 25px;background:#4caf50;color:white;text-decoration:none;border-radius:5px;font-weight:bold;margin:5px;\">✅ המסמכים תקינים - שלח ללקוח</a>\n    <a href=\"${editUrl}\" style=\"display:inline-block;padding:12px 25px;background:#ff9800;color:white;text-decoration:none;border-radius:5px;font-weight:bold;margin:5px;\">✏️ עריכת רשימה</a>\n  </div>\n  <p style=\"font-size:12px;color:#666;\">לקוח: ${clientEmail} | שנה: ${year} | דוח: ${reportId.slice(-6)}</p>\n</div>`;\n\nreturn [{\n  json: {\n    ...formatItem,\n    html_summary: formatItem.html_summary + docsHtml + buttonsHtml,\n    approve_url: approveUrl,\n    edit_url: editUrl\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        13680,
+        976
+      ],
+      "id": "578a6267-9ddc-49e9-a488-4d96805410e4",
+      "name": "Code - Add Docs to Email"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://graph.microsoft.com/v1.0/me/sendMail",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "oAuth2Api",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {}
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{\n{\n  \"message\": {\n    \"subject\": `התקבל שאלון שנתי: ${$json.client_name} - ${$json.year}`,\n    \"body\": {\n      \"contentType\": \"HTML\",\n      \"content\": $json.html_summary\n    },\n    \"toRecipients\": [\n      {\n        \"emailAddress\": {\n          \"address\": \"reports@moshe-atsits.co.il\"\n        }\n      }\n    ]\n  }\n}\n}}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        13904,
+        976
+      ],
+      "id": "8c1ee579-4001-42d7-a93d-505acae07658",
+      "name": "HTTP Request - Send Email",
+      "credentials": {
+        "oAuth2Api": {
+          "id": "GcLQZwzH2xj41sV7",
+          "name": "MS_Graph_CPA_Automation"
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "operation": "search",
+        "base": {
+          "__rl": true,
+          "value": "appqBL5RWQN9cPOyh",
+          "mode": "list",
+          "cachedResultName": "Annual Reports CRM",
+          "cachedResultUrl": "https://airtable.com/appqBL5RWQN9cPOyh"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblcwptR63skeODPn",
+          "mode": "list",
+          "cachedResultName": "documents",
+          "cachedResultUrl": "https://airtable.com/appqBL5RWQN9cPOyh/tblcwptR63skeODPn"
+        },
+        "filterByFormula": "={{ \"AND(FIND('\" + $json.report_record_id + \"', ARRAYJOIN({report_record_id})), {status}='Required_Missing', {status}!='Removed')\" }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        13456,
+        896
+      ],
+      "id": "65204e0a-449f-4b9e-a049-e8a468890045",
+      "name": "Airtable - List Docs",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "ODW07LgvsPQySQxh",
+          "name": "Airtable Personal Access Token account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "return [\n  {\n    json: {\n      report_record_id: $items(\"Code - Format & Extract\")[0].json.report_record_id,\n    },\n  },\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        13232,
+        896
+      ],
+      "id": "c4c9d92f-6b34-450b-976a-0f8a390d85d8",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "Success",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        12112,
+        976
+      ],
+      "id": "b70ee575-b3de-4e04-b246-99277062eacb",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "4370f0d4-1218-4771-9925-9839d2bfb3a0",
+              "leftValue": "={{ $json.isEmpty() }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "notEquals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        12784,
+        976
+      ],
+      "id": "45d6549c-dc91-48fb-a583-e5509c08e7ed",
+      "name": "If"
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code - Format & Extract": {
+      "main": [
+        [
+          {
+            "node": "Code - DocMapping",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Airtable - Update Annual Report": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Airtable - Upsert Documents": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code - DocMapping": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code - Add Docs to Email": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request - Send Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request - Send Email": {
+      "main": [
+        [
+          {
+            "node": "Airtable - Update Annual Report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Airtable - List Docs": {
+      "main": [
+        [
+          {
+            "node": "Code - Add Docs to Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Airtable - List Docs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Respond to Webhook": {
+      "main": [
+        [
+          {
+            "node": "Code - Format & Extract",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Airtable - Upsert Documents",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Code - Add Docs to Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timeSavedMode": "fixed",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": true
+  },
+  "staticData": null,
+  "pinData": {
+    "Webhook": [
+      {
+        "json": {
+          "headers": {
+            "host": "liozshor.app.n8n.cloud",
+            "user-agent": "Tally Webhooks",
+            "content-length": "18591",
+            "accept": "application/json, text/plain, */*",
+            "accept-encoding": "gzip, br",
+            "baggage": "sentry-environment=production,sentry-release=3c3f754c868a79d2dd14ee24859b82831d5885d2,sentry-public_key=6af4b6673f1648edaa8fef3f2ca43405,sentry-trace_id=fa79b545064003226db73323c428f95f,sentry-org_id=407628,sentry-sampled=false,sentry-sample_rand=0.758486201847918,sentry-sample_rate=0.0001",
+            "cdn-loop": "cloudflare; loops=1; subreqs=1",
+            "cf-connecting-ip": "34.96.62.180",
+            "cf-ew-via": "15",
+            "cf-ipcountry": "BE",
+            "cf-ray": "9c06dabc7634bd9b-LHR",
+            "cf-visitor": "{\"scheme\":\"https\"}",
+            "cf-worker": "n8n.cloud",
+            "content-type": "application/json",
+            "sentry-trace": "fa79b545064003226db73323c428f95f-de73299c136f385f-0",
+            "x-forwarded-for": "34.96.62.180, 172.70.85.90",
+            "x-forwarded-host": "liozshor.app.n8n.cloud",
+            "x-forwarded-port": "443",
+            "x-forwarded-proto": "https",
+            "x-forwarded-server": "traefik-prod-users-gwc-15-6cb64f5ddc-fd6vs",
+            "x-is-trusted": "yes",
+            "x-real-ip": "34.96.62.180"
+          },
+          "params": {},
+          "query": {},
+          "body": {
+            "eventId": "eb8a0f9c-e867-414b-bf8e-65290762c0d8",
+            "eventType": "FORM_RESPONSE",
+            "createdAt": "2026-01-19T13:59:45.258Z",
+            "data": {
+              "responseId": "ODNeE5K",
+              "submissionId": "ODNeE5K",
+              "respondentId": "PdOYKAB",
+              "formId": "1AkYKb",
+              "formName": "שאלון שנתי 2025",
+              "createdAt": "2026-01-19T13:59:45.000Z",
+              "fields": [
+                {
+                  "key": "question_Ad2ZXW_eda95daa-e622-4fcb-98d6-3f0aa0649680",
+                  "label": "report_record_id",
+                  "type": "HIDDEN_FIELDS",
+                  "value": "recfRL5hqblE9ya6C"
+                },
+                {
+                  "key": "question_Ad2ZXW_07088289-7dc1-4173-97cb-855bc6655b0a",
+                  "label": "client_id",
+                  "type": "HIDDEN_FIELDS",
+                  "value": "CPA-13"
+                },
+                {
+                  "key": "question_Ad2ZXW_45f853b0-2044-45f0-bca8-4cb0db3c538a",
+                  "label": "year",
+                  "type": "HIDDEN_FIELDS",
+                  "value": "2025"
+                },
+                {
+                  "key": "question_Ad2ZXW_12245f33-980a-4def-8656-f87f7ed1f397",
+                  "label": "questionnaire_token",
+                  "type": "HIDDEN_FIELDS",
+                  "value": "c16a8eab4be3241f7eb66ab32b601b6c"
+                },
+                {
+                  "key": "question_Ad2ZXW_5cf54aa8-32b8-47cc-b2c0-a2bcddabb689",
+                  "label": "full_name",
+                  "type": "HIDDEN_FIELDS",
+                  "value": "לקוח חדש"
+                },
+                {
+                  "key": "question_Ad2ZXW_64644761-68e7-45eb-aac2-18c5471941fa",
+                  "label": "email",
+                  "type": "HIDDEN_FIELDS",
+                  "value": "liozshor1@gmail.com"
+                },
+                {
+                  "key": "question_vAekdl",
+                  "label": "שם ושם משפחה",
+                  "type": "INPUT_TEXT",
+                  "value": "לקוח חדש"
+                },
+                {
+                  "key": "question_K65baX",
+                  "label": "אימייל",
+                  "type": "INPUT_EMAIL",
+                  "value": "liozshor1@gmail.com"
+                },
+                {
+                  "key": "question_Lb7l6l",
+                  "label": "מצב משפחתי בשנת המס",
+                  "type": "MULTIPLE_CHOICE",
+                  "value": [
+                    "7a974ce4-cff2-4572-a0fc-a266f5c4bdcd"
+                  ],
+                  "options": [
+                    {
+                      "id": "f146e2ae-5f45-4f9f-b429-1b4f9cf71562",
+                      "text": "רווק/ה"
+                    },
+                    {
+                      "id": "7a974ce4-cff2-4572-a0fc-a266f5c4bdcd",
+                      "text": "נשוי/אה"
+                    },
+                    {
+                      "id": "026a9ee1-1d64-4030-b526-010a89bf16aa",
+                      "text": "גרוש/ה"
+                    },
+                    {
+                      "id": "6bc95071-59d7-49b3-a3fb-1687255fb8e7",
+                      "text": "אלמן/ה"
+                    }
+                  ]
+                },
+                {
+                  "key": "question_67Kv1P",
+                  "label": "האם גרת ביישוב מזכה בשנת המס?",
+                  "type": "MULTIPLE_CHOICE",
+                  "value": [
+                    "be188f39-8ae6-4dfe-92b6-8717b7f88a0e"
+                  ],
+                  "options": [
+                    {
+                      "id": "be188f39-8ae6-4dfe-92b6-8717b7f88a0e",
+                      "text": "כן"
+                    },
+                    {
+                      "id": "458fbe6f-308e-41b4-aa0f-e85ad67e8da3",
+                      "text": "לא"
+                    }
+                  ]
+                },
+                {
+                  "key": "question_7WKvJP",
+                  "label": "שם היישוב",
+                  "type": "INPUT_TEXT",
+                  "value": "כרמיאל"
+                },
+                {
+                  "key": "question_1ld8p1",
+                  "label": "שם בן/בת הזוג",
+                  "type": "INPUT_TEXT",
+                  "value": "משה"
+                },
+                {
+                  "key": "question_J6p7MK",
+                  "label": "האם היה שינוי בסטטוס המשפחתי (נישואין/גירושין/התאלמנות/פירוד רשמי) בשנת המס?",
+                  "type": "MULTIPLE_CHOICE",
+                  "value": [
+                    "b2cfd4e5-a658-443a-a97a-1781c815ebf0"
+                  ],
+                  "options": [
+                    {
+                      "id": "e174bdb0-4a7b-496c-897f-0002939bcbbe",
+                      "text": "כן"
+                    },
+                    {
+                      "id": "b2cfd4e5-a658-443a-a97a-1781c815ebf0",
+                      "text": "לא"
+                    }
+                  ]
+                },
+                {
+                  "key": "question_g0d2vD",
+                  "label": "פירוט + תאריך השינוי",
+                  "type": "TEXTAREA",
+                  "value": null
+                },
+                {
+                  "key": "question_8KaOMz",
+                  "label": "האם יש לך ילדים?",
+                  "type": "MULTIPLE_CHOICE",
+                  "value": [
+                    "560dadd1-9dbe-4a43-a231-0c1aa5bf7a14"
+                  ],
+                  "options": [
+                    {
+                      "id": "a3b5d4d6-640f-44bd-86a0-b4245bdf9e13",
+                      "text": "כן"
+                    },
+                    {
+                      "id": "560dadd1-9dbe-4a43-a231-0c1aa5bf7a14",
+                      "text": "לא"
+                    }
+                  ]
+                },
+                {
+                  "key": "question_y62LzX",
+                  "label": "האם נולד/ה או הצטרף/ה ילד/ה בשנת המס?",
+                  "type": "MULTIPLE_CHOICE",
+                  "value": null,
+                  "options": [
+                    {
+                      "id": "96b7dcd6-5304-48e4-9956-462eb1cd4e02",
+                      "text": "כן"
+                    },
+                    {
+                      "id": "524a1153-a5da-42b6-9dd0-202c93c1956c",
+                      "text": "לא"
+                    }
+                  ]
+                },
+                {
+                  "key": "question_XDJXzL",
+                  "label": "תאריכי לידה של הילדים שנוספו בשנת המס",
+                  "type": "TEXTAREA",
+                  "value": null
+                },
+                {
+                  "key": "question_0xBXaB",
+                  "label": "האם יש ילדים בחינוך מיוחד?",
+                  "type": "MULTIPLE_CHOICE",
+                  "value": null,
+                  "options": [
+                    {
+                      "id": "b0f4bac1-7a82-4d80-bca9-76cbc31a2bfb",
+                      "text": "כן"
+                    },
+                    {
+                      "id": "815efe8e-fef6-456e-99cf-145b2117736b",
+                      "text": "לא"
+                    }
+                  ]
+                },
+                {
+                  "key": "question_8Ka0Zl",
+                  "label": "האם יש ילדים שבגינם מתקבלת קצבת נכות מביטוח לאומי?",
+                  "type": "MULTIPLE_CHOICE",
+                  "value": null,
+                  "options": [
+                    {
+                      "id": "4b88c35d-feb4-42ff-a333-c9455b14f52a",
+                      "text": "כן"
+                    },
+                    {
+                      "id": "c0c84912-0373-4fc5-92c9-35087b0b3224",
+                      "text": "לא"
+                    }
+                  ]
+                },
+                {
+                  "key": "question_P69RpP",
+                  "label": "האם שילמת דמי מזונות בשנת המס?",
+                  "type": "MULTIPLE_CHOICE",
+                  "value": null,
+                  "options": [
+                    {
+                      "id": "79968c0e-c0e4-4391-b987-518a650a5084",
+                      "text": "כן"
+                    },
+                    {
+                      "id": "f01d4bcf-ea8e-4c8a-9fb8-a96aeb17ce7f",
+                      "text": "לא"
+                    }
+                  ]
+                },
+                {
+                  "key": "question_zqylLM",
+                  "label": "האם היית שכיר/ה בשנת המס?",
+                  "type": "MULTIPLE_CHOICE",
+                  "value": [
+                    "143c6d86-15df-4738-b2c1-46022d804764"
+                  ],
+                  "options": [
+                    {
+                      "id": "44013eac-2bf9-4ea3-bbc8-308df59f9dc2",
+                      "text": "כן"
+                    },
+                    {
+                      "id": "143c6d86-15df-4738-b2c1-46022d804764",
+                      "text": "לא"
+                    }
+                  ]
+                },
+                {
+                  "key": "question_5zjRMZ",
+                  "label": "רשימת מעסיקים – שלך",
+                  "type": "TEXTAREA",
+                  "value": null
+                },
+                {
+                  "key": "question_d6arvd",
+                  "label": "האם בן/בת הזוג היה/הייתה שכיר/ה בשנת המס?",
+                  "type": "MULTIPLE_CHOICE",
+                  "value": [
+                    "34f116cd-805a-4ede-82db-a73905213ff8"
+                  ],
+                  "options": [
+                    {
+                      "id": "145f0789-7ab8-4218-bfb2-8807f9eb2699",
+                      "text": "כן"
+                    },
+                    {
+                      "id": "34f116cd-805a-4ede-82db-a73905213ff8",
+                      "text": "לא"
+                    }
+                  ]
+                },
+                {
+                  "key": "question_YQ08kW",
+                  "label": "רשימת מעסיקים – בן/בת זוג",
+                  "type": "TEXTAREA",
+                  "value": null
+                },
+                {
+                  "key": "question_DNkQMN",
+                  "label": "האם משכת כספים מחברת ביטוח/קופת גמל/פנסיה/השתלמות בשנת המס?",
+                  "type": "MULTIPLE_CHOICE",
+                  "value": [
+                    "b9b3c07f-9bfc-4281-92f3-2181541e6500"
+                  ],
+                  "options": [
+                    {
+                      "id": "cb6cad51-1a2c-4f15-9433-465811e807c4",
+                      "text": "כן"
+                    },
+                    {
+                      "id": "b9b3c07f-9bfc-4281-92f3-2181541e6500",
+                      "text": "לא"
+                    }
+                  ]
+                },
+                {
+                  "key": "question_lyeQvN",
+                  "label": "איזה סוג כספים נמשכו?",
+                  "type": "MULTI_SELECT",
+                  "value": null,
+                  "options": [
+                    {
+                      "id": "95cfdd65-faf6-489d-91be-827c7e613ff9",
+                      "text": "פיצויי פיטורין"
+                    },
+                    {
+                      "id": "3eb5d359-fb98-4151-822c-f6d6bb0cdfdf",
+                      "text": "מענק פרישה"
+                    },
+                    {
+                      "id": "14b456be-aa6e-40fc-9f0f-77718a59adff",
+                      "text": "משיכת תגמולים (הוני)"
+                    },
+                    {
+                      "id": "ee428464-45f0-4c15-9690-b1cf3c30e8aa",
+                      "text": "קצבה / היוון קצבה"
+                    },
+                    {
+                      "id": "57f56e42-1d95-49a9-85df-b8c900a70f88",
+                      "text": "משיכת קרן השתלמות"
+                    },
+                    {
+                      "id": "80db055d-3ed3-4f3d-a41c-2c960bd186fd",
+                      "text": "אחר"
+                    }
+                  ]
+                },
+                {
+                  "key": "question_R0Mpk4",
+                  "label": "פירוט \"אחר\"",
+                  "type": "INPUT_TEXT",
+                  "value": null
+                },
+                {
+                  "key": "question_oyeWvO",
+                  "label": "האם קיבלת קצבת נכות מביטוח לאומי בשנת המס?",
+                  "type": "MULTIPLE_CHOICE",
+                  "value": [
+                    "3d0ab394-6bdd-4d45-b9b7-206a4d5041cd"
+                  ],
+                  "options": [
+                    {
+                      "id": "27abe34a-e7e4-4f2e-a5d5-2c8bbfdd9960",
+                      "text": "כן"
+                    },
+                    {
+                      "id": "3d0ab394-6bdd-4d45-b9b7-206a4d5041cd",
+                      "text": "לא"
+                    }
+                  ]
+                },
+                {
+                  "key": "question_XDoYDP",
+                  "label": "האם קיבלת קצבת שארים בשנת המס?",
+                  "type": "MULTIPLE_CHOICE",
+                  "value": [
+                    "aed4fe2c-42d0-4f36-ba86-72af1e9cb8d4"
+                  ],
+                  "options": [
+                    {
+                      "id": "aed4fe2c-42d0-4f36-ba86-72af1e9cb8d4",
+                      "text": "כן"
+                    },
+                    {
+                      "id": "eff01efe-ba1b-435b-95c0-9a5112d80a26",
+                      "text": "לא"
+                    }
+                  ]
+                },
+                {
+                  "key": "question_8KL8Kl",
+                  "label": "פירוט קצבת שארים",
+                  "type": "TEXTAREA",
+                  "value": "קצבת שארים1"
+                },
+                {
+                  "key": "question_Oz4vkY",
+                  "label": "האם בן/בת הזוג קיבל/ה תקבולים מביטוח לאומי בשנת המס? (אבטלה, דמי לידה, פגיעה בעבודה, מילואים, נכות)",
+                  "type": "MULTIPLE_CHOICE",
+                  "value": [
+                    "15f76d00-f5a2-4878-8698-24f4cfaa206f"
+                  ],
+                  "options": [
+                    {
+                      "id": "3e1e66d7-df27-426a-80f4-d9249ba2494e",
+                      "text": "כן"
+                    },
+                    {
+                      "id": "15f76d00-f5a2-4878-8698-24f4cfaa206f",
+                      "text": "לא"
+                    }
+                  ]
+                },
+                {
+                  "key": "question_V0QgDM",
+                  "label": "אילו תקבולים?",
+                  "type": "MULTI_SELECT",
+                  "value": null,
+                  "options": [
+                    {
+                      "id": "d1dd042d-52e1-4f48-8912-63523221568a",
+                      "text": "נכות"
+                    },
+                    {
+                      "id": "113eb1cc-552a-439c-b1fd-d5e8e99847fb",
+                      "text": "אבטלה"
+                    },
+                    {
+                      "id": "307a7ead-c9dd-41e0-91a5-5ef8ee6322b0",
+                      "text": "מילואים"
+                    },
+                    {
+                      "id": "28c2a45f-9b24-4001-9ba1-ed064436939f",
+                      "text": "דמי לידה"
+                    },
+                    {
+                      "id": "36b1c0b5-6211-498e-bf9a-9e6257d7ab82",
+                      "text": "פגיעה בעבודה"
+                    },
+                    {
+                      "id": "47d4e192-0f77-459c-b040-b16703f6fca7",
+                      "text": "אחר"
+                    }
+                  ]
+                },
+                {
+                  "key": "question_P61KkB",
+                  "label": "פירוט \"אחר\"",
+                  "type": "INPUT_TEXT",
+                  "value": null
+                },
+                {
+                  "key": "question_0x8vx9",
+                  "label": "האם בן/בת הזוג קיבל/ה קצבת שארים?",
+                  "type": "MULTIPLE_CHOICE",
+                  "value": [
+                    "921e25be-8eb9-43b8-8194-0ca6f6d4a981"
+                  ],
+                  "options": [
+                    {
+                      "id": "921e25be-8eb9-43b8-8194-0ca6f6d4a981",
+                      "text": "כן"
+                    },
+                    {
+                      "id": "d87e6f98-f6f5-4f95-89fb-650134185eb4",
+                      "text": "לא"
+                    }
+                  ]
+                },
+                {
+                  "key": "question_zqMJqk",
+                  "label": "פירוט",
+                  "type": "TEXTAREA",
+                  "value": "קצבת שארים2"
+                },
+                {
+                  "key": "question_r6a7v2",
+                  "label": "היו לך ניירות ערך?",
+                  "type": "MULTIPLE_CHOICE",
+                  "value": [
+                    "2b18fac1-fb34-4d93-8bad-e1823670823f"
+                  ],
+                  "options": [
+                    {
+                      "id": "22779026-b39c-49cf-b834-c075c296a426",
+                      "text": "כן"
+                    },
+                    {
+                      "id": "2b18fac1-fb34-4d93-8bad-e1823670823f",
+                      "text": "לא"
+                    }
+                  ]
+                },
+                {
+                  "key": "question_48J5zA",
+                  "label": "באילו מוסדות הוחזקו ניירות ערך?",
+                  "type": "TEXTAREA",
+                  "value": null
+                },
+                {
+                  "key": "question_xpMKvv",
+                  "label": "היו לך פיקדונות/תכניות חיסכון בבנק?",
+                  "type": "MULTIPLE_CHOICE",
+                  "value": [
+                    "d211a6a3-6581-4d0a-8ed2-c52dcc9cb44c"
+                  ],
+                  "options": [
+                    {
+                      "id": "faa49fc4-67ab-4345-944b-4146ab790b37",
+                      "text": "כן"
+                    },
+                    {
+                      "id": "d211a6a3-6581-4d0a-8ed2-c52dcc9cb44c",
+                      "text": "לא"
+                    }
+                  ]
+                },
+                {
+                  "key": "question_ZNE0De",
+                  "label": "באילו בנקים?",
+                  "type": "TEXTAREA",
+                  "value": null
+                },
+                {
+                  "key": "question_N6lkdO",
+                  "label": "האם מכרת מטבעות וירטואליים בשנת המס?",
+                  "type": "MULTIPLE_CHOICE",
+                  "value": [
+                    "b825be47-bf75-4045-a7ed-0247fc8bf9ef"
+                  ],
+                  "options": [
+                    {
+                      "id": "05da58ea-6125-4ab0-83b5-10d3f8d337ef",
+                      "text": "כן"
+                    },
+                    {
+                      "id": "b825be47-bf75-4045-a7ed-0247fc8bf9ef",
+                      "text": "לא"
+                    }
+                  ]
+                },
+                {
+                  "key": "question_qdD6vg",
+                  "label": "פירוט",
+                  "type": "TEXTAREA",
+                  "value": null
+                },
+                {
+                  "key": "question_QDeLkX",
+                  "label": "היו הכנסות מהימורים/הגרלות/פרסים מעל 25,000₪?",
+                  "type": "MULTIPLE_CHOICE",
+                  "value": [
+                    "e0a33325-7087-49cd-973d-450131f04e96"
+                  ],
+                  "options": [
+                    {
+                      "id": "08ddd7fd-00f3-46d8-a5bf-0df81e35cff6",
+                      "text": "כן"
+                    },
+                    {
+                      "id": "e0a33325-7087-49cd-973d-450131f04e96",
+                      "text": "לא"
+                    }
+                  ]
+                },
+                {
+                  "key": "question_9W9VM5",
+                  "label": "פירוט סכום/מקור",
+                  "type": "TEXTAREA",
+                  "value": null
+                },
+                {
+                  "key": "question_e6Q4vl",
+                  "label": "היו לך הכנסות מחו\"ל בשנת המס שלא דווחו בעסק?",
+                  "type": "MULTIPLE_CHOICE",
+                  "value": [
+                    "928fb59d-822e-49c3-8ade-81927f0ba5b2"
+                  ],
+                  "options": [
+                    {
+                      "id": "026edd37-7881-4cdc-b086-9721e017e794",
+                      "text": "כן"
+                    },
+                    {
+                      "id": "928fb59d-822e-49c3-8ade-81927f0ba5b2",
+                      "text": "לא"
+                    }
+                  ]
+                },
+                {
+                  "key": "question_WNEy1k",
+                  "label": "מדינה",
+                  "type": "INPUT_TEXT",
+                  "value": null
+                },
+                {
+                  "key": "question_a65VvX",
+                  "label": "סוג הכנסה",
+                  "type": "MULTI_SELECT",
+                  "value": null,
+                  "options": [
+                    {
+                      "id": "4af2e9e2-39ea-4718-b336-86b30834cbf3",
+                      "text": "עסק"
+                    },
+                    {
+                      "id": "397f3620-0f5e-4cda-93c5-b776dd830faf",
+                      "text": "משכורת"
+                    },
+                    {
+                      "id": "9e5874fc-113a-4f8a-a665-ed96c8c97889",
+                      "text": "רווחי הון"
+                    },
+                    {
+                      "id": "43cb3dea-f25b-4328-9544-add765b91dbd",
+                      "text": "אחר"
+                    },
+                    {
+                      "id": "eee49f4a-0f7c-40b0-880a-b1d8a915b7b5",
+                      "text": "שכירות"
+                    }
+                  ]
+                },
+                {
+                  "key": "question_487oPA",
+                  "label": "האם הוגש דו\"ח מס במדינה בה היו לך הכנסות נוספות?",
+                  "type": "MULTIPLE_CHOICE",
+                  "value": null,
+                  "options": [
+                    {
+                      "id": "7fcb3fbe-69e3-4279-a0b0-7ace03f7c525",
+                      "text": "כן"
+                    },
+                    {
+                      "id": "175f9364-5061-4954-a62c-7a0fb4a83518",
+                      "text": "לא"
+                    }
+                  ]
+                },
+                {
+                  "key": "question_7WLGM0",
+                  "label": "היו לך הכנסות משכר דירה בישראל בשנת המס?",
+                  "type": "MULTIPLE_CHOICE",
+                  "value": [
+                    "bb6f9833-14ea-4b3d-846d-883a05d5d5b0"
+                  ],
+                  "options": [
+                    {
+                      "id": "9294c3c5-ebe6-453d-9e60-edb0dc1cb60b",
+                      "text": "כן\n"
+                    },
+                    {
+                      "id": "bb6f9833-14ea-4b3d-846d-883a05d5d5b0",
+                      "text": "לא\n"
+                    }
+                  ]
+                },
+                {
+                  "key": "question_K6xQyA",
+                  "label": "שכ\"ד חודשי שהתקבל",
+                  "type": "INPUT_TEXT",
+                  "value": null
+                },
+                {
+                  "key": "question_zqya7k",
+                  "label": "האם הדירה המושכרת היא הדירה היחידה בבעלותך?",
+                  "type": "MULTIPLE_CHOICE",
+                  "value": null,
+                  "options": [
+                    {
+                      "id": "9e6b26ab-bb61-4d13-bd02-0840bc57996f",
+                      "text": "כן"
+                    },
+                    {
+                      "id": "73262ae1-4d82-4b05-a998-96c5d51ff6e8",
+                      "text": "לא"
+                    }
+                  ]
+                },
+                {
+                  "key": "question_Ad2Zye",
+                  "label": "האם אתה גם שוכר דירה?",
+                  "type": "MULTIPLE_CHOICE",
+                  "value": null,
+                  "options": [
+                    {
+                      "id": "b0a48317-d97c-4d90-b6a0-8639a3058515",
+                      "text": "כן"
+                    },
+                    {
+                      "id": "bd278259-149c-4c50-a482-d4ff2a0a9ef5",
+                      "text": "לא"
+                    }
+                  ]
+                },
+                {
+                  "key": "question_BXdN0R",
+                  "label": "שכ\"ד חודשי",
+                  "type": "INPUT_NUMBER",
+                  "value": null
+                },
+                {
+                  "key": "question_kyeqvo",
+                  "label": "האם מכרת נכס מקרקעין בשנת המס?",
+                  "type": "MULTIPLE_CHOICE",
+                  "value": [
+                    "8e15c85c-f809-4631-8c77-a377d220e58f"
+                  ],
+                  "options": [
+                    {
+                      "id": "6b19c84a-dd4f-4bee-9ec9-62ab0571376b",
+                      "text": "כן"
+                    },
+                    {
+                      "id": "8e15c85c-f809-4631-8c77-a377d220e58f",
+                      "text": "לא"
+                    }
+                  ]
+                },
+                {
+                  "key": "question_vAekKl",
+                  "label": "פירוט קצר",
+                  "type": "TEXTAREA",
+                  "value": null
+                },
+                {
+                  "key": "question_K65bkX",
+                  "label": "האם יש לך מלאי בעסק?",
+                  "type": "MULTIPLE_CHOICE",
+                  "value": [
+                    "4470c817-85a5-49dc-b7ae-faca80ee9097"
+                  ],
+                  "options": [
+                    {
+                      "id": "0191046b-2f70-4318-a8d4-c82849050524",
+                      "text": "כן"
+                    },
+                    {
+                      "id": "4470c817-85a5-49dc-b7ae-faca80ee9097",
+                      "text": "לא"
+                    }
+                  ]
+                },
+                {
+                  "key": "question_pKyav8",
+                  "label": "הפקדת עצמאית לקרן פנסיה (לא דרך משכורת)?",
+                  "type": "MULTIPLE_CHOICE",
+                  "value": [
+                    "d274c1c1-b766-4fe7-bee7-a9ea8fa9bfee"
+                  ],
+                  "options": [
+                    {
+                      "id": "b1b9fe88-b9ee-4811-bb21-3e45b2dfc4b5",
+                      "text": "כן"
+                    },
+                    {
+                      "id": "d274c1c1-b766-4fe7-bee7-a9ea8fa9bfee",
+                      "text": "לא"
+                    }
+                  ]
+                },
+                {
+                  "key": "question_1ld861",
+                  "label": "באיזה חברות ביטוח?",
+                  "type": "TEXTAREA",
+                  "value": null
+                },
+                {
+                  "key": "question_MbNBMk",
+                  "label": "הפקדת עצמאית לקרן השתלמות?",
+                  "type": "MULTIPLE_CHOICE",
+                  "value": [
+                    "89ace79d-f85e-43f0-88fd-191a32313884"
+                  ],
+                  "options": [
+                    {
+                      "id": "a87dcb60-a06c-4ec8-9e41-3221ed5c0f69",
+                      "text": "כן"
+                    },
+                    {
+                      "id": "89ace79d-f85e-43f0-88fd-191a32313884",
+                      "text": "לא"
+                    }
+                  ]
+                },
+                {
+                  "key": "question_J6p7oK",
+                  "label": "באיזה חברות?",
+                  "type": "TEXTAREA",
+                  "value": null
+                },
+                {
+                  "key": "question_g0d2zD",
+                  "label": "הפקדת עצמאית לאובדן כושר עבודה?",
+                  "type": "MULTIPLE_CHOICE",
+                  "value": [
+                    "fc7e2569-dd81-4277-91f2-d1bbf9a1131e"
+                  ],
+                  "options": [
+                    {
+                      "id": "4425db32-3b9c-4fff-84f7-7752469e2a32",
+                      "text": "כן"
+                    },
+                    {
+                      "id": "fc7e2569-dd81-4277-91f2-d1bbf9a1131e",
+                      "text": "לא"
+                    }
+                  ]
+                },
+                {
+                  "key": "question_y62L1X",
+                  "label": "באיזה חברות?",
+                  "type": "TEXTAREA",
+                  "value": null
+                },
+                {
+                  "key": "question_a64Q7E",
+                  "label": "הפקדת עצמאית לביטוח חיים?",
+                  "type": "MULTIPLE_CHOICE",
+                  "value": [
+                    "5c731832-7c71-4c8e-946f-635b21cb5efd"
+                  ],
+                  "options": [
+                    {
+                      "id": "4e09b4e4-0452-4453-a9af-08248cd8bd5d",
+                      "text": "כן"
+                    },
+                    {
+                      "id": "5c731832-7c71-4c8e-946f-635b21cb5efd",
+                      "text": "לא\n"
+                    }
+                  ]
+                },
+                {
+                  "key": "question_67K8aO",
+                  "label": "באיזה חברות?",
+                  "type": "TEXTAREA",
+                  "value": null
+                },
+                {
+                  "key": "question_XDJXQL",
+                  "label": "האם יש משכנתא פעילה?",
+                  "type": "MULTIPLE_CHOICE",
+                  "value": [
+                    "9858dd4d-3e10-40b7-8d5f-8db275068489"
+                  ],
+                  "options": [
+                    {
+                      "id": "9f5a37d3-f41d-4780-a7bc-534f11f38b68",
+                      "text": "כן"
+                    },
+                    {
+                      "id": "9858dd4d-3e10-40b7-8d5f-8db275068489",
+                      "text": "לא"
+                    }
+                  ]
+                },
+                {
+                  "key": "question_8KaOrz",
+                  "label": "באיזה חברת ביטוח הביטוח חיים של המשכנתא?",
+                  "type": "INPUT_TEXT",
+                  "value": null
+                },
+                {
+                  "key": "question_oyR995",
+                  "label": "האם השתחררת מהצבא או משירות לאומי ב-3 שנים האחרונות?",
+                  "type": "MULTIPLE_CHOICE",
+                  "value": [
+                    "580e3c20-ed27-44ad-85ba-a6e3e759379d"
+                  ],
+                  "options": [
+                    {
+                      "id": "45a544ad-ad66-4abc-8301-a3069c7376c5",
+                      "text": "כן"
+                    },
+                    {
+                      "id": "580e3c20-ed27-44ad-85ba-a6e3e759379d",
+                      "text": "לא"
+                    }
+                  ]
+                },
+                {
+                  "key": "question_0xBXkB",
+                  "label": "האם היו לך במהלך שנת המס הוצאות להנצחת זכרו של קרוב משפחה שהינו חייל או שוטר שנספה במערכה ו.או לזכרו של קרוב משפחה שנספה בפעולות איבה?",
+                  "type": "MULTIPLE_CHOICE",
+                  "value": [
+                    "3d602df1-94a2-4548-9849-6e4a9dacbf68"
+                  ],
+                  "options": [
+                    {
+                      "id": "0cf07fd9-94e4-4828-b62f-b68e8cbcb76a",
+                      "text": "כן"
+                    },
+                    {
+                      "id": "3d602df1-94a2-4548-9849-6e4a9dacbf68",
+                      "text": "לא"
+                    }
+                  ]
+                },
+                {
+                  "key": "question_zqyldM",
+                  "label": "פירוט קרבה",
+                  "type": "TEXTAREA",
+                  "value": null
+                },
+                {
+                  "key": "question_5z9vzN",
+                  "label": "האם יש לך קרובי משפחה נטולי יכולת שמוחזקים במוסדות ואתה מממן אותם?",
+                  "type": "MULTIPLE_CHOICE",
+                  "value": [
+                    "824b3edd-5487-4423-8630-bcb80f57e482"
+                  ],
+                  "options": [
+                    {
+                      "id": "77c5bd9d-0814-48e7-83b7-df7efa8055e1",
+                      "text": "כן"
+                    },
+                    {
+                      "id": "824b3edd-5487-4423-8630-bcb80f57e482",
+                      "text": "לא"
+                    }
+                  ]
+                },
+                {
+                  "key": "question_5zjRVZ",
+                  "label": "האם סיימת תואר בשנים האחרונות (2023 והלאה)?",
+                  "type": "MULTIPLE_CHOICE",
+                  "value": [
+                    "5f78b079-72ab-4761-aeb7-506802de85af"
+                  ],
+                  "options": [
+                    {
+                      "id": "f294399c-2a35-4377-a5df-38b193e3a416",
+                      "text": "כן"
+                    },
+                    {
+                      "id": "5f78b079-72ab-4761-aeb7-506802de85af",
+                      "text": "לא"
+                    }
+                  ]
+                },
+                {
+                  "key": "question_d6arzd",
+                  "label": "סוג תואר + שנת סיום",
+                  "type": "INPUT_TEXT",
+                  "value": null
+                },
+                {
+                  "key": "question_YQ089W",
+                  "label": "מוסד לימודים",
+                  "type": "INPUT_TEXT",
+                  "value": null
+                },
+                {
+                  "key": "question_DNkQaN",
+                  "label": "האם היו שינויים במצב הבריאותי של מישהו בתא המשפחתי שהובילו לפטורים/הקלות במס?",
+                  "type": "MULTIPLE_CHOICE",
+                  "value": [
+                    "0147e32e-e50a-4caa-a2a7-ed7bece79b4f"
+                  ],
+                  "options": [
+                    {
+                      "id": "c44e4be0-0903-4908-bf31-cb44e4691e84",
+                      "text": "כן"
+                    },
+                    {
+                      "id": "0147e32e-e50a-4caa-a2a7-ed7bece79b4f",
+                      "text": "לא"
+                    }
+                  ]
+                },
+                {
+                  "key": "question_lyeQzN",
+                  "label": "פירוט",
+                  "type": "TEXTAREA",
+                  "value": null
+                },
+                {
+                  "key": "question_R0Mpj4",
+                  "label": "האם תרמת למוסדות ציבוריים ולא העברת את כל הקבלות (סה״כ מעל 200₪)?",
+                  "type": "MULTIPLE_CHOICE",
+                  "value": [
+                    "9d40dc92-fa17-4b76-8576-39bb5ff9bce5"
+                  ],
+                  "options": [
+                    {
+                      "id": "9d40dc92-fa17-4b76-8576-39bb5ff9bce5",
+                      "text": "כן"
+                    },
+                    {
+                      "id": "226e23e1-50ea-48aa-ae99-caa1a07172e6",
+                      "text": "לא"
+                    }
+                  ]
+                },
+                {
+                  "key": "question_Gz9WbL",
+                  "label": "האם יש לקוחות שניכו לך מס הכנסה במקור בשנת המס?",
+                  "type": "MULTIPLE_CHOICE",
+                  "value": [
+                    "4a6b3125-1227-4cd6-963b-b14a3ecb39c2"
+                  ],
+                  "options": [
+                    {
+                      "id": "afda7c3b-1d8d-44c6-a8ce-2876adc65953",
+                      "text": "כן"
+                    },
+                    {
+                      "id": "4a6b3125-1227-4cd6-963b-b14a3ecb39c2",
+                      "text": "לא"
+                    }
+                  ]
+                },
+                {
+                  "key": "question_Oz4vEY",
+                  "label": "שמות הלקוחות",
+                  "type": "TEXTAREA",
+                  "value": null
+                },
+                {
+                  "key": "question_V0QgNM",
+                  "label": "האם יש לקוחות שניכו לך ביטוח לאומי במקור בשנת המס?",
+                  "type": "MULTIPLE_CHOICE",
+                  "value": [
+                    "69419d85-d0dc-4906-947b-569972dc5dcb"
+                  ],
+                  "options": [
+                    {
+                      "id": "fddd7012-1965-481c-8066-3849c43a3a23",
+                      "text": "כן"
+                    },
+                    {
+                      "id": "69419d85-d0dc-4906-947b-569972dc5dcb",
+                      "text": "לא"
+                    }
+                  ]
+                },
+                {
+                  "key": "question_P61KrB",
+                  "label": "שמות הלקוחות",
+                  "type": "TEXTAREA",
+                  "value": null
+                },
+                {
+                  "key": "question_5zdaod",
+                  "label": "האם היו הכנסות אחרות בשנת המס שלא צוינו בשאלון ויכולות להיות רלוונטיות?\n",
+                  "type": "MULTIPLE_CHOICE",
+                  "value": [
+                    "7f9e9eec-1e64-4fd7-8a4b-41802ca541ed"
+                  ],
+                  "options": [
+                    {
+                      "id": "faf9ab8d-6bfe-493b-ac9a-f15bf44cd887",
+                      "text": "כן"
+                    },
+                    {
+                      "id": "7f9e9eec-1e64-4fd7-8a4b-41802ca541ed",
+                      "text": "לא\n"
+                    }
+                  ]
+                },
+                {
+                  "key": "question_d6YJXA",
+                  "label": "אנא פרט את ההכנסות הנוספות\n",
+                  "type": "TEXTAREA",
+                  "value": null
+                }
+              ]
+            }
+          },
+          "webhookUrl": "https://liozshor.app.n8n.cloud/webhook/tally-questionnaire-response",
+          "executionMode": "production"
+        },
+        "pairedItem": {
+          "item": 0
+        }
+      }
+    ]
+  },
+  "triggerCount": 1,
+  "meta": {
+    "templateCredsSetupCompleted": true
+  }
+}

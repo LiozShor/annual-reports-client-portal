@@ -1,0 +1,309 @@
+{
+  "name": "[API] Check Existing Submission",
+  "nodes": [
+    {
+      "parameters": {
+        "path": "check-existing-submission",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "774104dd-ccd8-4c9b-bdf0-1e2e7f0fe2ef",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        736,
+        -128
+      ],
+      "webhookId": "check-existing-sub"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.query.report_id }}",
+              "operation": "isNotEmpty"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "c98281b9-b663-4c36-bdf6-87fe37c45de0",
+      "name": "IF Has report_id",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        960,
+        -128
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { ok:false, error:'MISSING_REPORT_ID' } }}",
+        "options": {
+          "responseCode": 200,
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Access-Control-Allow-Origin",
+                "value": "*"
+              },
+              {
+                "name": "Access-Control-Allow-Methods",
+                "value": "GET, POST, OPTIONS"
+              },
+              {
+                "name": "Access-Control-Allow-Headers",
+                "value": "Content-Type"
+              }
+            ]
+          }
+        }
+      },
+      "id": "65131eb9-6699-411f-ad0d-2ec47eb67bb4",
+      "name": "Respond Missing report_id",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        1200,
+        16
+      ]
+    },
+    {
+      "parameters": {
+        "base": {
+          "__rl": true,
+          "value": "appqBL5RWQN9cPOyh",
+          "mode": "id"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tbls7m3hmHC4hhQVy",
+          "mode": "id"
+        },
+        "id": "={{ $json.query.report_id }}",
+        "options": {}
+      },
+      "id": "4ea341bf-6cbe-4438-9c1d-7ce1b6345181",
+      "name": "Get Report",
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        1216,
+        -128
+      ],
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "ODW07LgvsPQySQxh",
+          "name": "Airtable Personal Access Token account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "search",
+        "base": {
+          "__rl": true,
+          "value": "appqBL5RWQN9cPOyh",
+          "mode": "id"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblcwptR63skeODPn",
+          "mode": "id"
+        },
+        "filterByFormula": "==AND(FIND('{{ $('Get Report').item.json.id }}', ARRAYJOIN({report_record_id})), {status} != 'Waived', {status} != 'Removed')\n",
+        "options": {}
+      },
+      "id": "faf4bc10-ad51-4c56-8091-51233a4559c7",
+      "name": "Search Documents",
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        1456,
+        -128
+      ],
+      "settings": {
+        "alwaysOutputData": true
+      },
+      "alwaysOutputData": true,
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "ODW07LgvsPQySQxh",
+          "name": "Airtable Personal Access Token account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const report = $('Get Report').first().json;\nconst docsRaw = $('Search Documents').all();\nconst docs = docsRaw.filter(d => d?.json?.id);\n\nconst documentCount = docs.length;\nconst stage = report.stage || '1-Send_Questionnaire';\n\nconst STAGE_ORDER = {\n  '1-Send_Questionnaire': 1,\n  '2-Waiting_For_Answers': 2,\n  '3-Collecting_Docs': 3,\n  '4-Review': 4,\n  '5-Completed': 5\n};\n\nconst stageRank = STAGE_ORDER[stage] || 0;\n\n// Only treat as \"already submitted\" if stage >= 3 OR documents exist\nconst hasSubmission = stageRank >= 3 || documentCount > 0;\n\nreturn [{\n  json: {\n    ok: true,\n    has_submission: hasSubmission,\n    document_count: documentCount,\n    stage,\n    stage_rank: stageRank,\n    report_id: report.id,\n    year: String(report.year || '')\n  }\n}];"
+      },
+      "id": "2174b1e8-62d1-4025-9388-8d18da07fb42",
+      "name": "Build Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1696,
+        -128
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {
+          "responseCode": 200,
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Access-Control-Allow-Origin",
+                "value": "*"
+              },
+              {
+                "name": "Access-Control-Allow-Methods",
+                "value": "GET, POST, OPTIONS"
+              },
+              {
+                "name": "Access-Control-Allow-Headers",
+                "value": "Content-Type"
+              }
+            ]
+          }
+        }
+      },
+      "id": "15f48f67-042f-41c4-8994-1517c8227b5b",
+      "name": "Respond",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        1936,
+        -128
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "IF Has report_id",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF Has report_id": {
+      "main": [
+        [
+          {
+            "node": "Get Report",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond Missing report_id",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Report": {
+      "main": [
+        [
+          {
+            "node": "Search Documents",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search Documents": {
+      "main": [
+        [
+          {
+            "node": "Build Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Response": {
+      "main": [
+        [
+          {
+            "node": "Respond",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": true,
+    "timeSavedMode": "fixed",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "staticData": null,
+  "pinData": {
+    "Webhook": [
+      {
+        "json": {
+          "headers": {
+            "host": "liozshor.app.n8n.cloud",
+            "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36",
+            "accept": "*/*",
+            "accept-encoding": "gzip, br",
+            "accept-language": "he-IL,he;q=0.9,en-US;q=0.8,en;q=0.7",
+            "cdn-loop": "cloudflare; loops=1; subreqs=1",
+            "cf-connecting-ip": "2a00:a040:192:6db7:c193:9c0b:66cc:c2d7",
+            "cf-ew-via": "15",
+            "cf-ipcountry": "IL",
+            "cf-ray": "9c047be6222e948e-LHR",
+            "cf-visitor": "{\"scheme\":\"https\"}",
+            "cf-worker": "n8n.cloud",
+            "origin": "https://liozshor.github.io",
+            "priority": "u=1, i",
+            "referer": "https://liozshor.github.io/",
+            "sec-ch-ua": "\"Google Chrome\";v=\"143\", \"Chromium\";v=\"143\", \"Not A(Brand\";v=\"24\"",
+            "sec-ch-ua-mobile": "?0",
+            "sec-ch-ua-platform": "\"Windows\"",
+            "sec-fetch-dest": "empty",
+            "sec-fetch-mode": "cors",
+            "sec-fetch-site": "cross-site",
+            "x-forwarded-for": "2a00:a040:192:6db7:c193:9c0b:66cc:c2d7, 172.70.162.10",
+            "x-forwarded-host": "liozshor.app.n8n.cloud",
+            "x-forwarded-port": "443",
+            "x-forwarded-proto": "https",
+            "x-forwarded-server": "traefik-prod-users-gwc-15-6cb64f5ddc-fd6vs",
+            "x-is-trusted": "yes",
+            "x-real-ip": "2a00:a040:192:6db7:c193:9c0b:66cc:c2d7"
+          },
+          "params": {},
+          "query": {
+            "report_id": "reci3TDgN6R42hhTl"
+          },
+          "body": {},
+          "webhookUrl": "https://liozshor.app.n8n.cloud/webhook/check-existing-submission",
+          "executionMode": "production"
+        },
+        "pairedItem": {
+          "item": 0
+        }
+      }
+    ]
+  },
+  "triggerCount": 1,
+  "meta": {
+    "templateCredsSetupCompleted": true
+  }
+}
