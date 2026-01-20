@@ -1,0 +1,392 @@
+{
+  "name": "[API] Reset Submission",
+  "nodes": [
+    {
+      "parameters": {
+        "path": "reset-submission",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "ba7e1b8a-6532-408b-b01e-e5a0abd9175f",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -576,
+        24
+      ],
+      "webhookId": "reset-submission-wh"
+    },
+    {
+      "parameters": {
+        "operation": "search",
+        "base": {
+          "__rl": true,
+          "value": "appqBL5RWQN9cPOyh",
+          "mode": "id"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblcwptR63skeODPn",
+          "mode": "id"
+        },
+        "filterByFormula": "=FIND('{{ $('Webhook').item.json.query.report_id }}', ARRAYJOIN({report_record_id}))",
+        "options": {}
+      },
+      "id": "e3f3ebef-ba7b-472e-8f80-2dac662c3e26",
+      "name": "Search Documents",
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        -352,
+        24
+      ],
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "ODW07LgvsPQySQxh",
+          "name": "Airtable Personal Access Token account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "has-docs",
+              "leftValue": "={{ $json.id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "590bb54c-9553-4421-b851-97218bc433f9",
+      "name": "IF - Has Documents",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -128,
+        24
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "deleteRecord",
+        "base": {
+          "__rl": true,
+          "value": "appqBL5RWQN9cPOyh",
+          "mode": "id"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblcwptR63skeODPn",
+          "mode": "id"
+        },
+        "id": "={{ $json.id }}"
+      },
+      "id": "3a937c69-c90f-4ae0-b5d3-ddc847a79918",
+      "name": "Delete Document",
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        96,
+        -48
+      ],
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "ODW07LgvsPQySQxh",
+          "name": "Airtable Personal Access Token account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get report_id from webhook\nconst webhookData = $('Webhook').first().json.query;\nconst reportId = webhookData.report_id;\nconst year = webhookData.year || '';\n\n// Count how many documents were deleted\nconst deletedCount = $('Delete Document').all().length;\n\nconsole.log(`Reset completed: Deleted ${deletedCount} documents for report ${reportId} (year ${year})`);\n\nreturn [{ \n  json: { \n    report_id: reportId,\n    year: year,\n    deleted_count: deletedCount\n  } \n}];"
+      },
+      "id": "06315cac-cdb7-4dea-952d-0e22b41de96a",
+      "name": "Get Report ID",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        320,
+        24
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "base": {
+          "__rl": true,
+          "value": "appqBL5RWQN9cPOyh",
+          "mode": "id"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tbls7m3hmHC4hhQVy",
+          "mode": "id"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "id": "={{ $json.report_id }}",
+            "stage": "2-Waiting_For_Answers",
+            "last_progress_check_at": "={{ $now }}"
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": false
+            },
+            {
+              "id": "stage",
+              "displayName": "stage",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "1-Send_Questionnaire",
+                  "value": "1-Send_Questionnaire"
+                },
+                {
+                  "name": "2-Waiting_For_Answers",
+                  "value": "2-Waiting_For_Answers"
+                },
+                {
+                  "name": "3-Collecting_Docs",
+                  "value": "3-Collecting_Docs"
+                },
+                {
+                  "name": "4-Review",
+                  "value": "4-Review"
+                },
+                {
+                  "name": "5-Completed",
+                  "value": "5-Completed"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "last_progress_check_at",
+              "displayName": "last_progress_check_at",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "bb858635-d382-4095-961e-af13aa05bcfe",
+      "name": "Reset Report Stage",
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        544,
+        24
+      ],
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "ODW07LgvsPQySQxh",
+          "name": "Airtable Personal Access Token account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"success\": true, \"message\": \"Submission reset successfully for year \" + $json.year, \"deleted_documents\": $json.deleted_count, \"report_id\": $json.report_id } }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Access-Control-Allow-Origin",
+                "value": "*"
+              },
+              {
+                "name": "Access-Control-Allow-Methods",
+                "value": "GET, POST, OPTIONS"
+              },
+              {
+                "name": "Access-Control-Allow-Headers",
+                "value": "Content-Type"
+              }
+            ]
+          }
+        }
+      },
+      "id": "f6628842-10d9-472d-8bd5-639520a1422f",
+      "name": "Respond",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        768,
+        24
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Search Documents",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search Documents": {
+      "main": [
+        [
+          {
+            "node": "IF - Has Documents",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF - Has Documents": {
+      "main": [
+        [
+          {
+            "node": "Delete Document",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get Report ID",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Delete Document": {
+      "main": [
+        [
+          {
+            "node": "Get Report ID",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Report ID": {
+      "main": [
+        [
+          {
+            "node": "Reset Report Stage",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reset Report Stage": {
+      "main": [
+        [
+          {
+            "node": "Respond",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": true,
+    "timeSavedMode": "fixed",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "staticData": null,
+  "pinData": {
+    "Webhook": [
+      {
+        "json": {
+          "headers": {
+            "host": "liozshor.app.n8n.cloud",
+            "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36",
+            "accept": "*/*",
+            "accept-encoding": "gzip, br",
+            "accept-language": "he-IL,he;q=0.9,en-US;q=0.8,en;q=0.7",
+            "cdn-loop": "cloudflare; loops=1; subreqs=1",
+            "cf-connecting-ip": "2a00:a040:192:6db7:c193:9c0b:66cc:c2d7",
+            "cf-ew-via": "15",
+            "cf-ipcountry": "IL",
+            "cf-ray": "9c04ae0560c17863-LHR",
+            "cf-visitor": "{\"scheme\":\"https\"}",
+            "cf-worker": "n8n.cloud",
+            "origin": "https://liozshor.github.io",
+            "priority": "u=1, i",
+            "referer": "https://liozshor.github.io/",
+            "sec-ch-ua": "\"Google Chrome\";v=\"143\", \"Chromium\";v=\"143\", \"Not A(Brand\";v=\"24\"",
+            "sec-ch-ua-mobile": "?0",
+            "sec-ch-ua-platform": "\"Windows\"",
+            "sec-fetch-dest": "empty",
+            "sec-fetch-mode": "cors",
+            "sec-fetch-site": "cross-site",
+            "x-forwarded-for": "2a00:a040:192:6db7:c193:9c0b:66cc:c2d7, 172.68.229.26",
+            "x-forwarded-host": "liozshor.app.n8n.cloud",
+            "x-forwarded-port": "443",
+            "x-forwarded-proto": "https",
+            "x-forwarded-server": "traefik-prod-users-gwc-15-6cb64f5ddc-wtj5h",
+            "x-is-trusted": "yes",
+            "x-real-ip": "2a00:a040:192:6db7:c193:9c0b:66cc:c2d7"
+          },
+          "params": {},
+          "query": {
+            "report_id": "reci3TDgN6R42hhTl"
+          },
+          "body": {},
+          "webhookUrl": "https://liozshor.app.n8n.cloud/webhook/reset-submission",
+          "executionMode": "production"
+        },
+        "pairedItem": {
+          "item": 0
+        }
+      }
+    ]
+  },
+  "triggerCount": 1,
+  "meta": {
+    "templateCredsSetupCompleted": true
+  }
+}

@@ -1,0 +1,138 @@
+{
+  "name": "[04b] Document Manager API",
+  "nodes": [
+    {
+      "parameters": {
+        "path": "get-documents",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        672,
+        192
+      ],
+      "id": "6f72f21c-c674-4f45-831d-01a2d779739a",
+      "name": "Webhook",
+      "webhookId": "2971eb49-32fa-48a6-a9b5-3f0fe04afde8"
+    },
+    {
+      "parameters": {
+        "operation": "search",
+        "base": {
+          "__rl": true,
+          "value": "appqBL5RWQN9cPOyh",
+          "mode": "list",
+          "cachedResultName": "Annual Reports CRM",
+          "cachedResultUrl": "https://airtable.com/appqBL5RWQN9cPOyh"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblcwptR63skeODPn",
+          "mode": "id"
+        },
+        "filterByFormula": "=AND({status}='Required_Missing', REGEX_MATCH(ARRAYJOIN({report_record_id}), '(^|,\\\\s*){{ $json.query.report_id }}($|,\\\\s*)'))",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        880,
+        192
+      ],
+      "id": "2b1a363e-7a6a-455e-8708-6676abbb3af4",
+      "name": "Search records",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "ODW07LgvsPQySQxh",
+          "name": "Airtable Personal Access Token account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const docs = $input.all();\n  const formatted = docs.map(d => ({\n    id: d.json.id,\n    name: d.json.issuer_name,\n    type: d.json.type\n  }));\n  return [{ json: { documents: formatted } }];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1088,
+        192
+      ],
+      "id": "16a72fea-8866-4054-824b-860f42c23479",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Access-Control-Allow-Origin",
+                "value": "*"
+              }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        1296,
+        192
+      ],
+      "id": "6d6509c5-893b-491b-a9f5-f9aeb504e4f4",
+      "name": "Respond to Webhook"
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Search records",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search records": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": false
+  },
+  "staticData": null,
+  "pinData": {},
+  "triggerCount": 1,
+  "meta": {
+    "templateCredsSetupCompleted": true
+  }
+}
