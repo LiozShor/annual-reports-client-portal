@@ -3,462 +3,505 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>רשימת מסמכים נדרשים - Annual Report Documents</title>
+    <title>המסמכים שלי | משה ציץ - רואה חשבון</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
+        :root {
+            --primary-color: #2c3e50;
+            --secondary-color: #3498db;
+            --success-color: #27ae60;
+            --warning-color: #f39c12;
+            --danger-color: #e74c3c;
+            --bg-color: #f8f9fa;
         }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            padding: 20px;
-        }
-
-        .container {
-            max-width: 900px;
-            margin: 0 auto;
-            background: white;
-            border-radius: 16px;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-            overflow: hidden;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--primary-color);
         }
 
         .header {
-            background: linear-gradient(135deg, #1a237e 0%, #0d47a1 100%);
-            color: white;
-            padding: 30px;
-            text-align: center;
+            background: white;
+            padding: 2rem 0;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            margin-bottom: 2rem;
         }
 
-        .header h1 {
-            font-size: 28px;
-            margin-bottom: 10px;
+        .status-card {
+            background: white;
+            border-radius: 15px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+            transition: transform 0.2s;
         }
 
-        .header .subtitle {
-            font-size: 16px;
-            opacity: 0.9;
-        }
-
-        .content {
-            padding: 40px 30px;
-        }
-
-        .loading {
-            text-align: center;
-            padding: 60px 20px;
-        }
-
-        .spinner {
-            border: 4px solid #f3f3f3;
-            border-top: 4px solid #1976d2;
-            border-radius: 50%;
-            width: 50px;
-            height: 50px;
-            animation: spin 1s linear infinite;
-            margin: 0 auto 20px;
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
-        .error {
-            background: #ffebee;
-            border: 2px solid #ef5350;
-            border-radius: 8px;
-            padding: 20px;
-            margin: 20px 0;
-            color: #c62828;
-            text-align: center;
-        }
-
-        .success-message {
-            background: #e8f5e9;
-            border: 2px solid #66bb6a;
-            border-radius: 8px;
-            padding: 20px;
-            margin: 0 0 30px 0;
-            color: #2e7d32;
-            text-align: center;
-            font-size: 18px;
-        }
-
-        .category {
-            margin-bottom: 35px;
-            background: #f8f9fa;
-            border-radius: 12px;
-            padding: 25px;
-            border: 2px solid #e0e0e0;
+        .status-card:hover {
+            transform: translateY(-2px);
         }
 
         .category-header {
-            font-size: 20px;
-            font-weight: bold;
-            color: #1976d2;
+            background-color: #e9ecef;
+            padding: 10px 15px;
+            border-radius: 10px;
+            margin-top: 20px;
             margin-bottom: 15px;
-            padding-bottom: 10px;
-            border-bottom: 2px solid #e3f2fd;
+            font-weight: 700;
+            color: var(--primary-color);
+            display: flex;
+            align-items: center;
+            gap: 10px;
         }
 
-        .document-list {
-            list-style: none;
+        .doc-item {
+            border-bottom: 1px solid #eee;
+            padding: 15px 0;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
         }
 
-        .document-item {
-            padding: 12px 0;
-            border-bottom: 1px solid #e0e0e0;
-            line-height: 1.6;
-        }
-
-        .document-item:last-child {
+        .doc-item:last-child {
             border-bottom: none;
         }
 
-        .document-item::before {
-            content: "📄";
-            margin-left: 10px;
-        }
-
         .status-badge {
-            display: inline-block;
-            padding: 4px 12px;
-            border-radius: 12px;
-            font-size: 12px;
-            font-weight: bold;
-            margin-right: 8px;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
         }
 
-        .status-missing {
-            background: #fff3cd;
-            color: #856404;
-        }
+        .status-missing { background-color: #ffebee; color: var(--danger-color); }
+        .status-received { background-color: #e8f5e9; color: var(--success-color); }
+        .status-review { background-color: #fff3e0; color: var(--warning-color); }
 
-        .status-received {
-            background: #d4edda;
-            color: #155724;
-        }
-
-        .status-fix {
-            background: #f8d7da;
-            color: #721c24;
-        }
-
-        .contact-box {
-            background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
-            border-radius: 12px;
-            padding: 25px;
-            margin-top: 30px;
-            text-align: center;
-        }
-
-        .contact-box h3 {
-            color: #1565c0;
-            margin-bottom: 12px;
-            font-size: 20px;
-        }
-
-        .contact-box p {
-            color: #424242;
-            margin-bottom: 15px;
-            line-height: 1.6;
-        }
-
-        .email-link {
-            display: inline-block;
-            background: #1976d2;
+        .upload-btn {
+            background-color: var(--secondary-color);
             color: white;
-            padding: 12px 30px;
-            border-radius: 8px;
-            text-decoration: none;
-            font-weight: bold;
-            transition: all 0.3s;
-        }
-
-        .email-link:hover {
-            background: #1565c0;
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(25, 118, 210, 0.4);
-        }
-
-        .lang-toggle {
-            text-align: center;
-            margin: 20px 0;
-        }
-
-        .lang-button {
-            background: #f5f5f5;
-            border: 2px solid #e0e0e0;
-            padding: 10px 20px;
-            margin: 0 5px;
-            border-radius: 8px;
+            border: none;
+            padding: 5px 15px;
+            border-radius: 5px;
+            font-size: 0.9rem;
             cursor: pointer;
-            font-size: 14px;
-            transition: all 0.3s;
+            transition: background 0.2s;
         }
 
-        .lang-button.active {
-            background: #1976d2;
-            color: white;
-            border-color: #1976d2;
+        .upload-btn:hover {
+            background-color: #2980b9;
         }
 
-        .lang-button:hover {
-            border-color: #1976d2;
+        .spinner-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255,255,255,0.9);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
         }
 
-        [dir="ltr"] .document-item::before {
-            margin-left: 0;
-            margin-right: 10px;
+        /* Modal Styles */
+        .modal-header { border-bottom: none; }
+        .modal-footer { border-top: none; }
+        
+        .upload-area {
+            border: 2px dashed #ddd;
+            border-radius: 10px;
+            padding: 40px;
+            text-align: center;
+            cursor: pointer;
+            transition: border-color 0.3s;
+        }
+        
+        .upload-area:hover {
+            border-color: var(--secondary-color);
+            background-color: #f8fbff;
         }
 
-        [dir="ltr"] .status-badge {
-            margin-right: 0;
-            margin-left: 8px;
-        }
+        .hidden { display: none; }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <h1 id="title-he">רשימת מסמכים נדרשים</h1>
-            <h1 id="title-en" style="display: none;">Required Documents List</h1>
-            <div class="subtitle" id="subtitle"></div>
+    <div id="loader" class="spinner-overlay">
+        <div class="text-center">
+            <div class="spinner-border text-primary" role="status"></div>
+            <p class="mt-2">טוען נתונים...</p>
         </div>
+    </div>
 
-        <div class="content">
-            <div class="loading" id="loading">
-                <div class="spinner"></div>
-                <p id="loading-text-he">טוען את רשימת המסמכים...</p>
-                <p id="loading-text-en" style="display: none;">Loading document list...</p>
-            </div>
-
-            <div id="error" class="error" style="display: none;"></div>
-
-            <div id="results" style="display: none;">
-                <div class="lang-toggle">
-                    <button class="lang-button active" id="btn-he" onclick="switchLanguage('he')">עברית</button>
-                    <button class="lang-button" id="btn-en" onclick="switchLanguage('en')">English</button>
+    <div class="header">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <h1 class="mb-1">המסמכים שלי</h1>
+                    <p class="text-muted mb-0">דוח שנתי לשנת 2024</p>
                 </div>
-
-                <div id="documents-container"></div>
-
-                <div class="contact-box">
-                    <h3 id="contact-title-he">איך שולחים את המסמכים?</h3>
-                    <h3 id="contact-title-en" style="display: none;">How to Submit Documents?</h3>
-                    
-                    <p id="contact-text-he">
-                        שלחו את המסמכים במייל בקובץ מצורף:<br>
-                        <strong id="email-display"></strong>
-                    </p>
-                    <p id="contact-text-en" style="display: none;">
-                        Send the documents via email as attachments:<br>
-                        <strong id="email-display-en"></strong>
-                    </p>
-                    
-                    <a href="#" id="email-button" class="email-link">📧 שליחת מייל</a>
+                <div class="col-md-4 text-md-end mt-3 mt-md-0">
+                    <div class="d-inline-block text-start bg-light p-3 rounded">
+                        <small class="d-block text-muted">סטטוס דוח</small>
+                        <strong id="reportStatus">בבדיקה</strong>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <script>
-        let currentData = null;
-        let currentLang = 'he';
+    <div class="container mb-5">
+        <div class="row mb-4">
+            <div class="col-md-4">
+                <div class="status-card text-center">
+                    <h3 class="h1 mb-0 text-primary" id="docsReceived">0</h3>
+                    <div class="text-muted">מסמכים שהתקבלו</div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="status-card text-center">
+                    <h3 class="h1 mb-0 text-danger" id="docsMissing">0</h3>
+                    <div class="text-muted">מסמכים חסרים</div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="status-card text-center">
+                    <h3 class="h1 mb-0 text-success" id="completionRate">0%</h3>
+                    <div class="text-muted">הושלם</div>
+                </div>
+            </div>
+        </div>
 
-        // Get report_id from URL
-        const params = new URLSearchParams(window.location.search);
-        const reportId = params.get('report_id');
+        <div class="card border-0 shadow-sm">
+            <div class="card-body" id="documentsList">
+                </div>
+        </div>
+    </div>
 
-        if (!reportId) {
-            showError('חסר מזהה דוח / Missing report ID');
-        } else {
-            loadDocuments();
-        }
+    <div class="modal fade" id="uploadModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">העלאת מסמך</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p id="uploadDocName" class="fw-bold mb-3"></p>
+                    
+                    <form id="uploadForm">
+                        <input type="hidden" id="uploadDocId">
+                        <input type="hidden" id="uploadDocType">
+                        
+                        <div id="dynamicDetails" class="mb-3"></div>
 
-        async function loadDocuments() {
-            try {
-                const response = await fetch(`https://liozshor.app.n8n.cloud/webhook/get-client-documents?report_id=${reportId}`);
-                
-                if (!response.ok) {
-                    throw new Error('Failed to load documents');
-                }
+                        <div class="upload-area" id="dropZone">
+                            <i class="fas fa-cloud-upload-alt fa-3x text-muted mb-3"></i>
+                            <p class="mb-0">לחצו או גררו קובץ לכאן</p>
+                            <input type="file" id="fileInput" class="d-none" accept=".pdf,.jpg,.jpeg,.png">
+                        </div>
+                        <div id="filePreview" class="mt-3 d-none">
+                            <div class="d-flex align-items-center p-2 bg-light rounded">
+                                <i class="fas fa-file-alt me-2"></i>
+                                <span id="fileName" class="text-truncate"></span>
+                                <button type="button" class="btn-close ms-auto small" id="clearFile"></button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">ביטול</button>
+                    <button type="button" class="btn btn-primary" id="confirmUpload" disabled>שליחה</button>
+                </div>
+            </div>
+        </div>
+    </div>
 
-                const data = await response.json();
-                console.log('API Response:', data); // Debug log
-                currentData = data;
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.bundle.min.js"></script>
+    
+    <script type="module">
+        import { CATEGORIES, formatDocumentName, requiresDetails, getDetailsSchema } from './document-types.js';
 
-                document.getElementById('loading').style.display = 'none';
+        // --- Configuration ---
+        // Using existing APIs
+        const API_BASE_URL = 'https://automation.moshe-cpa.com/webhook'; 
+        
+        // --- State ---
+        let currentReportId = '';
+        let currentToken = '';
+        let currentClientId = '';
+        const uploadModal = new bootstrap.Modal(document.getElementById('uploadModal'));
 
-                if (!data.ok) {
-                    showError(data.error || 'שגיאה בטעינת המסמכים / Error loading documents');
-                    return;
-                }
+        // --- Initialization ---
+        document.addEventListener('DOMContentLoaded', async () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            currentReportId = urlParams.get('report_id');
+            currentToken = urlParams.get('token');
+            currentClientId = urlParams.get('client_id'); // If available
 
-                // FIXED: Access nested report object
-                const clientName = data.report?.client_name || '';
-                const spouseName = data.report?.spouse_name || '';
-                const year = data.report?.year || '';
-                const sourceLanguage = data.report?.source_language || 'he';
-
-                // Build display name (include spouse if exists)
-                const displayName = spouseName ? `${clientName} ו${spouseName}` : clientName;
-                const displayNameEn = spouseName ? `${clientName} & ${spouseName}` : clientName;
-
-                // Update subtitle
-                const subtitleHe = `${displayName} • שנת מס ${year}`;
-                const subtitleEn = `${displayNameEn} • Tax Year ${year}`;
-                document.getElementById('subtitle').innerHTML = `
-                    <span id="subtitle-he">${subtitleHe}</span>
-                    <span id="subtitle-en" style="display: none;">${subtitleEn}</span>
-                `;
-
-                // Set email
-                const email = data.support_email || 'reports@moshe-atsits.co.il';
-                document.getElementById('email-display').textContent = email;
-                document.getElementById('email-display-en').textContent = email;
-                document.getElementById('email-button').href = `mailto:${email}?subject=מסמכים לדוח שנתי ${year} - ${displayName}`;
-
-                // Set default language based on questionnaire language
-                currentLang = sourceLanguage || 'he';
-                switchLanguage(currentLang);
-                
-                renderDocuments();
-                document.getElementById('results').style.display = 'block';
-
-            } catch (error) {
-                console.error('Error:', error);
-                showError('שגיאה בטעינת המסמכים / Error loading documents');
-            }
-        }
-
-        function renderDocuments() {
-            // FIXED: API returns "documents" object, not "categories" array
-            if (!currentData || !currentData.documents) return;
-
-            const container = document.getElementById('documents-container');
-            
-            if (currentData.document_count === 0) {
-                container.innerHTML = currentLang === 'he' 
-                    ? '<div class="success-message">✅ כל המסמכים התקבלו! אין מסמכים חסרים.</div>'
-                    : '<div class="success-message">✅ All documents received! No missing documents.</div>';
+            if (!currentReportId) {
+                alert('קישור לא תקין. חסר מזהה דוח.');
                 return;
             }
 
-            // Category name translations (emoji categories from API → English names)
-            const categoryTranslations = {
-                '💼 הכנסות מעבודה': 'Employment Income',
-                '🏦 בנקים ושוק ההון': 'Banks & Capital Markets',
-                '🛡️ ביטוח, פנסיה וקצבאות': 'Insurance, Pension & Benefits',
-                '🏠 מגורים ונדל"ן': 'Housing & Real Estate',
-                '📋 אישי ותרומות': 'Personal & Donations',
-                '💰 הכנסות נוספות': 'Additional Income',
-                '📋 אחר': 'Other'
-            };
+            await loadDocuments();
+        });
 
-            let html = '';
-
-            // FIXED: Iterate over documents object (category name → documents array)
-            for (const [categoryHe, docs] of Object.entries(currentData.documents)) {
-                const categoryEn = categoryTranslations[categoryHe] || categoryHe;
-                const categoryName = currentLang === 'he' ? categoryHe : categoryEn;
+        // --- Load Data ---
+        async function loadDocuments() {
+            try {
+                // Determine API endpoint - assuming we have a GET endpoint or using the check-existing logic
+                // For now, let's assume we use the new GET endpoint we planned, 
+                // OR we reuse check-existing-submission if it returns docs.
+                // Let's stick to the plan: "GET /get-client-documents" (We need to build/verify this in n8n next step)
+                const response = await fetch(`${API_BASE_URL}/get-client-documents?report_id=${currentReportId}&token=${currentToken}`);
                 
-                html += `<div class="category">`;
-                html += `<div class="category-header">${categoryName}</div>`;
-                html += `<ul class="document-list">`;
+                if (!response.ok) throw new Error('Failed to load documents');
+                
+                const data = await response.json();
+                updateStats(data);
+                renderDocumentsList(data.documents);
+                
+                document.getElementById('loader').classList.add('d-none');
+            } catch (error) {
+                console.error('Error:', error);
+                document.getElementById('documentsList').innerHTML = 
+                    `<div class="text-center text-danger p-5">
+                        <i class="fas fa-exclamation-circle fa-2x mb-3"></i>
+                        <p>שגיאה בטעינת הנתונים. אנא רעננו את העמוד.</p>
+                    </div>`;
+                document.getElementById('loader').classList.add('d-none');
+            }
+        }
 
-                for (const doc of docs) {
-                    const docName = currentLang === 'he' ? doc.name_he : doc.name_en;
+        function updateStats(data) {
+            document.getElementById('docsReceived').textContent = data.stats.received;
+            document.getElementById('docsMissing').textContent = data.stats.missing;
+            document.getElementById('completionRate').textContent = data.stats.percent + '%';
+            document.getElementById('reportStatus').textContent = data.report_status_label || 'בטיפול';
+        }
+
+        // --- Rendering ---
+        function renderDocumentsList(documents) {
+            const container = document.getElementById('documentsList');
+            container.innerHTML = '';
+
+            if (documents.length === 0) {
+                container.innerHTML = '<p class="text-center text-muted py-5">אין מסמכים להצגה</p>';
+                return;
+            }
+
+            // Group by Category
+            const grouped = documents.reduce((acc, doc) => {
+                const cat = doc.category || 'other';
+                if (!acc[cat]) acc[cat] = [];
+                acc[cat].push(doc);
+                return acc;
+            }, {});
+
+            // Sort Categories based on our SSoT order
+            const sortedCats = Object.keys(CATEGORIES).filter(c => grouped[c]);
+            // Add any categories found in data but not in SSoT at the end
+            Object.keys(grouped).forEach(c => {
+                if (!CATEGORIES[c]) sortedCats.push(c);
+            });
+
+            sortedCats.forEach(catKey => {
+                const catMeta = CATEGORIES[catKey] || { emoji: 'Vg', he: 'כללי' };
+                const docs = grouped[catKey];
+
+                // Render Category Header
+                const catHeader = document.createElement('div');
+                catHeader.className = 'category-header';
+                catHeader.innerHTML = `<span>${catMeta.emoji}</span> <span>${catMeta.he}</span>`;
+                container.appendChild(catHeader);
+
+                // Render Documents
+                docs.forEach(doc => {
+                    const el = document.createElement('div');
+                    el.className = 'doc-item';
                     
-                    // Apply smart formatting (bold after dashes)
-                    const formattedName = formatDocumentName(docName);
+                    // Format Name using SSoT
+                    // Note: doc object should come from n8n with 'type', 'year', 'details' etc.
+                    // If n8n sends pre-formatted name, use it. If raw data, format it here.
+                    // We assume n8n sends raw data for maximum flexibility.
+                    const displayName = formatDocumentName(doc.type, doc.params || { year: '2024' }, { mode: 'html' });
                     
-                    let statusBadge = '';
-                    if (doc.status === 'Received') {
-                        statusBadge = currentLang === 'he' 
-                            ? '<span class="status-badge status-received">התקבל</span>'
-                            : '<span class="status-badge status-received">Received</span>';
-                    } else if (doc.status === 'Requires_Fix') {
-                        statusBadge = currentLang === 'he'
-                            ? '<span class="status-badge status-fix">דורש תיקון</span>'
-                            : '<span class="status-badge status-fix">Needs Fix</span>';
-                    } else {
-                        statusBadge = currentLang === 'he'
-                            ? '<span class="status-badge status-missing">נדרש</span>'
-                            : '<span class="status-badge status-missing">Required</span>';
+                    const isMissing = doc.status === 'missing';
+                    const statusClass = isMissing ? 'status-missing' : 'status-received';
+                    const statusText = isMissing ? 'חסר' : 'התקבל';
+                    
+                    let actionBtn = '';
+                    if (isMissing) {
+                        actionBtn = `<button class="upload-btn ms-3" 
+                            onclick="openUploadModal('${doc.id}', '${doc.type}', '${encodeURIComponent(displayName)}')">
+                            <i class="fas fa-upload me-1"></i> העלאה
+                        </button>`;
                     }
 
-                    html += `<li class="document-item">${statusBadge}${formattedName}</li>`;
+                    el.innerHTML = `
+                        <div class="d-flex align-items-center">
+                            <div class="ms-3">
+                                <div class="fw-bold">${displayName}</div>
+                                ${doc.notes ? `<small class="text-muted">${doc.notes}</small>` : ''}
+                            </div>
+                        </div>
+                        <div class="d-flex align-items-center">
+                            <span class="status-badge ${statusClass} ms-2">${statusText}</span>
+                            ${actionBtn}
+                        </div>
+                    `;
+                    container.appendChild(el);
+                });
+            });
+        }
+
+        // --- Upload Modal Logic ---
+        window.openUploadModal = (docId, docType, encodedName) => {
+            const displayName = decodeURIComponent(encodedName);
+            
+            document.getElementById('uploadDocId').value = docId;
+            document.getElementById('uploadDocType').value = docType;
+            document.getElementById('uploadDocName').innerHTML = displayName; // innerHTML to support bold
+            
+            // Generate Dynamic Fields if needed
+            const detailsContainer = document.getElementById('dynamicDetails');
+            detailsContainer.innerHTML = '';
+            
+            if (requiresDetails(docType)) {
+                const schema = getDetailsSchema(docType);
+                schema.forEach(field => {
+                    const div = document.createElement('div');
+                    div.className = 'mb-2';
+                    
+                    const label = document.createElement('label');
+                    label.className = 'form-label small fw-bold';
+                    label.innerText = field.label_he;
+                    
+                    let input;
+                    if (field.type === 'select') {
+                        input = document.createElement('select');
+                        input.className = 'form-select form-select-sm';
+                        input.innerHTML = `<option value="" disabled selected>בחר/י...</option>` + 
+                             field.options_he.map(o => `<option value="${o}">${o}</option>`).join('');
+                    } else {
+                        input = document.createElement('input');
+                        input.type = 'text';
+                        input.className = 'form-control form-control-sm';
+                        input.placeholder = field.placeholder_he;
+                    }
+                    input.name = field.key;
+                    input.dataset.isDetail = "true";
+                    
+                    div.appendChild(label);
+                    div.appendChild(input);
+                    detailsContainer.appendChild(div);
+                });
+            }
+
+            // Reset File Input
+            document.getElementById('fileInput').value = '';
+            document.getElementById('filePreview').classList.add('d-none');
+            document.getElementById('confirmUpload').disabled = true;
+            
+            uploadModal.show();
+        };
+
+        // --- File Handling ---
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('fileInput');
+
+        dropZone.onclick = () => fileInput.click();
+
+        fileInput.onchange = (e) => handleFile(e.target.files[0]);
+
+        dropZone.ondragover = (e) => {
+            e.preventDefault();
+            dropZone.style.borderColor = 'var(--secondary-color)';
+            dropZone.style.backgroundColor = '#f8fbff';
+        };
+
+        dropZone.ondragleave = (e) => {
+            e.preventDefault();
+            dropZone.style.borderColor = '#ddd';
+            dropZone.style.backgroundColor = 'white';
+        };
+
+        dropZone.ondrop = (e) => {
+            e.preventDefault();
+            dropZone.style.borderColor = '#ddd';
+            dropZone.style.backgroundColor = 'white';
+            handleFile(e.dataTransfer.files[0]);
+        };
+
+        function handleFile(file) {
+            if (!file) return;
+            // Validate type/size if needed
+            
+            document.getElementById('fileName').textContent = file.name;
+            document.getElementById('filePreview').classList.remove('d-none');
+            document.getElementById('confirmUpload').disabled = false;
+            
+            // Store file in input (if dragged)
+            if (fileInput.files.length === 0) {
+                const dt = new DataTransfer();
+                dt.items.add(file);
+                fileInput.files = dt.files;
+            }
+        }
+
+        document.getElementById('clearFile').onclick = () => {
+            fileInput.value = '';
+            document.getElementById('filePreview').classList.add('d-none');
+            document.getElementById('confirmUpload').disabled = true;
+        };
+
+        // --- Submit Upload ---
+        document.getElementById('confirmUpload').onclick = async () => {
+            const btn = document.getElementById('confirmUpload');
+            const originalText = btn.innerText;
+            btn.disabled = true;
+            btn.innerText = 'שולח...';
+
+            try {
+                const formData = new FormData();
+                formData.append('report_id', currentReportId);
+                formData.append('client_id', currentClientId);
+                formData.append('token', currentToken); // Important for security
+                formData.append('doc_id', document.getElementById('uploadDocId').value);
+                formData.append('doc_type', document.getElementById('uploadDocType').value);
+                formData.append('file', fileInput.files[0]);
+                
+                // Collect details
+                const detailInputs = document.querySelectorAll('[data-is-detail="true"]');
+                const details = {};
+                detailInputs.forEach(inp => {
+                    if (inp.value) details[inp.name] = inp.value;
+                });
+                if (Object.keys(details).length) {
+                    formData.append('details', JSON.stringify(details));
                 }
 
-                html += `</ul></div>`;
+                const res = await fetch(`${API_BASE_URL}/tally-edit-documents`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!res.ok) throw new Error('Upload failed');
+
+                uploadModal.hide();
+                alert('המסמך הועלה בהצלחה!');
+                await loadDocuments(); // Refresh list
+
+            } catch (error) {
+                console.error(error);
+                alert('שגיאה בהעלאת המסמך. אנא נסו שוב.');
+            } finally {
+                btn.disabled = false;
+                btn.innerText = originalText;
             }
-
-            container.innerHTML = html;
-        }
-
-        function formatDocumentName(name) {
-            // Bold parts after dashes (names, companies, banks)
-            const parts = String(name || '').split(' - ');
-            if (parts.length === 1) return name;
-            
-            const formatted = [parts[0]];
-            for (let i = 1; i < parts.length; i++) {
-                formatted.push(`<strong>${parts[i]}</strong>`);
-            }
-            
-            return formatted.join(' - ');
-        }
-
-        function switchLanguage(lang) {
-            currentLang = lang;
-            const isHe = lang === 'he';
-
-            // Toggle direction
-            document.documentElement.dir = isHe ? 'rtl' : 'ltr';
-            document.documentElement.lang = isHe ? 'he' : 'en';
-
-            // Toggle buttons
-            document.getElementById('btn-he').classList.toggle('active', isHe);
-            document.getElementById('btn-en').classList.toggle('active', !isHe);
-
-            // Toggle titles
-            document.getElementById('title-he').style.display = isHe ? 'block' : 'none';
-            document.getElementById('title-en').style.display = isHe ? 'none' : 'block';
-
-            const subtitleHe = document.getElementById('subtitle-he');
-            const subtitleEn = document.getElementById('subtitle-en');
-            if (subtitleHe) subtitleHe.style.display = isHe ? 'inline' : 'none';
-            if (subtitleEn) subtitleEn.style.display = isHe ? 'none' : 'inline';
-
-            // Toggle loading texts
-            document.getElementById('loading-text-he').style.display = isHe ? 'block' : 'none';
-            document.getElementById('loading-text-en').style.display = isHe ? 'none' : 'block';
-
-            // Toggle contact section
-            document.getElementById('contact-title-he').style.display = isHe ? 'block' : 'none';
-            document.getElementById('contact-title-en').style.display = isHe ? 'none' : 'block';
-            document.getElementById('contact-text-he').style.display = isHe ? 'block' : 'none';
-            document.getElementById('contact-text-en').style.display = isHe ? 'none' : 'block';
-
-            // Update email button text
-            document.getElementById('email-button').textContent = isHe ? '📧 שליחת מייל' : '📧 Send Email';
-
-            // Re-render documents
-            renderDocuments();
-        }
-
-        function showError(message) {
-            document.getElementById('loading').style.display = 'none';
-            const errorDiv = document.getElementById('error');
-            errorDiv.textContent = message;
-            errorDiv.style.display = 'block';
-        }
+        };
     </script>
 </body>
 </html>
