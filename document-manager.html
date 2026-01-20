@@ -4,6 +4,12 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ניהול מסמכים - משופר</title>
+<script type="module">
+    // Import document registry
+    import { DOCUMENT_TYPES, CATEGORIES, formatDocumentName, getDocumentDropdownOptions, requiresDetails, getDetailsSchema } from './document-types.js';
+    // Expose to global scope for inline handlers
+    window.DocRegistry = { DOCUMENT_TYPES, CATEGORIES, formatDocumentName, getDocumentDropdownOptions, requiresDetails, getDetailsSchema };
+</script>
 <style>
 * {
     margin: 0;
@@ -887,34 +893,7 @@ textarea {
                     </div>
                     <select id="docTypeSelect">
                         <option value="">-- בחר מסמך מהרשימה --</option>
-                        <option value="אישור דיבידנד">אישור דיבידנד</option>
-                        <option value="אישור זכאות לתואר">אישור זכאות לתואר</option>
-                        <option value="אישור מס שנתי מחברת ביטוח|REQUIRES_DETAIL">אישור מס שנתי מחברת ביטוח</option>
-                        <option value="אישור משיכת כספים (פנסיה/גמל/ביטוח)|REQUIRES_DETAIL">אישור משיכת כספים (פנסיה/גמל/ביטוח)</option>
-                        <option value="אישור ניכוי מס במקור|REQUIRES_DETAIL">אישור ניכוי מס במקור</option>
-                        <option value="אישור קצבת נכות לילד">אישור קצבת נכות לילד</option>
-                        <option value="אישור שחרור מצה״ל/שירות לאומי">אישור שחרור מצה״ל/שירות לאומי</option>
-                        <option value="אישור שנתי מביטוח לאומי">אישור שנתי מביטוח לאומי</option>
-                        <option value="אישור שנתי מביטוח לאומי - בן/בת זוג">אישור שנתי מביטוח לאומי - בן/בת זוג</option>
-                        <option value="אישור תושבות מהרשות המקומית">אישור תושבות מהרשות המקומית</option>
-                        <option value="אסמכתא הימורים/פרסים">אסמכתא הימורים/פרסים</option>
-                        <option value="אסמכתא הכנסות מחו״ל">אסמכתא הכנסות מחו״ל</option>
-                        <option value="טופס 106|REQUIRES_DETAIL">טופס 106</option>
-                        <option value="טופס 106 - בן/בת זוג|REQUIRES_DETAIL">טופס 106 - בן/בת זוג</option>
-                        <option value="טופס 1399 (קריפטו)">טופס 1399 (קריפטו)</option>
-                        <option value="טופס 867|REQUIRES_DETAIL">טופס 867</option>
-                        <option value="טופס 867 - בן/בת זוג|REQUIRES_DETAIL">טופס 867 - בן/בת זוג</option>
-                        <option value="מסמך רופא/ועדה רפואית">מסמך רפואי/ועדה רפואית</option>
-                        <option value="מסמך רשמי - החזקת קרוב במוסד">מסמך רשמי - החזקת קרוב במוסד</option>
-                        <option value="פסק דין / הסכם גירושין (מזונות)">פסק דין / הסכם גירושין (מזונות)</option>
-                        <option value="קבלות ומסמכי הנצחה">קבלות ומסמכי הנצחה</option>
-                        <option value="קבלות תרומות מרוכזות (סעיף 46)">קבלות תרומות מרוכזות (סעיף 46)</option>
-                        <option value="רשימת ספירת מלאי">רשימת ספירת מלאי</option>
-                        <option value="ספח ת.ז כולל פרטי ילדים">ספח ת.ז כולל פרטי ילדים</option>
-                        <option value="ספח ת.ז מעודכן">ספח ת.ז מעודכן</option>
-                        <option value="חוזה שכירות (הוצאה)">חוזה שכירות (הוצאה)</option>
-                        <option value="חוזה שכירות (הכנסה)">חוזה שכירות (הכנסה)</option>
-                        <option value="אישור ועדת השמה/שילוב">אישור ועדת השמה/שילוב</option>
+                        <!-- Options populated dynamically from document-types.js -->
                     </select>
                     
                     <!-- Detail Input Section -->
@@ -1017,42 +996,24 @@ let markedForRemoval = new Set();
 let docsToAdd = new Set();
 let pendingDocWithDetail = null; // For documents requiring detail
 
-// Document types that require additional details
-const DOCS_REQUIRING_DETAILS = {
-    'טופס 106': {
-        label: 'שם המעסיק',
-        placeholder: 'לדוגמה: חברת ABC בע"מ'
-    },
-    'טופס 106 - בן/בת זוג': {
-        label: 'שם המעסיק של בן/בת הזוג',
-        placeholder: 'לדוגמה: חברת XYZ בע"מ'
-    },
-    'טופס 867': {
-        label: 'שם הבנק / המוסד הפיננסי',
-        placeholder: 'לדוגמה: בנק הפועלים, מיטב דש'
-    },
-    'טופס 867 - בן/בת זוג': {
-        label: 'שם הבנק / המוסד הפיננסי - בן/בת זוג',
-        placeholder: 'לדוגמה: בנק לאומי'
-    },
-    'אישור משיכת כספים (פנסיה/גמל/ביטוח)': {
-        label: 'סוג המשיכה',
-        placeholder: 'לדוגמה: פיצויי פיטורין, מענק פרישה, קצבה'
-    },
-    'אישור מס שנתי מחברת ביטוח': {
-        label: 'סוג הביטוח ושם החברה',
-        placeholder: 'לדוגמה: פנסיה - מיטב דש, קרן השתלמות - אלטשולר שחם'
-    },
-    'אישור ניכוי מס במקור': {
-        label: 'מקור ההכנסה',
-        placeholder: 'לדוגמה: דמי שכירות, דיבידנד מחברה פרטית'
-    }
-};
-
 // Initialize
 document.getElementById('clientName').textContent = CLIENT_NAME || '-';
 document.getElementById('spouseName').textContent = SPOUSE_NAME || '-';
 document.getElementById('year').textContent = YEAR || '-';
+
+// Populate document dropdown from registry
+function initDocumentDropdown() {
+    const select = document.getElementById('docTypeSelect');
+    const optionsHtml = window.DocRegistry.getDocumentDropdownOptions({ lang: 'he', includeCategoryGroups: true });
+    select.innerHTML = '<option value="">-- בחר מסמך מהרשימה --</option>\n' + optionsHtml;
+}
+
+// Run on page load
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initDocumentDropdown);
+} else {
+    initDocumentDropdown();
+}
 
 // Show alert
 function showAlert(msg, type = 'success') {
@@ -1122,29 +1083,35 @@ function toggleRemoval(id) {
 
 // Handle document selection
 document.getElementById('docTypeSelect').addEventListener('change', function(e) {
-    const fullValue = e.target.value;
-    if (!fullValue) return;
-    
-    const parts = fullValue.split('|');
-    const docType = parts[0];
-    const requiresDetail = parts[1] === 'REQUIRES_DETAIL';
-    
-    if (requiresDetail && DOCS_REQUIRING_DETAILS[docType]) {
+    const typeId = e.target.value;
+    if (!typeId) return;
+
+    const requiresDetail = window.DocRegistry.requiresDetails(typeId);
+
+    if (requiresDetail) {
         // Show detail input
-        pendingDocWithDetail = docType;
-        const detailConfig = DOCS_REQUIRING_DETAILS[docType];
-        
-        document.getElementById('detailLabel').textContent = detailConfig.label + ':';
-        document.getElementById('detailValue').placeholder = detailConfig.placeholder;
-        document.getElementById('detailValue').value = '';
-        document.getElementById('detailInput').classList.add('show');
-        document.getElementById('detailValue').focus();
+        pendingDocWithDetail = typeId;
+        const schema = window.DocRegistry.getDetailsSchema(typeId);
+
+        // Build dynamic detail inputs
+        const detailInputDiv = document.getElementById('detailInput');
+        const firstDetail = schema[0];
+
+        if (firstDetail) {
+            document.getElementById('detailLabel').textContent = firstDetail.label_he + ':';
+            document.getElementById('detailValue').placeholder = firstDetail.placeholder_he || '';
+            document.getElementById('detailValue').value = '';
+            detailInputDiv.classList.add('show');
+            document.getElementById('detailValue').focus();
+        }
     } else {
         // Add directly without detail
-        if (docsToAdd.has(docType)) {
+        const displayName = window.DocRegistry.formatDocumentName(typeId, { year: YEAR }, { lang: 'he', mode: 'text' });
+
+        if (docsToAdd.has(displayName)) {
             showAlert('מסמך זה כבר נמצא ברשימה', 'error');
         } else {
-            docsToAdd.add(docType);
+            docsToAdd.add(displayName);
             updateSelectedDocs();
             updateStats();
         }
@@ -1155,25 +1122,35 @@ document.getElementById('docTypeSelect').addEventListener('change', function(e) 
 // Add document with detail
 function addDocumentWithDetail() {
     const detail = document.getElementById('detailValue').value.trim();
-    
+
     if (!detail) {
         showAlert('יש להזין את הפרטים הנדרשים', 'error');
         return;
     }
-    
+
     if (!pendingDocWithDetail) return;
-    
-    const fullDocName = `${pendingDocWithDetail} - ${detail}`;
-    
+
+    // Get detail schema to determine parameter key
+    const schema = window.DocRegistry.getDetailsSchema(pendingDocWithDetail);
+    const firstDetail = schema[0];
+    if (!firstDetail) return;
+
+    // Build params object
+    const params = { year: YEAR };
+    params[firstDetail.key] = detail;
+
+    // Format document name using registry
+    const fullDocName = window.DocRegistry.formatDocumentName(pendingDocWithDetail, params, { lang: 'he', mode: 'text' });
+
     if (docsToAdd.has(fullDocName)) {
         showAlert('מסמך זה כבר נמצא ברשימה', 'error');
         return;
     }
-    
+
     docsToAdd.add(fullDocName);
     updateSelectedDocs();
     updateStats();
-    
+
     // Reset
     document.getElementById('detailInput').classList.remove('show');
     document.getElementById('docTypeSelect').value = '';
