@@ -4,6 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>רשימת מסמכים נדרשים - Annual Report Documents</title>
+    <script type="module">
+        // Import document registry
+        import { CATEGORIES } from './document-types.js';
+        // Expose to global scope
+        window.DocRegistry = { CATEGORIES };
+    </script>
     <style>
         * {
             margin: 0;
@@ -342,24 +348,20 @@
             if (!currentData || !currentData.documents) return;
 
             const container = document.getElementById('documents-container');
-            
+
             if (currentData.document_count === 0) {
-                container.innerHTML = currentLang === 'he' 
+                container.innerHTML = currentLang === 'he'
                     ? '<div class="success-message">✅ כל המסמכים התקבלו! אין מסמכים חסרים.</div>'
                     : '<div class="success-message">✅ All documents received! No missing documents.</div>';
                 return;
             }
 
-            // Category name translations (emoji categories from API → English names)
-            const categoryTranslations = {
-                '💼 הכנסות מעבודה': 'Employment Income',
-                '🏦 בנקים ושוק ההון': 'Banks & Capital Markets',
-                '🛡️ ביטוח, פנסיה וקצבאות': 'Insurance, Pension & Benefits',
-                '🏠 מגורים ונדל"ן': 'Housing & Real Estate',
-                '📋 אישי ותרומות': 'Personal & Donations',
-                '💰 הכנסות נוספות': 'Additional Income',
-                '📋 אחר': 'Other'
-            };
+            // Build category translation map from registry
+            const categoryTranslations = {};
+            Object.values(window.DocRegistry.CATEGORIES).forEach(cat => {
+                const heKey = `${cat.emoji} ${cat.he}`;
+                categoryTranslations[heKey] = cat.en;
+            });
 
             let html = '';
 
