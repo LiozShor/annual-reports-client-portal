@@ -1,5 +1,11 @@
 // document-types.js
-// Single Source of Truth for document types + categories.
+// ⚠️ SINGLE SOURCE OF TRUTH - This file is the master definition for all document types.
+//
+// IMPORTANT: After editing this file:
+// 1. Run: node -e "const fs=require('fs');const js=fs.readFileSync('./document-types.js','utf8');const extractData=new Function(js.replace(/export /g,'')+'; return {CATEGORIES,DOCUMENT_TYPES};');const data=extractData();fs.writeFileSync('./document-types.json',JSON.stringify({version:new Date().toISOString().split('T')[0],updated_at:new Date().toISOString(),categories:data.CATEGORIES,document_types:data.DOCUMENT_TYPES},null,2));"
+// 2. Commit and push both .js and .json files to GitHub
+// 3. n8n workflows automatically fetch from: https://liozshor.github.io/annual-reports-client-portal/document-types.json
+//
 // Notes:
 // - name_he supports **markdown bold** for client display (convert to HTML where needed).
 // - Use formatDocumentName(typeId, params, { lang, mode }) to render final string.
