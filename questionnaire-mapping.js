@@ -548,13 +548,13 @@ export const QUESTION_MAPPINGS = [
         label: { he: "היו לך פיקדונות/תכניות חיסכון בבנק?", en: "Did you have bank deposits/savings plans?" },
         type: "yes_no",
         category: "investments",
-        condition: null,
-        documents: [],
+        condition: "yes",
+        documents: ["form_867"],
         isSpouse: false,
         perItem: false,
         detailsField: null,
         linkedQuestion: "investments_deposits_banks",
-        docDescription: { he: "", en: "" }
+        docDescription: { he: "טופס 867 (אישור ניכוי מס) לשנת המס מהבנק", en: "Form 867 (withholding tax certificate) from the bank" }
     },
     {
         id: "investments_deposits_banks",
@@ -563,12 +563,12 @@ export const QUESTION_MAPPINGS = [
         type: "list",
         category: "investments",
         condition: null,
-        documents: [],
+        documents: ["form_867"],
         isSpouse: false,
-        perItem: false,
-        detailsField: null,
+        perItem: true,
+        detailsField: "issuer_name",
         linkedQuestion: null,
-        docDescription: { he: "", en: "" }
+        docDescription: { he: "טופס 867 (אישור ניכוי מס) לשנת המס מהבנק (אחד לכל בנק)", en: "Form 867 (withholding tax certificate) - one per bank" }
     },
     {
         id: "investments_crypto",
