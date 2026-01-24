@@ -1,6 +1,7 @@
 // Configuration
 const API_BASE = 'https://liozshor.app.n8n.cloud/webhook';
 const ADMIN_TOKEN_KEY = 'QKiwUBXVH@%#1gD7t@rB]<,dM.[NC5b_';
+const SESSION_FLAG_KEY = 'admin_session_active';
 
 // State
 let authToken = localStorage.getItem(ADMIN_TOKEN_KEY) || '';
@@ -29,6 +30,7 @@ async function login() {
         if (data.ok && data.token) {
             authToken = data.token;
             localStorage.setItem(ADMIN_TOKEN_KEY, authToken);
+            sessionStorage.setItem(SESSION_FLAG_KEY, 'true');
             document.getElementById('loginScreen').style.display = 'none';
             document.getElementById('app').classList.add('visible');
             loadDashboard();
@@ -44,6 +46,7 @@ async function login() {
 
 function logout() {
     localStorage.removeItem(ADMIN_TOKEN_KEY);
+    sessionStorage.removeItem(SESSION_FLAG_KEY);
     authToken = '';
     location.reload();
 }
@@ -52,16 +55,27 @@ function logout() {
 async function checkAuth() {
     if (!authToken) return;
 
+    // If session already active in this browser window, skip API call
+    if (sessionStorage.getItem(SESSION_FLAG_KEY) === 'true') {
+        document.getElementById('loginScreen').style.display = 'none';
+        document.getElementById('app').classList.add('visible');
+        loadDashboard();
+        return;
+    }
+
+    // New tab/window - verify token with API
     try {
         const response = await fetch(`${API_BASE}/admin-verify?token=${authToken}`);
         const data = await response.json();
 
         if (data.ok) {
+            sessionStorage.setItem(SESSION_FLAG_KEY, 'true');
             document.getElementById('loginScreen').style.display = 'none';
             document.getElementById('app').classList.add('visible');
             loadDashboard();
         } else {
             localStorage.removeItem(ADMIN_TOKEN_KEY);
+            sessionStorage.removeItem(SESSION_FLAG_KEY);
             authToken = '';
         }
     } catch (error) {

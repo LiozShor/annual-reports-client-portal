@@ -28,27 +28,32 @@
 
     <!-- Main App -->
     <div id="app" class="app">
-        <header class="header">
-            <h1><i class="fa-solid fa-building"></i> פורטל ניהול - דוחות שנתיים</h1>
-            <div class="header-actions">
+        <!-- Persistent Navbar -->
+        <nav class="admin-navbar">
+            <div class="nav-brand">
+                <i class="fa-solid fa-building"></i>
+                פורטל ניהול
+            </div>
+            <div class="nav-links">
+                <a href="index.html" class="active"><i class="fa-solid fa-chart-simple"></i> לוח בקרה</a>
+                <a href="document-types-viewer.html"><i class="fa-solid fa-file-lines"></i> סוגי מסמכים</a>
+                <a href="questionnaire-mapping-editor.html"><i class="fa-solid fa-diagram-project"></i> מיפוי שאלון</a>
+            </div>
+            <div class="nav-actions">
                 <button class="btn btn-secondary" onclick="refreshData()">
-                    <i class="fa-solid fa-rotate-right"></i> רענן נתונים
+                    <i class="fa-solid fa-rotate-right"></i> רענן
                 </button>
                 <button class="btn btn-secondary" onclick="logout()">
                     <i class="fa-solid fa-right-from-bracket"></i> התנתק
                 </button>
             </div>
-        </header>
+        </nav>
 
         <div class="tabs">
             <div class="tab active" onclick="switchTab('dashboard')"><i class="fa-solid fa-chart-simple"></i> לוח בקרה
             </div>
             <div class="tab" onclick="switchTab('import')"><i class="fa-solid fa-upload"></i> הוספת לקוחות</div>
             <div class="tab" onclick="switchTab('send')"><i class="fa-solid fa-envelope"></i> שליחת שאלונים</div>
-            <div class="tab" onclick="window.location.href='document-types-viewer.html'"><i
-                    class="fa-solid fa-file-lines"></i> סוגי מסמכים</div>
-            <div class="tab" onclick="window.location.href='questionnaire-mapping-editor.html'"><i
-                    class="fa-solid fa-diagram-project"></i> מיפוי שאלון</div>
         </div>
 
         <div class="content">
