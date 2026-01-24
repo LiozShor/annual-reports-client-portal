@@ -1,6 +1,6 @@
 {
   "version": "2026-01-24",
-  "updated_at": "2026-01-24T08:50:34.909Z",
+  "updated_at": "2026-01-24T17:18:06.924Z",
   "categories": {
     "hidden": {
       "id": "hidden",
@@ -930,15 +930,17 @@
       },
       "type": "yes_no",
       "category": "investments",
-      "condition": null,
-      "documents": [],
+      "condition": "yes",
+      "documents": [
+        "form_867"
+      ],
       "isSpouse": false,
       "perItem": false,
       "detailsField": null,
       "linkedQuestion": "investments_deposits_banks",
       "docDescription": {
-        "he": "",
-        "en": ""
+        "he": "טופס 867 (אישור ניכוי מס) לשנת המס מהבנק",
+        "en": "Form 867 (withholding tax certificate) from the bank"
       }
     },
     {
@@ -954,14 +956,16 @@
       "type": "list",
       "category": "investments",
       "condition": null,
-      "documents": [],
+      "documents": [
+        "form_867"
+      ],
       "isSpouse": false,
-      "perItem": false,
-      "detailsField": null,
+      "perItem": true,
+      "detailsField": "issuer_name",
       "linkedQuestion": null,
       "docDescription": {
-        "he": "",
-        "en": ""
+        "he": "טופס 867 (אישור ניכוי מס) לשנת המס מהבנק (אחד לכל בנק)",
+        "en": "Form 867 (withholding tax certificate) - one per bank"
       }
     },
     {
