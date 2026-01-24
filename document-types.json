@@ -1,6 +1,6 @@
 {
   "version": "2026-01-24",
-  "updated_at": "2026-01-24T18:04:18.123Z",
+  "updated_at": "2026-01-24T18:08:37.826Z",
   "categories": {
     "identity": {
       "emoji": "🪪",
@@ -126,7 +126,7 @@
       "aliases": [
         "Crypto_Report"
       ],
-      "name_he": "דוח על הרווחים / הפסדים והמס שנוכה (במידה ונוכה) לשנת {year} מ{platform}",
+      "name_he": "דו\"ח על הרווחים / הפסדים והמס שנוכה (במידה ונוכה) לשנת {year} מ{platform}",
       "name_en": "Report of gains/losses and tax withheld (if any) for {year} from {platform}",
       "details": [
         {
