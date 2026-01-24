@@ -1,0 +1,146 @@
+/* ===========================================
+   LANDING PAGE STYLES - index.html
+   =========================================== */
+
+body {
+    background: var(--bg-gradient);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+.container {
+    max-width: 550px;
+    width: 100%;
+    position: relative;
+}
+
+/* Header styling */
+.header {
+    background: #fff;
+    padding: 40px 30px 20px;
+    text-align: center;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.header-icon {
+    font-size: 40px;
+    margin-bottom: 15px;
+    display: block;
+}
+
+.header h1 {
+    font-size: 22px;
+    font-weight: 700;
+    margin-bottom: 8px;
+    color: var(--text-main);
+}
+
+.header p {
+    font-size: 14px;
+    color: var(--text-muted);
+    font-weight: 500;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+}
+
+.content {
+    padding: 30px;
+}
+
+/* Alert / Warning Sections */
+.alert-box {
+    text-align: center;
+    margin-bottom: 30px;
+}
+
+.alert-icon {
+    font-size: 48px;
+    margin-bottom: 15px;
+}
+
+.alert-title {
+    font-size: 18px;
+    font-weight: 600;
+    margin-bottom: 10px;
+}
+
+.alert-text {
+    font-size: 15px;
+    line-height: 1.6;
+    color: var(--text-muted);
+    margin-bottom: 8px;
+}
+
+.doc-badge {
+    display: inline-flex;
+    align-items: center;
+    background: #e0e7ff;
+    color: var(--primary);
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 14px;
+    font-weight: 600;
+    margin: 15px 0;
+}
+
+/* Actions */
+.actions {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.actions .btn {
+    width: 100%;
+    padding: 16px;
+}
+
+/* Language Selection Cards */
+.lang-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+    margin-top: 20px;
+}
+
+.lang-card {
+    background: white;
+    border: 2px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.lang-card:hover {
+    border-color: var(--primary);
+    background: #f5f3ff;
+    transform: translateY(-2px);
+}
+
+.lang-flag {
+    font-size: 32px;
+    display: block;
+    margin-bottom: 10px;
+}
+
+.lang-name {
+    font-weight: 700;
+    color: var(--text-main);
+}
+
+/* Dev badge */
+.dev-badge {
+    display: inline-block;
+    background: #fef3c7;
+    color: #92400e;
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 4px;
+    margin-top: 4px;
+    font-weight: 500;
+}
