@@ -228,7 +228,8 @@
                 </div>
                 <div class="card-body">
                     <div class="search-box">
-                        <input type="text" id="searchInput" placeholder="חיפוש לפי שם מסמך..." oninput="filterDocTypes()">
+                        <input type="text" id="searchInput" placeholder="חיפוש לפי שם מסמך..."
+                            oninput="filterDocTypes()">
                         <i class="fa-solid fa-magnifying-glass"></i>
                     </div>
 
@@ -660,7 +661,8 @@
         function escapeHtml(text) {
             const div = document.createElement('div');
             div.textContent = text || '';
-            return div.innerHTML;
+            // Also escape double quotes for use in HTML attributes
+            return div.innerHTML.replace(/"/g, '&quot;');
         }
 
         // Initialize

@@ -1188,7 +1188,8 @@
         function escapeHtml(text) {
             const div = document.createElement('div');
             div.textContent = text || '';
-            return div.innerHTML;
+            // Also escape double quotes for use in HTML attributes
+            return div.innerHTML.replace(/"/g, '&quot;');
         }
 
         // Initialize
