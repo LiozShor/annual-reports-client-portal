@@ -201,9 +201,19 @@
 
     <!-- Main App -->
     <div id="app" class="app">
-        <header class="header">
-            <h1><i class="fa-solid fa-file-lines"></i> ניהול סוגי מסמכים</h1>
-            <div class="header-actions">
+        <!-- Persistent Navbar -->
+        <nav class="admin-navbar">
+            <div class="nav-brand">
+                <i class="fa-solid fa-building"></i>
+                פורטל ניהול
+            </div>
+            <div class="nav-links">
+                <a href="index.html"><i class="fa-solid fa-chart-simple"></i> לוח בקרה</a>
+                <a href="document-types-viewer.html" class="active"><i class="fa-solid fa-file-lines"></i> סוגי
+                    מסמכים</a>
+                <a href="questionnaire-mapping-editor.html"><i class="fa-solid fa-diagram-project"></i> מיפוי שאלון</a>
+            </div>
+            <div class="nav-actions">
                 <button class="btn btn-secondary" onclick="refreshData()">
                     <i class="fa-solid fa-rotate-right"></i> רענן
                 </button>
@@ -211,12 +221,9 @@
                     <i class="fa-solid fa-right-from-bracket"></i> התנתק
                 </button>
             </div>
-        </header>
+        </nav>
 
         <div class="content">
-            <a href="index.html" class="back-link">
-                <i class="fa-solid fa-arrow-right"></i> חזרה לפורטל הניהול
-            </a>
 
             <div class="card">
                 <div class="card-header">
@@ -282,6 +289,7 @@
         // Configuration
         const API_BASE = 'https://liozshor.app.n8n.cloud/webhook';
         const ADMIN_TOKEN_KEY = 'QKiwUBXVH@%#1gD7t@rB]<,dM.[NC5b_';
+        const SESSION_FLAG_KEY = 'admin_session_active';
         const GITHUB_API = 'https://raw.githubusercontent.com/LiozShor/annual-reports-client-portal/main/document-types.json';
 
         // State
@@ -325,6 +333,7 @@
                 if (data.ok && data.token) {
                     authToken = data.token;
                     localStorage.setItem(ADMIN_TOKEN_KEY, authToken);
+                    sessionStorage.setItem(SESSION_FLAG_KEY, 'true');
                     document.getElementById('loginScreen').style.display = 'none';
                     document.getElementById('app').classList.add('visible');
                     loadDocumentTypes();
@@ -340,6 +349,7 @@
 
         function logout() {
             localStorage.removeItem(ADMIN_TOKEN_KEY);
+            sessionStorage.removeItem(SESSION_FLAG_KEY);
             authToken = '';
             location.reload();
         }
@@ -347,16 +357,27 @@
         async function checkAuth() {
             if (!authToken) return;
 
+            // If session already active in this browser window, skip API call
+            if (sessionStorage.getItem(SESSION_FLAG_KEY) === 'true') {
+                document.getElementById('loginScreen').style.display = 'none';
+                document.getElementById('app').classList.add('visible');
+                loadDocumentTypes();
+                return;
+            }
+
+            // New tab/window - verify token with API
             try {
                 const response = await fetch(`${API_BASE}/admin-verify?token=${authToken}`);
                 const data = await response.json();
 
                 if (data.ok) {
+                    sessionStorage.setItem(SESSION_FLAG_KEY, 'true');
                     document.getElementById('loginScreen').style.display = 'none';
                     document.getElementById('app').classList.add('visible');
                     loadDocumentTypes();
                 } else {
                     localStorage.removeItem(ADMIN_TOKEN_KEY);
+                    sessionStorage.removeItem(SESSION_FLAG_KEY);
                     authToken = '';
                 }
             } catch (error) {
