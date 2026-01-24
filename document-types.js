@@ -24,14 +24,14 @@ export const DOCUMENT_TYPES = {
     name_he: 'טופס 106 לשנת {year} מ{employer}',
     name_en: "Form 106 for {year} from {employer}",
     details: [
-          {
-                "key": "employer",
-                "type": "text",
-                "label_he": "שם המעסיק",
-                "label_en": "Employer name",
-                "placeholder_he": "לדוגמה: חברת ABC בע\"מ",
-                "placeholder_en": "e.g.: ABC Ltd."
-          }
+      {
+        "key": "employer",
+        "type": "text",
+        "label_he": "שם המעסיק",
+        "label_en": "Employer name",
+        "placeholder_he": "לדוגמה: חברת ABC בע\"מ",
+        "placeholder_en": "e.g.: ABC Ltd."
+      }
     ],
   },
 
@@ -42,14 +42,14 @@ export const DOCUMENT_TYPES = {
     name_he: 'טופס 106 לשנת {year} מ{employer} (בן/בת זוג)',
     name_en: "Form 106 for {year} from {employer} (spouse)",
     details: [
-          {
-                "key": "employer",
-                "type": "text",
-                "label_he": "שם המעסיק",
-                "label_en": "Employer name",
-                "placeholder_he": "לדוגמה: חברת ABC בע\"מ",
-                "placeholder_en": "e.g.: ABC Ltd."
-          }
+      {
+        "key": "employer",
+        "type": "text",
+        "label_he": "שם המעסיק",
+        "label_en": "Employer name",
+        "placeholder_he": "לדוגמה: חברת ABC בע\"מ",
+        "placeholder_en": "e.g.: ABC Ltd."
+      }
     ],
   },
 
@@ -60,14 +60,14 @@ export const DOCUMENT_TYPES = {
     name_he: 'טופס 867 (אישור ניכוי מס) לשנת {year} מ{institution}',
     name_en: "Form 867 (withholding tax certificate) for {year} from {institution}",
     details: [
-          {
-                "key": "institution",
-                "type": "text",
-                "label_he": "בנק / בית השקעות",
-                "label_en": "Bank / Broker",
-                "placeholder_he": "לדוגמה: לאומי / מיטב",
-                "placeholder_en": "e.g.: Leumi / Meitav"
-          }
+      {
+        "key": "institution",
+        "type": "text",
+        "label_he": "בנק / בית השקעות",
+        "label_en": "Bank / Broker",
+        "placeholder_he": "לדוגמה: לאומי / מיטב",
+        "placeholder_en": "e.g.: Leumi / Meitav"
+      }
     ],
   },
 
@@ -78,14 +78,14 @@ export const DOCUMENT_TYPES = {
     name_he: 'דוח על הרווחים / הפסדים והמס שנוכה (במידה ונוכה) לשנת {year} מ{platform}',
     name_en: "Report of gains/losses and tax withheld (if any) for {year} from {platform}",
     details: [
-          {
-                "key": "platform",
-                "type": "text",
-                "label_he": "פלטפורמה",
-                "label_en": "Platform",
-                "placeholder_he": "לדוגמה: Binance / eToro",
-                "placeholder_en": "e.g.: Binance / eToro"
-          }
+      {
+        "key": "platform",
+        "type": "text",
+        "label_he": "פלטפורמה",
+        "label_en": "Platform",
+        "placeholder_he": "לדוגמה: Binance / eToro",
+        "placeholder_en": "e.g.: Binance / eToro"
+      }
     ],
   },
 
@@ -152,14 +152,14 @@ export const DOCUMENT_TYPES = {
     name_he: 'אישור שנתי לשנת {year} על תקבולי דמי נכות שהתקבלו מביטוח לאומי - {name}',
     name_en: "Annual certificate for {year} of disability payments from NII - {name}",
     details: [
-          {
-                "key": "name",
-                "type": "text",
-                "label_he": "שם מלא",
-                "label_en": "Full name",
-                "placeholder_he": "לדוגמה: ישראל ישראלי",
-                "placeholder_en": "e.g.: John Doe"
-          }
+      {
+        "key": "name",
+        "type": "text",
+        "label_he": "שם מלא",
+        "label_en": "Full name",
+        "placeholder_he": "לדוגמה: ישראל ישראלי",
+        "placeholder_en": "e.g.: John Doe"
+      }
     ],
   },
 
@@ -170,14 +170,14 @@ export const DOCUMENT_TYPES = {
     name_he: 'אישור שנתי מביטוח לאומי לשנת {year} בהתאם לסוג הקצבה של בן/בת הזוג - {name}',
     name_en: "Annual NII certificate for {year} by benefit type (spouse) - {name}",
     details: [
-          {
-                "key": "name",
-                "type": "text",
-                "label_he": "שם מלא",
-                "label_en": "Full name",
-                "placeholder_he": "לדוגמה: ישראל ישראלי",
-                "placeholder_en": "e.g.: John Doe"
-          }
+      {
+        "key": "name",
+        "type": "text",
+        "label_he": "שם מלא",
+        "label_en": "Full name",
+        "placeholder_he": "לדוגמה: ישראל ישראלי",
+        "placeholder_en": "e.g.: John Doe"
+      }
     ],
   },
 
@@ -187,14 +187,14 @@ export const DOCUMENT_TYPES = {
     name_he: 'אישור שנתי לשנת {year} על תקבולי דמי לידה מביטוח לאומי עבור - {name}',
     name_en: "Annual certificate for {year} of maternity payments from NII for - {name}",
     details: [
-          {
-                "key": "name",
-                "type": "text",
-                "label_he": "שם מלא",
-                "label_en": "Full name",
-                "placeholder_he": "לדוגמה: ישראל ישראלי",
-                "placeholder_en": "e.g.: John Doe"
-          }
+      {
+        "key": "name",
+        "type": "text",
+        "label_he": "שם מלא",
+        "label_en": "Full name",
+        "placeholder_he": "לדוגמה: ישראל ישראלי",
+        "placeholder_en": "e.g.: John Doe"
+      }
     ],
   },
 
@@ -205,30 +205,30 @@ export const DOCUMENT_TYPES = {
     name_he: 'אישור שנתי למס הכנסה לשנת {year} (נקרא גם **דוח שנתי מקוצר**) על ההפקדות ל{product} ב"{company}"',
     name_en: "Annual tax certificate for {year} (also called a shortened annual report) for contributions to {product} at \"{company}\"",
     details: [
-          {
-                "key": "product",
-                "type": "select",
-                "label_he": "סוג המוצר",
-                "label_en": "Product type",
-                "options_he": [
-                      "ביטוח חיים",
-                      "אובדן כושר עבודה",
-                      "קרן השתלמות"
-                ],
-                "options_en": [
-                      "Life insurance",
-                      "Work capacity loss",
-                      "Study fund"
-                ]
-          },
-          {
-                "key": "company",
-                "type": "text",
-                "label_he": "שם החברה",
-                "label_en": "Company name",
-                "placeholder_he": "לדוגמה: הראל",
-                "placeholder_en": "e.g.: Harel"
-          }
+      {
+        "key": "product",
+        "type": "select",
+        "label_he": "סוג המוצר",
+        "label_en": "Product type",
+        "options_he": [
+          "ביטוח חיים",
+          "אובדן כושר עבודה",
+          "קרן השתלמות"
+        ],
+        "options_en": [
+          "Life insurance",
+          "Work capacity loss",
+          "Study fund"
+        ]
+      },
+      {
+        "key": "company",
+        "type": "text",
+        "label_he": "שם החברה",
+        "label_en": "Company name",
+        "placeholder_he": "לדוגמה: הראל",
+        "placeholder_en": "e.g.: Harel"
+      }
     ],
   },
 
@@ -239,26 +239,26 @@ export const DOCUMENT_TYPES = {
     name_he: 'אישור על משיכת {withdrawal_type} לשנת {year} והמס שנוכה בעת המשיכה',
     name_en: "Certificate of {withdrawal_type} withdrawal for {year} and tax withheld at withdrawal",
     details: [
-          {
-                "key": "withdrawal_type",
-                "type": "select",
-                "label_he": "סוג המשיכה",
-                "label_en": "Withdrawal type",
-                "options_he": [
-                      "פיצויי פיטורין",
-                      "מענק פרישה",
-                      "משיכת קרן פנסיה",
-                      "משיכת קרן השתלמות",
-                      "משיכת קופת גמל להשקעה"
-                ],
-                "options_en": [
-                      "Severance pay",
-                      "Retirement grant",
-                      "Pension fund withdrawal",
-                      "Study fund withdrawal",
-                      "Investment provident fund withdrawal"
-                ]
-          }
+      {
+        "key": "withdrawal_type",
+        "type": "select",
+        "label_he": "סוג המשיכה",
+        "label_en": "Withdrawal type",
+        "options_he": [
+          "פיצויי פיטורין",
+          "מענק פרישה",
+          "משיכת קרן פנסיה",
+          "משיכת קרן השתלמות",
+          "משיכת קופת גמל להשקעה"
+        ],
+        "options_en": [
+          "Severance pay",
+          "Retirement grant",
+          "Pension fund withdrawal",
+          "Study fund withdrawal",
+          "Investment provident fund withdrawal"
+        ]
+      }
     ],
   },
 
@@ -285,14 +285,14 @@ export const DOCUMENT_TYPES = {
     name_he: 'אישור זכאות לתואר אקדמי מ{institution}',
     name_en: "Academic degree eligibility certificate from {institution}",
     details: [
-          {
-                "key": "institution",
-                "type": "text",
-                "label_he": "מוסד לימודים",
-                "label_en": "Institution",
-                "placeholder_he": "לדוגמה: אוניברסיטת תל אביב",
-                "placeholder_en": "e.g.: Tel Aviv University"
-          }
+      {
+        "key": "institution",
+        "type": "text",
+        "label_he": "מוסד לימודים",
+        "label_en": "Institution",
+        "placeholder_he": "לדוגמה: אוניברסיטת תל אביב",
+        "placeholder_en": "e.g.: Tel Aviv University"
+      }
     ],
   },
 
@@ -336,21 +336,31 @@ export const DOCUMENT_TYPES = {
     name_en: "Proof of foreign income and tax paid abroad",
   },
 
-  wht_approval: {
-    id: "wht_approval",
+  wht_income_tax: {
+    id: "wht_income_tax",
     category: "business",
-    aliases: ["WHT_Approval"],
-    name_he: 'אישור שנתי על ניכוי מס במקור/בט"ל מהלקוח',
-    name_en: "Annual certificate of withholding tax / NII withheld from client",
+    aliases: ["WHT_Income_Tax"],
+    name_he: "אישור שנתי על ניכוי מס במקור (מס הכנסה) מהלקוח",
+    name_en: "Annual certificate of withholding tax (Income Tax) withheld from client",
     details: [
-          {
-                "key": "client",
-                "type": "text",
-                "label_he": "שם הלקוח/ה",
-                "label_en": "Client name",
-                "placeholder_he": "לדוגמה: חברת XYZ בע\"מ",
-                "placeholder_en": "e.g.: XYZ Ltd."
-          }
+      {
+        key: "client", type: "text", label_he: "שם הלקוח/ה", label_en: "Client name",
+        placeholder_he: 'לדוגמה: חברת XYZ בע"מ', placeholder_en: "e.g.: XYZ Ltd."
+      }
+    ],
+  },
+
+  wht_nii: {
+    id: "wht_nii",
+    category: "business",
+    aliases: ["WHT_NII"],
+    name_he: 'אישור שנתי על ניכוי ביטוח לאומי מהלקוח (ניכוי במקור)',
+    name_en: "Annual certificate of National Insurance withheld from client",
+    details: [
+      {
+        key: "client", type: "text", label_he: "שם הלקוח/ה", label_en: "Client name",
+        placeholder_he: 'לדוגמה: חברת XYZ בע"מ', placeholder_en: "e.g.: XYZ Ltd."
+      }
     ],
   },
 

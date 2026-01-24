@@ -1,6 +1,6 @@
 {
   "version": "2026-01-24",
-  "updated_at": "2026-01-24T18:04:18.123Z",
+  "updated_at": "2026-01-24T18:10:02.465Z",
   "categories": {
     "identity": {
       "emoji": "🪪",
@@ -114,10 +114,6 @@
           "placeholder_he": "לדוגמה: לאומי / מיטב",
           "placeholder_en": "e.g.: Leumi / Meitav"
         }
-      ],
-      "deduplication_key": [
-        "id",
-        "institution"
       ]
     },
     "crypto_report": {
