@@ -1,6 +1,6 @@
 {
-  "version": "2026-01-23",
-  "updated_at": "2026-01-23T11:37:04.598Z",
+  "version": "2026-01-24",
+  "updated_at": "2026-01-24T18:04:18.123Z",
   "categories": {
     "identity": {
       "emoji": "🪪",
@@ -172,7 +172,7 @@
       "aliases": [
         "Child_ID_Appendix"
       ],
-      "name_he": "ספח תז בו מופיע הילד/ה שהצטרפו למשפחה",
+      "name_he": "ספח ת\"ז בו מופיע הילד/ה שהצטרפו למשפחה",
       "name_en": "ID appendix showing the child added to the family"
     },
     "special_ed_approval": {
