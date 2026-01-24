@@ -879,12 +879,40 @@
                 `;
             }
 
-            const previewText = currentMapping.docDescription?.he || '';
-            const previewHtml = previewText ? `
-                <div class="mapping-preview">
-                    <strong>תיאור:</strong> ${escapeHtml(previewText)}
-                </div>
-            ` : '';
+
+
+            // Build document name preview from document-types
+            let docPreviewHtml = '';
+            if (hasDocs && currentMapping.documents?.length > 0) {
+                const docPreviews = currentMapping.documents.map(docId => {
+                    const docType = documentTypes[docId];
+                    if (!docType) return `<div style="color:#999;">${docId} (לא נמצא)</div>`;
+
+                    // Replace placeholders with sample data
+                    let displayName = docType.name_he || docId;
+                    displayName = displayName
+                        .replace('{year}', SAMPLE_DATA.year)
+                        .replace('{employer}', SAMPLE_DATA.employer)
+                        .replace('{institution}', SAMPLE_DATA.institution)
+                        .replace('{company}', SAMPLE_DATA.company)
+                        .replace('{platform}', 'Binance')
+                        .replace('{product}', 'קרן פנסיה')
+                        .replace('{withdrawal_type}', 'פיצויי פיטורין')
+                        .replace('{name}', 'ישראל ישראלי')
+                        .replace('{client}', 'חברת ABC');
+
+                    return `<div style="padding:4px 0;">📄 ${escapeHtml(displayName)}</div>`;
+                }).join('');
+
+                docPreviewHtml = `
+                    <div class="mapping-preview" style="background:#f0fdf4; border-right-color:var(--success);">
+                        <div style="font-size:11px; color:var(--text-muted); margin-bottom:6px;">
+                            <i class="fa-solid fa-eye"></i> דוגמה לתצוגת המסמך:
+                        </div>
+                        ${docPreviews}
+                    </div>
+                `;
+            }
 
             return `
                 <div class="mapping-card ${isModified ? 'modified' : ''} ${hasDocs ? 'has-docs' : 'no-docs'}" data-id="${mapping.id}">
@@ -894,29 +922,6 @@
                     </div>
                     <div class="mapping-question">${escapeHtml(currentMapping.label?.he || '')}</div>
                     <div class="mapping-question-en">${escapeHtml(currentMapping.label?.en || '')}</div>
-                    
-                    <div class="mapping-fields">
-                        <div class="mapping-field">
-                            <label>🇮🇱 תיאור מסמך בעברית:</label>
-                            <input type="text" 
-                                   value="${escapeHtml(currentMapping.docDescription?.he || '')}" 
-                                   data-mapping="${mapping.id}" 
-                                   data-field="docDescription.he"
-                                   class="${isModified ? 'modified' : ''}"
-                                   oninput="handleFieldChange(this)"
-                                   placeholder="תיאור המסמך הנדרש...">
-                        </div>
-                        <div class="mapping-field">
-                            <label>🇬🇧 תיאור מסמך באנגלית:</label>
-                            <input type="text" 
-                                   value="${escapeHtml(currentMapping.docDescription?.en || '')}" 
-                                   data-mapping="${mapping.id}" 
-                                   data-field="docDescription.en"
-                                   class="${isModified ? 'modified' : ''}"
-                                   oninput="handleFieldChange(this)"
-                                   placeholder="Document description...">
-                        </div>
-                    </div>
 
                     <div class="toggle-row">
                         <label class="toggle-item">
@@ -938,7 +943,7 @@
                     </div>
 
                     ${docsHtml}
-                    ${previewHtml}
+                    ${docPreviewHtml}
                 </div>
             `;
         }

@@ -63,8 +63,7 @@ export const QUESTION_MAPPINGS = [
         isSpouse: false,
         perItem: false,
         detailsField: null,
-        linkedQuestion: null,
-        docDescription: { he: "", en: "" }
+        linkedQuestion: null
     },
     {
         id: "hidden_client_id",
@@ -77,8 +76,7 @@ export const QUESTION_MAPPINGS = [
         isSpouse: false,
         perItem: false,
         detailsField: null,
-        linkedQuestion: null,
-        docDescription: { he: "", en: "" }
+        linkedQuestion: null
     },
     {
         id: "hidden_year",
@@ -91,8 +89,7 @@ export const QUESTION_MAPPINGS = [
         isSpouse: false,
         perItem: false,
         detailsField: null,
-        linkedQuestion: null,
-        docDescription: { he: "", en: "" }
+        linkedQuestion: null
     },
     {
         id: "hidden_token",
@@ -105,8 +102,7 @@ export const QUESTION_MAPPINGS = [
         isSpouse: false,
         perItem: false,
         detailsField: null,
-        linkedQuestion: null,
-        docDescription: { he: "", en: "" }
+        linkedQuestion: null
     },
     {
         id: "hidden_full_name",
@@ -119,8 +115,7 @@ export const QUESTION_MAPPINGS = [
         isSpouse: false,
         perItem: false,
         detailsField: null,
-        linkedQuestion: null,
-        docDescription: { he: "", en: "" }
+        linkedQuestion: null
     },
     {
         id: "hidden_email",
@@ -133,8 +128,7 @@ export const QUESTION_MAPPINGS = [
         isSpouse: false,
         perItem: false,
         detailsField: null,
-        linkedQuestion: null,
-        docDescription: { he: "", en: "" }
+        linkedQuestion: null
     },
 
     // ============ PERSONAL DETAILS ============
@@ -149,8 +143,7 @@ export const QUESTION_MAPPINGS = [
         isSpouse: false,
         perItem: false,
         detailsField: null,
-        linkedQuestion: null,
-        docDescription: { he: "", en: "" }
+        linkedQuestion: null
     },
     {
         id: "personal_email",
@@ -163,8 +156,7 @@ export const QUESTION_MAPPINGS = [
         isSpouse: false,
         perItem: false,
         detailsField: null,
-        linkedQuestion: null,
-        docDescription: { he: "", en: "" }
+        linkedQuestion: null
     },
 
     // ============ FAMILY STATUS ============
@@ -179,8 +171,7 @@ export const QUESTION_MAPPINGS = [
         isSpouse: false,
         perItem: false,
         detailsField: null,
-        linkedQuestion: null,
-        docDescription: { he: "", en: "" }
+        linkedQuestion: null
     },
     {
         id: "family_qualifying_settlement",
@@ -193,8 +184,7 @@ export const QUESTION_MAPPINGS = [
         isSpouse: false,
         perItem: false,
         detailsField: null,
-        linkedQuestion: "family_settlement_name",
-        docDescription: { he: "אישור תושבות לשנת המס מהרשות המקומית", en: "Municipality residency certificate for the tax year" }
+        linkedQuestion: "family_settlement_name"
     },
     {
         id: "family_settlement_name",
@@ -207,8 +197,7 @@ export const QUESTION_MAPPINGS = [
         isSpouse: false,
         perItem: false,
         detailsField: null,
-        linkedQuestion: null,
-        docDescription: { he: "", en: "" }
+        linkedQuestion: null
     },
     {
         id: "family_spouse_name",
@@ -221,8 +210,7 @@ export const QUESTION_MAPPINGS = [
         isSpouse: true,
         perItem: false,
         detailsField: null,
-        linkedQuestion: null,
-        docDescription: { he: "", en: "" }
+        linkedQuestion: null
     },
     {
         id: "family_marital_change",
@@ -235,8 +223,7 @@ export const QUESTION_MAPPINGS = [
         isSpouse: false,
         perItem: false,
         detailsField: null,
-        linkedQuestion: "family_marital_change_details",
-        docDescription: { he: "ספח ת\"ז מעודכן או תעודת נישואין/גירושין/פירוד רשמי", en: "Updated ID appendix; marriage/divorce/separation documents" }
+        linkedQuestion: "family_marital_change_details"
     },
     {
         id: "family_marital_change_details",
@@ -249,8 +236,7 @@ export const QUESTION_MAPPINGS = [
         isSpouse: false,
         perItem: false,
         detailsField: null,
-        linkedQuestion: null,
-        docDescription: { he: "", en: "" }
+        linkedQuestion: null
     },
 
     // ============ CHILDREN ============
@@ -265,8 +251,7 @@ export const QUESTION_MAPPINGS = [
         isSpouse: false,
         perItem: false,
         detailsField: null,
-        linkedQuestion: null,
-        docDescription: { he: "ספח תעודת זהות עדכני כולל פרטי הילד/ה", en: "Updated ID appendix including child details" }
+        linkedQuestion: null
     },
     {
         id: "children_new_child",
@@ -279,8 +264,7 @@ export const QUESTION_MAPPINGS = [
         isSpouse: false,
         perItem: false,
         detailsField: null,
-        linkedQuestion: "children_new_child_dates",
-        docDescription: { he: "ספח תעודת זהות עדכני כולל פרטי הילד/ה", en: "Updated ID appendix including child details" }
+        linkedQuestion: "children_new_child_dates"
     },
     {
         id: "children_new_child_dates",
@@ -293,8 +277,7 @@ export const QUESTION_MAPPINGS = [
         isSpouse: false,
         perItem: false,
         detailsField: null,
-        linkedQuestion: null,
-        docDescription: { he: "", en: "" }
+        linkedQuestion: null
     },
     {
         id: "children_special_ed",
@@ -307,8 +290,7 @@ export const QUESTION_MAPPINGS = [
         isSpouse: false,
         perItem: false,
         detailsField: null,
-        linkedQuestion: null,
-        docDescription: { he: "אישור ועדת השמה/ועדת שילוב עבור הילד (חינוך מיוחד)", en: "Placement committee approval" }
+        linkedQuestion: null
     },
     {
         id: "children_disability",
@@ -321,8 +303,7 @@ export const QUESTION_MAPPINGS = [
         isSpouse: false,
         perItem: false,
         detailsField: null,
-        linkedQuestion: null,
-        docDescription: { he: "אישור מביטוח לאומי על קבלת קצבת נכות עבור הילד", en: "National Insurance certificate for child disability allowance" }
+        linkedQuestion: null
     },
     {
         id: "children_alimony",
@@ -335,8 +316,7 @@ export const QUESTION_MAPPINGS = [
         isSpouse: false,
         perItem: false,
         detailsField: null,
-        linkedQuestion: null,
-        docDescription: { he: "פסק דין / הסכם גירושין (דמי מזונות)", en: "Court judgment / divorce agreement" }
+        linkedQuestion: null
     },
 
     // ============ EMPLOYMENT ============
@@ -351,8 +331,7 @@ export const QUESTION_MAPPINGS = [
         isSpouse: false,
         perItem: false,
         detailsField: null,
-        linkedQuestion: "employment_employers_list",
-        docDescription: { he: "טופס 106 לשנת המס מכל המעסיקים", en: "Form 106 (one per employer)" }
+        linkedQuestion: "employment_employers_list"
     },
     {
         id: "employment_employers_list",
@@ -365,8 +344,7 @@ export const QUESTION_MAPPINGS = [
         isSpouse: false,
         perItem: true,
         detailsField: "issuer_name",
-        linkedQuestion: null,
-        docDescription: { he: "טופס 106 לשנת המס מכל המעסיקים (אחד לכל מעסיק)", en: "Form 106 (one per employer listed)" }
+        linkedQuestion: null
     },
     {
         id: "employment_spouse_was_employed",
@@ -379,8 +357,7 @@ export const QUESTION_MAPPINGS = [
         isSpouse: true,
         perItem: false,
         detailsField: null,
-        linkedQuestion: "employment_spouse_employers_list",
-        docDescription: { he: "טופס 106 לשנת המס מכל המעסיקים של בן/בת הזוג", en: "Form 106 for spouse (one per employer)" }
+        linkedQuestion: "employment_spouse_employers_list"
     },
     {
         id: "employment_spouse_employers_list",
@@ -393,8 +370,7 @@ export const QUESTION_MAPPINGS = [
         isSpouse: true,
         perItem: true,
         detailsField: "issuer_name",
-        linkedQuestion: null,
-        docDescription: { he: "טופס 106 לשנת המס מכל המעסיקים של בן/בת הזוג (אחד לכל מעסיק)", en: "Form 106 for spouse (one per employer listed)" }
+        linkedQuestion: null
     },
 
     // ============ PENSION & PROVIDENT ============
@@ -409,8 +385,7 @@ export const QUESTION_MAPPINGS = [
         isSpouse: false,
         perItem: false,
         detailsField: null,
-        linkedQuestion: "pension_withdrawal_type",
-        docDescription: { he: "אישור על המשיכת הכספים והמס שנוכה בגינם מחברת הביטוח", en: "Withdrawal certificate + tax withheld" }
+        linkedQuestion: "pension_withdrawal_type"
     },
     {
         id: "pension_withdrawal_type",
@@ -423,8 +398,7 @@ export const QUESTION_MAPPINGS = [
         isSpouse: false,
         perItem: false,
         detailsField: null,
-        linkedQuestion: null,
-        docDescription: { he: "", en: "" }
+        linkedQuestion: null
     },
 
     // ============ NATIONAL INSURANCE ============
@@ -439,8 +413,7 @@ export const QUESTION_MAPPINGS = [
         isSpouse: false,
         perItem: false,
         detailsField: null,
-        linkedQuestion: null,
-        docDescription: { he: "אישור שנתי מביטוח לאומי על קצבת נכות שהתקבלה בשנת המס", en: "Annual National Insurance allowance certificate — disability" }
+        linkedQuestion: null
     },
     {
         id: "nii_survivors",
@@ -453,8 +426,7 @@ export const QUESTION_MAPPINGS = [
         isSpouse: false,
         perItem: false,
         detailsField: null,
-        linkedQuestion: "nii_survivors_details",
-        docDescription: { he: "אישור שנתי מביטוח לאומי על קצבת שארים שהתקבלה בשנת המס", en: "Annual National Insurance allowance certificate — survivors" }
+        linkedQuestion: "nii_survivors_details"
     },
     {
         id: "nii_survivors_details",
@@ -467,8 +439,7 @@ export const QUESTION_MAPPINGS = [
         isSpouse: false,
         perItem: false,
         detailsField: null,
-        linkedQuestion: null,
-        docDescription: { he: "", en: "" }
+        linkedQuestion: null
     },
     {
         id: "nii_spouse_payments",
@@ -481,8 +452,7 @@ export const QUESTION_MAPPINGS = [
         isSpouse: true,
         perItem: false,
         detailsField: null,
-        linkedQuestion: "nii_spouse_payment_type",
-        docDescription: { he: "אישור שנתי ספציפי מביטוח לאומי בהתאם לסוג הקצבה של בן/בת הזוג", en: "Annual National Insurance allowance certificate for spouse" }
+        linkedQuestion: "nii_spouse_payment_type"
     },
     {
         id: "nii_spouse_payment_type",
@@ -495,8 +465,7 @@ export const QUESTION_MAPPINGS = [
         isSpouse: true,
         perItem: false,
         detailsField: null,
-        linkedQuestion: null,
-        docDescription: { he: "", en: "" }
+        linkedQuestion: null
     },
     {
         id: "nii_spouse_survivors",
@@ -509,8 +478,7 @@ export const QUESTION_MAPPINGS = [
         isSpouse: true,
         perItem: false,
         detailsField: null,
-        linkedQuestion: null,
-        docDescription: { he: "אישור שנתי מביטוח לאומי על קצבת שארים של בן/בת הזוג", en: "Annual National Insurance allowance certificate — survivors for spouse" }
+        linkedQuestion: null
     },
 
     // ============ INVESTMENTS & FINANCE ============
@@ -525,8 +493,7 @@ export const QUESTION_MAPPINGS = [
         isSpouse: false,
         perItem: false,
         detailsField: null,
-        linkedQuestion: "investments_securities_institutions",
-        docDescription: { he: "טופס 867 (אישור ניכוי מס) לשנת המס מהבנק/בית ההשקעות", en: "Form 867 (one per institution)" }
+        linkedQuestion: "investments_securities_institutions"
     },
     {
         id: "investments_securities_institutions",
@@ -539,8 +506,7 @@ export const QUESTION_MAPPINGS = [
         isSpouse: false,
         perItem: true,
         detailsField: "issuer_name",
-        linkedQuestion: null,
-        docDescription: { he: "טופס 867 (אישור ניכוי מס) לשנת המס מהבנק/בית ההשקעות (אחד לכל מוסד)", en: "Form 867 (one per institution listed)" }
+        linkedQuestion: null
     },
     {
         id: "investments_deposits",
@@ -553,8 +519,7 @@ export const QUESTION_MAPPINGS = [
         isSpouse: false,
         perItem: false,
         detailsField: null,
-        linkedQuestion: "investments_deposits_banks",
-        docDescription: { he: "טופס 867 (אישור ניכוי מס) לשנת המס מהבנק", en: "Form 867 (withholding tax certificate) from the bank" }
+        linkedQuestion: "investments_deposits_banks"
     },
     {
         id: "investments_deposits_banks",
@@ -567,8 +532,7 @@ export const QUESTION_MAPPINGS = [
         isSpouse: false,
         perItem: true,
         detailsField: "issuer_name",
-        linkedQuestion: null,
-        docDescription: { he: "טופס 867 (אישור ניכוי מס) לשנת המס מהבנק (אחד לכל בנק)", en: "Form 867 (withholding tax certificate) - one per bank" }
+        linkedQuestion: null
     },
     {
         id: "investments_crypto",
@@ -581,8 +545,7 @@ export const QUESTION_MAPPINGS = [
         isSpouse: false,
         perItem: false,
         detailsField: null,
-        linkedQuestion: "investments_crypto_details",
-        docDescription: { he: "טופס 1399 המרכז את כל הקניות/המכירות והמס ששולם על הקריפטו בשנת המס", en: "Form 1399 trades summary for the tax year" }
+        linkedQuestion: "investments_crypto_details"
     },
     {
         id: "investments_crypto_details",
@@ -595,8 +558,7 @@ export const QUESTION_MAPPINGS = [
         isSpouse: false,
         perItem: false,
         detailsField: null,
-        linkedQuestion: null,
-        docDescription: { he: "", en: "" }
+        linkedQuestion: null
     },
     {
         id: "investments_gambling",
@@ -609,8 +571,7 @@ export const QUESTION_MAPPINGS = [
         isSpouse: false,
         perItem: false,
         detailsField: null,
-        linkedQuestion: "investments_gambling_details",
-        docDescription: { he: "אסמכתאות על הזכייה והמס שנוכה (הימורים/פרסים מעל 25,000 ש\"ח)", en: "Winnings proof + tax withheld" }
+        linkedQuestion: "investments_gambling_details"
     },
     {
         id: "investments_gambling_details",
@@ -623,8 +584,7 @@ export const QUESTION_MAPPINGS = [
         isSpouse: false,
         perItem: false,
         detailsField: null,
-        linkedQuestion: null,
-        docDescription: { he: "", en: "" }
+        linkedQuestion: null
     },
     {
         id: "investments_foreign_income",
@@ -637,8 +597,7 @@ export const QUESTION_MAPPINGS = [
         isSpouse: false,
         perItem: false,
         detailsField: null,
-        linkedQuestion: "investments_foreign_country",
-        docDescription: { he: "אסמכתאות על ההכנסה ועל המס ששולם בחו\"ל; אם הוגש דו\"ח מס במדינה אחרת — לצרף גם אותו", en: "Income proof + foreign tax paid; include foreign tax return if filed" }
+        linkedQuestion: "investments_foreign_country"
     },
     {
         id: "investments_foreign_country",
@@ -651,8 +610,7 @@ export const QUESTION_MAPPINGS = [
         isSpouse: false,
         perItem: false,
         detailsField: null,
-        linkedQuestion: null,
-        docDescription: { he: "", en: "" }
+        linkedQuestion: null
     },
 
     // ============ REAL ESTATE ============
@@ -667,8 +625,7 @@ export const QUESTION_MAPPINGS = [
         isSpouse: false,
         perItem: false,
         detailsField: null,
-        linkedQuestion: null,
-        docDescription: { he: "חוזה שכירות של הדירה שהשכרת (הכנסה)", en: "Lease contract for rented-out property" }
+        linkedQuestion: null
     },
     {
         id: "realestate_rental_expense",
@@ -681,8 +638,7 @@ export const QUESTION_MAPPINGS = [
         isSpouse: false,
         perItem: false,
         detailsField: null,
-        linkedQuestion: null,
-        docDescription: { he: "חוזה שכירות של הדירה ששכרת למגורים (הוצאה)", en: "Lease contract for rented-in residence" }
+        linkedQuestion: null
     },
     {
         id: "realestate_sold_property",
@@ -695,8 +651,7 @@ export const QUESTION_MAPPINGS = [
         isSpouse: false,
         perItem: false,
         detailsField: null,
-        linkedQuestion: "realestate_sold_details",
-        docDescription: { he: "", en: "" }
+        linkedQuestion: "realestate_sold_details"
     },
     {
         id: "realestate_sold_details",
@@ -709,8 +664,7 @@ export const QUESTION_MAPPINGS = [
         isSpouse: false,
         perItem: false,
         detailsField: null,
-        linkedQuestion: null,
-        docDescription: { he: "", en: "" }
+        linkedQuestion: null
     },
     {
         id: "realestate_inventory",
@@ -723,8 +677,7 @@ export const QUESTION_MAPPINGS = [
         isSpouse: false,
         perItem: false,
         detailsField: null,
-        linkedQuestion: null,
-        docDescription: { he: "רשימת ספירת מלאי ליום האחרון של שנת המס", en: "Inventory count list as of last day of the tax year" }
+        linkedQuestion: null
     },
 
     // ============ INSURANCE ============
@@ -739,8 +692,7 @@ export const QUESTION_MAPPINGS = [
         isSpouse: false,
         perItem: false,
         detailsField: null,
-        linkedQuestion: "insurance_pension_companies",
-        docDescription: { he: "אישור מס שנתי או דוח שנתי מקוצר מחברת הביטוח", en: "Annual tax certificate from insurance company" }
+        linkedQuestion: "insurance_pension_companies"
     },
     {
         id: "insurance_pension_companies",
@@ -753,8 +705,7 @@ export const QUESTION_MAPPINGS = [
         isSpouse: false,
         perItem: true,
         detailsField: "issuer_name",
-        linkedQuestion: null,
-        docDescription: { he: "אישור מס שנתי או דוח שנתי מקוצר מחברת הביטוח (אחד לכל חברת ביטוח)", en: "Annual tax certificate (one per insurance company)" }
+        linkedQuestion: null
     },
     {
         id: "insurance_study_fund",
@@ -767,8 +718,7 @@ export const QUESTION_MAPPINGS = [
         isSpouse: false,
         perItem: false,
         detailsField: null,
-        linkedQuestion: "insurance_study_fund_companies",
-        docDescription: { he: "אישור מס שנתי או דוח שנתי מקוצר מחברת הביטוח", en: "Annual tax certificate from insurance company" }
+        linkedQuestion: "insurance_study_fund_companies"
     },
     {
         id: "insurance_study_fund_companies",
@@ -781,8 +731,7 @@ export const QUESTION_MAPPINGS = [
         isSpouse: false,
         perItem: true,
         detailsField: "issuer_name",
-        linkedQuestion: null,
-        docDescription: { he: "אישור מס שנתי או דוח שנתי מקוצר מחברת הביטוח (אחד לכל חברת ביטוח)", en: "Annual tax certificate (one per insurance company)" }
+        linkedQuestion: null
     },
     {
         id: "insurance_disability",
@@ -795,8 +744,7 @@ export const QUESTION_MAPPINGS = [
         isSpouse: false,
         perItem: false,
         detailsField: null,
-        linkedQuestion: "insurance_disability_companies",
-        docDescription: { he: "אישור מס שנתי או דוח שנתי מקוצר מחברת הביטוח", en: "Annual tax certificate from insurance company" }
+        linkedQuestion: "insurance_disability_companies"
     },
     {
         id: "insurance_disability_companies",
@@ -809,8 +757,7 @@ export const QUESTION_MAPPINGS = [
         isSpouse: false,
         perItem: true,
         detailsField: "issuer_name",
-        linkedQuestion: null,
-        docDescription: { he: "אישור מס שנתי או דוח שנתי מקוצר מחברת הביטוח (אחד לכל חברת ביטוח)", en: "Annual tax certificate (one per insurance company)" }
+        linkedQuestion: null
     },
     {
         id: "insurance_life",
@@ -823,8 +770,7 @@ export const QUESTION_MAPPINGS = [
         isSpouse: false,
         perItem: false,
         detailsField: null,
-        linkedQuestion: "insurance_life_companies",
-        docDescription: { he: "אישור מס שנתי או דוח שנתי מקוצר מחברת הביטוח", en: "Annual tax certificate from insurance company" }
+        linkedQuestion: "insurance_life_companies"
     },
     {
         id: "insurance_life_companies",
@@ -837,8 +783,7 @@ export const QUESTION_MAPPINGS = [
         isSpouse: false,
         perItem: true,
         detailsField: "issuer_name",
-        linkedQuestion: null,
-        docDescription: { he: "אישור מס שנתי או דוח שנתי מקוצר מחברת הביטוח (אחד לכל חברת ביטוח)", en: "Annual tax certificate (one per insurance company)" }
+        linkedQuestion: null
     },
     {
         id: "insurance_mortgage",
@@ -851,8 +796,7 @@ export const QUESTION_MAPPINGS = [
         isSpouse: false,
         perItem: false,
         detailsField: null,
-        linkedQuestion: "insurance_mortgage_company",
-        docDescription: { he: "", en: "" }
+        linkedQuestion: "insurance_mortgage_company"
     },
     {
         id: "insurance_mortgage_company",
@@ -865,8 +809,7 @@ export const QUESTION_MAPPINGS = [
         isSpouse: false,
         perItem: false,
         detailsField: null,
-        linkedQuestion: null,
-        docDescription: { he: "", en: "" }
+        linkedQuestion: null
     },
 
     // ============ MILITARY & SERVICE ============
@@ -881,8 +824,7 @@ export const QUESTION_MAPPINGS = [
         isSpouse: false,
         perItem: false,
         detailsField: null,
-        linkedQuestion: null,
-        docDescription: { he: "אישור שחרור משירות סדיר מאתר \"אישורים\" של צה\"ל או טופס אישור לסיום השירות הלאומי", en: "Military/national service release certificate" }
+        linkedQuestion: null
     },
     {
         id: "military_memorial",
@@ -895,8 +837,7 @@ export const QUESTION_MAPPINGS = [
         isSpouse: false,
         perItem: false,
         detailsField: null,
-        linkedQuestion: "military_memorial_details",
-        docDescription: { he: "קבלות ומסמכים המעידים על הוצאות הנצחה והקרבה", en: "Receipts + proof of relationship" }
+        linkedQuestion: "military_memorial_details"
     },
     {
         id: "military_memorial_details",
@@ -909,8 +850,7 @@ export const QUESTION_MAPPINGS = [
         isSpouse: false,
         perItem: false,
         detailsField: null,
-        linkedQuestion: null,
-        docDescription: { he: "", en: "" }
+        linkedQuestion: null
     },
     {
         id: "military_institution",
@@ -923,8 +863,7 @@ export const QUESTION_MAPPINGS = [
         isSpouse: false,
         perItem: false,
         detailsField: null,
-        linkedQuestion: null,
-        docDescription: { he: "מסמך רשמי רלוונטי על ההוצאה והקרבה (החזקת קרוב משפחה במוסד)", en: "Official proof + relationship" }
+        linkedQuestion: null
     },
 
     // ============ EDUCATION ============
@@ -939,8 +878,7 @@ export const QUESTION_MAPPINGS = [
         isSpouse: false,
         perItem: false,
         detailsField: null,
-        linkedQuestion: "education_degree_type",
-        docDescription: { he: "אישור זכאות לתואר ממוסד הלימודים", en: "Degree eligibility certificate" }
+        linkedQuestion: "education_degree_type"
     },
     {
         id: "education_degree_type",
@@ -953,8 +891,7 @@ export const QUESTION_MAPPINGS = [
         isSpouse: false,
         perItem: false,
         detailsField: null,
-        linkedQuestion: null,
-        docDescription: { he: "", en: "" }
+        linkedQuestion: null
     },
     {
         id: "education_institution",
@@ -967,8 +904,7 @@ export const QUESTION_MAPPINGS = [
         isSpouse: false,
         perItem: false,
         detailsField: null,
-        linkedQuestion: null,
-        docDescription: { he: "", en: "" }
+        linkedQuestion: null
     },
 
     // ============ HEALTH ============
@@ -983,8 +919,7 @@ export const QUESTION_MAPPINGS = [
         isSpouse: false,
         perItem: false,
         detailsField: null,
-        linkedQuestion: "health_status_details",
-        docDescription: { he: "מסמך רשמי רלוונטי על הפטור/נכות (מסמכים רפואיים/ועדה רפואית)", en: "Official medical exemption/disability documentation" }
+        linkedQuestion: "health_status_details"
     },
     {
         id: "health_status_details",
@@ -997,8 +932,7 @@ export const QUESTION_MAPPINGS = [
         isSpouse: false,
         perItem: false,
         detailsField: null,
-        linkedQuestion: null,
-        docDescription: { he: "", en: "" }
+        linkedQuestion: null
     },
 
     // ============ DONATIONS ============
@@ -1013,8 +947,7 @@ export const QUESTION_MAPPINGS = [
         isSpouse: false,
         perItem: false,
         detailsField: null,
-        linkedQuestion: null,
-        docDescription: { he: "קבלות מקוריות מרוכזות על תרומות לפי סעיף 46 (מעל 200 ש\"ח)", en: "Consolidated receipts — Section 46" }
+        linkedQuestion: null
     },
 
     // ============ WITHHOLDING ============
@@ -1029,8 +962,7 @@ export const QUESTION_MAPPINGS = [
         isSpouse: false,
         perItem: false,
         detailsField: null,
-        linkedQuestion: "withholding_income_tax_clients",
-        docDescription: { he: "אישור שנתי על ניכוי מס במקור/בט\"ל מהלקוח", en: "Annual withholding tax certificate (one per client)" }
+        linkedQuestion: "withholding_income_tax_clients"
     },
     {
         id: "withholding_income_tax_clients",
@@ -1043,8 +975,7 @@ export const QUESTION_MAPPINGS = [
         isSpouse: false,
         perItem: true,
         detailsField: "issuer_name",
-        linkedQuestion: null,
-        docDescription: { he: "אישור שנתי על ניכוי מס במקור/בט\"ל מהלקוח (אחד לכל לקוח)", en: "Annual withholding tax certificate (one per client listed)" }
+        linkedQuestion: null
     },
     {
         id: "withholding_nii",
@@ -1057,8 +988,7 @@ export const QUESTION_MAPPINGS = [
         isSpouse: false,
         perItem: false,
         detailsField: null,
-        linkedQuestion: "withholding_nii_clients",
-        docDescription: { he: "אישור שנתי על ניכוי מס במקור/בט\"ל מהלקוח", en: "Annual withholding tax certificate (one per client)" }
+        linkedQuestion: "withholding_nii_clients"
     },
     {
         id: "withholding_nii_clients",
@@ -1071,8 +1001,7 @@ export const QUESTION_MAPPINGS = [
         isSpouse: false,
         perItem: true,
         detailsField: "issuer_name",
-        linkedQuestion: null,
-        docDescription: { he: "אישור שנתי על ניכוי מס במקור/בט\"ל מהלקוח (אחד לכל לקוח)", en: "Annual withholding tax certificate (one per client listed)" }
+        linkedQuestion: null
     },
 
     // ============ OTHER ============
@@ -1087,8 +1016,7 @@ export const QUESTION_MAPPINGS = [
         isSpouse: false,
         perItem: false,
         detailsField: null,
-        linkedQuestion: "other_additional_income_details",
-        docDescription: { he: "", en: "" }
+        linkedQuestion: "other_additional_income_details"
     },
     {
         id: "other_additional_income_details",
@@ -1101,8 +1029,7 @@ export const QUESTION_MAPPINGS = [
         isSpouse: false,
         perItem: false,
         detailsField: null,
-        linkedQuestion: null,
-        docDescription: { he: "", en: "" }
+        linkedQuestion: null
     }
 ];
 
