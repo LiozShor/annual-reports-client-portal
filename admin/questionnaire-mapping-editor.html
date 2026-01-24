@@ -1,0 +1,1199 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="he">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>מיפוי שאלון למסמכים - משרד רו"ח Client Name</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* Mapping Editor specific styles */
+        .mapping-card {
+            background: white;
+            border-radius: 10px;
+            padding: 16px 20px;
+            margin-bottom: 12px;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+            border-right: 4px solid var(--accent);
+            transition: all 0.2s;
+        }
+
+        .mapping-card:hover {
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .mapping-card.modified {
+            border-right-color: var(--warning);
+            background: #fffbeb;
+        }
+
+        .mapping-card.has-docs {
+            border-right-color: var(--success);
+        }
+
+        .mapping-card.no-docs {
+            opacity: 0.7;
+            border-right-color: #d1d5db;
+        }
+
+        .mapping-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 12px;
+            gap: 10px;
+        }
+
+        .mapping-id {
+            font-family: monospace;
+            font-size: 11px;
+            color: var(--text-muted);
+            background: #f3f4f6;
+            padding: 3px 6px;
+            border-radius: 4px;
+        }
+
+        .mapping-badges {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+
+        .badge {
+            font-size: 11px;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-weight: 500;
+        }
+
+        .badge-spouse {
+            background: #fce7f3;
+            color: #be185d;
+        }
+
+        .badge-peritem {
+            background: #dbeafe;
+            color: #1d4ed8;
+        }
+
+        .badge-condition {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .mapping-question {
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--primary);
+            margin-bottom: 10px;
+            line-height: 1.5;
+        }
+
+        .mapping-question-en {
+            font-size: 13px;
+            color: var(--text-muted);
+            margin-bottom: 12px;
+            direction: ltr;
+            text-align: right;
+        }
+
+        .mapping-fields {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        @media (max-width: 768px) {
+            .mapping-fields {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .mapping-field {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .mapping-field label {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-muted);
+        }
+
+        .mapping-field input,
+        .mapping-field select {
+            padding: 10px 14px;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.2s;
+        }
+
+        .mapping-field input:focus,
+        .mapping-field select:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        .mapping-field input.modified,
+        .mapping-field select.modified {
+            border-color: var(--warning);
+            background: #fffdf7;
+        }
+
+        .mapping-docs {
+            margin-top: 12px;
+            padding: 12px;
+            background: #f0fdf4;
+            border-radius: 8px;
+            border-right: 3px solid var(--success);
+        }
+
+        .mapping-docs-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .mapping-docs-header strong {
+            font-size: 13px;
+            color: var(--success);
+        }
+
+        .mapping-docs-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+
+        .doc-tag {
+            background: white;
+            border: 1px solid #10b981;
+            color: #047857;
+            padding: 4px 10px;
+            border-radius: 16px;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .doc-tag button {
+            background: none;
+            border: none;
+            color: #dc2626;
+            cursor: pointer;
+            padding: 0;
+            margin-right: 4px;
+            font-size: 14px;
+        }
+
+        .add-doc-btn {
+            background: #10b981;
+            color: white;
+            border: none;
+            padding: 4px 10px;
+            border-radius: 16px;
+            font-size: 12px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .add-doc-btn:hover {
+            background: #059669;
+        }
+
+        .mapping-preview {
+            margin-top: 10px;
+            padding: 10px 14px;
+            background: #f0f9ff;
+            border-radius: 6px;
+            font-size: 13px;
+            color: var(--primary);
+            border-right: 3px solid var(--accent);
+        }
+
+        .mapping-preview strong {
+            color: var(--success);
+        }
+
+        .category-section {
+            margin-bottom: 30px;
+        }
+
+        .category-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--primary);
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #e5e7eb;
+        }
+
+        .changes-bar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+            color: white;
+            padding: 16px 30px;
+            display: none;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.15);
+            z-index: 100;
+        }
+
+        .changes-bar.visible {
+            display: flex;
+        }
+
+        .search-filter-bar {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .search-box {
+            position: relative;
+            flex: 1;
+            min-width: 250px;
+        }
+
+        .search-box input {
+            width: 100%;
+            padding: 14px 20px 14px 50px;
+            border: 2px solid #e5e7eb;
+            border-radius: 10px;
+            font-size: 16px;
+        }
+
+        .search-box i {
+            position: absolute;
+            left: 18px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-muted);
+        }
+
+        .filter-select {
+            padding: 14px 20px;
+            border: 2px solid #e5e7eb;
+            border-radius: 10px;
+            font-size: 14px;
+            background: white;
+            min-width: 180px;
+        }
+
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-muted);
+            text-decoration: none;
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
+
+        .back-link:hover {
+            color: var(--accent);
+        }
+
+        .toggle-row {
+            display: flex;
+            gap: 12px;
+            margin-top: 12px;
+        }
+
+        .toggle-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+
+        .toggle-item input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+
+        .translate-btn {
+            background: #eef2ff;
+            border: 1px solid #c7d2fe;
+            color: #4f46e5;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .translate-btn:hover {
+            background: #e0e7ff;
+        }
+
+        .doc-dropdown {
+            position: absolute;
+            background: white;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+            max-height: 300px;
+            overflow-y: auto;
+            z-index: 1000;
+            width: 300px;
+        }
+
+        .doc-dropdown-item {
+            padding: 10px 14px;
+            cursor: pointer;
+            font-size: 13px;
+            border-bottom: 1px solid #f3f4f6;
+        }
+
+        .doc-dropdown-item:hover {
+            background: #f0fdf4;
+        }
+
+        .doc-dropdown-item:last-child {
+            border-bottom: none;
+        }
+
+        .status-legend {
+            display: flex;
+            gap: 16px;
+            margin-bottom: 16px;
+            flex-wrap: wrap;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        .legend-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 3px;
+        }
+
+        .legend-dot.has-docs {
+            background: var(--success);
+        }
+
+        .legend-dot.no-docs {
+            background: #d1d5db;
+        }
+
+        .legend-dot.modified {
+            background: var(--warning);
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Login Screen -->
+    <div id="loginScreen" class="login-screen">
+        <div class="login-box">
+            <h1><i class="fa-solid fa-lock"></i> מיפוי שאלון למסמכים</h1>
+            <p>משרד רו"ח Client Name</p>
+            <form onsubmit="login(); return false;">
+                <input type="password" id="passwordInput" placeholder="הזן סיסמה" autocomplete="current-password">
+            </form>
+            <div id="loginError" class="login-error">סיסמה שגויה</div>
+            <button class="btn btn-primary" onclick="login()" style="width: 100%;">
+                <i class="fa-solid fa-rocket"></i> כניסה
+            </button>
+        </div>
+    </div>
+
+    <!-- Main App -->
+    <div id="app" class="app">
+        <header class="header">
+            <h1><i class="fa-solid fa-diagram-project"></i> מיפוי שאלון למסמכים</h1>
+            <div class="header-actions">
+                <button class="btn btn-secondary" onclick="refreshData()">
+                    <i class="fa-solid fa-rotate-right"></i> רענן
+                </button>
+                <button class="btn btn-secondary" onclick="logout()">
+                    <i class="fa-solid fa-right-from-bracket"></i> התנתק
+                </button>
+            </div>
+        </header>
+
+        <div class="content">
+            <a href="index.html" class="back-link">
+                <i class="fa-solid fa-arrow-right"></i> חזרה לפורטל הניהול
+            </a>
+
+            <div class="card">
+                <div class="card-header">
+                    <h2><i class="fa-solid fa-list-check"></i> שאלות ומסמכים נדרשים (<span id="totalCount">0</span>)
+                    </h2>
+                    <a href="https://github.com/LiozShor/annual-reports-client-portal/blob/main/questionnaire-mapping.js"
+                        target="_blank" class="btn btn-outline">
+                        <i class="fa-brands fa-github"></i> צפה בקוד המקור
+                    </a>
+                </div>
+                <div class="card-body">
+                    <div class="status-legend">
+                        <div class="legend-item">
+                            <div class="legend-dot has-docs"></div>
+                            <span>שאלה עם מסמכים נדרשים</span>
+                        </div>
+                        <div class="legend-item">
+                            <div class="legend-dot no-docs"></div>
+                            <span>שאלה ללא מסמכים</span>
+                        </div>
+                        <div class="legend-item">
+                            <div class="legend-dot modified"></div>
+                            <span>שינוי לא נשמר</span>
+                        </div>
+                    </div>
+
+                    <div class="search-filter-bar">
+                        <div class="search-box">
+                            <input type="text" id="searchInput" placeholder="חיפוש לפי שאלה או מסמך..."
+                                oninput="filterMappings()">
+                            <i class="fa-solid fa-magnifying-glass"></i>
+                        </div>
+                        <select class="filter-select" id="categoryFilter" onchange="filterMappings()">
+                            <option value="">כל הקטגוריות</option>
+                        </select>
+                        <select class="filter-select" id="docsFilter" onchange="filterMappings()">
+                            <option value="">הכל</option>
+                            <option value="with-docs">עם מסמכים</option>
+                            <option value="without-docs">ללא מסמכים</option>
+                        </select>
+                    </div>
+
+                    <div id="mappingsContainer">
+                        <div class="empty-state">
+                            <div class="empty-state-icon"><i class="fa-solid fa-spinner fa-spin"></i></div>
+                            <p>טוען מיפויים...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Changes Bar -->
+    <div id="changesBar" class="changes-bar">
+        <div class="changes-count">
+            <i class="fa-solid fa-pen"></i> <span id="changesCount">0</span> שינויים לא נשמרו
+        </div>
+        <div class="changes-actions">
+            <button class="btn btn-secondary" onclick="discardChanges()">
+                <i class="fa-solid fa-xmark"></i> בטל
+            </button>
+            <button class="btn btn-warning" onclick="previewChanges()">
+                <i class="fa-solid fa-eye"></i> תצוגה מקדימה
+            </button>
+            <button class="btn btn-success" onclick="saveChanges()">
+                <i class="fa-solid fa-cloud-arrow-up"></i> שמור ל-GitHub
+            </button>
+        </div>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="loading-overlay">
+        <div class="loading-box">
+            <div class="spinner"></div>
+            <p id="loadingText">מעבד...</p>
+        </div>
+    </div>
+
+    <!-- Result Modal -->
+    <div id="resultModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-icon" id="modalIcon"><i class="fa-solid fa-check-circle"></i></div>
+            <h2 class="modal-title" id="modalTitle">הושלם בהצלחה!</h2>
+            <div class="modal-body" id="modalBody"></div>
+            <div class="modal-stats" id="modalStats"></div>
+            <button class="btn btn-primary" onclick="closeModal()">סגור</button>
+        </div>
+    </div>
+
+    <!-- Document Dropdown (hidden by default) -->
+    <div id="docDropdown" class="doc-dropdown" style="display: none;"></div>
+
+    <script>
+        // Configuration
+        const API_BASE = 'https://liozshor.app.n8n.cloud/webhook';
+        const ADMIN_TOKEN_KEY = 'QKiwUBXVH@%#1gD7t@rB]<,dM.[NC5b_';
+        const MAPPING_API = 'https://raw.githubusercontent.com/LiozShor/annual-reports-client-portal/main/questionnaire-mapping.json';
+        const DOC_TYPES_API = 'https://raw.githubusercontent.com/LiozShor/annual-reports-client-portal/main/document-types.json';
+
+        // State
+        let authToken = localStorage.getItem(ADMIN_TOKEN_KEY) || '';
+        let mappings = [];
+        let categories = {};
+        let documentTypes = {};
+        let originalMappings = [];
+        let changes = {};
+
+        // Sample data for preview
+        const SAMPLE_DATA = {
+            year: '2024',
+            employer: 'קפה גרג',
+            institution: 'בנק לאומי',
+            company: 'הראל'
+        };
+
+        // Category icons
+        const CATEGORY_ICONS = {
+            hidden: '⚙️',
+            personal: '👤',
+            family: '👨‍👩‍👧',
+            children: '👶',
+            employment: '💼',
+            pension: '🏦',
+            nii: '🏛️',
+            investments: '📈',
+            realestate: '🏠',
+            insurance: '🛡️',
+            military: '🎖️',
+            education: '🎓',
+            health: '🏥',
+            donations: '❤️',
+            withholding: '📋',
+            other: '📄'
+        };
+
+        // ==================== AUTH ====================
+
+        async function login() {
+            const password = document.getElementById('passwordInput').value;
+            if (!password) return;
+
+            showLoading('מאמת...');
+
+            try {
+                const response = await fetch(`${API_BASE}/admin-auth`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ password })
+                });
+
+                const data = await response.json();
+                hideLoading();
+
+                if (data.ok && data.token) {
+                    authToken = data.token;
+                    localStorage.setItem(ADMIN_TOKEN_KEY, authToken);
+                    document.getElementById('loginScreen').style.display = 'none';
+                    document.getElementById('app').classList.add('visible');
+                    loadData();
+                } else {
+                    document.getElementById('loginError').style.display = 'block';
+                }
+            } catch (error) {
+                hideLoading();
+                document.getElementById('loginError').textContent = 'שגיאת התחברות';
+                document.getElementById('loginError').style.display = 'block';
+            }
+        }
+
+        function logout() {
+            localStorage.removeItem(ADMIN_TOKEN_KEY);
+            authToken = '';
+            location.reload();
+        }
+
+        async function checkAuth() {
+            if (!authToken) return;
+
+            try {
+                const response = await fetch(`${API_BASE}/admin-verify?token=${authToken}`);
+                const data = await response.json();
+
+                if (data.ok) {
+                    document.getElementById('loginScreen').style.display = 'none';
+                    document.getElementById('app').classList.add('visible');
+                    loadData();
+                } else {
+                    localStorage.removeItem(ADMIN_TOKEN_KEY);
+                    authToken = '';
+                }
+            } catch (error) {
+                // Token invalid, stay on login
+            }
+        }
+
+        document.getElementById('passwordInput').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') login();
+        });
+
+        // ==================== LOAD DATA ====================
+
+        async function loadData() {
+            showLoading('טוען נתונים...');
+
+            try {
+                // Load both mapping and document types in parallel
+                const [mappingRes, docTypesRes] = await Promise.all([
+                    fetch(MAPPING_API),
+                    fetch(DOC_TYPES_API)
+                ]);
+
+                const mappingData = await mappingRes.json();
+                const docTypesData = await docTypesRes.json();
+
+                hideLoading();
+
+                categories = mappingData.categories || {};
+                mappings = mappingData.mappings || [];
+                documentTypes = docTypesData.document_types || {};
+                originalMappings = JSON.parse(JSON.stringify(mappings));
+                changes = {};
+
+                // Populate category filter
+                const categoryFilter = document.getElementById('categoryFilter');
+                categoryFilter.innerHTML = '<option value="">כל הקטגוריות</option>';
+                for (const [catId, cat] of Object.entries(categories)) {
+                    if (catId !== 'hidden') {
+                        categoryFilter.innerHTML += `<option value="${catId}">${CATEGORY_ICONS[catId] || '📄'} ${cat.he}</option>`;
+                    }
+                }
+
+                document.getElementById('totalCount').textContent = mappings.length;
+                renderMappings();
+
+            } catch (error) {
+                hideLoading();
+                console.error('Error loading data:', error);
+                showModal('error', 'שגיאה', 'לא ניתן לטעון את הנתונים');
+            }
+        }
+
+        function refreshData() {
+            if (Object.keys(changes).length > 0) {
+                if (!confirm('יש שינויים לא שמורים. האם אתה בטוח שברצונך לרענן?')) {
+                    return;
+                }
+            }
+            loadData();
+        }
+
+        // ==================== RENDER ====================
+
+        function renderMappings() {
+            const container = document.getElementById('mappingsContainer');
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            const categoryFilter = document.getElementById('categoryFilter').value;
+            const docsFilter = document.getElementById('docsFilter').value;
+
+            // Group by category
+            const byCategory = {};
+            for (const mapping of mappings) {
+                // Skip hidden fields
+                if (mapping.category === 'hidden') continue;
+
+                const cat = mapping.category || 'other';
+                if (!byCategory[cat]) byCategory[cat] = [];
+                byCategory[cat].push(mapping);
+            }
+
+            let html = '';
+            const categoryOrder = Object.keys(categories).filter(c => c !== 'hidden');
+
+            for (const catId of categoryOrder) {
+                if (categoryFilter && categoryFilter !== catId) continue;
+                if (!byCategory[catId]) continue;
+
+                const catMeta = categories[catId];
+                let items = byCategory[catId];
+
+                // Filter by search
+                if (searchTerm) {
+                    items = items.filter(m =>
+                        m.label?.he?.toLowerCase().includes(searchTerm) ||
+                        m.label?.en?.toLowerCase().includes(searchTerm) ||
+                        m.id?.toLowerCase().includes(searchTerm) ||
+                        m.documents?.some(d => d.toLowerCase().includes(searchTerm))
+                    );
+                }
+
+                // Filter by docs
+                if (docsFilter === 'with-docs') {
+                    items = items.filter(m => m.documents?.length > 0);
+                } else if (docsFilter === 'without-docs') {
+                    items = items.filter(m => !m.documents?.length);
+                }
+
+                if (items.length === 0) continue;
+
+                html += `
+                    <div class="category-section">
+                        <div class="category-header">
+                            <span>${CATEGORY_ICONS[catId] || '📄'}</span>
+                            <span>${catMeta.he}</span>
+                            <span style="color: var(--text-muted); font-weight: normal; font-size: 14px;">(${items.length})</span>
+                        </div>
+                `;
+
+                for (const mapping of items) {
+                    html += renderMappingCard(mapping);
+                }
+
+                html += '</div>';
+            }
+
+            if (!html) {
+                html = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon"><i class="fa-solid fa-search"></i></div>
+                        <p>לא נמצאו תוצאות</p>
+                    </div>
+                `;
+            }
+
+            container.innerHTML = html;
+            updateChangesBar();
+        }
+
+        function renderMappingCard(mapping) {
+            const isModified = changes[mapping.id] !== undefined;
+            const hasDocs = mapping.documents?.length > 0;
+            const currentMapping = { ...mapping, ...changes[mapping.id] };
+
+            let badgesHtml = '';
+            if (mapping.isSpouse) {
+                badgesHtml += '<span class="badge badge-spouse">בן/בת זוג</span>';
+            }
+            if (mapping.perItem) {
+                badgesHtml += '<span class="badge badge-peritem">לכל פריט</span>';
+            }
+            if (mapping.condition) {
+                badgesHtml += `<span class="badge badge-condition">IF: ${mapping.condition}</span>`;
+            }
+
+            let docsHtml = '';
+            if (hasDocs) {
+                const docTags = currentMapping.documents.map(docId => {
+                    const docType = documentTypes[docId];
+                    const docName = docType?.name_he || docId;
+                    return `
+                        <span class="doc-tag">
+                            ${escapeHtml(docName)}
+                            <button onclick="removeDoc('${mapping.id}', '${docId}')" title="הסר">
+                                <i class="fa-solid fa-times"></i>
+                            </button>
+                        </span>
+                    `;
+                }).join('');
+
+                docsHtml = `
+                    <div class="mapping-docs">
+                        <div class="mapping-docs-header">
+                            <strong><i class="fa-solid fa-file-lines"></i> מסמכים נדרשים:</strong>
+                            <button class="add-doc-btn" onclick="showDocDropdown('${mapping.id}', this)">
+                                <i class="fa-solid fa-plus"></i> הוסף
+                            </button>
+                        </div>
+                        <div class="mapping-docs-list">
+                            ${docTags}
+                        </div>
+                    </div>
+                `;
+            } else {
+                docsHtml = `
+                    <div class="mapping-docs" style="background: #f9fafb; border-right-color: #d1d5db;">
+                        <div class="mapping-docs-header">
+                            <strong style="color: var(--text-muted);"><i class="fa-solid fa-file-lines"></i> אין מסמכים נדרשים</strong>
+                            <button class="add-doc-btn" onclick="showDocDropdown('${mapping.id}', this)">
+                                <i class="fa-solid fa-plus"></i> הוסף מסמך
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }
+
+            const previewText = currentMapping.docDescription?.he || '';
+            const previewHtml = previewText ? `
+                <div class="mapping-preview">
+                    <strong>תיאור:</strong> ${escapeHtml(previewText)}
+                </div>
+            ` : '';
+
+            return `
+                <div class="mapping-card ${isModified ? 'modified' : ''} ${hasDocs ? 'has-docs' : 'no-docs'}" data-id="${mapping.id}">
+                    <div class="mapping-header">
+                        <span class="mapping-id">${mapping.id}</span>
+                        <div class="mapping-badges">${badgesHtml}</div>
+                    </div>
+                    <div class="mapping-question">${escapeHtml(currentMapping.label?.he || '')}</div>
+                    <div class="mapping-question-en">${escapeHtml(currentMapping.label?.en || '')}</div>
+                    
+                    <div class="mapping-fields">
+                        <div class="mapping-field">
+                            <label>🇮🇱 תיאור מסמך בעברית:</label>
+                            <input type="text" 
+                                   value="${escapeHtml(currentMapping.docDescription?.he || '')}" 
+                                   data-mapping="${mapping.id}" 
+                                   data-field="docDescription.he"
+                                   class="${isModified ? 'modified' : ''}"
+                                   oninput="handleFieldChange(this)"
+                                   placeholder="תיאור המסמך הנדרש...">
+                        </div>
+                        <div class="mapping-field">
+                            <label>🇬🇧 תיאור מסמך באנגלית:</label>
+                            <input type="text" 
+                                   value="${escapeHtml(currentMapping.docDescription?.en || '')}" 
+                                   data-mapping="${mapping.id}" 
+                                   data-field="docDescription.en"
+                                   class="${isModified ? 'modified' : ''}"
+                                   oninput="handleFieldChange(this)"
+                                   placeholder="Document description...">
+                        </div>
+                    </div>
+
+                    <div class="toggle-row">
+                        <label class="toggle-item">
+                            <input type="checkbox" 
+                                   ${currentMapping.perItem ? 'checked' : ''} 
+                                   data-mapping="${mapping.id}" 
+                                   data-field="perItem"
+                                   onchange="handleToggleChange(this)">
+                            מסמך לכל פריט ברשימה
+                        </label>
+                        <label class="toggle-item">
+                            <input type="checkbox" 
+                                   ${currentMapping.isSpouse ? 'checked' : ''} 
+                                   data-mapping="${mapping.id}" 
+                                   data-field="isSpouse"
+                                   onchange="handleToggleChange(this)">
+                            שאלה על בן/בת זוג
+                        </label>
+                    </div>
+
+                    ${docsHtml}
+                    ${previewHtml}
+                </div>
+            `;
+        }
+
+        function filterMappings() {
+            renderMappings();
+        }
+
+        // ==================== DOCUMENT MANAGEMENT ====================
+
+        let activeDropdownMappingId = null;
+
+        function showDocDropdown(mappingId, button) {
+            const dropdown = document.getElementById('docDropdown');
+            activeDropdownMappingId = mappingId;
+
+            // Get current docs for this mapping
+            const mapping = mappings.find(m => m.id === mappingId);
+            const currentDocs = changes[mappingId]?.documents || mapping?.documents || [];
+
+            // Build dropdown content
+            let html = '';
+            for (const [docId, docType] of Object.entries(documentTypes)) {
+                if (currentDocs.includes(docId)) continue; // Skip already added
+                html += `
+                    <div class="doc-dropdown-item" onclick="addDoc('${mappingId}', '${docId}')">
+                        <strong>${escapeHtml(docType.name_he)}</strong>
+                        <div style="font-size: 11px; color: var(--text-muted);">${escapeHtml(docType.name_en || '')}</div>
+                    </div>
+                `;
+            }
+
+            if (!html) {
+                html = '<div class="doc-dropdown-item" style="color: var(--text-muted);">כל סוגי המסמכים כבר נוספו</div>';
+            }
+
+            dropdown.innerHTML = html;
+
+            // Position dropdown
+            const rect = button.getBoundingClientRect();
+            dropdown.style.top = `${rect.bottom + window.scrollY + 5}px`;
+            dropdown.style.left = `${rect.left + window.scrollX}px`;
+            dropdown.style.display = 'block';
+
+            // Close on outside click
+            document.addEventListener('click', closeDropdownOnOutsideClick);
+        }
+
+        function closeDropdownOnOutsideClick(e) {
+            const dropdown = document.getElementById('docDropdown');
+            if (!dropdown.contains(e.target) && !e.target.closest('.add-doc-btn')) {
+                dropdown.style.display = 'none';
+                document.removeEventListener('click', closeDropdownOnOutsideClick);
+            }
+        }
+
+        function addDoc(mappingId, docId) {
+            const mapping = mappings.find(m => m.id === mappingId);
+            if (!mapping) return;
+
+            if (!changes[mappingId]) {
+                changes[mappingId] = { documents: [...(mapping.documents || [])] };
+            }
+            if (!changes[mappingId].documents) {
+                changes[mappingId].documents = [...(mapping.documents || [])];
+            }
+
+            if (!changes[mappingId].documents.includes(docId)) {
+                changes[mappingId].documents.push(docId);
+            }
+
+            document.getElementById('docDropdown').style.display = 'none';
+            renderMappings();
+        }
+
+        function removeDoc(mappingId, docId) {
+            const mapping = mappings.find(m => m.id === mappingId);
+            if (!mapping) return;
+
+            if (!changes[mappingId]) {
+                changes[mappingId] = { documents: [...(mapping.documents || [])] };
+            }
+            if (!changes[mappingId].documents) {
+                changes[mappingId].documents = [...(mapping.documents || [])];
+            }
+
+            changes[mappingId].documents = changes[mappingId].documents.filter(d => d !== docId);
+            renderMappings();
+        }
+
+        // ==================== CHANGES ====================
+
+        function handleFieldChange(input) {
+            const mappingId = input.dataset.mapping;
+            const fieldPath = input.dataset.field;
+            const newValue = input.value;
+
+            const mapping = mappings.find(m => m.id === mappingId);
+            if (!mapping) return;
+
+            // Get original value using field path
+            const getNestedValue = (obj, path) => {
+                return path.split('.').reduce((o, k) => o?.[k], obj);
+            };
+            const originalValue = getNestedValue(mapping, fieldPath) || '';
+
+            if (!changes[mappingId]) {
+                changes[mappingId] = {};
+            }
+
+            if (newValue !== originalValue) {
+                // Set nested value in changes
+                if (fieldPath.includes('.')) {
+                    const [parent, child] = fieldPath.split('.');
+                    if (!changes[mappingId][parent]) {
+                        changes[mappingId][parent] = { ...mapping[parent] };
+                    }
+                    changes[mappingId][parent][child] = newValue;
+                } else {
+                    changes[mappingId][fieldPath] = newValue;
+                }
+                input.classList.add('modified');
+                input.closest('.mapping-card').classList.add('modified');
+            } else {
+                // Check if we should remove the change
+                if (fieldPath.includes('.')) {
+                    const [parent, child] = fieldPath.split('.');
+                    if (changes[mappingId][parent]) {
+                        delete changes[mappingId][parent][child];
+                        if (Object.keys(changes[mappingId][parent]).every(k =>
+                            changes[mappingId][parent][k] === mapping[parent]?.[k]
+                        )) {
+                            delete changes[mappingId][parent];
+                        }
+                    }
+                } else {
+                    delete changes[mappingId][fieldPath];
+                }
+
+                if (Object.keys(changes[mappingId]).length === 0) {
+                    delete changes[mappingId];
+                }
+                input.classList.remove('modified');
+
+                const card = input.closest('.mapping-card');
+                if (!changes[mappingId]) {
+                    card.classList.remove('modified');
+                }
+            }
+
+            updateChangesBar();
+        }
+
+        function handleToggleChange(checkbox) {
+            const mappingId = checkbox.dataset.mapping;
+            const field = checkbox.dataset.field;
+            const newValue = checkbox.checked;
+
+            const mapping = mappings.find(m => m.id === mappingId);
+            if (!mapping) return;
+
+            const originalValue = mapping[field] || false;
+
+            if (!changes[mappingId]) {
+                changes[mappingId] = {};
+            }
+
+            if (newValue !== originalValue) {
+                changes[mappingId][field] = newValue;
+                checkbox.closest('.mapping-card').classList.add('modified');
+            } else {
+                delete changes[mappingId][field];
+                if (Object.keys(changes[mappingId]).length === 0) {
+                    delete changes[mappingId];
+                    checkbox.closest('.mapping-card').classList.remove('modified');
+                }
+            }
+
+            updateChangesBar();
+        }
+
+        function updateChangesBar() {
+            const changesCount = Object.keys(changes).length;
+            const bar = document.getElementById('changesBar');
+            document.getElementById('changesCount').textContent = changesCount;
+
+            if (changesCount > 0) {
+                bar.classList.add('visible');
+                document.body.style.paddingBottom = '80px';
+            } else {
+                bar.classList.remove('visible');
+                document.body.style.paddingBottom = '0';
+            }
+        }
+
+        function discardChanges() {
+            if (!confirm('האם אתה בטוח שברצונך לבטל את כל השינויים?')) {
+                return;
+            }
+            changes = {};
+            renderMappings();
+        }
+
+        function previewChanges() {
+            let previewHtml = '<ul style="text-align: right;">';
+            for (const [mappingId, changedFields] of Object.entries(changes)) {
+                const mapping = mappings.find(m => m.id === mappingId);
+                previewHtml += `<li><strong>${mapping?.label?.he || mappingId}</strong>: `;
+                previewHtml += Object.keys(changedFields).join(', ');
+                previewHtml += '</li>';
+            }
+            previewHtml += '</ul>';
+
+            showModal('warning', 'תצוגה מקדימה של שינויים', '');
+            document.getElementById('modalBody').innerHTML = previewHtml;
+        }
+
+        async function saveChanges() {
+            const changesCount = Object.keys(changes).length;
+            if (changesCount === 0) return;
+
+            if (!confirm(`האם לשמור ${changesCount} שינויים ל-GitHub?`)) {
+                return;
+            }
+
+            showLoading('שומר שינויים...');
+
+            try {
+                // Apply changes to mappings
+                const updatedMappings = mappings.map(m => {
+                    if (changes[m.id]) {
+                        return { ...m, ...changes[m.id] };
+                    }
+                    return m;
+                });
+
+                // Send to n8n webhook
+                const response = await fetch(`${API_BASE}/admin-update-questionnaire-mapping`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        token: authToken,
+                        categories: categories,
+                        mappings: updatedMappings,
+                        changes_summary: changes
+                    })
+                });
+
+                const data = await response.json();
+                hideLoading();
+
+                if (!data.ok) {
+                    throw new Error(data.error || 'Failed to save');
+                }
+
+                showModal('success', 'נשמר בהצלחה!', `${changesCount} שינויים נשמרו ל-GitHub.`);
+
+                // Reset state
+                mappings = updatedMappings;
+                originalMappings = JSON.parse(JSON.stringify(updatedMappings));
+                changes = {};
+                renderMappings();
+
+            } catch (error) {
+                hideLoading();
+                console.error('Save error:', error);
+                showModal('error', 'שגיאה', 'לא ניתן לשמור: ' + error.message);
+            }
+        }
+
+        // ==================== UTILITIES ====================
+
+        function showLoading(text) {
+            document.getElementById('loadingText').textContent = text || 'מעבד...';
+            document.getElementById('loadingOverlay').classList.add('visible');
+        }
+
+        function hideLoading() {
+            document.getElementById('loadingOverlay').classList.remove('visible');
+        }
+
+        function showModal(type, title, body) {
+            const icons = {
+                success: '<i class="fa-solid fa-check-circle" style="color: var(--success)"></i>',
+                error: '<i class="fa-solid fa-circle-exclamation" style="color: var(--danger)"></i>',
+                warning: '<i class="fa-solid fa-triangle-exclamation" style="color: var(--warning)"></i>'
+            };
+            document.getElementById('modalIcon').innerHTML = icons[type] || icons.success;
+            document.getElementById('modalTitle').textContent = title;
+            document.getElementById('modalBody').textContent = body;
+            document.getElementById('modalStats').innerHTML = '';
+            document.getElementById('resultModal').classList.add('visible');
+        }
+
+        function closeModal() {
+            document.getElementById('resultModal').classList.remove('visible');
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text || '';
+            return div.innerHTML;
+        }
+
+        // Initialize
+        checkAuth();
+    </script>
+</body>
+
+</html>
