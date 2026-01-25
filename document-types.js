@@ -389,3 +389,101 @@ export const DOCUMENT_TYPES = {
   },
 
 };
+
+// ============================================
+// HELPER FUNCTIONS (Exported)
+// ============================================
+
+/**
+ * Format document name with parameters
+ */
+export function formatDocumentName(typeId, params = {}, options = {}) {
+  const lang = options.lang || 'he';
+  const docDef = DOCUMENT_TYPES[typeId];
+  if (!docDef) return typeId;
+
+  let text = lang === 'he' ? docDef.name_he : docDef.name_en;
+
+  // Replace standard placeholders
+  text = text.replace('{year}', params.year || '____');
+
+  // Replace dynamic details
+  if (docDef.details) {
+    docDef.details.forEach(detail => {
+      const key = detail.key;
+      const value = params[key] || (options.mode === 'html' ? `<span class="missing-param">[${detail['label_' + lang]}]</span>` : `[${detail['label_' + lang]}]`);
+      text = text.replace(`{${key}}`, value);
+    });
+  }
+
+  // Handle markdown-style bold (**text**)
+  if (options.mode !== 'text') {
+    text = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+  } else {
+    text = text.replace(/\*\*(.*?)\*\*/g, '$1');
+  }
+
+  return text;
+}
+
+/**
+ * Generate HTML options for Select dropdown
+ */
+export function getDocumentDropdownOptions(options = {}) {
+  const lang = options.lang || 'he';
+  const includeGroups = options.includeCategoryGroups !== false;
+
+  let html = '';
+
+  if (includeGroups) {
+    // Group by category
+    const groups = {};
+    // Use defined order for docs within categories if possible?
+    // Actually, we just iterate DOCUMENT_TYPES which is ordered.
+    Object.values(DOCUMENT_TYPES).forEach(doc => {
+      const cat = doc.category || 'other';
+      if (!groups[cat]) groups[cat] = [];
+      groups[cat].push(doc);
+    });
+
+    // Use defined order for categories
+    Object.keys(CATEGORIES).forEach(catKey => {
+      if (groups[catKey]) {
+        const catDef = CATEGORIES[catKey];
+        const catLabel = lang === 'he' ? catDef.he : catDef.en;
+        html += `<optgroup label="${catDef.emoji} ${catLabel}">`;
+
+        groups[catKey].forEach(doc => {
+          const name = formatDocumentName(doc.id, { year: 'YYYY' }, { lang, mode: 'text' });
+          html += `<option value="${doc.id}">${name}</option>`;
+        });
+
+        html += `</optgroup>`;
+      }
+    });
+  } else {
+    // Flat list
+    Object.values(DOCUMENT_TYPES).forEach(doc => {
+      const name = formatDocumentName(doc.id, { year: 'YYYY' }, { lang, mode: 'text' });
+      html += `<option value="${doc.id}">${name}</option>`;
+    });
+  }
+
+  return html;
+}
+
+/**
+ * Check if document requires user details input
+ */
+export function requiresDetails(typeId) {
+  const doc = DOCUMENT_TYPES[typeId];
+  return doc && doc.details && doc.details.length > 0;
+}
+
+/**
+ * Get details schema for input generation
+ */
+export function getDetailsSchema(typeId) {
+  const doc = DOCUMENT_TYPES[typeId];
+  return doc ? doc.details : [];
+}
