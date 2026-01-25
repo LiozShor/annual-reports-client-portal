@@ -247,7 +247,7 @@ export const QUESTION_MAPPINGS = [
         type: "yes_no",
         category: "children",
         condition: "yes",
-        documents: ["child_id_appendix"],
+        documents: [],  // No document needed - only status changes trigger docs
         isSpouse: false,
         perItem: false,
         detailsField: null,
@@ -312,7 +312,7 @@ export const QUESTION_MAPPINGS = [
         type: "yes_no",
         category: "children",
         condition: "yes",
-        documents: ["alimony_judgment"],
+        documents: [],  // Document not needed per user request
         isSpouse: false,
         perItem: false,
         detailsField: null,
@@ -461,10 +461,10 @@ export const QUESTION_MAPPINGS = [
         type: "checkbox",
         category: "nii",
         condition: null,
-        documents: [],
+        documents: ["nii_allowance_cert_spouse"],  // Split into separate docs per benefit type
         isSpouse: true,
-        perItem: false,
-        detailsField: null,
+        perItem: true,  // Changed from false to true for multi-expand
+        detailsField: "benefit_type",
         linkedQuestion: null
     },
     {

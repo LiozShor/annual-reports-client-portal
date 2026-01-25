@@ -138,6 +138,29 @@ function displayDocuments() {
         groups[category].push(doc);
     });
 
+    // Deduplication Logic
+    // For each group, we keep only unique document names
+    categoryKeys.forEach(catKey => {
+        if (!groups[catKey]) return;
+
+        const uniqueDocs = [];
+        const seenNames = new Set();
+
+        groups[catKey].forEach(doc => {
+            // Create a unique key for deduplication: Name + Type
+            // Standardizing name to handle basic inconsistencies (trim)
+            const uniqueKey = (doc.name || 'unknown').trim() + '|' + (doc.type || 'unknown');
+
+            if (!seenNames.has(uniqueKey)) {
+                seenNames.add(uniqueKey);
+                uniqueDocs.push(doc);
+            }
+        });
+
+        groups[catKey] = uniqueDocs;
+    });
+
+
     let html = '';
 
     // Create a lookup for Sort Order
