@@ -1,6 +1,6 @@
 {
-  "version": "2026-01-24",
-  "updated_at": "2026-01-24T18:10:02.465Z",
+  "version": "2026-01-25",
+  "updated_at": "2026-01-25T09:24:51.598Z",
   "categories": {
     "identity": {
       "emoji": "🪪",
@@ -65,6 +65,7 @@
       "aliases": [
         "Form_106"
       ],
+      "airtable_type": "Form_106",
       "name_he": "טופס 106 לשנת {year} מ{employer}",
       "name_en": "Form 106 for {year} from {employer}",
       "details": [
@@ -84,6 +85,7 @@
       "aliases": [
         "Form_106_Spouse"
       ],
+      "airtable_type": "Form_106_Spouse",
       "name_he": "טופס 106 לשנת {year} מ{employer} (בן/בת זוג)",
       "name_en": "Form 106 for {year} from {employer} (spouse)",
       "details": [
@@ -103,6 +105,7 @@
       "aliases": [
         "Form_867"
       ],
+      "airtable_type": "Form_867",
       "name_he": "טופס 867 (אישור ניכוי מס) לשנת {year} מ{institution}",
       "name_en": "Form 867 (withholding tax certificate) for {year} from {institution}",
       "details": [
@@ -122,7 +125,8 @@
       "aliases": [
         "Crypto_Report"
       ],
-      "name_he": "דוח על הרווחים / הפסדים והמס שנוכה (במידה ונוכה) לשנת {year} מ{platform}",
+      "airtable_type": "Crypto_Report",
+      "name_he": "דו\"ח על הרווחים / הפסדים והמס שנוכה (במידה ונוכה) לשנת {year} מ{platform}",
       "name_en": "Report of gains/losses and tax withheld (if any) for {year} from {platform}",
       "details": [
         {
@@ -141,6 +145,7 @@
       "aliases": [
         "Residency_Cert"
       ],
+      "airtable_type": "Residency_Cert",
       "name_he": "אישור תושבות לשנת המס מהרשות המקומית",
       "name_en": "Municipality residency certificate for the tax year"
     },
@@ -150,6 +155,7 @@
       "aliases": [
         "ID_Appendix"
       ],
+      "airtable_type": "ID_Appendix",
       "name_he": "ספח ת\"ז מעודכן או תעודת נישואין/גירושין/פירוד רשמי (לפי הצורך)",
       "name_en": "Updated ID appendix or marriage/divorce/separation certificate (as needed)"
     },
@@ -159,6 +165,7 @@
       "aliases": [
         "Army_Release_Cert"
       ],
+      "airtable_type": "Army_Release_Cert",
       "name_he": "אישור שחרור משירות סדיר (ניתן להוציא את האישור מאתר \"אישורים\")",
       "name_en": "Regular service discharge certificate (can be issued via the \"Certificates\" site)"
     },
@@ -168,6 +175,7 @@
       "aliases": [
         "Child_ID_Appendix"
       ],
+      "airtable_type": "Child_ID_Appendix",
       "name_he": "ספח ת\"ז בו מופיע הילד/ה שהצטרפו למשפחה",
       "name_en": "ID appendix showing the child added to the family"
     },
@@ -177,6 +185,7 @@
       "aliases": [
         "Special_Ed_Approval"
       ],
+      "airtable_type": "Special_Ed_Approval",
       "name_he": "אישור ועדת השמה/ועדת שילוב עבור הילד (חינוך מיוחד)",
       "name_en": "Placement/integration committee approval (special education) for the child"
     },
@@ -186,6 +195,7 @@
       "aliases": [
         "Child_Disability_Approval"
       ],
+      "airtable_type": "Child_Disability_Approval",
       "name_he": "אישור שנתי לשנת {year} על תקבולי קצבת נכות מביטוח לאומי עבור הילד/ה",
       "name_en": "Annual certificate for {year} of child disability allowance from NII"
     },
@@ -195,6 +205,7 @@
       "aliases": [
         "Alimony_Judgment"
       ],
+      "airtable_type": "Alimony_Judgment",
       "name_he": "פסק דין / הסכם גירושין (דמי מזונות)",
       "name_en": "Court judgment / divorce agreement (alimony)"
     },
@@ -204,6 +215,7 @@
       "aliases": [
         "NII_Allowance_Cert"
       ],
+      "airtable_type": "NII_Allowance_Cert",
       "name_he": "אישור שנתי לשנת {year} על תקבולי דמי נכות שהתקבלו מביטוח לאומי - {name}",
       "name_en": "Annual certificate for {year} of disability payments from NII - {name}",
       "details": [
@@ -223,6 +235,7 @@
       "aliases": [
         "NII_Allowance_Cert_Spouse"
       ],
+      "airtable_type": "NII_Allowance_Cert_Spouse",
       "name_he": "אישור שנתי מביטוח לאומי לשנת {year} בהתאם לסוג הקצבה של בן/בת הזוג - {name}",
       "name_en": "Annual NII certificate for {year} by benefit type (spouse) - {name}",
       "details": [
@@ -239,6 +252,7 @@
     "nii_maternity_allowance_cert": {
       "id": "nii_maternity_allowance_cert",
       "category": "benefits",
+      "airtable_type": "NII_Maternity_Allowance_Cert",
       "name_he": "אישור שנתי לשנת {year} על תקבולי דמי לידה מביטוח לאומי עבור - {name}",
       "name_en": "Annual certificate for {year} of maternity payments from NII for - {name}",
       "details": [
@@ -258,6 +272,7 @@
       "aliases": [
         "Insurance_Tax_Cert"
       ],
+      "airtable_type": "Insurance_Tax_Cert",
       "name_he": "אישור שנתי למס הכנסה לשנת {year} (נקרא גם **דוח שנתי מקוצר**) על ההפקדות ל{product} ב\"{company}\"",
       "name_en": "Annual tax certificate for {year} (also called a shortened annual report) for contributions to {product} at \"{company}\"",
       "details": [
@@ -293,6 +308,7 @@
       "aliases": [
         "Pension_Withdrawal"
       ],
+      "airtable_type": "Pension_Withdrawal",
       "name_he": "אישור על משיכת {withdrawal_type} לשנת {year} והמס שנוכה בעת המשיכה",
       "name_en": "Certificate of {withdrawal_type} withdrawal for {year} and tax withheld at withdrawal",
       "details": [
@@ -324,6 +340,7 @@
       "aliases": [
         "Rent_Contract_Income"
       ],
+      "airtable_type": "Rent_Contract_Income",
       "name_he": "חוזה שכירות של הדירה שהשכרת (הכנסה)",
       "name_en": "Rental contract of the apartment you rented out (income)"
     },
@@ -333,6 +350,7 @@
       "aliases": [
         "Rent_Contract_Expense"
       ],
+      "airtable_type": "Rent_Contract_Expense",
       "name_he": "חוזה שכירות של הדירה ששכרת למגורים (הוצאה)",
       "name_en": "Rental contract of the apartment you rented for living (expense)"
     },
@@ -342,6 +360,7 @@
       "aliases": [
         "Degree_Cert"
       ],
+      "airtable_type": "Degree_Cert",
       "name_he": "אישור זכאות לתואר אקדמי מ{institution}",
       "name_en": "Academic degree eligibility certificate from {institution}",
       "details": [
@@ -361,6 +380,7 @@
       "aliases": [
         "Donation_Receipts"
       ],
+      "airtable_type": "Donation_Receipts",
       "name_he": "קבלות תרומות מרוכזות (יש לשלוח קבלות רק ממוסדות שלהם יש סעיף 46. ניתן לראות זאת בקבלה)",
       "name_en": "Consolidated donation receipts (only from institutions with Section 46; appears on the receipt)"
     },
@@ -370,6 +390,7 @@
       "aliases": [
         "Memorial_Receipts"
       ],
+      "airtable_type": "Memorial_Receipts",
       "name_he": "קבלות ומסמכים **רלוונטיים** על הוצאות הנצחה",
       "name_en": "Relevant receipts and documents for memorial expenses"
     },
@@ -379,6 +400,7 @@
       "aliases": [
         "Institution_Approval"
       ],
+      "airtable_type": "Institution_Approval",
       "name_he": "מסמך רשמי רלוונטי על החזקת קרוב משפחה במוסד",
       "name_en": "Official relevant document for maintaining a family member in an institution"
     },
@@ -388,6 +410,7 @@
       "aliases": [
         "Medical_Committee"
       ],
+      "airtable_type": "Medical_Committee",
       "name_he": "מסמך רשמי רלוונטי על הפטור/נכות (מסמכים רפואיים/ועדה רפואית)",
       "name_en": "Official document regarding exemption/disability (medical docs / medical committee)"
     },
@@ -397,17 +420,39 @@
       "aliases": [
         "Foreign_Income_Report"
       ],
+      "airtable_type": "Foreign_Income_Report",
       "name_he": "אסמכתאות על ההכנסה ועל המס ששולם בחו\"ל",
       "name_en": "Proof of foreign income and tax paid abroad"
     },
-    "wht_approval": {
-      "id": "wht_approval",
+    "wht_income_tax": {
+      "id": "wht_income_tax",
       "category": "business",
       "aliases": [
-        "WHT_Approval"
+        "WHT_Income_Tax"
       ],
-      "name_he": "אישור שנתי על ניכוי מס במקור/בט\"ל מהלקוח",
-      "name_en": "Annual certificate of withholding tax / NII withheld from client",
+      "airtable_type": "WHT_Income_Tax",
+      "name_he": "אישור שנתי על ניכוי מס במקור (מס הכנסה) מהלקוח",
+      "name_en": "Annual certificate of withholding tax (Income Tax) withheld from client",
+      "details": [
+        {
+          "key": "client",
+          "type": "text",
+          "label_he": "שם הלקוח/ה",
+          "label_en": "Client name",
+          "placeholder_he": "לדוגמה: חברת XYZ בע\"מ",
+          "placeholder_en": "e.g.: XYZ Ltd."
+        }
+      ]
+    },
+    "wht_nii": {
+      "id": "wht_nii",
+      "category": "business",
+      "aliases": [
+        "WHT_NII"
+      ],
+      "airtable_type": "WHT_NII",
+      "name_he": "אישור שנתי על ניכוי ביטוח לאומי מהלקוח (ניכוי במקור)",
+      "name_en": "Annual certificate of National Insurance withheld from client",
       "details": [
         {
           "key": "client",
@@ -425,6 +470,7 @@
       "aliases": [
         "Inventory_List"
       ],
+      "airtable_type": "Inventory_List",
       "name_he": "רשימת ספירת מלאי ליום האחרון של שנת המס",
       "name_en": "Inventory count list as of the last day of the tax year"
     },
@@ -434,6 +480,7 @@
       "aliases": [
         "Gambling_Win_Cert"
       ],
+      "airtable_type": "Gambling_Win_Cert",
       "name_he": "אסמכתאות על הזכייה והמס שנוכה (הימורים/פרסים מעל 25,000 ש\"ח)",
       "name_en": "Proof of winnings and tax withheld (gambling/prizes over 25,000 NIS)"
     },
@@ -443,6 +490,7 @@
       "aliases": [
         "General_Doc"
       ],
+      "airtable_type": "General_Doc",
       "name_he": "אישורים/אסמכתאות על הכנסות נוספות בשנת המס (שאינן מופיעות בשאלון)",
       "name_en": "Proof of additional income during the tax year (not listed in the questionnaire)"
     }
