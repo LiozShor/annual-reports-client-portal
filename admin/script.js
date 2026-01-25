@@ -187,7 +187,15 @@ function renderClientsTable(clients) {
 
         html += `
             <tr>
-                <td><strong>${escapeHtml(client.name)}</strong></td>
+                <td>
+                    <strong 
+                        class="client-link" 
+                        style="cursor: pointer; color: var(--primary-color); text-decoration: underline;"
+                        onclick="viewClientDocs('${client.report_id}', '${escapeHtml(client.name)}', '${escapeHtml(client.email || '')}', '${client.year}')"
+                    >
+                        ${escapeHtml(client.name)}
+                    </strong>
+                </td>
                 <td>${escapeHtml(client.email)}</td>
                 <td>${client.year}</td>
                 <td><span class="stage-badge ${stage.class}">${stage.text}</span></td>
@@ -626,6 +634,28 @@ async function sendQuestionnaires(reportIds) {
 
 function viewClient(reportId) {
     window.open(`https://liozshor.github.io/annual-reports-client-portal/view-documents.html?report_id=${reportId}`, '_blank');
+}
+
+function viewClientDocs(reportId, name, email, year) {
+    // Navigate in same tab
+    const params = new URLSearchParams({
+        report_id: reportId || '',
+        client_name: name,
+        email: email, // Optional, might be useful
+        year: year
+    });
+    // Add spouse if available (fetching from spouseName if we had it, but currently we rely on URL params or fetching in next page)
+    // Note: The renderClientsTable logic doesn't seemingly pass spouse_name directly. 
+    // We'll pass what we have. Document manager usually fetches details or uses params for display.
+    // If 'spouse_name' is missing in clientsData, we can't pass it yet.
+    // However, document-manager fetches get-documents which might return spouse name?
+    // Let's check: document-manager.js uses params.get('spouse_name') for display. 
+    // Admin dashboard 'clientsData' might not have spouse_name? 
+    // Checking dashboard response... usually has 'name', 'email', 'year', 'stage'. 
+    // If spouse_name isn't in dashboard data, it will be '-' on the next page until we fetch it there.
+    // We will proceed with available data.
+
+    window.location.href = `../document-manager.html?${params.toString()}`;
 }
 
 function exportToExcel() {

@@ -719,3 +719,96 @@ body {
         width: 100%;
     }
 }
+
+/* ===========================================
+   NEW STYLES FOR ADMIN INTEGRATION
+   =========================================== */
+
+/* Return Button */
+.btn-return {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+    padding: 8px 16px;
+    border-radius: 20px;
+    text-decoration: none;
+    font-size: 14px;
+    transition: all 0.3s ease;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.btn-return:hover {
+    background: rgba(255, 255, 255, 0.3);
+    transform: translateX(5px);
+}
+
+/* Category Header */
+.category-header {
+    background: #eef2f7;
+    padding: 12px 15px;
+    margin-top: 15px;
+    margin-bottom: 5px;
+    border-radius: 8px;
+    color: #2c5282;
+    font-weight: bold;
+    font-size: 16px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border-right: 4px solid #667eea;
+}
+
+/* Status Badge */
+.status-badge {
+    padding: 5px 10px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: bold;
+    margin-right: 10px;
+    white-space: nowrap;
+}
+
+.status-badge.received {
+    background-color: #d4edda;
+    color: #155724;
+}
+
+.status-badge.missing {
+    background-color: #f8d7da;
+    color: #721c24;
+}
+
+.status-badge.waived {
+    background-color: #e2e3e5;
+    color: #383d41;
+}
+
+.status-badge.review {
+    background-color: #fff3cd;
+    color: #856404;
+}
+
+/* Download Button */
+.download-btn {
+    background: none;
+    border: none;
+    color: #6c757d;
+    cursor: not-allowed;
+    padding: 5px;
+    margin-right: 10px;
+    font-size: 18px;
+    opacity: 0.5;
+    transition: all 0.2s ease;
+}
+
+.download-btn:not(:disabled) {
+    color: #007bff;
+    cursor: pointer;
+    opacity: 1;
+}
+
+.download-btn:not(:disabled):hover {
+    transform: scale(1.1);
+}

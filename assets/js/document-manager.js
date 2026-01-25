@@ -21,18 +21,33 @@ document.getElementById('clientName').textContent = CLIENT_NAME || '-';
 document.getElementById('spouseName').textContent = SPOUSE_NAME || '-';
 document.getElementById('year').textContent = YEAR || '-';
 
+// Check if we have a report ID (if not, show "Not Started" state)
+if (!REPORT_ID || REPORT_ID === 'null' || REPORT_ID === 'undefined') {
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('not-started-view').style.display = 'block';
+} else {
+    // Run on page load
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+    } else {
+        init();
+    }
+}
+
+function init() {
+    initDocumentDropdown();
+    loadDocuments();
+}
+
 // Populate document dropdown from registry
 function initDocumentDropdown() {
+    if (!window.DocRegistry) {
+        setTimeout(initDocumentDropdown, 100);
+        return;
+    }
     const select = document.getElementById('docTypeSelect');
     const optionsHtml = window.DocRegistry.getDocumentDropdownOptions({ lang: 'he', includeCategoryGroups: true });
     select.innerHTML = '<option value="">-- בחר מסמך מהרשימה --</option>\n' + optionsHtml;
-}
-
-// Run on page load
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initDocumentDropdown);
-} else {
-    initDocumentDropdown();
 }
 
 // Show alert
@@ -48,6 +63,16 @@ async function loadDocuments() {
     try {
         const response = await fetch(`${API_BASE}/get-documents?report_id=${REPORT_ID}`);
         const data = await response.json();
+
+        // Handle case where report is found but stage is 1 (Not Started)
+        if (data.stage && (data.stage.startsWith('1') || data.stage.startsWith('2'))) {
+            if ((!data.documents || data.documents.length === 0) && data.stage.startsWith('1')) {
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('not-started-view').style.display = 'block';
+                return;
+            }
+        }
+
         currentDocuments = data.documents || [];
         displayDocuments();
         updateStats();
@@ -73,17 +98,83 @@ function displayDocuments() {
         return;
     }
 
-    container.innerHTML = currentDocuments.map(doc => `
-        <div class="document-item" id="doc-${doc.id}">
-            <input type="checkbox" 
-                   onchange="toggleRemoval('${doc.id}')" 
-                   id="checkbox-${doc.id}"
-                   aria-label="סמן להסרה">
-            <span class="document-icon">📄</span>
-            <span class="document-name">${doc.name}</span>
-        </div>
-    `).join('');
+    // Groupping
+    const groups = {};
+    const categoriesDisplay = window.DocRegistry.CATEGORIES;
+
+    // Sort keys to match document-types.js order
+    const categoryKeys = Object.keys(categoriesDisplay);
+
+    // Initialize groups
+    categoryKeys.forEach(key => groups[key] = []);
+
+    // Fill groups
+    currentDocuments.forEach(doc => {
+        const docTypeDef = window.DocRegistry.DOCUMENT_TYPES[doc.type] || {};
+        const category = docTypeDef.category || 'other';
+
+        if (!groups[category]) groups[category] = [];
+        groups[category].push(doc);
+    });
+
+    let html = '';
+
+    categoryKeys.forEach(catKey => {
+        const catDocs = groups[catKey];
+        if (catDocs && catDocs.length > 0) {
+            const catInfo = categoriesDisplay[catKey];
+            html += `
+                <div class="category-header">
+                    <span>${catInfo.emoji}</span>
+                    <span>${catInfo.he}</span>
+                </div>
+                <div class="document-group">
+            `;
+
+            catDocs.forEach(doc => {
+                const status = getStatusBadge(doc.status);
+
+                html += `
+                    <div class="document-item" id="doc-${doc.id}">
+                        <input type="checkbox" 
+                            onchange="toggleRemoval('${doc.id}')" 
+                            id="checkbox-${doc.id}"
+                            aria-label="סמן להסרה">
+                        <span class="document-icon">📄</span>
+                        <div class="document-name">
+                            ${doc.name}
+                        </div>
+                        <span class="status-badge ${status.class}">${status.text}</span>
+                        <button class="download-btn" disabled 
+                                title="הורדה (בקרוב)">
+                            ⬇️
+                        </button>
+                    </div>
+                `;
+            });
+
+            html += `</div>`;
+        }
+    });
+
+    container.innerHTML = html;
 }
+
+function getStatusBadge(status) {
+    switch (status) {
+        case 'Received':
+            return { text: 'התקבל', class: 'received' };
+        case 'Required_Missing':
+            return { text: 'חסר', class: 'missing' };
+        case 'Waived':
+            return { text: 'ויתור', class: 'waived' };
+        case 'Requires_Fix':
+            return { text: 'נדרש תיקון', class: 'review' };
+        default:
+            return { text: status || 'חסר', class: 'missing' };
+    }
+}
+
 
 // Toggle removal
 function toggleRemoval(id) {
@@ -411,15 +502,60 @@ function checkCustomDocDuplicate() {
     }
 }
 
+
+// Send Questionnaire for Not-Started Clients
+async function confirmSendQuestionnaire() {
+    // 1. Confirm
+    if (!confirm("האם אתה בטוח שברצונך לשלוח את השאלון ללקוח זה?")) return;
+
+    // 2. Auth check (requires admin token)
+    const token = localStorage.getItem('QKiwUBXVH@%#1gD7t@rB]<,dM.[NC5b_');
+    if (!token) {
+        alert("שגיאת הרשאה: עליך להתחבר דרך פורטל הניהול.");
+        return;
+    }
+
+    // 3. Send
+    // We assume we have report_id from URL even if not started? 
+    // Yes, from admin panel we link with report_id.
+
+    // Show local loading
+    const btn = document.querySelector('#not-started-view button');
+    const originalText = btn.textContent;
+    btn.textContent = 'שולח...';
+    btn.disabled = true;
+
+    try {
+        const response = await fetch(`${API_BASE}/admin-send-questionnaires`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                token: token,
+                report_ids: [REPORT_ID]
+            })
+        });
+
+        const data = await response.json();
+
+        if (data.ok) {
+            alert("השאלון נשלח בהצלחה! ✅");
+        } else {
+            alert("שגיאה בשליחה: " + (data.error || 'Unknown error'));
+        }
+    } catch (e) {
+        alert("שגיאת תקשורת");
+    } finally {
+        btn.textContent = originalText;
+        btn.disabled = false;
+    }
+}
+
 // Escape HTML
 function escapeHtml(text) {
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
 }
-
-// Load on page load
-window.addEventListener('DOMContentLoaded', loadDocuments);
 
 // Close detail input when clicking outside
 document.addEventListener('click', function (e) {
