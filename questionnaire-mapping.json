@@ -1,6 +1,6 @@
 {
   "version": "2026-01-25",
-  "updated_at": "2026-01-25T08:32:12.068Z",
+  "updated_at": "2026-01-25T11:11:27.592Z",
   "categories": {
     "hidden": {
       "id": "hidden",
@@ -587,9 +587,7 @@
       "type": "yes_no",
       "category": "pension",
       "condition": "yes",
-      "documents": [
-        "pension_withdrawal"
-      ],
+      "documents": [],
       "isSpouse": false,
       "perItem": false,
       "detailsField": null,
@@ -608,10 +606,12 @@
       "type": "checkbox",
       "category": "pension",
       "condition": null,
-      "documents": [],
+      "documents": [
+        "pension_withdrawal"
+      ],
       "isSpouse": false,
-      "perItem": false,
-      "detailsField": null,
+      "perItem": true,
+      "detailsField": "withdrawal_type",
       "linkedQuestion": null
     },
     {
@@ -688,9 +688,7 @@
       "type": "yes_no",
       "category": "nii",
       "condition": "yes",
-      "documents": [
-        "nii_allowance_cert_spouse"
-      ],
+      "documents": [],
       "isSpouse": true,
       "perItem": false,
       "detailsField": null,
@@ -1056,9 +1054,7 @@
       "type": "yes_no",
       "category": "insurance",
       "condition": "yes",
-      "documents": [
-        "insurance_tax_cert"
-      ],
+      "documents": [],
       "isSpouse": false,
       "perItem": false,
       "detailsField": null,
@@ -1082,7 +1078,10 @@
       ],
       "isSpouse": false,
       "perItem": true,
-      "detailsField": "issuer_name",
+      "detailsField": "company",
+      "fixedParams": {
+        "product": "קרן פנסיה"
+      },
       "linkedQuestion": null
     },
     {
@@ -1098,9 +1097,7 @@
       "type": "yes_no",
       "category": "insurance",
       "condition": "yes",
-      "documents": [
-        "insurance_tax_cert"
-      ],
+      "documents": [],
       "isSpouse": false,
       "perItem": false,
       "detailsField": null,
@@ -1124,7 +1121,10 @@
       ],
       "isSpouse": false,
       "perItem": true,
-      "detailsField": "issuer_name",
+      "detailsField": "company",
+      "fixedParams": {
+        "product": "קרן השתלמות"
+      },
       "linkedQuestion": null
     },
     {
@@ -1140,9 +1140,7 @@
       "type": "yes_no",
       "category": "insurance",
       "condition": "yes",
-      "documents": [
-        "insurance_tax_cert"
-      ],
+      "documents": [],
       "isSpouse": false,
       "perItem": false,
       "detailsField": null,
@@ -1166,7 +1164,10 @@
       ],
       "isSpouse": false,
       "perItem": true,
-      "detailsField": "issuer_name",
+      "detailsField": "company",
+      "fixedParams": {
+        "product": "אובדן כושר עבודה"
+      },
       "linkedQuestion": null
     },
     {
@@ -1182,9 +1183,7 @@
       "type": "yes_no",
       "category": "insurance",
       "condition": "yes",
-      "documents": [
-        "insurance_tax_cert"
-      ],
+      "documents": [],
       "isSpouse": false,
       "perItem": false,
       "detailsField": null,
@@ -1208,7 +1207,10 @@
       ],
       "isSpouse": false,
       "perItem": true,
-      "detailsField": "issuer_name",
+      "detailsField": "company",
+      "fixedParams": {
+        "product": "ביטוח חיים"
+      },
       "linkedQuestion": null
     },
     {

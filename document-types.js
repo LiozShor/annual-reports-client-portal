@@ -180,9 +180,17 @@ export const DOCUMENT_TYPES = {
     category: "benefits",
     aliases: ["NII_Allowance_Cert_Spouse"],
     airtable_type: "NII_Allowance_Cert_Spouse",
-    name_he: 'אישור שנתי מביטוח לאומי לשנת {year} בהתאם לסוג הקצבה של בן/בת הזוג - {name}',
-    name_en: "Annual NII certificate for {year} by benefit type (spouse) - {name}",
+    name_he: 'אישור שנתי מביטוח לאומי לשנת {year} בגין קצבת {benefit_type} (בן/בת הזוג) - {name}',
+    name_en: "Annual NII certificate for {year} for {benefit_type} allowance (spouse) - {name}",
     details: [
+      {
+        "key": "benefit_type",
+        "type": "text",
+        "label_he": "סוג הקצבה",
+        "label_en": "Benefit type",
+        "placeholder_he": "לדוגמה: נכות",
+        "placeholder_en": "e.g.: Disability"
+      },
       {
         "key": "name",
         "type": "text",

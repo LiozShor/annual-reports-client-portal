@@ -381,7 +381,7 @@ export const QUESTION_MAPPINGS = [
         type: "yes_no",
         category: "pension",
         condition: "yes",
-        documents: ["pension_withdrawal"],
+        documents: [],
         isSpouse: false,
         perItem: false,
         detailsField: null,
@@ -394,10 +394,10 @@ export const QUESTION_MAPPINGS = [
         type: "checkbox",
         category: "pension",
         condition: null,
-        documents: [],
+        documents: ["pension_withdrawal"],
         isSpouse: false,
-        perItem: false,
-        detailsField: null,
+        perItem: true,
+        detailsField: "withdrawal_type",
         linkedQuestion: null
     },
 
@@ -448,7 +448,7 @@ export const QUESTION_MAPPINGS = [
         type: "yes_no",
         category: "nii",
         condition: "yes",
-        documents: ["nii_allowance_cert_spouse"],
+        documents: [],
         isSpouse: true,
         perItem: false,
         detailsField: null,
@@ -688,7 +688,7 @@ export const QUESTION_MAPPINGS = [
         type: "yes_no",
         category: "insurance",
         condition: "yes",
-        documents: ["insurance_tax_cert"],
+        documents: [],
         isSpouse: false,
         perItem: false,
         detailsField: null,
@@ -704,7 +704,8 @@ export const QUESTION_MAPPINGS = [
         documents: ["insurance_tax_cert"],
         isSpouse: false,
         perItem: true,
-        detailsField: "issuer_name",
+        detailsField: "company",
+        fixedParams: { product: "קרן פנסיה" },
         linkedQuestion: null
     },
     {
@@ -714,7 +715,7 @@ export const QUESTION_MAPPINGS = [
         type: "yes_no",
         category: "insurance",
         condition: "yes",
-        documents: ["insurance_tax_cert"],
+        documents: [],
         isSpouse: false,
         perItem: false,
         detailsField: null,
@@ -730,7 +731,8 @@ export const QUESTION_MAPPINGS = [
         documents: ["insurance_tax_cert"],
         isSpouse: false,
         perItem: true,
-        detailsField: "issuer_name",
+        detailsField: "company",
+        fixedParams: { product: "קרן השתלמות" },
         linkedQuestion: null
     },
     {
@@ -740,7 +742,7 @@ export const QUESTION_MAPPINGS = [
         type: "yes_no",
         category: "insurance",
         condition: "yes",
-        documents: ["insurance_tax_cert"],
+        documents: [],
         isSpouse: false,
         perItem: false,
         detailsField: null,
@@ -756,7 +758,8 @@ export const QUESTION_MAPPINGS = [
         documents: ["insurance_tax_cert"],
         isSpouse: false,
         perItem: true,
-        detailsField: "issuer_name",
+        detailsField: "company",
+        fixedParams: { product: "אובדן כושר עבודה" },
         linkedQuestion: null
     },
     {
@@ -766,7 +769,7 @@ export const QUESTION_MAPPINGS = [
         type: "yes_no",
         category: "insurance",
         condition: "yes",
-        documents: ["insurance_tax_cert"],
+        documents: [],
         isSpouse: false,
         perItem: false,
         detailsField: null,
@@ -782,7 +785,8 @@ export const QUESTION_MAPPINGS = [
         documents: ["insurance_tax_cert"],
         isSpouse: false,
         perItem: true,
-        detailsField: "issuer_name",
+        detailsField: "company",
+        fixedParams: { product: "ביטוח חיים" },
         linkedQuestion: null
     },
     {
