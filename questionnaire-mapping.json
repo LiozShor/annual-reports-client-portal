@@ -1,6 +1,6 @@
 {
   "version": "2026-01-25",
-  "updated_at": "2026-01-25T11:11:27.592Z",
+  "updated_at": "2026-01-25T12:55:45.620Z",
   "categories": {
     "hidden": {
       "id": "hidden",
@@ -503,9 +503,7 @@
       "type": "yes_no",
       "category": "employment",
       "condition": "yes",
-      "documents": [
-        "form_106"
-      ],
+      "documents": [],
       "isSpouse": false,
       "perItem": false,
       "detailsField": null,
@@ -545,9 +543,7 @@
       "type": "yes_no",
       "category": "employment",
       "condition": "yes",
-      "documents": [
-        "form_106_spouse"
-      ],
+      "documents": [],
       "isSpouse": true,
       "perItem": false,
       "detailsField": null,
@@ -749,9 +745,7 @@
       "type": "yes_no",
       "category": "investments",
       "condition": "yes",
-      "documents": [
-        "form_867"
-      ],
+      "documents": [],
       "isSpouse": false,
       "perItem": false,
       "detailsField": null,
@@ -791,9 +785,7 @@
       "type": "yes_no",
       "category": "investments",
       "condition": "yes",
-      "documents": [
-        "form_867"
-      ],
+      "documents": [],
       "isSpouse": false,
       "perItem": false,
       "detailsField": null,
@@ -833,9 +825,7 @@
       "type": "yes_no",
       "category": "investments",
       "condition": "yes",
-      "documents": [
-        "crypto_report"
-      ],
+      "documents": [],
       "isSpouse": false,
       "perItem": false,
       "detailsField": null,
@@ -851,13 +841,15 @@
         "he": "פירוט",
         "en": "Details"
       },
-      "type": "text",
+      "type": "list",
       "category": "investments",
       "condition": null,
-      "documents": [],
+      "documents": [
+        "crypto_report"
+      ],
       "isSpouse": false,
-      "perItem": false,
-      "detailsField": null,
+      "perItem": true,
+      "detailsField": "platform",
       "linkedQuestion": null
     },
     {
