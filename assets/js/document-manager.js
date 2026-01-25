@@ -140,9 +140,33 @@ function displayDocuments() {
 
     let html = '';
 
+    // Create a lookup for Sort Order
+    const docTypeOrder = Object.keys(window.DocRegistry.DOCUMENT_TYPES);
+    const getDocIndex = (doc) => {
+        // Try to match type to index
+        // Similar fuzzy match logic as grouping
+        const typeKey = doc.type || doc.id;
+        let index = docTypeOrder.indexOf(typeKey);
+
+        if (index === -1 && typeKey) {
+            const lowerKey = String(typeKey).toLowerCase();
+            // Find matching definition to get its real key
+            const matchKey = Object.keys(window.DocRegistry.DOCUMENT_TYPES).find(k => {
+                const dt = window.DocRegistry.DOCUMENT_TYPES[k];
+                return (dt.id && dt.id.toLowerCase() === lowerKey) ||
+                    (dt.aliases && dt.aliases.some(a => a.toLowerCase() === lowerKey));
+            });
+            if (matchKey) index = docTypeOrder.indexOf(matchKey);
+        }
+        return index === -1 ? 9999 : index;
+    };
+
     categoryKeys.forEach(catKey => {
         const catDocs = groups[catKey];
         if (catDocs && catDocs.length > 0) {
+            // SORT DOCUMENTS MATCHING QUESTIONNAIRE ORDER
+            catDocs.sort((a, b) => getDocIndex(a) - getDocIndex(b));
+
             const catInfo = categoriesDisplay[catKey];
             html += `
                 <div class="category-header">
