@@ -8,6 +8,12 @@
  * Fetch from: https://raw.githubusercontent.com/LiozShor/annual-reports-client-portal/main/workflow-processor-n8n.js
  *
  * SINGLE SOURCE OF TRUTH - All workflow [02] logic lives here!
+ *
+ * ⚠️ DOCUMENT TITLE GENERATION:
+ * This file now delegates to ssot-document-generator.js for all title formatting
+ * Which implements: SSOT_required_documents_from_Tally_input.md
+ *
+ * The SSOT module must be fetched separately and passed to processAllMappings()
  */
 
 // ========== CONFIGURATION ==========
@@ -245,9 +251,10 @@ function buildAnswersTableHTML(tallyData, formLanguage) {
  * @param {Object} tallyData - Raw Tally webhook payload
  * @param {Object} mappingData - Full mapping file with { categories, document_types, question_mappings }
  * @param {Object} systemFields - System fields from extractSystemFields()
+ * @param {Object} ssotModule - SSOT document generator module (optional, for SSOT-compliant formatting)
  * @returns {Array} Array of document objects with category info
  */
-function processAllMappings(tallyData, mappingData, systemFields) {
+function processAllMappings(tallyData, mappingData, systemFields, ssotModule = null) {
   const body = tallyData.body || {};
   const eventData = body.data || {};
   const fields = Array.isArray(eventData.fields) ? eventData.fields : [];
@@ -341,7 +348,81 @@ function processAllMappings(tallyData, mappingData, systemFields) {
     return String(value).split(/[\n,]/).map(x => x.trim()).filter(Boolean);
   }
 
+  /**
+   * Map legacy document type IDs to SSOT template keys
+   * @param {string} typeId - Legacy type ID (e.g., 'form_106')
+   * @param {object} params - Parameters that may indicate which variant to use
+   * @returns {string} SSOT template key (e.g., 'form_106_client' or 'form_106_spouse')
+   */
+  function mapLegacyToSSOT(typeId, params) {
+    // Form 106: client vs spouse variant
+    if (typeId === 'form_106') {
+      return params.spouse_name ? 'form_106_spouse' : 'form_106_client';
+    }
+
+    // Pension withdrawal: check for 'other' variant
+    if (typeId === 'pension_withdrawal') {
+      return params.withdrawal_other_text ? 'pension_withdrawal_other' : 'pension_withdrawal';
+    }
+
+    // NII allowances: check type
+    if (typeId === 'nii_disability_allowance_cert') {
+      return params.spouse_name ? 'nii_disability_spouse' : 'nii_disability_client';
+    }
+    if (typeId === 'nii_maternity_allowance_cert') {
+      return 'nii_maternity';
+    }
+    if (typeId === 'nii_allowance_cert_spouse') {
+      return 'nii_generic_allowance';
+    }
+
+    // Foreign income variants
+    if (typeId === 'foreign_income_report') {
+      return 'foreign_income_evidence';
+    }
+
+    // Direct mappings (same name in SSOT)
+    const DIRECT_MAPPINGS = {
+      'form_867': 'form_867',
+      'crypto_report': 'crypto_report',
+      'residency_cert': 'residency_cert',
+      'id_appendix': 'id_appendix_with_children',
+      'child_id_appendix': 'child_id_appendix',
+      'special_ed_approval': 'special_ed_approval',
+      'child_disability_approval': 'child_disability_cert',
+      'alimony_judgment': 'alimony_judgment',
+      'rent_contract_income': 'rent_contract_income',
+      'rent_contract_expense': 'rent_contract_expense',
+      'inventory_list': 'inventory_list',
+      'insurance_tax_cert': 'insurance_deposit',
+      'army_release_cert': 'army_release_cert',
+      'degree_cert': 'degree_cert',
+      'medical_committee': 'medical_committee',
+      'donation_receipts': 'donation_receipts',
+      'memorial_receipts': 'memorial_receipts',
+      'institution_approval': 'institution_approval',
+      'gambling_win_cert': 'gambling_win_cert',
+      'wht_approval': 'wht_approval'
+    };
+
+    return DIRECT_MAPPINGS[typeId] || typeId;
+  }
+
   function formatDocumentName(typeId, params) {
+    // If SSOT module available, use it (PREFERRED)
+    if (ssotModule && ssotModule.formatDocumentTitle) {
+      try {
+        const ssotKey = mapLegacyToSSOT(typeId, params);
+        const result = ssotModule.formatDocumentTitle(ssotKey, params, { lang: 'he' });
+        // SSOT returns { he: '...', en: '...' } already formatted
+        return result;
+      } catch (err) {
+        console.warn(`SSOT formatting failed for ${typeId}, falling back to legacy:`, err.message);
+        // Fall through to legacy mode
+      }
+    }
+
+    // LEGACY MODE (fallback if SSOT not available)
     const docType = DOCUMENT_TYPES[typeId];
     if (!docType) return { he: typeId, en: typeId };
 
@@ -487,15 +568,33 @@ function processAllMappings(tallyData, mappingData, systemFields) {
 }
 
 /**
- * Deduplicate documents by type + issuer + person
+ * Deduplicate documents by document_key (SSOT-compliant)
+ * Also applies business rules when SSOT module available:
+ * - Form 867 deduplication by normalized institution name
+ * - Appendix consolidation (only ONE)
+ * - Foreign income FRA01 conditional logic
+ *
  * @param {Array} documents - Array of document objects
- * @returns {Array} Deduplicated array
+ * @param {Object} context - Context with answers, year, client_name, spouse_name (for SSOT)
+ * @returns {Array} Deduplicated and processed array
  */
-function deduplicateDocuments(documents) {
+function deduplicateDocuments(documents, context = {}) {
+  // If SSOT module available and context provided, use it (PREFERRED)
+  if (ssotModule && ssotModule.applyBusinessRules && context.answers) {
+    try {
+      return ssotModule.applyBusinessRules(documents, context);
+    } catch (err) {
+      console.warn('SSOT applyBusinessRules failed, falling back to simple dedup:', err.message);
+      // Fall through to legacy mode
+    }
+  }
+
+  // LEGACY MODE (fallback): Simple deduplication by document_key
   const uniqueMap = new Map();
 
   documents.forEach(doc => {
-    const key = `${doc.type}|||${doc.issuer_key || ''}|||${doc.person || 'client'}`;
+    // Use document_key if available (includes item-specific value)
+    const key = doc.document_key || `${doc.type}|||${doc.issuer_key || ''}|||${doc.person || 'client'}`;
 
     // Keep first occurrence
     if (!uniqueMap.has(key)) {

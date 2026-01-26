@@ -1,16 +1,22 @@
 /**
  * QUESTIONNAIRE MAPPING - SINGLE SOURCE OF TRUTH
  * ===============================================
- * 
+ *
  * This file defines the mapping between Tally questionnaire questions
  * and the documents that should be created based on responses.
- * 
+ *
+ * ⚠️ DOCUMENT TITLE GENERATION:
+ * This file maps questions → document type IDs.
+ * Actual document title generation MUST use:
+ * → n8n/ssot-document-generator.js
+ * → Which implements: SSOT_required_documents_from_Tally_input.md
+ *
  * DO NOT EDIT MANUALLY unless you know what you're doing.
  * Use the admin interface at: /admin/questionnaire-mapping-editor.html
- * 
+ *
  * After editing, regenerate JSON:
  * node generate-mapping-json.js
- * 
+ *
  * Then commit both files.
  */
 
