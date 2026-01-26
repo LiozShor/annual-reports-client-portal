@@ -2,7 +2,6 @@
  * DOCUMENT DISPLAY LIBRARY FOR n8n
  * =================================
  *
- * This is the n8n-compatible version (no ES6 exports)
  * Fetch from: https://raw.githubusercontent.com/LiozShor/annual-reports-client-portal/main/document-display-n8n.js
  */
 
@@ -85,7 +84,12 @@ function separateClientAndSpouse(documents) {
 }
 
 function generateDocumentListHTML(documents, options = {}) {
-  const { clientName = '', spouseName = '', language = 'he' } = options;
+  // Default options to avoid crash
+  options = options || {}; 
+  const clientName = options.client_name || ''; // Note: Changed to match input structure usually passed
+  const spouseName = options.spouse_name || '';
+  const language = options.language || 'he';
+  
   const isMarried = spouseName && spouseName.trim().length > 0;
 
   const grouped = groupDocumentsByCategory(documents);
@@ -139,14 +143,14 @@ function generateDocumentListHTML(documents, options = {}) {
     </div>`;
   });
 
-  return `<div style="margin-top:20px;padding:15px;background:#fff3cd;border-radius:8px;border-right:5px solid #ff9800;">
-    <h3>📄 מסמכים נדרשים</h3>
+  return `<div style="margin-top:20px;padding:15px;background:#fff3cd;border-radius:8px;border-right:5px solid #ff9800; direction: rtl; text-align: right;">
+    <h3 style="margin-top:0;">📄 מסמכים נדרשים</h3>
     ${html}
   </div>`;
 }
 
-// For n8n: return functions as object
-return {
+// Exports for Node.js / n8n
+module.exports = {
   formatDocumentName,
   groupDocumentsByCategory,
   separateClientAndSpouse,
