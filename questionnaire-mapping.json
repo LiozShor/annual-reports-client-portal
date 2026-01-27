@@ -1,6 +1,6 @@
 {
   "version": "2026-01-27",
-  "updated_at": "2026-01-27T09:41:39.446Z",
+  "updated_at": "2026-01-27T11:23:24.677Z",
   "categories": {
     "hidden": {
       "id": "hidden",
@@ -645,11 +645,11 @@
       "category": "nii",
       "condition": "yes",
       "documents": [
-        "nii_allowance_cert"
+        "nii_survivors_cert"
       ],
       "isSpouse": false,
       "perItem": false,
-      "detailsField": null,
+      "detailsField": "survivor_details",
       "linkedQuestion": "nii_survivors_details"
     },
     {
@@ -725,11 +725,11 @@
       "category": "nii",
       "condition": "yes",
       "documents": [
-        "nii_allowance_cert_spouse"
+        "nii_survivors_cert_spouse"
       ],
       "isSpouse": true,
       "perItem": false,
-      "detailsField": null,
+      "detailsField": "survivor_details",
       "linkedQuestion": "nii_spouse_survivors_details"
     },
     {
@@ -1630,13 +1630,15 @@
         "he": "אנא פרט את ההכנסות הנוספות",
         "en": "Please describe the additional income sources"
       },
-      "type": "text",
+      "type": "list",
       "category": "other",
       "condition": null,
-      "documents": [],
+      "documents": [
+        "other_income_doc"
+      ],
       "isSpouse": false,
-      "perItem": false,
-      "detailsField": null,
+      "perItem": true,
+      "detailsField": "other_income_text",
       "linkedQuestion": null
     }
   ]
