@@ -587,7 +587,7 @@ export const QUESTION_MAPPINGS = [
         type: "yes_no",
         category: "investments",
         condition: "yes",
-        documents: ["gambling_win_cert"],
+        documents: [],  // Handled by special logic in workflow-processor-n8n.js
         isSpouse: false,
         perItem: false,
         detailsField: null,
@@ -613,7 +613,7 @@ export const QUESTION_MAPPINGS = [
         type: "yes_no",
         category: "investments",
         condition: "yes",
-        documents: ["foreign_income_report"],
+        documents: [],  // Handled by special logic in workflow-processor-n8n.js (SSOT Rule 1.10)
         isSpouse: false,
         perItem: false,
         detailsField: null,
@@ -766,8 +766,8 @@ export const QUESTION_MAPPINGS = [
         documents: ["insurance_tax_cert"],
         isSpouse: false,
         perItem: true,
-        detailsField: "company",
-        fixedParams: { product: "קרן פנסיה" },
+        detailsField: "company_name",
+        fixedParams: { deposit_type: "קרן פנסיה" },
         linkedQuestion: null
     },
     {
@@ -793,8 +793,8 @@ export const QUESTION_MAPPINGS = [
         documents: ["insurance_tax_cert"],
         isSpouse: false,
         perItem: true,
-        detailsField: "company",
-        fixedParams: { product: "קרן השתלמות" },
+        detailsField: "company_name",
+        fixedParams: { deposit_type: "קרן השתלמות" },
         linkedQuestion: null
     },
     {
@@ -820,8 +820,8 @@ export const QUESTION_MAPPINGS = [
         documents: ["insurance_tax_cert"],
         isSpouse: false,
         perItem: true,
-        detailsField: "company",
-        fixedParams: { product: "אובדן כושר עבודה" },
+        detailsField: "company_name",
+        fixedParams: { deposit_type: "אובדן כושר עבודה" },
         linkedQuestion: null
     },
     {
@@ -847,8 +847,8 @@ export const QUESTION_MAPPINGS = [
         documents: ["insurance_tax_cert"],
         isSpouse: false,
         perItem: true,
-        detailsField: "company",
-        fixedParams: { product: "ביטוח חיים" },
+        detailsField: "company_name",
+        fixedParams: { deposit_type: "ביטוח חיים" },
         linkedQuestion: null
     },
     {
@@ -1037,10 +1037,10 @@ export const QUESTION_MAPPINGS = [
         type: "list",
         category: "withholding",
         condition: null,
-        documents: ["wht_approval"],
+        documents: ["wht_income_tax"],
         isSpouse: false,
         perItem: true,
-        detailsField: "issuer_name",
+        detailsField: "withholding_client_name",
         linkedQuestion: null
     },
     {
@@ -1063,10 +1063,10 @@ export const QUESTION_MAPPINGS = [
         type: "list",
         category: "withholding",
         condition: null,
-        documents: ["wht_approval"],
+        documents: ["wht_nii"],
         isSpouse: false,
         perItem: true,
-        detailsField: "issuer_name",
+        detailsField: "withholding_client_name",
         linkedQuestion: null
     },
 
