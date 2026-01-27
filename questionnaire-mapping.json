@@ -1,6 +1,6 @@
 {
-  "version": "2026-01-25",
-  "updated_at": "2026-01-25T12:55:45.620Z",
+  "version": "2026-01-27",
+  "updated_at": "2026-01-27T09:41:39.446Z",
   "categories": {
     "hidden": {
       "id": "hidden",
@@ -730,6 +730,25 @@
       "isSpouse": true,
       "perItem": false,
       "detailsField": null,
+      "linkedQuestion": "nii_spouse_survivors_details"
+    },
+    {
+      "id": "nii_spouse_survivors_details",
+      "tallyKeys": {
+        "he": "question_zqMJqk",
+        "en": "question_zqMJqk"
+      },
+      "label": {
+        "he": "פירוט קצבת שארים בן/בת זוג",
+        "en": "Spouse survivors benefit details"
+      },
+      "type": "text",
+      "category": "nii",
+      "condition": null,
+      "documents": [],
+      "isSpouse": true,
+      "perItem": false,
+      "detailsField": null,
       "linkedQuestion": null
     },
     {
@@ -933,6 +952,25 @@
       "linkedQuestion": null
     },
     {
+      "id": "investments_foreign_income_type",
+      "tallyKeys": {
+        "he": "question_a65VvX",
+        "en": "question_a65VvX"
+      },
+      "label": {
+        "he": "סוג הכנסה מחו\"ל",
+        "en": "Foreign income type"
+      },
+      "type": "checkbox",
+      "category": "investments",
+      "condition": null,
+      "documents": [],
+      "isSpouse": false,
+      "perItem": false,
+      "detailsField": null,
+      "linkedQuestion": null
+    },
+    {
       "id": "realestate_rental_income",
       "tallyKeys": {
         "he": "question_7WLGM0",
@@ -948,6 +986,25 @@
       "documents": [
         "rent_contract_income"
       ],
+      "isSpouse": false,
+      "perItem": false,
+      "detailsField": null,
+      "linkedQuestion": "realestate_rental_income_amount"
+    },
+    {
+      "id": "realestate_rental_income_amount",
+      "tallyKeys": {
+        "he": "question_K6xQyA",
+        "en": "question_K6xQyA"
+      },
+      "label": {
+        "he": "שכ\"ד חודשי שהתקבל",
+        "en": "Monthly rent received"
+      },
+      "type": "text",
+      "category": "realestate",
+      "condition": null,
+      "documents": [],
       "isSpouse": false,
       "perItem": false,
       "detailsField": null,
@@ -969,6 +1026,25 @@
       "documents": [
         "rent_contract_expense"
       ],
+      "isSpouse": false,
+      "perItem": false,
+      "detailsField": null,
+      "linkedQuestion": "realestate_rental_expense_amount"
+    },
+    {
+      "id": "realestate_rental_expense_amount",
+      "tallyKeys": {
+        "he": "question_BXdN0R",
+        "en": "question_BXdN0R"
+      },
+      "label": {
+        "he": "שכ\"ד חודשי ששולם",
+        "en": "Monthly rent paid"
+      },
+      "type": "text",
+      "category": "realestate",
+      "condition": null,
+      "documents": [],
       "isSpouse": false,
       "perItem": false,
       "detailsField": null,
@@ -1458,9 +1534,7 @@
       "type": "yes_no",
       "category": "withholding",
       "condition": "yes",
-      "documents": [
-        "wht_approval"
-      ],
+      "documents": [],
       "isSpouse": false,
       "perItem": false,
       "detailsField": null,
@@ -1500,9 +1574,7 @@
       "type": "yes_no",
       "category": "withholding",
       "condition": "yes",
-      "documents": [
-        "wht_approval"
-      ],
+      "documents": [],
       "isSpouse": false,
       "perItem": false,
       "detailsField": null,
