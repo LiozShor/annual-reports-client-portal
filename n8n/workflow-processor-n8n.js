@@ -285,7 +285,7 @@ function processAllMappings(tallyData, mappingData, systemFields, ssotModule = n
     "crypto_report": "Crypto_Report",
     "residency_cert": "Residency_Cert",
     "id_appendix": "ID_Appendix",
-    "child_id_appendix": "Child_ID_Appendix",
+    "child_id_appendix": "ID_Appendix",  // Consolidated to ID_Appendix (SSOT Rule 1.3)
     "special_ed_approval": "Special_Ed_Approval",
     "child_disability_approval": "Child_Disability_Approval",
     "alimony_judgment": "Alimony_Judgment",
@@ -402,12 +402,12 @@ function mapLegacyToSSOT(typeId, params) {
     'form_867': 'form_867',
     'crypto_report': 'crypto_report',
     'residency_cert': 'residency_cert',
-    'id_appendix': 'id_appendix', // Fixed to generic
-    'child_id_appendix': 'child_id_appendix',
+    'id_appendix': 'id_appendix',
+    'child_id_appendix': 'id_appendix',  // Consolidated to id_appendix (SSOT Rule 1.3)
     'special_ed_approval': 'special_ed_approval',
     'child_disability_approval': 'child_disability_cert',
-    'nii_allowance_cert': 'nii_generic_allowance', // Will be overridden by NII logic
-    'nii_allowance_cert_spouse': 'nii_generic_allowance',
+    'nii_allowance_cert': 'nii_generic_client', // Client NII, will be overridden by NII logic for specific types
+    'nii_allowance_cert_spouse': 'nii_generic_spouse', // Spouse NII, will be overridden by NII logic for specific types
     'nii_survivors_cert': 'nii_survivors',
     'nii_survivors_cert_spouse': 'nii_survivors_spouse',
     'insurance_tax_cert': 'insurance_deposit',

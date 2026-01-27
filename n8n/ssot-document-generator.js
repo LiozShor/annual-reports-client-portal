@@ -7,7 +7,7 @@
 const SSOT_TEMPLATES = {
   residency_cert: {
     he: 'אישור תושבות לשנת **{year}** – **{city_name}**',
-    en: 'Residency certificate for **{year}** – **{city_name}**',
+    en: 'Residency certificate for **{year}** — **{city_name}**',
     params: ['year', 'city_name']
   },
   id_appendix: {
@@ -15,15 +15,10 @@ const SSOT_TEMPLATES = {
     en: 'Updated ID appendix',
     params: []
   },
-  id_appendix_with_status_change: {
-    he: 'ספח ת"ז מעודכן',
-    en: 'Updated ID appendix',
+  marital_status_change: {
+    he: 'מסמכי שינוי סטטוס משפחתי בשנת **{year}** – **{client_name}** – **{status_change_details}**',
+    en: 'Marital status change documents in **{year}** — **{client_name}** — **{status_change_details}**',
     params: ['year', 'client_name', 'status_change_details']
-  },
-  child_id_appendix: {
-    he: 'ספח ת״ז מעודכן)',
-    en: 'Updated ID appendix',
-    params: []
   },
   special_ed_approval: {
     he: 'אישור ועדת השמה/ועדת שילוב (חינוך מיוחד)',
@@ -36,14 +31,14 @@ const SSOT_TEMPLATES = {
     params: ['year']
   },
   form_106_client: {
-    he: 'טופס 106 לשנת **{year}** – **{employer}**',
-    en: 'Form 106 for **{year}** — **{employer}**',
-    params: ['year', 'employer']
+    he: 'טופס 106 לשנת **{year}** – **{employer_name}**',
+    en: 'Form 106 for **{year}** — **{employer_name}**',
+    params: ['year', 'employer_name']
   },
   form_106_spouse: {
-    he: 'טופס 106 לשנת **{year}** – **{spouse_name}** – **{employer}**',
-    en: 'Form 106 for **{year}** — **{spouse_name}** — **{employer}**',
-    params: ['year', 'spouse_name', 'employer']
+    he: 'טופס 106 לשנת **{year}** – **{spouse_name}** – **{employer_name}**',
+    en: 'Form 106 for **{year}** — **{spouse_name}** — **{employer_name}**',
+    params: ['year', 'spouse_name', 'employer_name']
   },
   nii_disability_client: {
     he: 'אישור שנתי לשנת **{year}** על תקבולי דמי נכות שהתקבלו מביטוח לאומי עבור - **{client_name}**',
@@ -60,10 +55,15 @@ const SSOT_TEMPLATES = {
     en: 'Annual certificate for **{year}** for maternity payments from National Insurance — for **{name}**',
     params: ['year', 'name']
   },
-  nii_generic_allowance: {
-    he: 'אישור שנתי לשנת **{year}** על תקבולי **{allowance_type}** מביטוח לאומי עבור - **{name}**',
-    en: 'Annual certificate for **{year}** for **{allowance_type}** from National Insurance — for **{name}**',
-    params: ['year', 'allowance_type', 'name']
+  nii_generic_client: {
+    he: 'אישור שנתי לשנת **{year}** על תקבולי **{allowance_type}** מביטוח לאומי עבור - **{client_name}**',
+    en: 'Annual certificate for **{year}** for **{allowance_type}** from National Insurance — for **{client_name}**',
+    params: ['year', 'allowance_type', 'client_name']
+  },
+  nii_generic_spouse: {
+    he: 'אישור שנתי לשנת **{year}** על תקבולי **{allowance_type}** מביטוח לאומי עבור - **{spouse_name}**',
+    en: 'Annual certificate for **{year}** for **{allowance_type}** from National Insurance — for **{spouse_name}**',
+    params: ['year', 'allowance_type', 'spouse_name']
   },
   nii_survivors: {
     he: 'אישור שנתי לשנת **{year}** – קצבת שארים (ביטוח לאומי) – **{survivor_details}**',
@@ -226,7 +226,7 @@ function selectNIITemplate(benefitType, isSpouse = false) {
   if (normalized === 'דמי לידה' || normalized.toLowerCase() === 'maternity benefits') {
     return 'nii_maternity';
   }
-  return 'nii_generic_allowance';
+  return isSpouse ? 'nii_generic_spouse' : 'nii_generic_client';
 }
 
 function applyBusinessRules(documents, context) {
@@ -243,14 +243,17 @@ function applyBusinessRules(documents, context) {
     }
   });
 
-  const appendixDocs = processed.filter(d => d.type === 'ID_Appendix' || d.type === 'Child_ID_Appendix');
+  // SSOT Rule 1.3: Consolidate ALL appendix documents to ONE T002
+  // Multiple triggers (marital change, new child, etc.) → still only ONE appendix
+  const appendixDocs = processed.filter(d => d.type === 'ID_Appendix');
   if (appendixDocs.length > 1) {
+    // Keep only the first, remove the rest
     appendixDocs.slice(1).forEach(doc => doc._remove = true);
-    if (appendixDocs[0]) {
-      // Use T002 generic
-      appendixDocs[0].issuer_name = 'ספח ת״ז מעודכן';
-      appendixDocs[0].issuer_name_en = 'Updated ID appendix (Safach TZ)';
-    }
+  }
+  // Ensure the remaining appendix has canonical title
+  if (appendixDocs.length > 0 && appendixDocs[0]) {
+    appendixDocs[0].issuer_name = 'ספח ת״ז מעודכן';
+    appendixDocs[0].issuer_name_en = 'Updated ID appendix (Safach TZ)';
   }
 
   const { answers } = context;

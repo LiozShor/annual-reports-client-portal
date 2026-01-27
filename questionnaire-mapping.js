@@ -266,7 +266,7 @@ export const QUESTION_MAPPINGS = [
         type: "yes_no",
         category: "children",
         condition: "yes",
-        documents: ["child_id_appendix"],
+        documents: ["id_appendix"],  // Changed from child_id_appendix - consolidates to T002 (SSOT Rule 1.3)
         isSpouse: false,
         perItem: false,
         detailsField: null,
