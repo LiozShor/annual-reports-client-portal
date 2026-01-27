@@ -292,7 +292,10 @@ function processAllMappings(tallyData, mappingData, systemFields, ssotModule = n
     "pension_withdrawal": "Pension_Withdrawal",
     "nii_disability_allowance_cert": "NII_Allowance_Cert",
     "nii_allowance_cert_spouse": "NII_Allowance_Cert_Spouse",
+    "nii_allowance_cert": "NII_Allowance_Cert",
     "nii_maternity_allowance_cert": "NII_Allowance_Cert",
+    "nii_survivors_cert": "NII_Survivors_Cert",
+    "nii_survivors_cert_spouse": "NII_Survivors_Cert_Spouse",
     "rent_contract_income": "Rent_Contract_Income",
     "rent_contract_expense": "Rent_Contract_Expense",
     "inventory_list": "Inventory_List",
@@ -303,11 +306,14 @@ function processAllMappings(tallyData, mappingData, systemFields, ssotModule = n
     "donation_receipts": "Donation_Receipts",
     "memorial_receipts": "Memorial_Receipts",
     "institution_approval": "Institution_Approval",
-    "foreign_income_report": "Foreign_Income_Report",
+    "foreign_income_evidence": "Foreign_Income_Evidence",
+    "foreign_tax_return": "Foreign_Tax_Return",
     "gambling_win_cert": "Gambling_Win_Cert",
+    "other_income_doc": "Other_Income_Doc",
     "general_doc": "General_Doc",
-    "wht_approval": "WHT_Approval_IncomeTax",
-    "wht_approval_nii": "WHT_Approval_NII"
+    "wht_income_tax": "WHT_Income_Tax",
+    "wht_nii": "WHT_NII",
+    "wht_approval": "WHT_Approval_IncomeTax"
   };
 
   // Client/Spouse names
@@ -419,9 +425,15 @@ function processAllMappings(tallyData, mappingData, systemFields, ssotModule = n
       return 'foreign_income_evidence';
     }
 
-    // Withholding: check which type
+    // Withholding: separate types
+    if (typeId === 'wht_income_tax') {
+      return 'wht_income_tax';
+    }
+    if (typeId === 'wht_nii') {
+      return 'wht_nii';
+    }
     if (typeId === 'wht_approval') {
-      // This will be determined by the mapping context (income tax vs NII)
+      // Legacy support
       return params.withholding_type === 'nii' ? 'wht_nii' : 'wht_income_tax';
     }
 
@@ -446,7 +458,9 @@ function processAllMappings(tallyData, mappingData, systemFields, ssotModule = n
       'memorial_receipts': 'memorial_receipts',
       'institution_approval': 'institution_approval',
       'gambling_win_cert': 'gambling_win_cert',
-      'other_income_doc': 'other_income_doc'
+      'other_income_doc': 'other_income_doc',
+      'foreign_income_evidence': 'foreign_income_evidence',
+      'foreign_tax_return': 'foreign_tax_return'
     };
 
     return DIRECT_MAPPINGS[typeId] || typeId;
@@ -668,6 +682,58 @@ function processAllMappings(tallyData, mappingData, systemFields, ssotModule = n
           const names = formatDocumentName('pension_withdrawal', params);
           addDoc(pensionMapping, 'pension_withdrawal', names.he, names.en, rawItem);
         }
+      });
+    }
+  }
+
+  // Special handling: Foreign income (SSOT Rule 1.10)
+  const foreignIncomeMapping = QUESTION_MAPPINGS.find(m => m.id === "investments_foreign_income");
+  if (foreignIncomeMapping) {
+    const foreignIncomeAnswer = answers['question_e6Q4vl']; // "היו לך הכנסות מחו״ל?"
+    if (foreignIncomeAnswer === 'כן' || foreignIncomeAnswer === 'yes') {
+      const returnFiled = answers['question_487oPA']; // "הוגש דו״ח מס במדינה?"
+      const country = answers['question_WNEy1k'] || 'Unknown';
+      const incomeTypesRaw = answers['question_a65VvX'] || '';
+
+      if (returnFiled === 'כן' || returnFiled === 'yes') {
+        // ONLY request tax return (T1602)
+        const params = {
+          year: tax_year,
+          country: cleanAndBold(country)
+        };
+        const names = formatDocumentName('foreign_tax_return', params);
+        addDoc(foreignIncomeMapping, 'foreign_tax_return', names.he, names.en, 'foreign_return');
+      } else {
+        // ONLY request evidence docs (T1601), one per income type
+        const incomeTypes = splitListItems(incomeTypesRaw);
+        incomeTypes.forEach(incomeType => {
+          const params = {
+            year: tax_year,
+            country: cleanAndBold(country),
+            income_type: cleanAndBold(incomeType)
+          };
+          const names = formatDocumentName('foreign_income_evidence', params);
+          addDoc(foreignIncomeMapping, 'foreign_income_evidence', names.he, names.en, incomeType);
+        });
+      }
+    }
+  }
+
+  // Special handling: Gambling/Prizes - split by source
+  const gamblingMapping = QUESTION_MAPPINGS.find(m => m.id === "investments_gambling");
+  if (gamblingMapping) {
+    const gamblingAnswer = answers['question_QDeLkX']; // "היו הכנסות מהימורים?"
+    if (gamblingAnswer === 'כן' || gamblingAnswer === 'yes') {
+      const sourcesRaw = answers['question_9W9VM5'] || ''; // Details
+      const sources = splitListItems(sourcesRaw);
+
+      sources.forEach(source => {
+        const params = {
+          year: tax_year,
+          gambling_source: cleanAndBold(source)
+        };
+        const names = formatDocumentName('gambling_win_cert', params);
+        addDoc(gamblingMapping, 'gambling_win_cert', names.he, names.en, source);
       });
     }
   }

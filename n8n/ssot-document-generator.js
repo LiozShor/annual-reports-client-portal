@@ -162,14 +162,14 @@ const SSOT_TEMPLATES = {
   // ============ DEPOSITS (EXACT SSOT WORDING!) ============
 
   insurance_deposit: {
-    he: 'אישור שנתי למס הכנסה לשנת **{year}** (**מקוצר**) (נקרא גם דוח שנתי מקוצר) על ההפקדות ל**{deposit_type}** ב**"{company_name}"**',
-    en: 'Annual tax certificate for **{year}** (**shortened**) (also called shortened annual report) for contributions to **{deposit_type}** at **"{company_name}"**',
+    he: 'אישור שנתי למס הכנסה לשנת **{year}** (נקרא גם דוח שנתי **מקוצר**) על ההפקדות ל**{deposit_type}** ב**"{company_name}"**',
+    en: 'Annual tax certificate for **{year}** (also called shortened annual report) for contributions to **{deposit_type}** at **"{company_name}"**',
     params: ['year', 'deposit_type', 'company_name'],
     category: 'insurance',
     notes: [
-      'CRITICAL: Must include (נקרא גם דוח שנתי מקוצר)',
+      'CRITICAL: Parentheses: (נקרא גם דוח שנתי **מקוצר**)',
       'CRITICAL: Must include על ההפקדות',
-      'CRITICAL: מקוצר must be bold',
+      'CRITICAL: מקוצר must be bold INSIDE the legal phrase',
       'CRITICAL: Company name in quotes and bold'
     ]
   },

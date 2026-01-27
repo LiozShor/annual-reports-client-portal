@@ -1,6 +1,6 @@
 {
   "version": "2026-01-27",
-  "updated_at": "2026-01-27T11:23:24.677Z",
+  "updated_at": "2026-01-27T14:13:36.782Z",
   "categories": {
     "hidden": {
       "id": "hidden",
@@ -884,9 +884,7 @@
       "type": "yes_no",
       "category": "investments",
       "condition": "yes",
-      "documents": [
-        "gambling_win_cert"
-      ],
+      "documents": [],
       "isSpouse": false,
       "perItem": false,
       "detailsField": null,
@@ -924,9 +922,7 @@
       "type": "yes_no",
       "category": "investments",
       "condition": "yes",
-      "documents": [
-        "foreign_income_report"
-      ],
+      "documents": [],
       "isSpouse": false,
       "perItem": false,
       "detailsField": null,
@@ -1146,9 +1142,9 @@
       ],
       "isSpouse": false,
       "perItem": true,
-      "detailsField": "company",
+      "detailsField": "company_name",
       "fixedParams": {
-        "product": "קרן פנסיה"
+        "deposit_type": "קרן פנסיה"
       },
       "linkedQuestion": null
     },
@@ -1189,9 +1185,9 @@
       ],
       "isSpouse": false,
       "perItem": true,
-      "detailsField": "company",
+      "detailsField": "company_name",
       "fixedParams": {
-        "product": "קרן השתלמות"
+        "deposit_type": "קרן השתלמות"
       },
       "linkedQuestion": null
     },
@@ -1232,9 +1228,9 @@
       ],
       "isSpouse": false,
       "perItem": true,
-      "detailsField": "company",
+      "detailsField": "company_name",
       "fixedParams": {
-        "product": "אובדן כושר עבודה"
+        "deposit_type": "אובדן כושר עבודה"
       },
       "linkedQuestion": null
     },
@@ -1275,9 +1271,9 @@
       ],
       "isSpouse": false,
       "perItem": true,
-      "detailsField": "company",
+      "detailsField": "company_name",
       "fixedParams": {
-        "product": "ביטוח חיים"
+        "deposit_type": "ביטוח חיים"
       },
       "linkedQuestion": null
     },
@@ -1554,11 +1550,11 @@
       "category": "withholding",
       "condition": null,
       "documents": [
-        "wht_approval"
+        "wht_income_tax"
       ],
       "isSpouse": false,
       "perItem": true,
-      "detailsField": "issuer_name",
+      "detailsField": "withholding_client_name",
       "linkedQuestion": null
     },
     {
@@ -1594,11 +1590,11 @@
       "category": "withholding",
       "condition": null,
       "documents": [
-        "wht_approval"
+        "wht_nii"
       ],
       "isSpouse": false,
       "perItem": true,
-      "detailsField": "issuer_name",
+      "detailsField": "withholding_client_name",
       "linkedQuestion": null
     },
     {
