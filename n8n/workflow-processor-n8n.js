@@ -507,15 +507,28 @@ function processAllMappings(tallyData, mappingData, systemFields, ssotModule = n
 
   // Data containers
   const out = [];
-  const seen = new Set();
+  const seen = new Map();
 
   function addDoc(mapping, docTypeId, issuer_name_he, issuer_name_en, itemRaw = "static") {
-    const stepKey = cleanKeyPart(mapping.id || "mapping");
-    const itemKey = cleanKeyPart(itemRaw || "static");
-    const document_key = `${docTypeId}_${reportId}_${stepKey}_${itemKey}`;
+    // Build unique key from: report_id + year + type + person + item
+    // This ensures uniqueness across all clients and years
+    const person = mapping.isSpouse ? 'spouse' : 'client';
+    const itemKey = cleanKeyPart(itemRaw || 'static');
 
-    if (seen.has(document_key)) return;
-    seen.add(document_key);
+    // Format: docType_reportId_year_person_item
+    // Example: form_106_recABC123_2025_client_Intel
+    let document_key = `${docTypeId}_${reportId}_${tax_year}_${person}_${itemKey}`;
+
+    // Handle collisions (same employer name from different mappings, etc.)
+    let counter = 0;
+    let finalKey = document_key;
+    while (seen.has(finalKey)) {
+      counter++;
+      finalKey = `${document_key}_${counter}`;
+    }
+
+    document_key = finalKey;
+    seen.set(document_key, true);
 
     const airtableType = AIRTABLE_TYPE_MAP[docTypeId] || docTypeId;
     const categoryId = getCategoryId(mapping.category);
