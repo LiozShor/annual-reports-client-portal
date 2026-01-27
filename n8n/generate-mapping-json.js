@@ -7,8 +7,8 @@
 const fs = require('fs');
 const path = require('path');
 
-// Read the JS file
-const jsPath = path.join(__dirname, 'questionnaire-mapping.js');
+// Read the JS file (located in parent directory - project root)
+const jsPath = path.join(__dirname, '..', 'questionnaire-mapping.js');
 const jsContent = fs.readFileSync(jsPath, 'utf8');
 
 // Extract the data by evaluating the JS (remove export keywords for Node compatibility)
@@ -24,8 +24,8 @@ const jsonData = {
     mappings: data.QUESTION_MAPPINGS
 };
 
-// Write the JSON file
-const jsonPath = path.join(__dirname, 'questionnaire-mapping.json');
+// Write the JSON file (to parent directory - project root)
+const jsonPath = path.join(__dirname, '..', 'questionnaire-mapping.json');
 fs.writeFileSync(jsonPath, JSON.stringify(jsonData, null, 2));
 
 console.log(`Generated questionnaire-mapping.json with ${data.QUESTION_MAPPINGS.length} mappings`);

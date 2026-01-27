@@ -484,6 +484,20 @@ export const QUESTION_MAPPINGS = [
         isSpouse: true,
         perItem: false,
         detailsField: null,
+        linkedQuestion: "nii_spouse_survivors_details"
+    },
+    // DATA-ONLY: Spouse survivors benefit details (for title param lookup)
+    {
+        id: "nii_spouse_survivors_details",
+        tallyKeys: { he: "question_zqMJqk", en: "question_zqMJqk" },
+        label: { he: "פירוט קצבת שארים בן/בת זוג", en: "Spouse survivors benefit details" },
+        type: "text",
+        category: "nii",
+        condition: null,
+        documents: [],
+        isSpouse: true,
+        perItem: false,
+        detailsField: null,
         linkedQuestion: null
     },
 
@@ -618,6 +632,20 @@ export const QUESTION_MAPPINGS = [
         detailsField: null,
         linkedQuestion: null
     },
+    // DATA-ONLY: Foreign income type (for title param lookup)
+    {
+        id: "investments_foreign_income_type",
+        tallyKeys: { he: "question_a65VvX", en: "question_a65VvX" },
+        label: { he: "סוג הכנסה מחו\"ל", en: "Foreign income type" },
+        type: "checkbox",
+        category: "investments",
+        condition: null,
+        documents: [],
+        isSpouse: false,
+        perItem: false,
+        detailsField: null,
+        linkedQuestion: null
+    },
 
     // ============ REAL ESTATE ============
     {
@@ -631,6 +659,20 @@ export const QUESTION_MAPPINGS = [
         isSpouse: false,
         perItem: false,
         detailsField: null,
+        linkedQuestion: "realestate_rental_income_amount"
+    },
+    // DATA-ONLY: Monthly rent received (for title param lookup)
+    {
+        id: "realestate_rental_income_amount",
+        tallyKeys: { he: "question_K6xQyA", en: "question_K6xQyA" },
+        label: { he: "שכ\"ד חודשי שהתקבל", en: "Monthly rent received" },
+        type: "text",
+        category: "realestate",
+        condition: null,
+        documents: [],
+        isSpouse: false,
+        perItem: false,
+        detailsField: null,
         linkedQuestion: null
     },
     {
@@ -641,6 +683,20 @@ export const QUESTION_MAPPINGS = [
         category: "realestate",
         condition: "yes",
         documents: ["rent_contract_expense"],
+        isSpouse: false,
+        perItem: false,
+        detailsField: null,
+        linkedQuestion: "realestate_rental_expense_amount"
+    },
+    // DATA-ONLY: Monthly rent paid (for title param lookup)
+    {
+        id: "realestate_rental_expense_amount",
+        tallyKeys: { he: "question_BXdN0R", en: "question_BXdN0R" },
+        label: { he: "שכ\"ד חודשי ששולם", en: "Monthly rent paid" },
+        type: "text",
+        category: "realestate",
+        condition: null,
+        documents: [],
         isSpouse: false,
         perItem: false,
         detailsField: null,
@@ -968,7 +1024,7 @@ export const QUESTION_MAPPINGS = [
         type: "yes_no",
         category: "withholding",
         condition: "yes",
-        documents: ["wht_approval"],
+        documents: [],  // FIXED: Docs created by perItem child (withholding_income_tax_clients), not boolean
         isSpouse: false,
         perItem: false,
         detailsField: null,
@@ -994,7 +1050,7 @@ export const QUESTION_MAPPINGS = [
         type: "yes_no",
         category: "withholding",
         condition: "yes",
-        documents: ["wht_approval"],
+        documents: [],  // FIXED: Docs created by perItem child (withholding_nii_clients), not boolean
         isSpouse: false,
         perItem: false,
         detailsField: null,
