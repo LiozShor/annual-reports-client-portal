@@ -428,10 +428,10 @@ export const QUESTION_MAPPINGS = [
         type: "yes_no",
         category: "nii",
         condition: "yes",
-        documents: ["nii_allowance_cert"],
+        documents: ["nii_survivors_cert"],
         isSpouse: false,
         perItem: false,
-        detailsField: null,
+        detailsField: "survivor_details",
         linkedQuestion: "nii_survivors_details"
     },
     {
@@ -480,10 +480,10 @@ export const QUESTION_MAPPINGS = [
         type: "yes_no",
         category: "nii",
         condition: "yes",
-        documents: ["nii_allowance_cert_spouse"],
+        documents: ["nii_survivors_cert_spouse"],
         isSpouse: true,
         perItem: false,
-        detailsField: null,
+        detailsField: "survivor_details",
         linkedQuestion: "nii_spouse_survivors_details"
     },
     // DATA-ONLY: Spouse survivors benefit details (for title param lookup)
@@ -1088,13 +1088,13 @@ export const QUESTION_MAPPINGS = [
         id: "other_additional_income_details",
         tallyKeys: { he: "question_d6YJXA", en: "question_oyA8Z1" },
         label: { he: "אנא פרט את ההכנסות הנוספות", en: "Please describe the additional income sources" },
-        type: "text",
+        type: "list",
         category: "other",
         condition: null,
-        documents: [],
+        documents: ["other_income_doc"],
         isSpouse: false,
-        perItem: false,
-        detailsField: null,
+        perItem: true,
+        detailsField: "other_income_text",
         linkedQuestion: null
     }
 ];

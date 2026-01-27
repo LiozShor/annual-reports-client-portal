@@ -229,12 +229,29 @@ const SSOT_TEMPLATES = {
 
   // ============ WITHHOLDING TAX ============
 
+  wht_income_tax: {
+    he: 'אישור ניכוי מס הכנסה במקור – **{withholding_client_name}**',
+    en: 'Income tax withholding approval – **{withholding_client_name}**',
+    params: ['withholding_client_name'],
+    category: 'withholding',
+    notes: 'One per client who withheld income tax - SEPARATE from NII withholding!'
+  },
+
+  wht_nii: {
+    he: 'אישור ניכוי ביטוח לאומי במקור – **{withholding_client_name}**',
+    en: 'National Insurance withholding approval – **{withholding_client_name}**',
+    params: ['withholding_client_name'],
+    category: 'withholding',
+    notes: 'One per client who withheld NII - SEPARATE from income tax withholding!'
+  },
+
+  // DEPRECATED - Use wht_income_tax or wht_nii instead
   wht_approval: {
     he: 'אישור ניכוי מס במקור / ביטוח לאומי במקור – **{withholding_client_name}**',
     en: 'Withholding tax / NII approval – **{withholding_client_name}**',
     params: ['withholding_client_name'],
     category: 'withholding',
-    notes: 'One per client who withheld taxes'
+    notes: 'DEPRECATED: Use separate wht_income_tax and wht_nii templates'
   },
 
   // ============ DONATIONS ============

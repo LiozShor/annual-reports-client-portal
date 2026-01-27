@@ -6,15 +6,8 @@
  */
 
 function formatDocumentName(doc, spouseName = null) {
+  // SSOT already handles all formatting - this is now a pass-through
   let name = doc.issuer_name || doc.description || 'מסמך';
-
-  // Add spouse name in parentheses if this is a spouse document
-  if (doc.person === 'spouse' && spouseName) {
-    // Remove generic "(בן/בת זוג)" if it exists
-    name = name.replace(/\s*\(בן\/בת זוג\)\s*$/, '');
-    // Add actual spouse name
-    name = `${name} (${spouseName})`;
-  }
 
   return {
     plain: name,
@@ -84,66 +77,77 @@ function separateClientAndSpouse(documents) {
 }
 
 function generateDocumentListHTML(documents, options = {}) {
-  // Default options to avoid crash
-  options = options || {}; 
-  const clientName = options.client_name || ''; // Note: Changed to match input structure usually passed
+  options = options || {};
+  const clientName = options.client_name || '';
   const spouseName = options.spouse_name || '';
   const language = options.language || 'he';
-  
+
   const isMarried = spouseName && spouseName.trim().length > 0;
 
-  const grouped = groupDocumentsByCategory(documents);
+  // Separate by person first (SSOT Rule 1.1)
+  const { client, spouse } = separateClientAndSpouse(documents);
 
   let html = '';
 
-  Object.entries(grouped).forEach(([categoryId, category]) => {
-    const categoryName = language === 'he' ? category.name_he : category.name_en;
-    const { client, spouse } = separateClientAndSpouse(category.docs);
+  // ========== CLIENT SECTION ==========
+  if (client.length > 0) {
+    html += `<div style="margin-bottom:30px;">
+      <h3 style="color:#2563eb;border-bottom:2px solid #3b82f6;padding-bottom:8px;">
+        מסמכים של הלקוח: <b>${clientName}</b>
+      </h3>`;
 
-    let docsHtml = '';
+    // Group client docs by category
+    const clientGrouped = groupDocumentsByCategory(client);
 
-    // Client documents
-    if (client.length > 0) {
-      if (isMarried) {
-        docsHtml += `<div style="margin-bottom:8px;">
-          <strong style="color:#1976d2;">${clientName}:</strong>
-          <ul style="list-style:none;padding:0;margin:5px 0;">
-            ${client.map(doc => {
-              const formatted = formatDocumentName(doc, spouseName);
-              return `<li>• ${formatted.html}</li>`;
-            }).join('')}
-          </ul>
-        </div>`;
-      } else {
-        docsHtml += `<ul style="list-style:none;padding:0;margin:5px 0;">
-          ${client.map(doc => {
-            const formatted = formatDocumentName(doc, spouseName);
-            return `<li>• ${formatted.html}</li>`;
-          }).join('')}
-        </ul>`;
-      }
-    }
+    Object.entries(clientGrouped).forEach(([categoryId, category]) => {
+      const categoryName = language === 'he' ? category.name_he : category.name_en;
 
-    // Spouse documents
-    if (spouse.length > 0 && isMarried) {
-      docsHtml += `<div style="margin-bottom:8px;">
-        <strong style="color:#7b1fa2;">${spouseName} (בן/בת זוג):</strong>
-        <ul style="list-style:none;padding:0;margin:5px 0;">
-          ${spouse.map(doc => {
-            const formatted = formatDocumentName(doc, spouseName);
-            return `<li>• ${formatted.html}</li>`;
-          }).join('')}
-        </ul>
-      </div>`;
-    }
+      html += `<div style="margin:15px 0;">
+        <h4 style="color:#ff9800;margin:10px 0;">${category.emoji} ${categoryName}</h4>
+        <ul style="list-style:none;padding:0;margin:5px 0;">`;
 
-    html += `<div style="margin-bottom:20px;">
-      <h4 style="margin:0 0 10px 0;color:#ff9800;border-bottom:1px solid #ffe0b2;">${category.emoji} ${categoryName}</h4>
-      ${docsHtml}
-    </div>`;
-  });
+      category.docs.forEach(doc => {
+        // SSOT already formatted titles - just pass through
+        const name = doc.issuer_name || doc.description || 'מסמך';
+        html += `<li>• ${name}</li>`;
+      });
 
-  return `<div style="margin-top:20px;padding:15px;background:#fff3cd;border-radius:8px;border-right:5px solid #ff9800; direction: rtl; text-align: right;">
+      html += `</ul></div>`;
+    });
+
+    html += `</div>`;
+  }
+
+  // ========== SPOUSE SECTION ==========
+  if (isMarried && spouse.length > 0) {
+    html += `<div style="margin-bottom:30px;">
+      <h3 style="color:#7b1fa2;border-bottom:2px solid #9c27b0;padding-bottom:8px;">
+        מסמכים של בן/בת הזוג: <b>${spouseName}</b>
+      </h3>`;
+
+    // Group spouse docs by category
+    const spouseGrouped = groupDocumentsByCategory(spouse);
+
+    Object.entries(spouseGrouped).forEach(([categoryId, category]) => {
+      const categoryName = language === 'he' ? category.name_he : category.name_en;
+
+      html += `<div style="margin:15px 0;">
+        <h4 style="color:#ff9800;margin:10px 0;">${category.emoji} ${categoryName}</h4>
+        <ul style="list-style:none;padding:0;margin:5px 0;">`;
+
+      category.docs.forEach(doc => {
+        // SSOT already formatted titles - just pass through
+        const name = doc.issuer_name || doc.description || 'מסמך';
+        html += `<li>• ${name}</li>`;
+      });
+
+      html += `</ul></div>`;
+    });
+
+    html += `</div>`;
+  }
+
+  return `<div style="margin-top:20px;padding:15px;background:#fff3cd;border-radius:8px;border-right:5px solid #ff9800;direction:rtl;text-align:right;">
     <h3 style="margin-top:0;">📄 מסמכים נדרשים</h3>
     ${html}
   </div>`;

@@ -140,7 +140,11 @@ function translateValue(val) {
 
 function cleanAndBold(text) {
   if (!text) return '';
-  return `<b>${htmlEscape(String(text).trim())}</b>`;
+  const cleaned = String(text).trim();
+  // Convert markdown **text** to HTML <b>text</b>
+  const htmlConverted = cleaned.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>');
+  // If not already bolded, wrap in <b>
+  return htmlConverted.includes('<b>') ? htmlConverted : `<b>${htmlEscape(htmlConverted)}</b>`;
 }
 
 // ========== EXPORTED FUNCTIONS ==========
@@ -354,6 +358,34 @@ function processAllMappings(tallyData, mappingData, systemFields, ssotModule = n
    * @param {object} params - Parameters that may indicate which variant to use
    * @returns {string} SSOT template key (e.g., 'form_106_client' or 'form_106_spouse')
    */
+  /**
+   * Check if a document type is NII-related
+   */
+  function isNIIDocumentType(docTypeId) {
+    return docTypeId === 'nii_disability_allowance_cert' ||
+           docTypeId === 'nii_allowance_cert' ||
+           docTypeId === 'nii_allowance_cert_spouse' ||
+           docTypeId === 'nii_maternity_allowance_cert' ||
+           docTypeId === 'nii_generic_allowance' ||
+           docTypeId === 'nii_survivors_cert' ||
+           docTypeId === 'nii_survivors_cert_spouse';
+  }
+
+  /**
+   * Validate benefit type - filter out boolean responses
+   */
+  function validateBenefitType(rawValue) {
+    const normalized = String(rawValue || '').trim().toLowerCase();
+
+    // Filter invalid values (boolean responses, empty)
+    const invalidValues = ['כן', 'yes', 'לא', 'no', ''];
+    if (invalidValues.includes(normalized)) {
+      return null;
+    }
+
+    return String(rawValue || '').trim(); // Return original case
+  }
+
   function mapLegacyToSSOT(typeId, params) {
     // Form 106: client vs spouse variant
     if (typeId === 'form_106') {
@@ -375,10 +407,22 @@ function processAllMappings(tallyData, mappingData, systemFields, ssotModule = n
     if (typeId === 'nii_allowance_cert_spouse') {
       return 'nii_generic_allowance';
     }
+    if (typeId === 'nii_survivors_cert') {
+      return 'nii_survivors';
+    }
+    if (typeId === 'nii_survivors_cert_spouse') {
+      return 'nii_survivors_spouse';
+    }
 
     // Foreign income variants
     if (typeId === 'foreign_income_report') {
       return 'foreign_income_evidence';
+    }
+
+    // Withholding: check which type
+    if (typeId === 'wht_approval') {
+      // This will be determined by the mapping context (income tax vs NII)
+      return params.withholding_type === 'nii' ? 'wht_nii' : 'wht_income_tax';
     }
 
     // Direct mappings (same name in SSOT)
@@ -402,7 +446,7 @@ function processAllMappings(tallyData, mappingData, systemFields, ssotModule = n
       'memorial_receipts': 'memorial_receipts',
       'institution_approval': 'institution_approval',
       'gambling_win_cert': 'gambling_win_cert',
-      'wht_approval': 'wht_approval'
+      'other_income_doc': 'other_income_doc'
     };
 
     return DIRECT_MAPPINGS[typeId] || typeId;
@@ -496,6 +540,40 @@ function processAllMappings(tallyData, mappingData, systemFields, ssotModule = n
         items.forEach(item => {
           const params = { year: tax_year };
 
+          // ========== SPECIAL HANDLING FOR NII DOCUMENTS ==========
+          if (isNIIDocumentType(docTypeId)) {
+            const benefitType = validateBenefitType(item);
+
+            // Skip invalid benefit types (e.g., boolean "כן")
+            if (!benefitType) {
+              console.warn(`[SSOT] Skipping invalid NII benefit type: "${item}"`);
+              return;
+            }
+
+            // Determine correct SSOT template based on benefit type
+            if (ssotModule && ssotModule.selectNIITemplate) {
+              const ssotKey = ssotModule.selectNIITemplate(benefitType, mapping.isSpouse);
+
+              // Set parameters based on template
+              if (ssotKey === 'nii_disability_client') {
+                params.client_name = cleanAndBold(clientNamePlain);
+              } else if (ssotKey === 'nii_disability_spouse') {
+                params.spouse_name = cleanAndBold(spouseNamePlain);
+              } else if (ssotKey === 'nii_maternity') {
+                params.name = mapping.isSpouse ? cleanAndBold(spouseNamePlain) : cleanAndBold(clientNamePlain);
+              } else {
+                // Generic allowance
+                params.allowance_type = cleanAndBold(benefitType);
+                params.name = mapping.isSpouse ? cleanAndBold(spouseNamePlain) : cleanAndBold(clientNamePlain);
+              }
+
+              const names = formatDocumentName(docTypeId, params);
+              addDoc(mapping, docTypeId, names.he, names.en, item);
+              return; // Done with NII, skip standard processing
+            }
+          }
+
+          // ========== STANDARD PROCESSING FOR NON-NII ==========
           // Add ALL parameters from docType.details
           if (docType.details && docType.details.length > 0) {
             docType.details.forEach(detail => {
@@ -531,12 +609,28 @@ function processAllMappings(tallyData, mappingData, systemFields, ssotModule = n
               params[detail.key] = cleanAndBold(mapping.fixedParams[detail.key]);
             } else if (mapping.detailsField && answerValue) {
               const linkedAnswer = answers[mapping.linkedQuestion] || answerValue;
-              params[detail.key] = cleanAndBold(linkedAnswer);
+
+              // Split multi-line values and convert to comma-separated
+              if (typeof linkedAnswer === 'string' && linkedAnswer.includes('\n')) {
+                const items = splitListItems(linkedAnswer);
+                const cleanItems = items.map(item => item.trim()).filter(Boolean);
+                params[detail.key] = cleanAndBold(cleanItems.join(', '));
+              } else {
+                params[detail.key] = cleanAndBold(linkedAnswer);
+              }
             }
           });
         } else if (mapping.detailsField && answerValue) {
           const linkedAnswer = answers[mapping.linkedQuestion] || answerValue;
-          params[mapping.detailsField] = cleanAndBold(linkedAnswer);
+
+          // Split multi-line values and convert to comma-separated
+          if (typeof linkedAnswer === 'string' && linkedAnswer.includes('\n')) {
+            const items = splitListItems(linkedAnswer);
+            const cleanItems = items.map(item => item.trim()).filter(Boolean);
+            params[mapping.detailsField] = cleanAndBold(cleanItems.join(', '));
+          } else {
+            params[mapping.detailsField] = cleanAndBold(linkedAnswer);
+          }
         }
 
         const names = formatDocumentName(docTypeId, params);
@@ -545,21 +639,35 @@ function processAllMappings(tallyData, mappingData, systemFields, ssotModule = n
     }
   }
 
-  // Special handling: Pension withdrawal multi-expand
+  // Special handling: Pension withdrawal multi-expand with "Other" free text
   const pensionMapping = QUESTION_MAPPINGS.find(m => m.id === "pension_withdrawal_type");
   if (pensionMapping && pensionMapping.documents && pensionMapping.documents.length > 0) {
     const pensionAnswer = answers[pensionMapping.tallyKeys?.he] || answers[pensionMapping.tallyKeys?.en];
     if (pensionAnswer) {
       const items = splitListItems(pensionAnswer);
-      const otherDetailKey = 'question_R0Mpk4';
+      const otherDetailKey = 'question_R0Mpk4'; // Free text field for "Other"
 
       items.forEach(rawItem => {
         const isOther = norm(rawItem).replace(/["']/g, "") === 'אחר' || norm(rawItem).toLowerCase() === 'other';
-        const withdrawalType = isOther ? (answers[otherDetailKey] || 'אחר') : rawItem;
 
-        const params = { year: tax_year, withdrawal_type: cleanAndBold(withdrawalType) };
-        const names = formatDocumentName('pension_withdrawal', params);
-        addDoc(pensionMapping, 'pension_withdrawal', names.he, names.en, rawItem);
+        if (isOther) {
+          // Use T402 template with free text
+          const otherText = answers[otherDetailKey] || 'אחר';
+          const params = {
+            year: tax_year,
+            withdrawal_other_text: cleanAndBold(otherText)
+          };
+          const names = formatDocumentName('pension_withdrawal', params);
+          addDoc(pensionMapping, 'pension_withdrawal', names.he, names.en, rawItem);
+        } else {
+          // Use T401 template with withdrawal type
+          const params = {
+            year: tax_year,
+            withdrawal_type: cleanAndBold(rawItem)
+          };
+          const names = formatDocumentName('pension_withdrawal', params);
+          addDoc(pensionMapping, 'pension_withdrawal', names.he, names.en, rawItem);
+        }
       });
     }
   }
