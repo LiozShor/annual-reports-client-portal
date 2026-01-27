@@ -392,79 +392,48 @@ function processAllMappings(tallyData, mappingData, systemFields, ssotModule = n
     return String(rawValue || '').trim(); // Return original case
   }
 
-  function mapLegacyToSSOT(typeId, params) {
-    // Form 106: client vs spouse variant
-    if (typeId === 'form_106') {
-      return params.spouse_name ? 'form_106_spouse' : 'form_106_client';
-    }
+ // ... (Helper functions remain the same: extractSystemFields, etc.)
 
-    // Pension withdrawal: check for 'other' variant
-    if (typeId === 'pension_withdrawal') {
-      return params.withdrawal_other_text ? 'pension_withdrawal_other' : 'pension_withdrawal';
-    }
+function mapLegacyToSSOT(typeId, params) {
+  // Direct mappings now cover almost everything thanks to updated questionnaire-mapping.json
+  const DIRECT_MAPPINGS = {
+    'form_106': params.spouse_name ? 'form_106_spouse' : 'form_106_client',
+    'form_106_spouse': 'form_106_spouse',
+    'form_867': 'form_867',
+    'crypto_report': 'crypto_report',
+    'residency_cert': 'residency_cert',
+    'id_appendix': 'id_appendix', // Fixed to generic
+    'child_id_appendix': 'child_id_appendix',
+    'special_ed_approval': 'special_ed_approval',
+    'child_disability_approval': 'child_disability_cert',
+    'nii_allowance_cert': 'nii_generic_allowance', // Will be overridden by NII logic
+    'nii_allowance_cert_spouse': 'nii_generic_allowance',
+    'nii_survivors_cert': 'nii_survivors',
+    'nii_survivors_cert_spouse': 'nii_survivors_spouse',
+    'insurance_tax_cert': 'insurance_deposit',
+    'pension_withdrawal': params.withdrawal_other_text ? 'pension_withdrawal_other' : 'pension_withdrawal',
+    'rent_contract_income': 'rent_contract_income',
+    'rent_contract_expense': 'rent_contract_expense',
+    'inventory_list': 'inventory_list',
+    'army_release_cert': 'army_release_cert',
+    'degree_cert': 'degree_cert',
+    'medical_committee': 'medical_committee',
+    'donation_receipts': 'donation_receipts',
+    'memorial_receipts': 'memorial_receipts',
+    'institution_approval': 'institution_approval',
+    'gambling_win_cert': 'gambling_win_cert',
+    'other_income_doc': 'other_income_doc',
+    'wht_income_tax': 'wht_income_tax',
+    'wht_nii': 'wht_nii',
+    'foreign_income_evidence': 'foreign_income_evidence',
+    'foreign_tax_return': 'foreign_tax_return'
+  };
 
-    // NII allowances: check type
-    if (typeId === 'nii_disability_allowance_cert') {
-      return params.spouse_name ? 'nii_disability_spouse' : 'nii_disability_client';
-    }
-    if (typeId === 'nii_maternity_allowance_cert') {
-      return 'nii_maternity';
-    }
-    if (typeId === 'nii_allowance_cert_spouse') {
-      return 'nii_generic_allowance';
-    }
-    if (typeId === 'nii_survivors_cert') {
-      return 'nii_survivors';
-    }
-    if (typeId === 'nii_survivors_cert_spouse') {
-      return 'nii_survivors_spouse';
-    }
+  return DIRECT_MAPPINGS[typeId] || typeId;
+}
 
-    // Foreign income variants
-    if (typeId === 'foreign_income_report') {
-      return 'foreign_income_evidence';
-    }
-
-    // Withholding: separate types
-    if (typeId === 'wht_income_tax') {
-      return 'wht_income_tax';
-    }
-    if (typeId === 'wht_nii') {
-      return 'wht_nii';
-    }
-    if (typeId === 'wht_approval') {
-      // Legacy support
-      return params.withholding_type === 'nii' ? 'wht_nii' : 'wht_income_tax';
-    }
-
-    // Direct mappings (same name in SSOT)
-    const DIRECT_MAPPINGS = {
-      'form_867': 'form_867',
-      'crypto_report': 'crypto_report',
-      'residency_cert': 'residency_cert',
-      'id_appendix': 'id_appendix_with_children',
-      'child_id_appendix': 'child_id_appendix',
-      'special_ed_approval': 'special_ed_approval',
-      'child_disability_approval': 'child_disability_cert',
-      'alimony_judgment': 'alimony_judgment',
-      'rent_contract_income': 'rent_contract_income',
-      'rent_contract_expense': 'rent_contract_expense',
-      'inventory_list': 'inventory_list',
-      'insurance_tax_cert': 'insurance_deposit',
-      'army_release_cert': 'army_release_cert',
-      'degree_cert': 'degree_cert',
-      'medical_committee': 'medical_committee',
-      'donation_receipts': 'donation_receipts',
-      'memorial_receipts': 'memorial_receipts',
-      'institution_approval': 'institution_approval',
-      'gambling_win_cert': 'gambling_win_cert',
-      'other_income_doc': 'other_income_doc',
-      'foreign_income_evidence': 'foreign_income_evidence',
-      'foreign_tax_return': 'foreign_tax_return'
-    };
-
-    return DIRECT_MAPPINGS[typeId] || typeId;
-  }
+// ... (Rest of logic: formatDocumentName calls ssotModule.formatDocumentTitle)
+// ... (Logic for NII checking remains valid as it calls selectNIITemplate)
 
   function formatDocumentName(typeId, params) {
     // If SSOT module available, use it (PREFERRED)

@@ -1,1641 +1,468 @@
 {
-  "version": "2026-01-27",
-  "updated_at": "2026-01-27T14:13:36.782Z",
+  "version": "2026-01-27-FIXED",
+  "updated_at": "2026-01-27T16:30:00.000Z",
   "categories": {
-    "hidden": {
-      "id": "hidden",
-      "he": "שדות מערכת",
-      "en": "System Fields",
-      "order": 0
+    "hidden": { "id": "hidden", "he": "שדות מערכת", "en": "System Fields", "order": 0 },
+    "personal": { "id": "personal", "he": "פרטים אישיים", "en": "Personal Details", "order": 1 },
+    "family": { "id": "family", "he": "מצב משפחתי", "en": "Family Status", "order": 2 },
+    "children": { "id": "children", "he": "ילדים", "en": "Children", "order": 3 },
+    "employment": { "id": "employment", "he": "תעסוקה", "en": "Employment", "order": 4 },
+    "pension": { "id": "pension", "he": "פנסיה וגמל", "en": "Pension & Provident", "order": 5 },
+    "nii": { "id": "nii", "he": "ביטוח לאומי", "en": "National Insurance", "order": 6 },
+    "investments": { "id": "investments", "he": "השקעות ופיננסים", "en": "Investments & Finance", "order": 7 },
+    "realestate": { "id": "realestate", "he": "נדל\"ן", "en": "Real Estate", "order": 8 },
+    "insurance": { "id": "insurance", "he": "ביטוח", "en": "Insurance", "order": 9 },
+    "military": { "id": "military", "he": "צבא ושירות", "en": "Military & Service", "order": 10 },
+    "education": { "id": "education", "he": "השכלה", "en": "Education", "order": 11 },
+    "health": { "id": "health", "he": "בריאות", "en": "Health", "order": 12 },
+    "donations": { "id": "donations", "he": "תרומות", "en": "Donations", "order": 13 },
+    "withholding": { "id": "withholding", "he": "ניכויים", "en": "Withholding", "order": 14 },
+    "other": { "id": "other", "he": "אחר", "en": "Other", "order": 15 }
+  },
+  "document_types": {
+    "form_106": {
+      "id": "form_106",
+      "category": "employment",
+      "airtable_type": "Form_106",
+      "name": { "he": "טופס 106", "en": "Form 106" },
+      "details": [{ "key": "employer", "type": "text" }]
     },
-    "personal": {
-      "id": "personal",
-      "he": "פרטים אישיים",
-      "en": "Personal Details",
-      "order": 1
+    "form_106_spouse": {
+      "id": "form_106_spouse",
+      "category": "employment",
+      "airtable_type": "Form_106_Spouse",
+      "name": { "he": "טופס 106 בן זוג", "en": "Form 106 Spouse" },
+      "details": [{ "key": "employer", "type": "text" }]
     },
-    "family": {
-      "id": "family",
-      "he": "מצב משפחתי",
-      "en": "Family Status",
-      "order": 2
+    "form_867": {
+      "id": "form_867",
+      "category": "banks",
+      "airtable_type": "Form_867",
+      "name": { "he": "טופס 867", "en": "Form 867" },
+      "details": [{ "key": "institution_name", "type": "text" }]
     },
-    "children": {
-      "id": "children",
-      "he": "ילדים",
-      "en": "Children",
-      "order": 3
+    "crypto_report": {
+      "id": "crypto_report",
+      "category": "crypto",
+      "airtable_type": "Crypto_Report",
+      "name": { "he": "דוח קריפטו", "en": "Crypto Report" },
+      "details": [{ "key": "crypto_source", "type": "text" }]
     },
-    "employment": {
-      "id": "employment",
-      "he": "תעסוקה",
-      "en": "Employment",
-      "order": 4
+    "residency_cert": {
+      "id": "residency_cert",
+      "category": "identity",
+      "airtable_type": "Residency_Cert",
+      "name": { "he": "אישור תושבות", "en": "Residency Cert" }
     },
-    "pension": {
-      "id": "pension",
-      "he": "פנסיה וגמל",
-      "en": "Pension & Provident",
-      "order": 5
+    "id_appendix": {
+      "id": "id_appendix",
+      "category": "identity",
+      "airtable_type": "ID_Appendix",
+      "name": { "he": "ספח תז", "en": "ID Appendix" }
     },
-    "nii": {
-      "id": "nii",
-      "he": "ביטוח לאומי",
-      "en": "National Insurance",
-      "order": 6
+    "army_release_cert": {
+      "id": "army_release_cert",
+      "category": "identity",
+      "airtable_type": "Army_Release_Cert",
+      "name": { "he": "אישור שחרור", "en": "Army Release" }
     },
-    "investments": {
-      "id": "investments",
-      "he": "השקעות ופיננסים",
-      "en": "Investments & Finance",
-      "order": 7
+    "child_id_appendix": {
+      "id": "child_id_appendix",
+      "category": "family",
+      "airtable_type": "Child_ID_Appendix",
+      "name": { "he": "ספח תז ילד", "en": "Child ID Appendix" }
     },
-    "realestate": {
-      "id": "realestate",
-      "he": "נדל\"ן",
-      "en": "Real Estate",
-      "order": 8
+    "special_ed_approval": {
+      "id": "special_ed_approval",
+      "category": "family",
+      "airtable_type": "Special_Ed_Approval",
+      "name": { "he": "אישור ועדת השמה", "en": "Special Ed Approval" }
     },
-    "insurance": {
-      "id": "insurance",
-      "he": "ביטוח",
-      "en": "Insurance",
-      "order": 9
+    "child_disability_approval": {
+      "id": "child_disability_approval",
+      "category": "family",
+      "airtable_type": "Child_Disability_Approval",
+      "name": { "he": "אישור נכות ילד", "en": "Child Disability Approval" }
     },
-    "military": {
-      "id": "military",
-      "he": "צבא ושירות",
-      "en": "Military & Service",
-      "order": 10
+    "nii_allowance_cert": {
+      "id": "nii_allowance_cert",
+      "category": "benefits",
+      "airtable_type": "NII_Allowance_Cert",
+      "name": { "he": "אישור קצבה", "en": "Allowance Cert" }
     },
-    "education": {
-      "id": "education",
-      "he": "השכלה",
-      "en": "Education",
-      "order": 11
+    "nii_allowance_cert_spouse": {
+      "id": "nii_allowance_cert_spouse",
+      "category": "benefits",
+      "airtable_type": "NII_Allowance_Cert_Spouse",
+      "name": { "he": "אישור קצבה בן זוג", "en": "Spouse Allowance Cert" }
     },
-    "health": {
-      "id": "health",
-      "he": "בריאות",
-      "en": "Health",
-      "order": 12
+    "nii_survivors_cert": {
+      "id": "nii_survivors_cert",
+      "category": "benefits",
+      "airtable_type": "NII_Survivors_Cert",
+      "name": { "he": "אישור שארים", "en": "Survivors Cert" },
+      "details": [{ "key": "survivor_details", "type": "text" }]
     },
-    "donations": {
-      "id": "donations",
-      "he": "תרומות",
-      "en": "Donations",
-      "order": 13
+    "nii_survivors_cert_spouse": {
+      "id": "nii_survivors_cert_spouse",
+      "category": "benefits",
+      "airtable_type": "NII_Survivors_Cert_Spouse",
+      "name": { "he": "אישור שארים בן זוג", "en": "Spouse Survivors Cert" },
+      "details": [{ "key": "survivor_details", "type": "text" }]
     },
-    "withholding": {
-      "id": "withholding",
-      "he": "ניכויים",
-      "en": "Withholding",
-      "order": 14
+    "insurance_tax_cert": {
+      "id": "insurance_tax_cert",
+      "category": "insurance",
+      "airtable_type": "Insurance_Tax_Cert",
+      "name": { "he": "אישור הפקדות", "en": "Insurance Deposit Cert" },
+      "details": [
+        { "key": "deposit_type", "type": "text" },
+        { "key": "company_name", "type": "text" }
+      ]
     },
-    "other": {
-      "id": "other",
-      "he": "אחר",
-      "en": "Other",
-      "order": 15
+    "pension_withdrawal": {
+      "id": "pension_withdrawal",
+      "category": "insurance",
+      "airtable_type": "Pension_Withdrawal",
+      "name": { "he": "אישור משיכה", "en": "Withdrawal Cert" },
+      "details": [{ "key": "withdrawal_type", "type": "text" }]
+    },
+    "rent_contract_income": {
+      "id": "rent_contract_income",
+      "category": "housing",
+      "airtable_type": "Rent_Contract_Income",
+      "name": { "he": "חוזה שכירות הכנסה", "en": "Rent Income" },
+      "details": [{ "key": "rent_income_monthly", "type": "text" }]
+    },
+    "rent_contract_expense": {
+      "id": "rent_contract_expense",
+      "category": "housing",
+      "airtable_type": "Rent_Contract_Expense",
+      "name": { "he": "חוזה שכירות הוצאה", "en": "Rent Expense" },
+      "details": [{ "key": "rent_expense_monthly", "type": "text" }]
+    },
+    "degree_cert": {
+      "id": "degree_cert",
+      "category": "education",
+      "airtable_type": "Degree_Cert",
+      "name": { "he": "אישור תואר", "en": "Degree Cert" },
+      "details": [{ "key": "degree_type", "type": "text" }, { "key": "university_name", "type": "text" }]
+    },
+    "donation_receipts": {
+      "id": "donation_receipts",
+      "category": "other",
+      "airtable_type": "Donation_Receipts",
+      "name": { "he": "קבלות תרומות", "en": "Donations" }
+    },
+    "memorial_receipts": {
+      "id": "memorial_receipts",
+      "category": "other",
+      "airtable_type": "Memorial_Receipts",
+      "name": { "he": "הוצאות הנצחה", "en": "Memorial Expenses" },
+      "details": [{ "key": "relationship_details", "type": "text" }]
+    },
+    "institution_approval": {
+      "id": "institution_approval",
+      "category": "other",
+      "airtable_type": "Institution_Approval",
+      "name": { "he": "אישור מוסד", "en": "Institution Approval" }
+    },
+    "medical_committee": {
+      "id": "medical_committee",
+      "category": "other",
+      "airtable_type": "Medical_Committee",
+      "name": { "he": "ועדה רפואית", "en": "Medical Committee" },
+      "details": [{ "key": "medical_details", "type": "text" }]
+    },
+    "foreign_income_evidence": {
+      "id": "foreign_income_evidence",
+      "category": "other",
+      "airtable_type": "Foreign_Income_Evidence",
+      "name": { "he": "הכנסות חו\"ל", "en": "Foreign Income" },
+      "details": [{ "key": "country", "type": "text" }, { "key": "income_type", "type": "text" }]
+    },
+    "foreign_tax_return": {
+      "id": "foreign_tax_return",
+      "category": "other",
+      "airtable_type": "Foreign_Tax_Return",
+      "name": { "he": "דוח מס זר", "en": "Foreign Tax Return" },
+      "details": [{ "key": "country", "type": "text" }]
+    },
+    "wht_income_tax": {
+      "id": "wht_income_tax",
+      "category": "business",
+      "airtable_type": "WHT_Income_Tax",
+      "name": { "he": "ניכוי מס הכנסה", "en": "WHT Income Tax" },
+      "details": [{ "key": "withholding_client_name", "type": "text" }]
+    },
+    "wht_nii": {
+      "id": "wht_nii",
+      "category": "business",
+      "airtable_type": "WHT_NII",
+      "name": { "he": "ניכוי ביטוח לאומי", "en": "WHT NII" },
+      "details": [{ "key": "withholding_client_name", "type": "text" }]
+    },
+    "inventory_list": {
+      "id": "inventory_list",
+      "category": "business",
+      "airtable_type": "Inventory_List",
+      "name": { "he": "ספירת מלאי", "en": "Inventory" }
+    },
+    "gambling_win_cert": {
+      "id": "gambling_win_cert",
+      "category": "other",
+      "airtable_type": "Gambling_Win_Cert",
+      "name": { "he": "זכיות הימורים", "en": "Gambling Wins" },
+      "details": [{ "key": "gambling_source", "type": "text" }]
+    },
+    "other_income_doc": {
+      "id": "other_income_doc",
+      "category": "other",
+      "airtable_type": "Other_Income_Doc",
+      "name": { "he": "הכנסה נוספת", "en": "Other Income" },
+      "details": [{ "key": "other_income_text", "type": "text" }]
     }
   },
   "mappings": [
     {
       "id": "hidden_report_id",
-      "tallyKeys": {
-        "he": "question_Ad2ZXW_eda95daa-e622-4fcb-98d6-3f0aa0649680",
-        "en": "question_WNRM5Q_21cb2748-23e4-4b6f-acbd-1b0ee32c0afe"
-      },
-      "label": {
-        "he": "report_record_id",
-        "en": "report_record_id"
-      },
-      "type": "hidden",
-      "category": "hidden",
-      "condition": null,
-      "documents": [],
-      "isSpouse": false,
-      "perItem": false,
-      "detailsField": null,
-      "linkedQuestion": null
-    },
-    {
-      "id": "hidden_client_id",
-      "tallyKeys": {
-        "he": "question_Ad2ZXW_07088289-7dc1-4173-97cb-855bc6655b0a",
-        "en": "question_WNRM5Q_7bdf1402-3d31-4855-bf97-88a1f48c912d"
-      },
-      "label": {
-        "he": "client_id",
-        "en": "client_id"
-      },
-      "type": "hidden",
-      "category": "hidden",
-      "condition": null,
-      "documents": [],
-      "isSpouse": false,
-      "perItem": false,
-      "detailsField": null,
-      "linkedQuestion": null
-    },
-    {
-      "id": "hidden_year",
-      "tallyKeys": {
-        "he": "question_Ad2ZXW_45f853b0-2044-45f0-bca8-4cb0db3c538a",
-        "en": "question_WNRM5Q_7da15418-e79a-4265-9726-0f92bdd4a2e9"
-      },
-      "label": {
-        "he": "year",
-        "en": "year"
-      },
-      "type": "hidden",
-      "category": "hidden",
-      "condition": null,
-      "documents": [],
-      "isSpouse": false,
-      "perItem": false,
-      "detailsField": null,
-      "linkedQuestion": null
-    },
-    {
-      "id": "hidden_token",
-      "tallyKeys": {
-        "he": "question_Ad2ZXW_12245f33-980a-4def-8656-f87f7ed1f397",
-        "en": "question_WNRM5Q_885e9fda-7bb7-4a09-af17-892ad4fe41fa"
-      },
-      "label": {
-        "he": "token",
-        "en": "token"
-      },
-      "type": "hidden",
-      "category": "hidden",
-      "condition": null,
-      "documents": [],
-      "isSpouse": false,
-      "perItem": false,
-      "detailsField": null,
-      "linkedQuestion": null
-    },
-    {
-      "id": "hidden_full_name",
-      "tallyKeys": {
-        "he": "question_Ad2ZXW_5cf54aa8-32b8-47cc-b2c0-a2bcddabb689",
-        "en": "question_WNRM5Q_f154cc30-448c-4960-837a-b857542fa97a"
-      },
-      "label": {
-        "he": "full_name",
-        "en": "full_name"
-      },
-      "type": "hidden",
-      "category": "hidden",
-      "condition": null,
-      "documents": [],
-      "isSpouse": false,
-      "perItem": false,
-      "detailsField": null,
-      "linkedQuestion": null
-    },
-    {
-      "id": "hidden_email",
-      "tallyKeys": {
-        "he": "question_Ad2ZXW_64644761-68e7-45eb-aac2-18c5471941fa",
-        "en": "question_WNRM5Q_dbe5baba-db73-4a05-bd58-eb953a3c308d"
-      },
-      "label": {
-        "he": "email",
-        "en": "email"
-      },
-      "type": "hidden",
-      "category": "hidden",
-      "condition": null,
-      "documents": [],
-      "isSpouse": false,
-      "perItem": false,
-      "detailsField": null,
-      "linkedQuestion": null
-    },
-    {
-      "id": "personal_name",
-      "tallyKeys": {
-        "he": "question_vAekdl",
-        "en": "question_R0oJPP"
-      },
-      "label": {
-        "he": "שם ושם משפחה",
-        "en": "First and Last Name"
-      },
-      "type": "text",
-      "category": "personal",
-      "condition": null,
-      "documents": [],
-      "isSpouse": false,
-      "perItem": false,
-      "detailsField": null,
-      "linkedQuestion": null
-    },
-    {
-      "id": "personal_email",
-      "tallyKeys": {
-        "he": "question_K65baX",
-        "en": "question_oyR7GM"
-      },
-      "label": {
-        "he": "אימייל",
-        "en": "Email"
-      },
-      "type": "text",
-      "category": "personal",
-      "condition": null,
-      "documents": [],
-      "isSpouse": false,
-      "perItem": false,
-      "detailsField": null,
-      "linkedQuestion": null
-    },
-    {
-      "id": "family_marital_status",
-      "tallyKeys": {
-        "he": "question_Lb7l6l",
-        "en": "question_GzpJlz"
-      },
-      "label": {
-        "he": "מצב משפחתי בשנת המס",
-        "en": "Marital status during the tax year"
-      },
-      "type": "choice",
-      "category": "family",
-      "condition": null,
-      "documents": [],
-      "isSpouse": false,
-      "perItem": false,
-      "detailsField": null,
-      "linkedQuestion": null
+      "tallyKeys": { "he": "question_Ad2ZXW_eda95daa-e622-4fcb-98d6-3f0aa0649680", "en": "question_WNRM5Q_21cb2748-23e4-4b6f-acbd-1b0ee32c0afe" },
+      "type": "hidden", "category": "hidden"
     },
     {
       "id": "family_qualifying_settlement",
-      "tallyKeys": {
-        "he": "question_67Kv1P",
-        "en": "question_J6lJA7"
-      },
-      "label": {
-        "he": "האם גרת ביישוב מזכה בשנת המס?",
-        "en": "Did you live in a qualifying settlement during the tax year?"
-      },
-      "type": "yes_no",
-      "category": "family",
-      "condition": "yes",
-      "documents": [
-        "residency_cert"
-      ],
-      "isSpouse": false,
-      "perItem": false,
-      "detailsField": null,
-      "linkedQuestion": "family_settlement_name"
-    },
-    {
-      "id": "family_settlement_name",
-      "tallyKeys": {
-        "he": "question_7WKvJP",
-        "en": "question_g0q7MK"
-      },
-      "label": {
-        "he": "שם היישוב",
-        "en": "Settlement name"
-      },
-      "type": "text",
-      "category": "family",
-      "condition": null,
-      "documents": [],
-      "isSpouse": false,
-      "perItem": false,
-      "detailsField": null,
-      "linkedQuestion": null
-    },
-    {
-      "id": "family_spouse_name",
-      "tallyKeys": {
-        "he": "question_1ld8p1",
-        "en": "question_OzXJGA"
-      },
-      "label": {
-        "he": "שם בן/בת הזוג",
-        "en": "Spouse's name"
-      },
-      "type": "text",
-      "category": "family",
-      "condition": null,
-      "documents": [],
-      "isSpouse": true,
-      "perItem": false,
-      "detailsField": null,
-      "linkedQuestion": null
+      "tallyKeys": { "he": "question_67Kv1P", "en": "question_J6lJA7" },
+      "type": "yes_no", "category": "family", "condition": "yes",
+      "documents": ["residency_cert"],
+      "linkedQuestion": "family_settlement_name",
+      "detailsField": "city_name"
     },
     {
       "id": "family_marital_change",
-      "tallyKeys": {
-        "he": "question_J6p7MK",
-        "en": "question_V0PMJl"
-      },
-      "label": {
-        "he": "האם היה שינוי בסטטוס המשפחתי (נישואין/גירושין/התאלמנות/פירוד רשמי) בשנת המס?",
-        "en": "Was there a change in marital status during the tax year?"
-      },
-      "type": "yes_no",
-      "category": "family",
-      "condition": "yes",
-      "documents": [
-        "id_appendix"
-      ],
-      "isSpouse": false,
-      "perItem": false,
-      "detailsField": null,
-      "linkedQuestion": "family_marital_change_details"
-    },
-    {
-      "id": "family_marital_change_details",
-      "tallyKeys": {
-        "he": "question_g0d2vD",
-        "en": "question_P69XO0"
-      },
-      "label": {
-        "he": "פירוט + תאריך השינוי",
-        "en": "Details + date of change"
-      },
-      "type": "text",
-      "category": "family",
-      "condition": null,
-      "documents": [],
-      "isSpouse": false,
-      "perItem": false,
-      "detailsField": null,
-      "linkedQuestion": null
-    },
-    {
-      "id": "children_have_children",
-      "tallyKeys": {
-        "he": "question_8KaOMz",
-        "en": "question_487oro"
-      },
-      "label": {
-        "he": "האם יש לך ילדים?",
-        "en": "Do you have children?"
-      },
-      "type": "yes_no",
-      "category": "children",
-      "condition": "yes",
-      "documents": [],
-      "isSpouse": false,
-      "perItem": false,
-      "detailsField": null,
-      "linkedQuestion": null
+      "tallyKeys": { "he": "question_J6p7MK", "en": "question_V0PMJl" },
+      "type": "yes_no", "category": "family", "condition": "yes",
+      "documents": ["id_appendix"],
+      "linkedQuestion": "family_marital_change_details",
+      "detailsField": "status_change_details"
     },
     {
       "id": "children_new_child",
-      "tallyKeys": {
-        "he": "question_y62LzX",
-        "en": "question_EXlJWL"
-      },
-      "label": {
-        "he": "האם נולד/ה או הצטרף/ה ילד/ה בשנת המס?",
-        "en": "Was a child born or added to the family during the tax year?"
-      },
-      "type": "yes_no",
-      "category": "children",
-      "condition": "yes",
-      "documents": [
-        "child_id_appendix"
-      ],
-      "isSpouse": false,
-      "perItem": false,
-      "detailsField": null,
-      "linkedQuestion": "children_new_child_dates"
-    },
-    {
-      "id": "children_new_child_dates",
-      "tallyKeys": {
-        "he": "question_XDJXzL",
-        "en": "question_r6OdPL"
-      },
-      "label": {
-        "he": "תאריכי לידה של הילדים שנוספו בשנת המס",
-        "en": "Birthdates of children added"
-      },
-      "type": "text",
-      "category": "children",
-      "condition": null,
-      "documents": [],
-      "isSpouse": false,
-      "perItem": false,
-      "detailsField": null,
-      "linkedQuestion": null
+      "tallyKeys": { "he": "question_y62LzX", "en": "question_EXlJWL" },
+      "type": "yes_no", "category": "children", "condition": "yes",
+      "documents": ["child_id_appendix"]
     },
     {
       "id": "children_special_ed",
-      "tallyKeys": {
-        "he": "question_0xBXaB",
-        "en": "question_jyo7P9"
-      },
-      "label": {
-        "he": "האם יש ילדים בחינוך מיוחד?",
-        "en": "Do you have children in special education?"
-      },
-      "type": "yes_no",
-      "category": "children",
-      "condition": "yes",
-      "documents": [
-        "special_ed_approval"
-      ],
-      "isSpouse": false,
-      "perItem": false,
-      "detailsField": null,
-      "linkedQuestion": null
+      "tallyKeys": { "he": "question_0xBXaB", "en": "question_jyo7P9" },
+      "type": "yes_no", "category": "children", "condition": "yes",
+      "documents": ["special_ed_approval"]
     },
     {
       "id": "children_disability",
-      "tallyKeys": {
-        "he": "question_8Ka0Zl",
-        "en": "question_a64DYy"
-      },
-      "label": {
-        "he": "האם יש ילדים שבגינם מתקבלת קצבת נכות מביטוח לאומי?",
-        "en": "Do you have children for whom you receive disability benefits?"
-      },
-      "type": "yes_no",
-      "category": "children",
-      "condition": "yes",
-      "documents": [
-        "child_disability_approval"
-      ],
-      "isSpouse": false,
-      "perItem": false,
-      "detailsField": null,
-      "linkedQuestion": null
-    },
-    {
-      "id": "children_alimony",
-      "tallyKeys": {
-        "he": "question_P69RpP",
-        "en": "question_kyG76j"
-      },
-      "label": {
-        "he": "האם שילמת דמי מזונות בשנת המס?",
-        "en": "Did you pay child support (alimony) during the tax year?"
-      },
-      "type": "yes_no",
-      "category": "children",
-      "condition": "yes",
-      "documents": [],
-      "isSpouse": false,
-      "perItem": false,
-      "detailsField": null,
-      "linkedQuestion": null
-    },
-    {
-      "id": "employment_was_employed",
-      "tallyKeys": {
-        "he": "question_zqylLM",
-        "en": "question_2eAJPb"
-      },
-      "label": {
-        "he": "האם היית שכיר/ה בשנת המס?",
-        "en": "Were you employed as a salaried employee during the tax year?"
-      },
-      "type": "yes_no",
-      "category": "employment",
-      "condition": "yes",
-      "documents": [],
-      "isSpouse": false,
-      "perItem": false,
-      "detailsField": null,
-      "linkedQuestion": "employment_employers_list"
+      "tallyKeys": { "he": "question_8Ka0Zl", "en": "question_a64DYy" },
+      "type": "yes_no", "category": "children", "condition": "yes",
+      "documents": ["child_disability_approval"]
     },
     {
       "id": "employment_employers_list",
-      "tallyKeys": {
-        "he": "question_5zjRMZ",
-        "en": "question_xpDPY9"
-      },
-      "label": {
-        "he": "רשימת מעסיקים – שלך",
-        "en": "Employer list"
-      },
-      "type": "list",
-      "category": "employment",
-      "condition": null,
-      "documents": [
-        "form_106"
-      ],
-      "isSpouse": false,
-      "perItem": true,
-      "detailsField": "issuer_name",
-      "linkedQuestion": null
-    },
-    {
-      "id": "employment_spouse_was_employed",
-      "tallyKeys": {
-        "he": "question_d6arvd",
-        "en": "question_ZNOzav"
-      },
-      "label": {
-        "he": "האם בן/בת הזוג היה/הייתה שכיר/ה בשנת המס?",
-        "en": "Was your spouse employed as a salaried employee?"
-      },
-      "type": "yes_no",
-      "category": "employment",
-      "condition": "yes",
-      "documents": [],
-      "isSpouse": true,
-      "perItem": false,
-      "detailsField": null,
-      "linkedQuestion": "employment_spouse_employers_list"
+      "tallyKeys": { "he": "question_5zjRMZ", "en": "question_xpDPY9" },
+      "type": "list", "category": "employment",
+      "documents": ["form_106"],
+      "perItem": true, "detailsField": "employer"
     },
     {
       "id": "employment_spouse_employers_list",
-      "tallyKeys": {
-        "he": "question_YQ08kW",
-        "en": "question_N6XJob"
-      },
-      "label": {
-        "he": "רשימת מעסיקים – בן/בת זוג",
-        "en": "Spouse employer list"
-      },
-      "type": "list",
-      "category": "employment",
-      "condition": null,
-      "documents": [
-        "form_106_spouse"
-      ],
-      "isSpouse": true,
-      "perItem": true,
-      "detailsField": "issuer_name",
-      "linkedQuestion": null
-    },
-    {
-      "id": "pension_withdrawal",
-      "tallyKeys": {
-        "he": "question_DNkQMN",
-        "en": "question_qdGKVk"
-      },
-      "label": {
-        "he": "האם משכת כספים מחברת ביטוח/קופת גמל/פנסיה/השתלמות בשנת המס?",
-        "en": "Did you withdraw funds from insurance/pension/provident fund?"
-      },
-      "type": "yes_no",
-      "category": "pension",
-      "condition": "yes",
-      "documents": [],
-      "isSpouse": false,
-      "perItem": false,
-      "detailsField": null,
-      "linkedQuestion": "pension_withdrawal_type"
+      "tallyKeys": { "he": "question_YQ08kW", "en": "question_N6XJob" },
+      "type": "list", "category": "employment",
+      "documents": ["form_106_spouse"],
+      "isSpouse": true, "perItem": true, "detailsField": "employer"
     },
     {
       "id": "pension_withdrawal_type",
-      "tallyKeys": {
-        "he": "question_lyeQvN",
-        "en": "question_QDRJVk"
-      },
-      "label": {
-        "he": "איזה סוג כספים נמשכו?",
-        "en": "What type of funds were withdrawn?"
-      },
-      "type": "checkbox",
-      "category": "pension",
-      "condition": null,
-      "documents": [
-        "pension_withdrawal"
-      ],
-      "isSpouse": false,
-      "perItem": true,
-      "detailsField": "withdrawal_type",
-      "linkedQuestion": null
+      "tallyKeys": { "he": "question_lyeQvN", "en": "question_QDRJVk" },
+      "type": "checkbox", "category": "pension",
+      "documents": ["pension_withdrawal"],
+      "perItem": true, "detailsField": "withdrawal_type"
     },
     {
       "id": "nii_disability",
-      "tallyKeys": {
-        "he": "question_oyeWvO",
-        "en": "question_e6r7Ro"
-      },
-      "label": {
-        "he": "האם קיבלת קצבת נכות מביטוח לאומי בשנת המס?",
-        "en": "Did you receive disability benefits from National Insurance?"
-      },
-      "type": "yes_no",
-      "category": "nii",
-      "condition": "yes",
-      "documents": [
-        "nii_allowance_cert"
-      ],
-      "isSpouse": false,
-      "perItem": false,
-      "detailsField": null,
-      "linkedQuestion": null
+      "tallyKeys": { "he": "question_oyeWvO", "en": "question_e6r7Ro" },
+      "type": "yes_no", "category": "nii", "condition": "yes",
+      "documents": ["nii_allowance_cert"]
     },
     {
       "id": "nii_survivors",
-      "tallyKeys": {
-        "he": "question_XDoYDP",
-        "en": "question_vADOy8"
-      },
-      "label": {
-        "he": "האם קיבלת קצבת שארים בשנת המס?",
-        "en": "Did you receive survivors' benefits during the tax year?"
-      },
-      "type": "yes_no",
-      "category": "nii",
-      "condition": "yes",
-      "documents": [
-        "nii_survivors_cert"
-      ],
-      "isSpouse": false,
-      "perItem": false,
-      "detailsField": "survivor_details",
-      "linkedQuestion": "nii_survivors_details"
-    },
-    {
-      "id": "nii_survivors_details",
-      "tallyKeys": {
-        "he": "question_8KL8Kl",
-        "en": "question_K6xJlK"
-      },
-      "label": {
-        "he": "פירוט קצבת שארים",
-        "en": "Survivors' benefit details"
-      },
-      "type": "text",
-      "category": "nii",
-      "condition": null,
-      "documents": [],
-      "isSpouse": false,
-      "perItem": false,
-      "detailsField": null,
-      "linkedQuestion": null
-    },
-    {
-      "id": "nii_spouse_payments",
-      "tallyKeys": {
-        "he": "question_Oz4vkY",
-        "en": "question_WNRMzQ"
-      },
-      "label": {
-        "he": "האם בן/בת הזוג קיבל/ה תקבולים מביטוח לאומי בשנת המס? (אבטלה, דמי לידה, פגיעה בעבודה, מילואים, נכות)",
-        "en": "Did your spouse receive payments from National Insurance?"
-      },
-      "type": "yes_no",
-      "category": "nii",
-      "condition": "yes",
-      "documents": [],
-      "isSpouse": true,
-      "perItem": false,
-      "detailsField": null,
-      "linkedQuestion": "nii_spouse_payment_type"
+      "tallyKeys": { "he": "question_XDoYDP", "en": "question_vADOy8" },
+      "type": "yes_no", "category": "nii", "condition": "yes",
+      "documents": ["nii_survivors_cert"],
+      "linkedQuestion": "nii_survivors_details",
+      "detailsField": "survivor_details"
     },
     {
       "id": "nii_spouse_payment_type",
-      "tallyKeys": {
-        "he": "question_V0QgDM",
-        "en": "question_a64Ddy"
-      },
-      "label": {
-        "he": "אילו תקבולים?",
-        "en": "Which payments?"
-      },
-      "type": "checkbox",
-      "category": "nii",
-      "condition": null,
-      "documents": [
-        "nii_allowance_cert_spouse"
-      ],
-      "isSpouse": true,
-      "perItem": true,
-      "detailsField": "benefit_type",
-      "linkedQuestion": null
+      "tallyKeys": { "he": "question_V0QgDM", "en": "question_a64Ddy" },
+      "type": "checkbox", "category": "nii",
+      "documents": ["nii_allowance_cert_spouse"],
+      "isSpouse": true, "perItem": true, "detailsField": "benefit_type"
     },
     {
       "id": "nii_spouse_survivors",
-      "tallyKeys": {
-        "he": "question_0x8vx9",
-        "en": "question_LbKJW2"
-      },
-      "label": {
-        "he": "האם בן/בת הזוג קיבל/ה קצבת שארים?",
-        "en": "Did your spouse receive a survivors' pension?"
-      },
-      "type": "yes_no",
-      "category": "nii",
-      "condition": "yes",
-      "documents": [
-        "nii_survivors_cert_spouse"
-      ],
+      "tallyKeys": { "he": "question_0x8vx9", "en": "question_LbKJW2" },
+      "type": "yes_no", "category": "nii", "condition": "yes",
+      "documents": ["nii_survivors_cert_spouse"],
       "isSpouse": true,
-      "perItem": false,
-      "detailsField": "survivor_details",
-      "linkedQuestion": "nii_spouse_survivors_details"
-    },
-    {
-      "id": "nii_spouse_survivors_details",
-      "tallyKeys": {
-        "he": "question_zqMJqk",
-        "en": "question_zqMJqk"
-      },
-      "label": {
-        "he": "פירוט קצבת שארים בן/בת זוג",
-        "en": "Spouse survivors benefit details"
-      },
-      "type": "text",
-      "category": "nii",
-      "condition": null,
-      "documents": [],
-      "isSpouse": true,
-      "perItem": false,
-      "detailsField": null,
-      "linkedQuestion": null
-    },
-    {
-      "id": "investments_securities",
-      "tallyKeys": {
-        "he": "question_r6a7v2",
-        "en": "question_7WKVxz"
-      },
-      "label": {
-        "he": "היו לך ניירות ערך?",
-        "en": "Did you hold securities?"
-      },
-      "type": "yes_no",
-      "category": "investments",
-      "condition": "yes",
-      "documents": [],
-      "isSpouse": false,
-      "perItem": false,
-      "detailsField": null,
-      "linkedQuestion": "investments_securities_institutions"
+      "linkedQuestion": "nii_spouse_survivors_details",
+      "detailsField": "survivor_details"
     },
     {
       "id": "investments_securities_institutions",
-      "tallyKeys": {
-        "he": "question_48J5zA",
-        "en": "question_b7e8dE"
-      },
-      "label": {
-        "he": "באילו מוסדות הוחזקו ניירות ערך?",
-        "en": "At which institutions were the securities held?"
-      },
-      "type": "list",
-      "category": "investments",
-      "condition": null,
-      "documents": [
-        "form_867"
-      ],
-      "isSpouse": false,
-      "perItem": true,
-      "detailsField": "issuer_name",
-      "linkedQuestion": null
-    },
-    {
-      "id": "investments_deposits",
-      "tallyKeys": {
-        "he": "question_xpMKvv",
-        "en": "question_kyG7Ej"
-      },
-      "label": {
-        "he": "היו לך פיקדונות/תכניות חיסכון בבנק?",
-        "en": "Did you have bank deposits/savings plans?"
-      },
-      "type": "yes_no",
-      "category": "investments",
-      "condition": "yes",
-      "documents": [],
-      "isSpouse": false,
-      "perItem": false,
-      "detailsField": null,
-      "linkedQuestion": "investments_deposits_banks"
+      "tallyKeys": { "he": "question_48J5zA", "en": "question_b7e8dE" },
+      "type": "list", "category": "investments",
+      "documents": ["form_867"],
+      "perItem": true, "detailsField": "institution_name"
     },
     {
       "id": "investments_deposits_banks",
-      "tallyKeys": {
-        "he": "question_ZNE0De",
-        "en": "question_vADOY8"
-      },
-      "label": {
-        "he": "באילו בנקים?",
-        "en": "At which banks?"
-      },
-      "type": "list",
-      "category": "investments",
-      "condition": null,
-      "documents": [
-        "form_867"
-      ],
-      "isSpouse": false,
-      "perItem": true,
-      "detailsField": "issuer_name",
-      "linkedQuestion": null
-    },
-    {
-      "id": "investments_crypto",
-      "tallyKeys": {
-        "he": "question_N6lkdO",
-        "en": "question_K6xJ1K"
-      },
-      "label": {
-        "he": "האם מכרת מטבעות וירטואליים בשנת המס?",
-        "en": "Did you sell virtual currencies during the tax year?"
-      },
-      "type": "yes_no",
-      "category": "investments",
-      "condition": "yes",
-      "documents": [],
-      "isSpouse": false,
-      "perItem": false,
-      "detailsField": null,
-      "linkedQuestion": "investments_crypto_details"
+      "tallyKeys": { "he": "question_ZNE0De", "en": "question_vADOY8" },
+      "type": "list", "category": "investments",
+      "documents": ["form_867"],
+      "perItem": true, "detailsField": "institution_name"
     },
     {
       "id": "investments_crypto_details",
-      "tallyKeys": {
-        "he": "question_qdD6vg",
-        "en": "question_LbKJp2"
-      },
-      "label": {
-        "he": "פירוט",
-        "en": "Details"
-      },
-      "type": "list",
-      "category": "investments",
-      "condition": null,
-      "documents": [
-        "crypto_report"
-      ],
-      "isSpouse": false,
-      "perItem": true,
-      "detailsField": "platform",
-      "linkedQuestion": null
+      "tallyKeys": { "he": "question_qdD6vg", "en": "question_LbKJp2" },
+      "type": "list", "category": "investments",
+      "documents": ["crypto_report"],
+      "perItem": true, "detailsField": "crypto_source"
     },
     {
       "id": "investments_gambling",
-      "tallyKeys": {
-        "he": "question_QDeLkX",
-        "en": "question_pKo7OE"
-      },
-      "label": {
-        "he": "היו הכנסות מהימורים/הגרלות/פרסים מעל 25,000₪?",
-        "en": "Did you have income from gambling/lotteries/prizes over 25,000₪?"
-      },
-      "type": "yes_no",
-      "category": "investments",
-      "condition": "yes",
-      "documents": [],
-      "isSpouse": false,
-      "perItem": false,
-      "detailsField": null,
-      "linkedQuestion": "investments_gambling_details"
-    },
-    {
-      "id": "investments_gambling_details",
-      "tallyKeys": {
-        "he": "question_9W9VM5",
-        "en": "question_1l4JVL"
-      },
-      "label": {
-        "he": "פירוט סכום/מקור",
-        "en": "Details of amount/source"
-      },
-      "type": "text",
-      "category": "investments",
-      "condition": null,
-      "documents": [],
-      "isSpouse": false,
-      "perItem": false,
-      "detailsField": null,
-      "linkedQuestion": null
+      "tallyKeys": { "he": "question_QDeLkX", "en": "question_pKo7OE" },
+      "type": "yes_no", "category": "investments", "condition": "yes",
+      "documents": ["gambling_win_cert"]
     },
     {
       "id": "investments_foreign_income",
-      "tallyKeys": {
-        "he": "question_e6Q4vl",
-        "en": "question_MbaJR0"
-      },
-      "label": {
-        "he": "היו לך הכנסות מחו\"ל בשנת המס שלא דווחו בעסק?",
-        "en": "Did you have foreign income not reported in a business?"
-      },
-      "type": "yes_no",
-      "category": "investments",
-      "condition": "yes",
-      "documents": [],
-      "isSpouse": false,
-      "perItem": false,
-      "detailsField": null,
-      "linkedQuestion": "investments_foreign_country"
-    },
-    {
-      "id": "investments_foreign_country",
-      "tallyKeys": {
-        "he": "question_WNEy1k",
-        "en": "question_J6lJz7"
-      },
-      "label": {
-        "he": "מדינה",
-        "en": "Country"
-      },
-      "type": "text",
-      "category": "investments",
-      "condition": null,
-      "documents": [],
-      "isSpouse": false,
-      "perItem": false,
-      "detailsField": null,
-      "linkedQuestion": null
-    },
-    {
-      "id": "investments_foreign_income_type",
-      "tallyKeys": {
-        "he": "question_a65VvX",
-        "en": "question_a65VvX"
-      },
-      "label": {
-        "he": "סוג הכנסה מחו\"ל",
-        "en": "Foreign income type"
-      },
-      "type": "checkbox",
-      "category": "investments",
-      "condition": null,
-      "documents": [],
-      "isSpouse": false,
-      "perItem": false,
-      "detailsField": null,
-      "linkedQuestion": null
+      "tallyKeys": { "he": "question_e6Q4vl", "en": "question_MbaJR0" },
+      "type": "yes_no", "category": "investments", "condition": "yes",
+      "documents": ["foreign_income_evidence"]
     },
     {
       "id": "realestate_rental_income",
-      "tallyKeys": {
-        "he": "question_7WLGM0",
-        "en": "question_XDoM0V"
-      },
-      "label": {
-        "he": "היו לך הכנסות משכר דירה בישראל בשנת המס?",
-        "en": "Did you have rental income from property in Israel?"
-      },
-      "type": "yes_no",
-      "category": "realestate",
-      "condition": "yes",
-      "documents": [
-        "rent_contract_income"
-      ],
-      "isSpouse": false,
-      "perItem": false,
-      "detailsField": null,
-      "linkedQuestion": "realestate_rental_income_amount"
-    },
-    {
-      "id": "realestate_rental_income_amount",
-      "tallyKeys": {
-        "he": "question_K6xQyA",
-        "en": "question_K6xQyA"
-      },
-      "label": {
-        "he": "שכ\"ד חודשי שהתקבל",
-        "en": "Monthly rent received"
-      },
-      "type": "text",
-      "category": "realestate",
-      "condition": null,
-      "documents": [],
-      "isSpouse": false,
-      "perItem": false,
-      "detailsField": null,
-      "linkedQuestion": null
+      "tallyKeys": { "he": "question_7WLGM0", "en": "question_XDoM0V" },
+      "type": "yes_no", "category": "realestate", "condition": "yes",
+      "documents": ["rent_contract_income"],
+      "linkedQuestion": "realestate_rental_income_amount",
+      "detailsField": "rent_income_monthly"
     },
     {
       "id": "realestate_rental_expense",
-      "tallyKeys": {
-        "he": "question_Ad2Zye",
-        "en": "question_8KLPQo"
-      },
-      "label": {
-        "he": "האם אתה גם שוכר דירה?",
-        "en": "Are you also renting a property?"
-      },
-      "type": "yes_no",
-      "category": "realestate",
-      "condition": "yes",
-      "documents": [
-        "rent_contract_expense"
-      ],
-      "isSpouse": false,
-      "perItem": false,
-      "detailsField": null,
-      "linkedQuestion": "realestate_rental_expense_amount"
-    },
-    {
-      "id": "realestate_rental_expense_amount",
-      "tallyKeys": {
-        "he": "question_BXdN0R",
-        "en": "question_BXdN0R"
-      },
-      "label": {
-        "he": "שכ\"ד חודשי ששולם",
-        "en": "Monthly rent paid"
-      },
-      "type": "text",
-      "category": "realestate",
-      "condition": null,
-      "documents": [],
-      "isSpouse": false,
-      "perItem": false,
-      "detailsField": null,
-      "linkedQuestion": null
-    },
-    {
-      "id": "realestate_sold_property",
-      "tallyKeys": {
-        "he": "question_kyeqvo",
-        "en": "question_zqMrDE"
-      },
-      "label": {
-        "he": "האם מכרת נכס מקרקעין בשנת המס?",
-        "en": "Did you sell real estate during the tax year?"
-      },
-      "type": "yes_no",
-      "category": "realestate",
-      "condition": null,
-      "documents": [],
-      "isSpouse": false,
-      "perItem": false,
-      "detailsField": null,
-      "linkedQuestion": "realestate_sold_details"
-    },
-    {
-      "id": "realestate_sold_details",
-      "tallyKeys": {
-        "he": "question_vAekKl",
-        "en": "question_5z9G1b"
-      },
-      "label": {
-        "he": "פירוט קצר",
-        "en": "Brief details"
-      },
-      "type": "text",
-      "category": "realestate",
-      "condition": null,
-      "documents": [],
-      "isSpouse": false,
-      "perItem": false,
-      "detailsField": null,
-      "linkedQuestion": null
+      "tallyKeys": { "he": "question_Ad2Zye", "en": "question_8KLPQo" },
+      "type": "yes_no", "category": "realestate", "condition": "yes",
+      "documents": ["rent_contract_expense"],
+      "linkedQuestion": "realestate_rental_expense_amount",
+      "detailsField": "rent_expense_monthly"
     },
     {
       "id": "realestate_inventory",
-      "tallyKeys": {
-        "he": "question_K65bkX",
-        "en": "question_d60DxN"
-      },
-      "label": {
-        "he": "האם יש לך מלאי בעסק?",
-        "en": "Do you have business inventory?"
-      },
-      "type": "yes_no",
-      "category": "realestate",
-      "condition": "yes",
-      "documents": [
-        "inventory_list"
-      ],
-      "isSpouse": false,
-      "perItem": false,
-      "detailsField": null,
-      "linkedQuestion": null
-    },
-    {
-      "id": "insurance_pension_contribution",
-      "tallyKeys": {
-        "he": "question_pKyav8",
-        "en": "question_YQGMW0"
-      },
-      "label": {
-        "he": "הפקדת עצמאית לקרן פנסיה (לא דרך משכורת)?",
-        "en": "Did you make independent contributions to a pension fund?"
-      },
-      "type": "yes_no",
-      "category": "insurance",
-      "condition": "yes",
-      "documents": [],
-      "isSpouse": false,
-      "perItem": false,
-      "detailsField": null,
-      "linkedQuestion": "insurance_pension_companies"
+      "tallyKeys": { "he": "question_K65bkX", "en": "question_d60DxN" },
+      "type": "yes_no", "category": "realestate", "condition": "yes",
+      "documents": ["inventory_list"]
     },
     {
       "id": "insurance_pension_companies",
-      "tallyKeys": {
-        "he": "question_1ld861",
-        "en": "question_DNpJdp"
-      },
-      "label": {
-        "he": "באיזה חברות ביטוח?",
-        "en": "At which insurance companies?"
-      },
-      "type": "list",
-      "category": "insurance",
-      "condition": null,
-      "documents": [
-        "insurance_tax_cert"
-      ],
-      "isSpouse": false,
-      "perItem": true,
-      "detailsField": "company_name",
-      "fixedParams": {
-        "deposit_type": "קרן פנסיה"
-      },
-      "linkedQuestion": null
-    },
-    {
-      "id": "insurance_study_fund",
-      "tallyKeys": {
-        "he": "question_MbNBMk",
-        "en": "question_lyO7d6"
-      },
-      "label": {
-        "he": "הפקדת עצמאית לקרן השתלמות?",
-        "en": "Did you make independent contributions to a study fund?"
-      },
-      "type": "yes_no",
-      "category": "insurance",
-      "condition": "yes",
-      "documents": [],
-      "isSpouse": false,
-      "perItem": false,
-      "detailsField": null,
-      "linkedQuestion": "insurance_study_fund_companies"
+      "tallyKeys": { "he": "question_1ld861", "en": "question_DNpJdp" },
+      "type": "list", "category": "insurance",
+      "documents": ["insurance_tax_cert"],
+      "perItem": true, "detailsField": "company_name",
+      "fixedParams": { "deposit_type": "קרן פנסיה" }
     },
     {
       "id": "insurance_study_fund_companies",
-      "tallyKeys": {
-        "he": "question_J6p7oK",
-        "en": "question_R0oJ5P"
-      },
-      "label": {
-        "he": "באיזה חברות?",
-        "en": "At which companies?"
-      },
-      "type": "list",
-      "category": "insurance",
-      "condition": null,
-      "documents": [
-        "insurance_tax_cert"
-      ],
-      "isSpouse": false,
-      "perItem": true,
-      "detailsField": "company_name",
-      "fixedParams": {
-        "deposit_type": "קרן השתלמות"
-      },
-      "linkedQuestion": null
-    },
-    {
-      "id": "insurance_disability",
-      "tallyKeys": {
-        "he": "question_g0d2zD",
-        "en": "question_oyR7MM"
-      },
-      "label": {
-        "he": "הפקדת עצמאית לאובדן כושר עבודה?",
-        "en": "Did you make independent contributions to disability insurance?"
-      },
-      "type": "yes_no",
-      "category": "insurance",
-      "condition": "yes",
-      "documents": [],
-      "isSpouse": false,
-      "perItem": false,
-      "detailsField": null,
-      "linkedQuestion": "insurance_disability_companies"
+      "tallyKeys": { "he": "question_J6p7oK", "en": "question_R0oJ5P" },
+      "type": "list", "category": "insurance",
+      "documents": ["insurance_tax_cert"],
+      "perItem": true, "detailsField": "company_name",
+      "fixedParams": { "deposit_type": "קרן השתלמות" }
     },
     {
       "id": "insurance_disability_companies",
-      "tallyKeys": {
-        "he": "question_y62L1X",
-        "en": "question_GzpJdz"
-      },
-      "label": {
-        "he": "באיזה חברות?",
-        "en": "At which companies?"
-      },
-      "type": "list",
-      "category": "insurance",
-      "condition": null,
-      "documents": [
-        "insurance_tax_cert"
-      ],
-      "isSpouse": false,
-      "perItem": true,
-      "detailsField": "company_name",
-      "fixedParams": {
-        "deposit_type": "אובדן כושר עבודה"
-      },
-      "linkedQuestion": null
-    },
-    {
-      "id": "insurance_life",
-      "tallyKeys": {
-        "he": "question_a64Q7E",
-        "en": "question_b7e8xE"
-      },
-      "label": {
-        "he": "הפקדת עצמאית לביטוח חיים?",
-        "en": "Did you make independent contributions to life insurance?"
-      },
-      "type": "yes_no",
-      "category": "insurance",
-      "condition": "yes",
-      "documents": [],
-      "isSpouse": false,
-      "perItem": false,
-      "detailsField": null,
-      "linkedQuestion": "insurance_life_companies"
+      "tallyKeys": { "he": "question_y62L1X", "en": "question_GzpJdz" },
+      "type": "list", "category": "insurance",
+      "documents": ["insurance_tax_cert"],
+      "perItem": true, "detailsField": "company_name",
+      "fixedParams": { "deposit_type": "אובדן כושר עבודה" }
     },
     {
       "id": "insurance_life_companies",
-      "tallyKeys": {
-        "he": "question_67K8aO",
-        "en": "question_AdpqLN"
-      },
-      "label": {
-        "he": "באיזה חברות?",
-        "en": "At which companies?"
-      },
-      "type": "list",
-      "category": "insurance",
-      "condition": null,
-      "documents": [
-        "insurance_tax_cert"
-      ],
-      "isSpouse": false,
-      "perItem": true,
-      "detailsField": "company_name",
-      "fixedParams": {
-        "deposit_type": "ביטוח חיים"
-      },
-      "linkedQuestion": null
-    },
-    {
-      "id": "insurance_mortgage",
-      "tallyKeys": {
-        "he": "question_XDJXQL",
-        "en": "question_OzXJ5A"
-      },
-      "label": {
-        "he": "האם יש משכנתא פעילה?",
-        "en": "Do you have an active mortgage?"
-      },
-      "type": "yes_no",
-      "category": "insurance",
-      "condition": null,
-      "documents": [],
-      "isSpouse": false,
-      "perItem": false,
-      "detailsField": null,
-      "linkedQuestion": "insurance_mortgage_company"
-    },
-    {
-      "id": "insurance_mortgage_company",
-      "tallyKeys": {
-        "he": "question_8KaOrz",
-        "en": "question_V0PM5l"
-      },
-      "label": {
-        "he": "באיזה חברת ביטוח הביטוח חיים של המשכנתא?",
-        "en": "At which insurance company is the mortgage life insurance?"
-      },
-      "type": "text",
-      "category": "insurance",
-      "condition": null,
-      "documents": [],
-      "isSpouse": false,
-      "perItem": false,
-      "detailsField": null,
-      "linkedQuestion": null
+      "tallyKeys": { "he": "question_67K8aO", "en": "question_AdpqLN" },
+      "type": "list", "category": "insurance",
+      "documents": ["insurance_tax_cert"],
+      "perItem": true, "detailsField": "company_name",
+      "fixedParams": { "deposit_type": "ביטוח חיים" }
     },
     {
       "id": "military_discharge",
-      "tallyKeys": {
-        "he": "question_oyR995",
-        "en": "question_BXpQkY"
-      },
-      "label": {
-        "he": "האם השתחררת מהצבא או משירות לאומי ב-3 שנים האחרונות?",
-        "en": "Were you discharged from military service in the last 3 years?"
-      },
-      "type": "yes_no",
-      "category": "military",
-      "condition": "yes",
-      "documents": [
-        "army_release_cert"
-      ],
-      "isSpouse": false,
-      "perItem": false,
-      "detailsField": null,
-      "linkedQuestion": null
+      "tallyKeys": { "he": "question_oyR995", "en": "question_BXpQkY" },
+      "type": "yes_no", "category": "military", "condition": "yes",
+      "documents": ["army_release_cert"]
     },
     {
       "id": "military_memorial",
-      "tallyKeys": {
-        "he": "question_0xBXkB",
-        "en": "question_P69X50"
-      },
-      "label": {
-        "he": "האם היו לך במהלך שנת המס הוצאות להנצחת זכרו של קרוב משפחה שהינו חייל או שוטר שנספה במערכה ו/או לזכרו של קרוב משפחה שנספה בפעולות איבה?",
-        "en": "Did you have memorial expenses during the tax year?"
-      },
-      "type": "yes_no",
-      "category": "military",
-      "condition": "yes",
-      "documents": [
-        "memorial_receipts"
-      ],
-      "isSpouse": false,
-      "perItem": false,
-      "detailsField": null,
-      "linkedQuestion": "military_memorial_details"
-    },
-    {
-      "id": "military_memorial_details",
-      "tallyKeys": {
-        "he": "question_zqyldM",
-        "en": "question_EXlJQL"
-      },
-      "label": {
-        "he": "פירוט קרבה",
-        "en": "Details of relationship"
-      },
-      "type": "text",
-      "category": "military",
-      "condition": null,
-      "documents": [],
-      "isSpouse": false,
-      "perItem": false,
-      "detailsField": null,
-      "linkedQuestion": null
+      "tallyKeys": { "he": "question_0xBXkB", "en": "question_P69X50" },
+      "type": "yes_no", "category": "military", "condition": "yes",
+      "documents": ["memorial_receipts"],
+      "linkedQuestion": "military_memorial_details",
+      "detailsField": "relationship_details"
     },
     {
       "id": "military_institution",
-      "tallyKeys": {
-        "he": "question_5z9vzN",
-        "en": "question_1l4J7L"
-      },
-      "label": {
-        "he": "האם יש לך קרובי משפחה נטולי יכולת שמוחזקים במוסדות ואתה מממן אותם?",
-        "en": "Do you have incapacitated family members in institutions?"
-      },
-      "type": "yes_no",
-      "category": "military",
-      "condition": "yes",
-      "documents": [
-        "institution_approval"
-      ],
-      "isSpouse": false,
-      "perItem": false,
-      "detailsField": null,
-      "linkedQuestion": null
+      "tallyKeys": { "he": "question_5z9vzN", "en": "question_1l4J7L" },
+      "type": "yes_no", "category": "military", "condition": "yes",
+      "documents": ["institution_approval"]
     },
     {
       "id": "education_degree",
-      "tallyKeys": {
-        "he": "question_5zjRVZ",
-        "en": "question_r6OdAL"
-      },
-      "label": {
-        "he": "האם סיימת תואר בשנים האחרונות (2023 והלאה)?",
-        "en": "Did you complete a degree in recent years?"
-      },
-      "type": "yes_no",
-      "category": "education",
-      "condition": "yes",
-      "documents": [
-        "degree_cert"
-      ],
-      "isSpouse": false,
-      "perItem": false,
-      "detailsField": null,
-      "linkedQuestion": "education_degree_type"
-    },
-    {
-      "id": "education_degree_type",
-      "tallyKeys": {
-        "he": "question_d6arzd",
-        "en": "question_487oxo"
-      },
-      "label": {
-        "he": "סוג תואר + שנת סיום",
-        "en": "Type of degree + year of completion"
-      },
-      "type": "text",
-      "category": "education",
-      "condition": null,
-      "documents": [],
-      "isSpouse": false,
-      "perItem": false,
-      "detailsField": null,
-      "linkedQuestion": null
-    },
-    {
-      "id": "education_institution",
-      "tallyKeys": {
-        "he": "question_YQ089W",
-        "en": "question_jyo7Q9"
-      },
-      "label": {
-        "he": "מוסד לימודים",
-        "en": "Educational institution"
-      },
-      "type": "text",
-      "category": "education",
-      "condition": null,
-      "documents": [],
-      "isSpouse": false,
-      "perItem": false,
-      "detailsField": null,
-      "linkedQuestion": null
+      "tallyKeys": { "he": "question_5zjRVZ", "en": "question_r6OdAL" },
+      "type": "yes_no", "category": "education", "condition": "yes",
+      "documents": ["degree_cert"],
+      "linkedQuestion": "education_degree_type",
+      "detailsField": "degree_type"
     },
     {
       "id": "health_status_change",
-      "tallyKeys": {
-        "he": "question_DNkQaN",
-        "en": "question_2eAJNb"
-      },
-      "label": {
-        "he": "האם היו שינויים במצב הבריאותי של מישהו בתא המשפחתי שהובילו לפטורים/הקלות במס?",
-        "en": "Were there changes in health status leading to tax exemptions?"
-      },
-      "type": "yes_no",
-      "category": "health",
-      "condition": "yes",
-      "documents": [
-        "medical_committee"
-      ],
-      "isSpouse": false,
-      "perItem": false,
-      "detailsField": null,
-      "linkedQuestion": "health_status_details"
-    },
-    {
-      "id": "health_status_details",
-      "tallyKeys": {
-        "he": "question_lyeQzN",
-        "en": "question_xpDPa9"
-      },
-      "label": {
-        "he": "פירוט",
-        "en": "Details"
-      },
-      "type": "text",
-      "category": "health",
-      "condition": null,
-      "documents": [],
-      "isSpouse": false,
-      "perItem": false,
-      "detailsField": null,
-      "linkedQuestion": null
+      "tallyKeys": { "he": "question_DNkQaN", "en": "question_2eAJNb" },
+      "type": "yes_no", "category": "health", "condition": "yes",
+      "documents": ["medical_committee"],
+      "linkedQuestion": "health_status_details",
+      "detailsField": "medical_details"
     },
     {
       "id": "donations_public",
-      "tallyKeys": {
-        "he": "question_R0Mpj4",
-        "en": "question_ZNOz6v"
-      },
-      "label": {
-        "he": "האם תרמת למוסדות ציבוריים ולא העברת את כל הקבלות (סה״כ מעל 200₪)?",
-        "en": "Did you donate to public institutions without all receipts?"
-      },
-      "type": "yes_no",
-      "category": "donations",
-      "condition": "yes",
-      "documents": [
-        "donation_receipts"
-      ],
-      "isSpouse": false,
-      "perItem": false,
-      "detailsField": null,
-      "linkedQuestion": null
-    },
-    {
-      "id": "withholding_income_tax",
-      "tallyKeys": {
-        "he": "question_Gz9WbL",
-        "en": "question_N6XJWb"
-      },
-      "label": {
-        "he": "האם יש לקוחות שניכו לך מס הכנסה במקור בשנת המס?",
-        "en": "Did any clients withhold income tax at source?"
-      },
-      "type": "yes_no",
-      "category": "withholding",
-      "condition": "yes",
-      "documents": [],
-      "isSpouse": false,
-      "perItem": false,
-      "detailsField": null,
-      "linkedQuestion": "withholding_income_tax_clients"
+      "tallyKeys": { "he": "question_R0Mpj4", "en": "question_ZNOz6v" },
+      "type": "yes_no", "category": "donations", "condition": "yes",
+      "documents": ["donation_receipts"]
     },
     {
       "id": "withholding_income_tax_clients",
-      "tallyKeys": {
-        "he": "question_Oz4vEY",
-        "en": "question_qdGKAk"
-      },
-      "label": {
-        "he": "שמות הלקוחות",
-        "en": "Client names"
-      },
-      "type": "list",
-      "category": "withholding",
-      "condition": null,
-      "documents": [
-        "wht_income_tax"
-      ],
-      "isSpouse": false,
-      "perItem": true,
-      "detailsField": "withholding_client_name",
-      "linkedQuestion": null
-    },
-    {
-      "id": "withholding_nii",
-      "tallyKeys": {
-        "he": "question_V0QgNM",
-        "en": "question_QDRJ5k"
-      },
-      "label": {
-        "he": "האם יש לקוחות שניכו לך ביטוח לאומי במקור בשנת המס?",
-        "en": "Did any clients withhold National Insurance at source?"
-      },
-      "type": "yes_no",
-      "category": "withholding",
-      "condition": "yes",
-      "documents": [],
-      "isSpouse": false,
-      "perItem": false,
-      "detailsField": null,
-      "linkedQuestion": "withholding_nii_clients"
+      "tallyKeys": { "he": "question_Oz4vEY", "en": "question_qdGKAk" },
+      "type": "list", "category": "withholding",
+      "documents": ["wht_income_tax"],
+      "perItem": true, "detailsField": "withholding_client_name"
     },
     {
       "id": "withholding_nii_clients",
-      "tallyKeys": {
-        "he": "question_P61KrB",
-        "en": "question_9WZED4"
-      },
-      "label": {
-        "he": "שמות הלקוחות",
-        "en": "Client names"
-      },
-      "type": "list",
-      "category": "withholding",
-      "condition": null,
-      "documents": [
-        "wht_nii"
-      ],
-      "isSpouse": false,
-      "perItem": true,
-      "detailsField": "withholding_client_name",
-      "linkedQuestion": null
-    },
-    {
-      "id": "other_additional_income",
-      "tallyKeys": {
-        "he": "question_5zdaod",
-        "en": "question_R0zqQl"
-      },
-      "label": {
-        "he": "האם היו הכנסות אחרות בשנת המס שלא צוינו בשאלון ויכולות להיות רלוונטיות?",
-        "en": "Were there other income sources in the tax year not mentioned in this questionnaire?"
-      },
-      "type": "yes_no",
-      "category": "other",
-      "condition": null,
-      "documents": [],
-      "isSpouse": false,
-      "perItem": false,
-      "detailsField": null,
-      "linkedQuestion": "other_additional_income_details"
+      "tallyKeys": { "he": "question_P61KrB", "en": "question_9WZED4" },
+      "type": "list", "category": "withholding",
+      "documents": ["wht_nii"],
+      "perItem": true, "detailsField": "withholding_client_name"
     },
     {
       "id": "other_additional_income_details",
-      "tallyKeys": {
-        "he": "question_d6YJXA",
-        "en": "question_oyA8Z1"
-      },
-      "label": {
-        "he": "אנא פרט את ההכנסות הנוספות",
-        "en": "Please describe the additional income sources"
-      },
-      "type": "list",
-      "category": "other",
-      "condition": null,
-      "documents": [
-        "other_income_doc"
-      ],
-      "isSpouse": false,
-      "perItem": true,
-      "detailsField": "other_income_text",
-      "linkedQuestion": null
+      "tallyKeys": { "he": "question_d6YJXA", "en": "question_oyA8Z1" },
+      "type": "list", "category": "other",
+      "documents": ["other_income_doc"],
+      "perItem": true, "detailsField": "other_income_text"
     }
   ]
 }
