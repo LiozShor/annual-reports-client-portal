@@ -470,38 +470,67 @@ function mapLegacyToSSOT(typeId, params) {
     return cat ? categoryKey : 'other';
   }
 
-  function cleanKeyPart(s) {
-    return String(s ?? "").trim().replace(/\s+/g, "_").replace(/[^\u0590-\u05FFa-zA-Z0-9_]/g, "");
+  /**
+   * Normalize a string for use in document_key
+   * - Lowercase
+   * - Replace spaces with underscores
+   * - Remove special characters (keep Hebrew, English, numbers, underscores)
+   * - Limit to 50 chars
+   */
+  function normalizeForKey(s) {
+    return String(s ?? "")
+      .trim()
+      .toLowerCase()
+      .replace(/\s+/g, "_")
+      .replace(/[^a-z0-9\u0590-\u05FF_]/g, "")
+      .substring(0, 50);
   }
 
   // Data containers
   const out = [];
   const seen = new Map();
 
-  function addDoc(mapping, docTypeId, issuer_name_he, issuer_name_en, itemRaw = "static") {
-    // Build unique key from: report_id + year + type + person + item
-    // This ensures uniqueness across all clients and years
-    const person = mapping.isSpouse ? 'spouse' : 'client';
-    const itemKey = cleanKeyPart(itemRaw || 'static');
-
-    // Format: docType_reportId_year_person_item
-    // Example: form_106_recABC123_2025_client_Intel
-    let document_key = `${docTypeId}_${reportId}_${tax_year}_${person}_${itemKey}`;
-
-    // Handle collisions (same employer name from different mappings, etc.)
-    let counter = 0;
-    let finalKey = document_key;
-    while (seen.has(finalKey)) {
-      counter++;
-      finalKey = `${document_key}_${counter}`;
+  /**
+   * Generate unique document_key
+   * Formula: {report_record_id}_{type}_{person}_{issuer}
+   * Example: recABC123_Form_106_client_intel_corporation
+   *
+   * Uniqueness guaranteed by:
+   * - report_record_id: unique per client per year
+   * - type: document type (Form_106, Form_867, etc.)
+   * - person: client or spouse
+   * - issuer: normalized issuer name (employer, bank, etc.)
+   */
+  function generateDocumentKey(airtableType, person, issuerRaw) {
+    // Validate report_record_id exists
+    if (!reportId) {
+      console.error('CRITICAL: report_record_id is missing! Document keys will not be unique.');
     }
 
-    document_key = finalKey;
-    seen.set(document_key, true);
+    const normalizedIssuer = normalizeForKey(issuerRaw) || 'static';
 
+    // Format: reportId_Type_person_issuer
+    let baseKey = `${reportId}_${airtableType}_${person}_${normalizedIssuer}`;
+
+    // Handle collisions (rare, but possible with similar issuer names)
+    let finalKey = baseKey;
+    let counter = 0;
+    while (seen.has(finalKey)) {
+      counter++;
+      finalKey = `${baseKey}_${counter}`;
+    }
+
+    seen.set(finalKey, true);
+    return finalKey;
+  }
+
+  function addDoc(mapping, docTypeId, issuer_name_he, issuer_name_en, itemRaw = "static") {
     const airtableType = AIRTABLE_TYPE_MAP[docTypeId] || docTypeId;
-    const categoryId = getCategoryId(mapping.category);
     const person = mapping.isSpouse ? 'spouse' : 'client';
+    const categoryId = getCategoryId(mapping.category);
+
+    // Generate unique document_key using formula
+    const document_key = generateDocumentKey(airtableType, person, itemRaw);
 
     out.push({
       document_key,
