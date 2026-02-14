@@ -215,7 +215,8 @@ function goToForm(lang) {
         year: year,
         questionnaire_token: token,
         full_name: fullName || '',
-        email: email || ''
+        email: email || '',
+        source_language: lang
     }).toString();
     window.location.href = `https://tally.so/r/${formId}?${qs}`;
 }
