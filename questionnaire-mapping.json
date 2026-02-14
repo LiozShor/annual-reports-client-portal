@@ -300,7 +300,7 @@
     },
     {
       "id": "nii_spouse_payment_type",
-      "tallyKeys": { "he": "question_V0QgDM", "en": "question_a64Ddy" },
+      "tallyKeys": { "he": "question_Oz4vkY", "en": "question_a64Ddy" },
       "type": "checkbox", "category": "nii",
       "documents": ["nii_allowance_cert_spouse"],
       "isSpouse": true, "perItem": true, "detailsField": "benefit_type"
