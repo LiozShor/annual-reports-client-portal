@@ -509,9 +509,10 @@ async function confirmSubmit() {
     };
 
     try {
+        // Use text/plain to avoid CORS preflight (n8n doesn't handle OPTIONS)
         const response = await fetch(`${API_BASE}/tally-edit-documents`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'text/plain' },
             body: JSON.stringify(payload)
         });
 
