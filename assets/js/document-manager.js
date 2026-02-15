@@ -110,28 +110,27 @@ function displayDocuments() {
 
     // Fill groups
     currentDocuments.forEach(doc => {
-        // Try to match type by key or id or alias
-        let typeKey = doc.type;
-        if (!typeKey && doc.id) typeKey = doc.id; // Fallback to ID if type is missing
+        let category = doc.category || 'other';
 
-        let category = 'other';
+        // If no category from API, try DocRegistry lookup
+        if (!doc.category) {
+            let typeKey = doc.type;
+            if (!typeKey && doc.id) typeKey = doc.id;
 
-        // 1. Direct lookup
-        let docTypeDef = window.DocRegistry.DOCUMENT_TYPES[typeKey];
+            let docTypeDef = window.DocRegistry.DOCUMENT_TYPES[typeKey];
 
-        // 2. Case insensitive lookup if direct failed
-        if (!docTypeDef && typeKey) {
-            const lowerKey = String(typeKey).toLowerCase();
-            // Find matching key
-            const match = Object.values(window.DocRegistry.DOCUMENT_TYPES).find(dt =>
-                (dt.id && dt.id.toLowerCase() === lowerKey) ||
-                (dt.aliases && dt.aliases.some(a => a.toLowerCase() === lowerKey))
-            );
-            if (match) docTypeDef = match;
-        }
+            if (!docTypeDef && typeKey) {
+                const lowerKey = String(typeKey).toLowerCase();
+                const match = Object.values(window.DocRegistry.DOCUMENT_TYPES).find(dt =>
+                    (dt.id && dt.id.toLowerCase() === lowerKey) ||
+                    (dt.aliases && dt.aliases.some(a => a.toLowerCase() === lowerKey))
+                );
+                if (match) docTypeDef = match;
+            }
 
-        if (docTypeDef && docTypeDef.category) {
-            category = docTypeDef.category;
+            if (docTypeDef && docTypeDef.category) {
+                category = docTypeDef.category;
+            }
         }
 
         if (!groups[category]) groups[category] = [];
