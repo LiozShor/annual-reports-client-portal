@@ -178,6 +178,19 @@ body {
     border-color: #1976d2;
 }
 
+.person-header {
+    font-size: 18px;
+    font-weight: bold;
+    color: #37474f;
+    padding: 12px 0 8px;
+    margin-top: 20px;
+    border-bottom: 2px solid #b0bec5;
+}
+
+.person-header:first-child {
+    margin-top: 0;
+}
+
 /* RTL/LTR specific styles */
 [dir="ltr"] .document-item::before {
     margin-left: 0;

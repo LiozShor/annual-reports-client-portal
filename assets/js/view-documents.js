@@ -1,5 +1,6 @@
 /* ===========================================
    VIEW DOCUMENTS JAVASCRIPT - view-documents.html
+   SSOT: categories + doc names from API (Airtable)
    =========================================== */
 
 let currentData = null;
@@ -10,7 +11,7 @@ const params = new URLSearchParams(window.location.search);
 const reportId = params.get('report_id');
 
 if (!reportId) {
-    showError('חסר מזהה דוח / Missing report ID');
+    showError('Missing report ID / חסר מזהה דוח');
 } else {
     loadDocuments();
 }
@@ -24,17 +25,16 @@ async function loadDocuments() {
         }
 
         const data = await response.json();
-        console.log('API Response:', data); // Debug log
+        console.log('API Response:', data);
         currentData = data;
 
         document.getElementById('loading').style.display = 'none';
 
         if (!data.ok) {
-            showError(data.error || 'שגיאה בטעינת המסמכים / Error loading documents');
+            showError(data.error || 'Error loading documents / שגיאה בטעינת המסמכים');
             return;
         }
 
-        // FIXED: Access nested report object
         const clientName = data.report?.client_name || '';
         const spouseName = data.report?.spouse_name || '';
         const year = data.report?.year || '';
@@ -67,82 +67,66 @@ async function loadDocuments() {
 
     } catch (error) {
         console.error('Error:', error);
-        showError('שגיאה בטעינת המסמכים / Error loading documents');
+        showError('Error loading documents / שגיאה בטעינת המסמכים');
     }
 }
 
 function renderDocuments() {
-    // FIXED: API returns "documents" object, not "categories" array
-    if (!currentData || !currentData.documents) return;
+    if (!currentData || !currentData.groups) return;
 
     const container = document.getElementById('documents-container');
+    const isHe = currentLang === 'he';
 
     if (currentData.document_count === 0) {
-        container.innerHTML = currentLang === 'he'
-            ? '<div class="success-message">✅ כל המסמכים התקבלו! אין מסמכים חסרים.</div>'
-            : '<div class="success-message">✅ All documents received! No missing documents.</div>';
+        container.innerHTML = isHe
+            ? '<div class="success-message">כל המסמכים התקבלו! אין מסמכים חסרים.</div>'
+            : '<div class="success-message">All documents received! No missing documents.</div>';
         return;
     }
 
-    // Build category translation map from registry
-    const categoryTranslations = {};
-    Object.values(window.DocRegistry.CATEGORIES).forEach(cat => {
-        const heKey = `${cat.emoji} ${cat.he}`;
-        categoryTranslations[heKey] = cat.en;
-    });
-
     let html = '';
 
-    // FIXED: Iterate over documents object (category name → documents array)
-    for (const [categoryHe, docs] of Object.entries(currentData.documents)) {
-        const categoryEn = categoryTranslations[categoryHe] || categoryHe;
-        const categoryName = currentLang === 'he' ? categoryHe : categoryEn;
-
-        html += `<div class="category">`;
-        html += `<div class="category-header">${categoryName}</div>`;
-        html += `<ul class="document-list">`;
-
-        for (const doc of docs) {
-            const docName = currentLang === 'he' ? doc.name_he : doc.name_en;
-
-            // Apply smart formatting (bold after dashes)
-            const formattedName = formatDocumentName(docName);
-
-            let statusBadge = '';
-            if (doc.status === 'Received') {
-                statusBadge = currentLang === 'he'
-                    ? '<span class="status-badge status-received">התקבל</span>'
-                    : '<span class="status-badge status-received">Received</span>';
-            } else if (doc.status === 'Requires_Fix') {
-                statusBadge = currentLang === 'he'
-                    ? '<span class="status-badge status-fix">דורש תיקון</span>'
-                    : '<span class="status-badge status-fix">Needs Fix</span>';
-            } else {
-                statusBadge = currentLang === 'he'
-                    ? '<span class="status-badge status-missing">נדרש</span>'
-                    : '<span class="status-badge status-missing">Required</span>';
-            }
-
-            html += `<li class="document-item">${statusBadge}${formattedName}</li>`;
+    for (const group of currentData.groups) {
+        // Person header (only if multiple groups = married couple)
+        if (currentData.groups.length > 1) {
+            const label = isHe ? group.person_label_he : group.person_label_en;
+            html += `<div class="person-header">${label}</div>`;
         }
 
-        html += `</ul></div>`;
+        for (const cat of group.categories) {
+            const catName = `${cat.emoji} ${isHe ? cat.name_he : cat.name_en}`;
+
+            html += `<div class="category">`;
+            html += `<div class="category-header">${catName}</div>`;
+            html += `<ul class="document-list">`;
+
+            for (const doc of cat.docs) {
+                // Document names may contain <b> tags from SSOT — render as HTML
+                const docName = isHe ? doc.name_he : (doc.name_en || doc.name_he);
+
+                let statusBadge = '';
+                if (doc.status === 'Received') {
+                    statusBadge = isHe
+                        ? '<span class="status-badge status-received">התקבל</span>'
+                        : '<span class="status-badge status-received">Received</span>';
+                } else if (doc.status === 'Requires_Fix') {
+                    statusBadge = isHe
+                        ? '<span class="status-badge status-fix">דורש תיקון</span>'
+                        : '<span class="status-badge status-fix">Needs Fix</span>';
+                } else {
+                    statusBadge = isHe
+                        ? '<span class="status-badge status-missing">נדרש</span>'
+                        : '<span class="status-badge status-missing">Required</span>';
+                }
+
+                html += `<li class="document-item">${statusBadge}${docName}</li>`;
+            }
+
+            html += `</ul></div>`;
+        }
     }
 
     container.innerHTML = html;
-}
-
-function formatDocumentName(name) {
-    // Bold parts after dashes (names, companies, banks)
-    const parts = String(name || '').split(' - ');
-    if (parts.length === 1) return name;
-
-    const formatted = [parts[0]];
-    for (let i = 1; i < parts.length; i++) {
-        formatted.push(`<strong>${parts[i]}</strong>`);
-    }
-
-    return formatted.join(' - ');
 }
 
 function switchLanguage(lang) {
