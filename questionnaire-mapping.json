@@ -402,6 +402,14 @@
       "fixedParams": { "deposit_type": "ביטוח חיים" }
     },
     {
+      "id": "insurance_mortgage_company",
+      "tallyKeys": { "he": "question_MRTins1" },
+      "type": "list", "category": "insurance",
+      "documents": ["insurance_tax_cert"],
+      "perItem": true, "detailsField": "company_name",
+      "fixedParams": { "deposit_type": "ביטוח חיים" }
+    },
+    {
       "id": "military_discharge",
       "tallyKeys": { "he": "question_oyR995", "en": "question_BXpQkY" },
       "type": "yes_no", "category": "military", "condition": "yes",

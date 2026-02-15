@@ -545,9 +545,13 @@ function mapLegacyToSSOT(typeId, params) {
     });
   }
 
+  // Mappings handled by dedicated special sections below (avoid duplicates)
+  const SPECIAL_HANDLED = ['pension_withdrawal_type', 'investments_foreign_income', 'investments_gambling'];
+
   // Main processing loop
   for (const mapping of QUESTION_MAPPINGS) {
     if (!mapping.documents || mapping.documents.length === 0) continue;
+    if (SPECIAL_HANDLED.includes(mapping.id)) continue;
 
     const answerValue = answers[mapping.tallyKeys?.he] || answers[mapping.tallyKeys?.en];
 
