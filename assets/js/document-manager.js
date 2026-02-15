@@ -135,7 +135,7 @@ function displayDocuments() {
                             id="checkbox-${doc.id}"
                             aria-label="סמן להסרה">
                         <span class="document-icon">📄</span>
-                        <div class="document-name">${escapeHtml(doc.name)}</div>
+                        <div class="document-name">${doc.name}</div>
                         <span class="status-badge ${status.class}">${status.text}</span>
                         <button class="download-btn" disabled
                                 title="הורדה (בקרוב)">⬇️</button>
