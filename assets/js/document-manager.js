@@ -61,7 +61,7 @@ function showAlert(msg, type = 'success') {
 // Load documents
 async function loadDocuments() {
     try {
-        const response = await fetch(`${API_BASE}/get-documents?report_id=${REPORT_ID}`);
+        const response = await fetch(`${API_BASE}/get-client-documents?report_id=${REPORT_ID}&mode=office`);
         const data = await response.json();
 
         // Handle case where report is found but stage is 1 (Not Started)
