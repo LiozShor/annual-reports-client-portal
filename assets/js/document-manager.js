@@ -1,5 +1,6 @@
 /* ===========================================
    DOCUMENT MANAGER JAVASCRIPT - document-manager.html
+   SSOT: all data (docs, categories, templates) from API (Airtable)
    =========================================== */
 
 // Get URL parameters
@@ -15,7 +16,36 @@ let currentGroups = [];
 let currentDocuments = [];
 let markedForRemoval = new Set();
 let docsToAdd = new Set();
-let pendingDocWithDetail = null; // For documents requiring detail
+let pendingTemplate = null; // Template awaiting detail input
+let apiTemplates = [];      // Templates from Airtable (SSOT)
+let apiCategories = [];     // Categories from Airtable (SSOT)
+
+// Variable name → Hebrew label mapping (UI only)
+const VAR_LABELS = {
+    employer_name: 'שם המעסיק',
+    spouse_name: 'שם בן/בת הזוג',
+    institution_name: 'בנק / בית השקעות',
+    company_name: 'שם החברה',
+    city_name: 'שם הישוב',
+    allowance_type: 'סוג הקצבה',
+    person_name: 'שם מלא',
+    withdrawal_type: 'סוג המשיכה',
+    withdrawal_other_text: 'פרטי המשיכה',
+    deposit_type: 'סוג ההפקדה',
+    crypto_source: 'פלטפורמה',
+    gambling_source: 'מקור הזכייה',
+    rent_income_monthly: 'סכום שכירות חודשי',
+    rent_expense_monthly: 'סכום שכירות חודשי',
+    withholding_client_name: 'שם הלקוח',
+    university_name: 'מוסד לימודים',
+    degree_type: 'סוג התואר',
+    country: 'מדינה',
+    income_type: 'סוג ההכנסה',
+    other_income_text: 'פרטי ההכנסה',
+    survivor_details: 'פרטי שארים',
+    relationship_details: 'פרטי ההנצחה',
+    medical_details: 'פרטים רפואיים'
+};
 
 // Initialize
 document.getElementById('clientName').textContent = CLIENT_NAME || '-';
@@ -27,28 +57,11 @@ if (!REPORT_ID || REPORT_ID === 'null' || REPORT_ID === 'undefined') {
     document.getElementById('loading').style.display = 'none';
     document.getElementById('not-started-view').style.display = 'block';
 } else {
-    // Run on page load
     if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', init);
+        document.addEventListener('DOMContentLoaded', loadDocuments);
     } else {
-        init();
+        loadDocuments();
     }
-}
-
-function init() {
-    initDocumentDropdown();
-    loadDocuments();
-}
-
-// Populate document dropdown from registry
-function initDocumentDropdown() {
-    if (!window.DocRegistry) {
-        setTimeout(initDocumentDropdown, 100);
-        return;
-    }
-    const select = document.getElementById('docTypeSelect');
-    const optionsHtml = window.DocRegistry.getDocumentDropdownOptions({ lang: 'he', includeCategoryGroups: true });
-    select.innerHTML = '<option value="">-- בחר מסמך מהרשימה --</option>\n' + optionsHtml;
 }
 
 // Show alert
@@ -74,9 +87,9 @@ async function loadDocuments() {
             }
         }
 
-        // Store pre-grouped structure from API (SSOT — same source as email)
+        // Store pre-grouped structure from API (SSOT)
         currentGroups = data.groups || [];
-        // Flatten for ID lookups (waive/add interactivity)
+        // Flatten for ID lookups
         currentDocuments = [];
         for (const group of currentGroups) {
             for (const cat of group.categories) {
@@ -85,6 +98,12 @@ async function loadDocuments() {
                 }
             }
         }
+
+        // Store templates and categories from API (SSOT)
+        apiTemplates = data.templates || [];
+        apiCategories = data.categories_list || [];
+
+        initDocumentDropdown();
         displayDocuments();
         updateStats();
         document.getElementById('loading').style.display = 'none';
@@ -93,6 +112,38 @@ async function loadDocuments() {
         console.error(error);
         showAlert('שגיאה בטעינת מסמכים. אנא נסה לרענן את הדף.', 'error');
     }
+}
+
+// Populate document dropdown from Airtable templates (SSOT)
+function initDocumentDropdown() {
+    const select = document.getElementById('docTypeSelect');
+    let html = '<option value="">-- בחר מסמך מהרשימה --</option>\n';
+
+    // Group templates by category
+    const groups = {};
+    for (const tpl of apiTemplates) {
+        const catId = tpl.category || 'other';
+        if (!groups[catId]) groups[catId] = [];
+        groups[catId].push(tpl);
+    }
+
+    // Build optgroups using category order from API
+    for (const cat of apiCategories) {
+        const catTemplates = groups[cat.id];
+        if (!catTemplates || catTemplates.length === 0) continue;
+
+        html += `<optgroup label="${cat.emoji} ${cat.name_he}">`;
+        for (const tpl of catTemplates) {
+            // Show template name with placeholders replaced by [...]
+            const displayName = tpl.name_he
+                .replace(/\{year\}/g, YEAR || 'YYYY')
+                .replace(/\{[^}]+\}/g, '[...]');
+            html += `<option value="${tpl.template_id}">${displayName}</option>`;
+        }
+        html += '</optgroup>';
+    }
+
+    select.innerHTML = html;
 }
 
 // Display documents — renders pre-grouped structure from API (SSOT)
@@ -112,7 +163,6 @@ function displayDocuments() {
     let html = '';
 
     for (const group of currentGroups) {
-        // Person header (client / spouse)
         if (currentGroups.length > 1) {
             html += `<div class="person-header">${escapeHtml(group.person_label)}</div>`;
         }
@@ -165,7 +215,6 @@ function getStatusBadge(status) {
     }
 }
 
-
 // Toggle removal
 function toggleRemoval(id) {
     const checkbox = document.getElementById(`checkbox-${id}`);
@@ -182,32 +231,24 @@ function toggleRemoval(id) {
     updateStats();
 }
 
-// Handle document selection
+// Handle document selection from dropdown
 document.getElementById('docTypeSelect').addEventListener('change', function (e) {
-    const typeId = e.target.value;
-    if (!typeId) return;
+    const templateId = e.target.value;
+    if (!templateId) return;
 
-    const requiresDetail = window.DocRegistry.requiresDetails(typeId);
+    const tpl = apiTemplates.find(t => t.template_id === templateId);
+    if (!tpl) return;
 
-    if (requiresDetail) {
-        // Show detail input
-        pendingDocWithDetail = typeId;
-        const schema = window.DocRegistry.getDetailsSchema(typeId);
+    // Check if template has variables beyond 'year'
+    const userVars = (tpl.variables || []).filter(v => v !== 'year');
 
-        // Build dynamic detail inputs
-        const detailInputDiv = document.getElementById('detailInput');
-        const firstDetail = schema[0];
-
-        if (firstDetail) {
-            document.getElementById('detailLabel').textContent = firstDetail.label_he + ':';
-            document.getElementById('detailValue').placeholder = firstDetail.placeholder_he || '';
-            document.getElementById('detailValue').value = '';
-            detailInputDiv.classList.add('show');
-            document.getElementById('detailValue').focus();
-        }
+    if (userVars.length > 0) {
+        // Show detail input for the first user variable
+        pendingTemplate = { tpl, userVars, collectedValues: { year: YEAR || '' } };
+        promptNextVariable();
     } else {
-        // Add directly without detail
-        const displayName = window.DocRegistry.formatDocumentName(typeId, { year: YEAR }, { lang: 'he', mode: 'text' });
+        // No variables needed — generate name directly
+        const displayName = tpl.name_he.replace(/\{year\}/g, YEAR || '');
 
         if (docsToAdd.has(displayName)) {
             showAlert('מסמך זה כבר נמצא ברשימה', 'error');
@@ -220,6 +261,44 @@ document.getElementById('docTypeSelect').addEventListener('change', function (e)
     }
 });
 
+// Prompt user for the next variable value
+function promptNextVariable() {
+    if (!pendingTemplate) return;
+
+    const { tpl, userVars, collectedValues } = pendingTemplate;
+
+    // Find the first variable not yet collected
+    const nextVar = userVars.find(v => !(v in collectedValues));
+    if (!nextVar) {
+        // All variables collected — generate name
+        let name = tpl.name_he;
+        for (const [key, val] of Object.entries(collectedValues)) {
+            name = name.replace(new RegExp(`\\{${key}\\}`, 'g'), val);
+        }
+
+        if (docsToAdd.has(name)) {
+            showAlert('מסמך זה כבר נמצא ברשימה', 'error');
+        } else {
+            docsToAdd.add(name);
+            updateSelectedDocs();
+            updateStats();
+        }
+
+        document.getElementById('detailInput').classList.remove('show');
+        document.getElementById('docTypeSelect').value = '';
+        pendingTemplate = null;
+        return;
+    }
+
+    // Show input for this variable
+    const label = VAR_LABELS[nextVar] || nextVar;
+    document.getElementById('detailLabel').textContent = label + ':';
+    document.getElementById('detailValue').placeholder = '';
+    document.getElementById('detailValue').value = '';
+    document.getElementById('detailInput').classList.add('show');
+    document.getElementById('detailValue').focus();
+}
+
 // Add document with detail
 function addDocumentWithDetail() {
     const detail = document.getElementById('detailValue').value.trim();
@@ -229,33 +308,16 @@ function addDocumentWithDetail() {
         return;
     }
 
-    if (!pendingDocWithDetail) return;
+    if (!pendingTemplate) return;
 
-    // Get detail schema to determine parameter key
-    const schema = window.DocRegistry.getDetailsSchema(pendingDocWithDetail);
-    const firstDetail = schema[0];
-    if (!firstDetail) return;
+    const { userVars, collectedValues } = pendingTemplate;
+    const nextVar = userVars.find(v => !(v in collectedValues));
+    if (!nextVar) return;
 
-    // Build params object
-    const params = { year: YEAR };
-    params[firstDetail.key] = detail;
+    collectedValues[nextVar] = detail;
 
-    // Format document name using registry
-    const fullDocName = window.DocRegistry.formatDocumentName(pendingDocWithDetail, params, { lang: 'he', mode: 'text' });
-
-    if (docsToAdd.has(fullDocName)) {
-        showAlert('מסמך זה כבר נמצא ברשימה', 'error');
-        return;
-    }
-
-    docsToAdd.add(fullDocName);
-    updateSelectedDocs();
-    updateStats();
-
-    // Reset
-    document.getElementById('detailInput').classList.remove('show');
-    document.getElementById('docTypeSelect').value = '';
-    pendingDocWithDetail = null;
+    // Check if more variables needed
+    promptNextVariable();
 }
 
 // Update selected documents display
@@ -297,12 +359,16 @@ function updateStats() {
     document.getElementById('addedDocs').textContent = docsToAdd.size;
 }
 
+// Strip HTML tags for plain text display
+function stripHtml(html) {
+    const div = document.createElement('div');
+    div.innerHTML = html;
+    return div.textContent || div.innerText || '';
+}
+
 // Open confirmation modal
 function openConfirmation() {
     const TXT_NO_CHANGES = "לא בוצעו שינויים. אנא בצע שינויים לפני השמירה.";
-    const TXT_REMOVE_PREFIX = "🚫 מסמכים שיוסרו מרשימת הלקוח (";
-    const TXT_ADD_PREFIX = "➕ מסמכים שיתווספו (";
-    const TXT_NOTES_TITLE = "💬 הערות:";
 
     const customDocRaw = (document.getElementById('customDoc')?.value ?? '').trim();
     const notes = (document.getElementById('notes')?.value ?? '').trim();
@@ -336,16 +402,17 @@ function openConfirmation() {
     let summary = '<div>';
 
     if (docsToRemove.length > 0) {
-        summary += '<h4>' + TXT_REMOVE_PREFIX + docsToRemove.length + '):</h4>';
+        summary += `<h4 style="color: #dc3545;">🚫 מסמכים שיוסרו מרשימת הלקוח (${docsToRemove.length}):</h4>`;
         summary += '<ul class="changes-list">';
         docsToRemove.forEach(doc => {
-            summary += `<li class="change-remove">🚫 ${escapeHtml(doc)}</li>`;
+            // Doc names may contain <b> tags — strip for plain text display in dialog
+            summary += `<li class="change-remove">🚫 ${stripHtml(doc)}</li>`;
         });
         summary += '</ul>';
     }
 
     if (uniqueDocsToAdd.length > 0) {
-        summary += '<h4>' + TXT_ADD_PREFIX + uniqueDocsToAdd.length + '):</h4>';
+        summary += `<h4 style="color: #28a745;">➕ מסמכים שיתווספו (${uniqueDocsToAdd.length}):</h4>`;
         summary += '<ul class="changes-list">';
         uniqueDocsToAdd.forEach(doc => {
             summary += `<li class="change-add">✓ ${escapeHtml(doc)}</li>`;
@@ -354,7 +421,7 @@ function openConfirmation() {
     }
 
     if (notes) {
-        summary += '<h4>' + TXT_NOTES_TITLE + '</h4>';
+        summary += '<h4>💬 הערות:</h4>';
         summary += '<ul class="changes-list"><li>' + escapeHtml(notes) + '</li></ul>';
     }
 
@@ -469,7 +536,7 @@ function resetForm() {
     document.getElementById('notes').value = '';
     document.getElementById('detailInput').classList.remove('show');
     document.getElementById('docTypeSelect').value = '';
-    pendingDocWithDetail = null;
+    pendingTemplate = null;
 
     document.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = false);
     document.querySelectorAll('.document-item').forEach(item => {
@@ -492,24 +559,16 @@ function checkCustomDocDuplicate() {
     }
 }
 
-
 // Send Questionnaire for Not-Started Clients
 async function confirmSendQuestionnaire() {
-    // 1. Confirm
     if (!confirm("האם אתה בטוח שברצונך לשלוח את השאלון ללקוח זה?")) return;
 
-    // 2. Auth check (requires admin token)
     const token = localStorage.getItem('QKiwUBXVH@%#1gD7t@rB]<,dM.[NC5b_');
     if (!token) {
         alert("שגיאת הרשאה: עליך להתחבר דרך פורטל הניהול.");
         return;
     }
 
-    // 3. Send
-    // We assume we have report_id from URL even if not started? 
-    // Yes, from admin panel we link with report_id.
-
-    // Show local loading
     const btn = document.querySelector('#not-started-view button');
     const originalText = btn.textContent;
     btn.textContent = 'שולח...';
@@ -528,7 +587,7 @@ async function confirmSendQuestionnaire() {
         const data = await response.json();
 
         if (data.ok) {
-            alert("השאלון נשלח בהצלחה! ✅");
+            alert("השאלון נשלח בהצלחה!");
         } else {
             alert("שגיאה בשליחה: " + (data.error || 'Unknown error'));
         }
@@ -557,6 +616,6 @@ document.addEventListener('click', function (e) {
         !select.contains(e.target)) {
         detailInput.classList.remove('show');
         select.value = '';
-        pendingDocWithDetail = null;
+        pendingTemplate = null;
     }
 });
