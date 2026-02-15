@@ -11,6 +11,7 @@ const YEAR = params.get('year');
 const API_BASE = 'https://liozshor.app.n8n.cloud/webhook';
 
 // State
+let currentGroups = [];
 let currentDocuments = [];
 let markedForRemoval = new Set();
 let docsToAdd = new Set();
@@ -66,14 +67,24 @@ async function loadDocuments() {
 
         // Handle case where report is found but stage is 1 (Not Started)
         if (data.stage && (data.stage.startsWith('1') || data.stage.startsWith('2'))) {
-            if ((!data.documents || data.documents.length === 0) && data.stage.startsWith('1')) {
+            if ((!data.groups || data.document_count === 0) && data.stage.startsWith('1')) {
                 document.getElementById('loading').style.display = 'none';
                 document.getElementById('not-started-view').style.display = 'block';
                 return;
             }
         }
 
-        currentDocuments = data.documents || [];
+        // Store pre-grouped structure from API (SSOT — same source as email)
+        currentGroups = data.groups || [];
+        // Flatten for ID lookups (waive/add interactivity)
+        currentDocuments = [];
+        for (const group of currentGroups) {
+            for (const cat of group.categories) {
+                for (const doc of cat.docs) {
+                    currentDocuments.push(doc);
+                }
+            }
+        }
         displayDocuments();
         updateStats();
         document.getElementById('loading').style.display = 'none';
@@ -84,7 +95,7 @@ async function loadDocuments() {
     }
 }
 
-// Display documents
+// Display documents — renders pre-grouped structure from API (SSOT)
 function displayDocuments() {
     const container = document.getElementById('existingDocs');
 
@@ -98,131 +109,43 @@ function displayDocuments() {
         return;
     }
 
-    // Groupping
-    const groups = {};
-    const categoriesDisplay = window.DocRegistry.CATEGORIES;
-
-    // Sort keys to match document-types.js order
-    const categoryKeys = Object.keys(categoriesDisplay);
-
-    // Initialize groups
-    categoryKeys.forEach(key => groups[key] = []);
-
-    // Fill groups
-    currentDocuments.forEach(doc => {
-        let category = doc.category || 'other';
-
-        // If no category from API, try DocRegistry lookup
-        if (!doc.category) {
-            let typeKey = doc.type;
-            if (!typeKey && doc.id) typeKey = doc.id;
-
-            let docTypeDef = window.DocRegistry.DOCUMENT_TYPES[typeKey];
-
-            if (!docTypeDef && typeKey) {
-                const lowerKey = String(typeKey).toLowerCase();
-                const match = Object.values(window.DocRegistry.DOCUMENT_TYPES).find(dt =>
-                    (dt.id && dt.id.toLowerCase() === lowerKey) ||
-                    (dt.aliases && dt.aliases.some(a => a.toLowerCase() === lowerKey))
-                );
-                if (match) docTypeDef = match;
-            }
-
-            if (docTypeDef && docTypeDef.category) {
-                category = docTypeDef.category;
-            }
-        }
-
-        if (!groups[category]) groups[category] = [];
-        groups[category].push(doc);
-    });
-
-    // Deduplication Logic
-    // For each group, we keep only unique document names
-    categoryKeys.forEach(catKey => {
-        if (!groups[catKey]) return;
-
-        const uniqueDocs = [];
-        const seenNames = new Set();
-
-        groups[catKey].forEach(doc => {
-            // Create a unique key for deduplication: Name + Type
-            // Standardizing name to handle basic inconsistencies (trim)
-            const uniqueKey = (doc.name || 'unknown').trim() + '|' + (doc.type || 'unknown');
-
-            if (!seenNames.has(uniqueKey)) {
-                seenNames.add(uniqueKey);
-                uniqueDocs.push(doc);
-            }
-        });
-
-        groups[catKey] = uniqueDocs;
-    });
-
-
     let html = '';
 
-    // Create a lookup for Sort Order
-    const docTypeOrder = Object.keys(window.DocRegistry.DOCUMENT_TYPES);
-    const getDocIndex = (doc) => {
-        // Try to match type to index
-        // Similar fuzzy match logic as grouping
-        const typeKey = doc.type || doc.id;
-        let index = docTypeOrder.indexOf(typeKey);
-
-        if (index === -1 && typeKey) {
-            const lowerKey = String(typeKey).toLowerCase();
-            // Find matching definition to get its real key
-            const matchKey = Object.keys(window.DocRegistry.DOCUMENT_TYPES).find(k => {
-                const dt = window.DocRegistry.DOCUMENT_TYPES[k];
-                return (dt.id && dt.id.toLowerCase() === lowerKey) ||
-                    (dt.aliases && dt.aliases.some(a => a.toLowerCase() === lowerKey));
-            });
-            if (matchKey) index = docTypeOrder.indexOf(matchKey);
+    for (const group of currentGroups) {
+        // Person header (client / spouse)
+        if (currentGroups.length > 1) {
+            html += `<div class="person-header">${escapeHtml(group.person_label)}</div>`;
         }
-        return index === -1 ? 9999 : index;
-    };
 
-    categoryKeys.forEach(catKey => {
-        const catDocs = groups[catKey];
-        if (catDocs && catDocs.length > 0) {
-            // SORT DOCUMENTS MATCHING QUESTIONNAIRE ORDER
-            catDocs.sort((a, b) => getDocIndex(a) - getDocIndex(b));
-
-            const catInfo = categoriesDisplay[catKey];
+        for (const cat of group.categories) {
             html += `
                 <div class="category-header">
-                    <span>${catInfo.emoji}</span>
-                    <span>${catInfo.he}</span>
+                    <span>${cat.emoji}</span>
+                    <span>${escapeHtml(cat.name)}</span>
                 </div>
                 <div class="document-group">
             `;
 
-            catDocs.forEach(doc => {
+            for (const doc of cat.docs) {
                 const status = getStatusBadge(doc.status);
-
                 html += `
                     <div class="document-item" id="doc-${doc.id}">
-                        <input type="checkbox" 
-                            onchange="toggleRemoval('${doc.id}')" 
+                        <input type="checkbox"
+                            onchange="toggleRemoval('${doc.id}')"
                             id="checkbox-${doc.id}"
                             aria-label="סמן להסרה">
                         <span class="document-icon">📄</span>
-                        <div class="document-name">
-                            ${doc.name}
-                        </div>
+                        <div class="document-name">${escapeHtml(doc.name)}</div>
                         <span class="status-badge ${status.class}">${status.text}</span>
-                        <button class="download-btn" disabled 
-                                title="הורדה (בקרוב)">
-                            ⬇️
-                        </button>
+                        <button class="download-btn" disabled
+                                title="הורדה (בקרוב)">⬇️</button>
                     </div>
                 `;
-            });
+            }
 
             html += `</div>`;
         }
-    });
+    }
 
     container.innerHTML = html;
 }
