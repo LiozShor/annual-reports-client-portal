@@ -511,7 +511,7 @@ async function confirmSubmit() {
     try {
         const response = await fetch(`${API_BASE}/tally-edit-documents`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'text/plain' },
             body: JSON.stringify(payload)
         });
 
