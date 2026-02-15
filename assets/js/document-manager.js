@@ -178,12 +178,16 @@ function displayDocuments() {
 
             for (const doc of cat.docs) {
                 const status = getStatusBadge(doc.status);
+                const isWaived = doc.status === 'Waived';
                 html += `
-                    <div class="document-item" id="doc-${doc.id}">
-                        <input type="checkbox"
-                            onchange="toggleRemoval('${doc.id}')"
-                            id="checkbox-${doc.id}"
-                            aria-label="סמן להסרה">
+                    <div class="document-item ${isWaived ? 'waived-item' : ''}" id="doc-${doc.id}">
+                        ${isWaived
+                            ? '<span class="waived-placeholder"></span>'
+                            : `<input type="checkbox"
+                                onchange="toggleRemoval('${doc.id}')"
+                                id="checkbox-${doc.id}"
+                                aria-label="סמן להסרה">`
+                        }
                         <span class="document-icon">📄</span>
                         <div class="document-name">${doc.name}</div>
                         <span class="status-badge ${status.class}">${status.text}</span>
@@ -354,7 +358,8 @@ function removeSelectedDoc(encodedDoc) {
 
 // Update statistics
 function updateStats() {
-    document.getElementById('totalDocs').textContent = currentDocuments.length;
+    const activeDocs = currentDocuments.filter(d => d.status !== 'Waived');
+    document.getElementById('totalDocs').textContent = activeDocs.length;
     document.getElementById('markedDocs').textContent = markedForRemoval.size;
     document.getElementById('addedDocs').textContent = docsToAdd.size;
 }

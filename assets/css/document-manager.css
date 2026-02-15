@@ -798,6 +798,21 @@ body {
     color: #383d41;
 }
 
+.document-item.waived-item {
+    opacity: 0.5;
+    background-color: #f8f9fa;
+}
+
+.document-item.waived-item .document-name {
+    text-decoration: line-through;
+    color: #999;
+}
+
+.waived-placeholder {
+    width: 18px;
+    min-width: 18px;
+}
+
 .status-badge.review {
     background-color: #fff3cd;
     color: #856404;
