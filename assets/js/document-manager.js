@@ -509,12 +509,9 @@ async function confirmSubmit() {
     };
 
     try {
-        // Use x-www-form-urlencoded to avoid CORS preflight (simple content type)
-        const response = await fetch(`${API_BASE}/tally-edit-documents`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: 'payload=' + encodeURIComponent(JSON.stringify(payload))
-        });
+        // Use GET with base64 query param to avoid CORS issues entirely
+        const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(payload))));
+        const response = await fetch(`${API_BASE}/tally-edit-documents?data=${encodeURIComponent(encoded)}`);
 
         if (response.ok) {
             document.getElementById('content').style.display = 'none';
