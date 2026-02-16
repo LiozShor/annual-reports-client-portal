@@ -1,32 +1,43 @@
 <!DOCTYPE html>
-<html dir="rtl">
+<html dir="rtl" lang="he">
 
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Annual Tax Report Questionnaire</title>
-  <link rel="stylesheet" href="assets/css/common.css">
-  <link rel="stylesheet" href="assets/css/landing.css">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Annual Tax Report Questionnaire</title>
+    <link rel="stylesheet" href="assets/css/design-system.css">
+    <link rel="stylesheet" href="assets/css/common.css">
+    <link rel="stylesheet" href="assets/css/landing.css">
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js" defer></script>
 </head>
 
 <body>
+    <div class="landing-wrapper">
+        <div class="container">
+            <div class="header">
+                <div class="header-logo">
+                    <i data-lucide="file-text" class="icon-xl"></i>
+                </div>
+                <h1 id="headerTitle"></h1>
+                <p class="header-subtitle">Annual Tax Report Questionnaire</p>
+            </div>
 
-  <div class="container">
-    <div class="header">
-      <span class="header-icon">📑</span>
-      <h1 id="headerTitle"></h1>
-      <p>Annual Tax Report Questionnaire</p>
+            <div class="content" id="content">
+                <!-- Skeleton loading -->
+                <div class="skeleton-loader">
+                    <div class="skeleton skeleton-text-lg" style="width: 70%; margin: 0 auto;"></div>
+                    <div class="skeleton skeleton-text" style="width: 90%; margin: var(--sp-3) auto 0;"></div>
+                    <div class="skeleton skeleton-text" style="width: 60%; margin: var(--sp-2) auto 0;"></div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-4); margin-top: var(--sp-6);">
+                        <div class="skeleton skeleton-block" style="height: 100px;"></div>
+                        <div class="skeleton skeleton-block" style="height: 100px;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
-    <div class="content" id="content">
-      <div class="loading">
-        <div class="spinner"></div>
-        <p id="loadingText"></p>
-      </div>
-    </div>
-  </div>
-
-  <script src="assets/js/landing.js"></script>
+    <script src="assets/js/landing.js"></script>
 </body>
 
 </html>

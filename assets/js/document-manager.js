@@ -67,10 +67,26 @@ document.getElementById('clientName').textContent = CLIENT_NAME || '-';
 document.getElementById('spouseName').textContent = SPOUSE_NAME || '-';
 document.getElementById('year').textContent = YEAR || '-';
 
+// Initialize Lucide icons when DOM is ready
+function initIcons() {
+    if (typeof lucide !== 'undefined') {
+        lucide.createIcons();
+    }
+}
+
+// Call once on load
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initIcons);
+} else {
+    initIcons();
+}
+
 // Check if we have a report ID (if not, show "Not Started" state)
 if (!REPORT_ID || REPORT_ID === 'null' || REPORT_ID === 'undefined') {
     document.getElementById('loading').style.display = 'none';
     document.getElementById('not-started-view').style.display = 'block';
+    // Init icons for the not-started view
+    setTimeout(initIcons, 50);
 } else {
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', loadDocuments);
@@ -82,9 +98,15 @@ if (!REPORT_ID || REPORT_ID === 'null' || REPORT_ID === 'undefined') {
 // Show alert
 function showAlert(msg, type = 'success') {
     const alert = document.getElementById('alert');
-    alert.className = `alert alert-${type} show`;
+    const typeMap = { 'error': 'danger', 'success': 'success', 'warning': 'warning', 'info': 'info' };
+    const cssType = typeMap[type] || type;
+    alert.className = `alert alert-${cssType} show`;
     alert.textContent = msg;
-    setTimeout(() => alert.classList.remove('show'), 5000);
+    alert.style.display = 'flex';
+    setTimeout(() => {
+        alert.classList.remove('show');
+        alert.style.display = 'none';
+    }, 5000);
 }
 
 // Load documents
@@ -98,6 +120,7 @@ async function loadDocuments() {
             if ((!data.groups || data.document_count === 0) && data.stage.startsWith('1')) {
                 document.getElementById('loading').style.display = 'none';
                 document.getElementById('not-started-view').style.display = 'block';
+                setTimeout(initIcons, 50);
                 return;
             }
         }
@@ -123,6 +146,7 @@ async function loadDocuments() {
         updateStats();
         document.getElementById('loading').style.display = 'none';
         document.getElementById('content').style.display = 'block';
+        setTimeout(initIcons, 50);
     } catch (error) {
         console.error(error);
         showAlert('שגיאה בטעינת מסמכים. אנא נסה לרענן את הדף.', 'error');
@@ -168,10 +192,11 @@ function displayDocuments() {
     if (currentDocuments.length === 0) {
         container.innerHTML = `
             <div class="empty-state">
-                <div class="empty-state-icon">📭</div>
+                <i data-lucide="inbox" class="icon-2xl"></i>
                 <p>אין מסמכים נדרשים כרגע</p>
             </div>
         `;
+        if (typeof lucide !== 'undefined') lucide.createIcons();
         return;
     }
 
@@ -196,7 +221,6 @@ function displayDocuments() {
                 const effectiveStatus = statusChanges.get(doc.id) || doc.status;
                 const status = getStatusBadge(isWaived ? doc.status : effectiveStatus);
                 const hasNote = (doc.bookkeepers_notes && doc.bookkeepers_notes.trim()) || noteChanges.has(doc.id);
-                const noteIcon = hasNote ? '📝' : '✏️';
                 const isRestoreMarked = markedForRestore.has(doc.id);
                 const isStatusChanged = statusChanges.has(doc.id);
 
@@ -215,20 +239,20 @@ function displayDocuments() {
                                 ${markedForRemoval.has(doc.id) ? 'checked' : ''}
                                 aria-label="סמן להסרה">`
                         }
-                        <span class="document-icon">📄</span>
+                        <span class="document-icon"><i data-lucide="file-text" class="icon-sm"></i></span>
                         <div class="document-name">${doc.name}</div>
                         ${isWaived
-                            ? `<span class="status-badge ${status.class}">${status.text}</span>`
-                            : `<span class="status-badge ${status.class} clickable"
+                            ? `<span class="badge ${status.class}">${status.text}</span>`
+                            : `<span class="badge ${status.class} clickable"
                                     onclick="openStatusDropdown(event, '${doc.id}', '${effectiveStatus}')"
                                     id="badge-${doc.id}"
-                                    title="לחץ לשינוי סטטוס">${status.text} ▾</span>`
+                                    title="לחץ לשינוי סטטוס">${status.text} &#x25BE;</span>`
                         }
                         <button class="note-btn ${hasNote ? 'has-note' : ''} ${noteChanges.has(doc.id) ? 'note-modified' : ''}"
                                 onclick="toggleNote('${doc.id}')"
-                                title="הערת משרד">${noteIcon}</button>
+                                title="הערת משרד"><i data-lucide="${hasNote ? 'file-pen' : 'pen-line'}" class="icon-sm"></i></button>
                         <button class="download-btn" disabled
-                                title="הורדה (בקרוב)">⬇️</button>
+                                title="הורדה (בקרוב)"><i data-lucide="download" class="icon-sm"></i></button>
                     </div>
                     <div class="note-editor" id="note-${doc.id}" style="display:none;">
                         <textarea class="note-textarea" id="notetext-${doc.id}"
@@ -243,20 +267,21 @@ function displayDocuments() {
     }
 
     container.innerHTML = html;
+    if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
 function getStatusBadge(status) {
     switch (status) {
         case 'Received':
-            return { text: 'התקבל', class: 'received' };
+            return { text: 'התקבל', class: 'badge-success' };
         case 'Required_Missing':
-            return { text: 'חסר', class: 'missing' };
+            return { text: 'חסר', class: 'badge-danger' };
         case 'Waived':
-            return { text: 'ויתור', class: 'waived' };
+            return { text: 'ויתור', class: 'badge-neutral' };
         case 'Requires_Fix':
-            return { text: 'נדרש תיקון', class: 'review' };
+            return { text: 'נדרש תיקון', class: 'badge-warning' };
         default:
-            return { text: status || 'חסר', class: 'missing' };
+            return { text: status || 'חסר', class: 'badge-danger' };
     }
 }
 
@@ -344,8 +369,8 @@ function updateDocStatusVisual(docId) {
     const item = document.getElementById(`doc-${docId}`);
 
     if (badge) {
-        badge.className = `status-badge ${status.class} clickable`;
-        badge.textContent = status.text + ' ▾';
+        badge.className = `badge ${status.class} clickable`;
+        badge.innerHTML = status.text + ' &#x25BE;';
     }
     if (item) {
         item.classList.toggle('status-changed', statusChanges.has(docId));
@@ -389,9 +414,11 @@ function trackNoteChange(docId) {
     const btn = document.querySelector(`#doc-${docId} .note-btn`);
     if (btn) {
         const hasContent = newText.trim().length > 0;
-        btn.textContent = hasContent ? '📝' : '✏️';
+        const iconName = hasContent ? 'file-pen' : 'pen-line';
+        btn.innerHTML = `<i data-lucide="${iconName}" class="icon-sm"></i>`;
         btn.classList.toggle('has-note', hasContent);
         btn.classList.toggle('note-modified', noteChanges.has(docId));
+        if (typeof lucide !== 'undefined') lucide.createIcons();
     }
 }
 
@@ -503,7 +530,7 @@ function updateSelectedDocs() {
                 <span>${escapeHtml(doc)}</span>
                 <button onclick="removeSelectedDoc('${safeArg}')"
                         type="button"
-                        aria-label="remove">×</button>
+                        aria-label="remove">&times;</button>
             </div>
         `;
     }).join('');
@@ -578,43 +605,43 @@ function openConfirmation() {
     // Restores (blue)
     if (markedForRestore.size > 0) {
         const restoreDocs = currentDocuments.filter(d => markedForRestore.has(d.id));
-        summary += `<h4 style="color: #2196f3;">🔄 מסמכים שישוחזרו (${restoreDocs.length}):</h4>`;
+        summary += `<h4 class="text-brand"><i data-lucide="refresh-cw" class="icon-sm" style="display:inline;vertical-align:middle;"></i> מסמכים שישוחזרו (${restoreDocs.length}):</h4>`;
         summary += '<ul class="changes-list">';
         restoreDocs.forEach(doc => {
-            summary += `<li class="change-restore">🔄 ${stripHtml(doc.name)}</li>`;
+            summary += `<li class="change-restore">${stripHtml(doc.name)}</li>`;
         });
         summary += '</ul>';
     }
 
     // Removals (red)
     if (docsToRemove.length > 0) {
-        summary += `<h4 style="color: #dc3545;">🚫 מסמכים שיוסרו מרשימת הלקוח (${docsToRemove.length}):</h4>`;
+        summary += `<h4 class="text-danger"><i data-lucide="circle-x" class="icon-sm" style="display:inline;vertical-align:middle;"></i> מסמכים שיוסרו מרשימת הלקוח (${docsToRemove.length}):</h4>`;
         summary += '<ul class="changes-list">';
         docsToRemove.forEach(doc => {
-            summary += `<li class="change-remove">🚫 ${stripHtml(doc)}</li>`;
+            summary += `<li class="change-remove">${stripHtml(doc)}</li>`;
         });
         summary += '</ul>';
     }
 
     // Additions (green)
     if (uniqueDocsToAdd.length > 0) {
-        summary += `<h4 style="color: #28a745;">➕ מסמכים שיתווספו (${uniqueDocsToAdd.length}):</h4>`;
+        summary += `<h4 class="text-success"><i data-lucide="plus-circle" class="icon-sm" style="display:inline;vertical-align:middle;"></i> מסמכים שיתווספו (${uniqueDocsToAdd.length}):</h4>`;
         summary += '<ul class="changes-list">';
         uniqueDocsToAdd.forEach(doc => {
-            summary += `<li class="change-add">✓ ${escapeHtml(doc)}</li>`;
+            summary += `<li class="change-add">${escapeHtml(doc)}</li>`;
         });
         summary += '</ul>';
     }
 
     // Status changes (purple)
     if (statusChanges.size > 0) {
-        summary += `<h4 style="color: #7b1fa2;">🔀 שינויי סטטוס (${statusChanges.size}):</h4>`;
+        summary += `<h4 style="color:#7C3AED;"><i data-lucide="arrow-right-left" class="icon-sm" style="display:inline;vertical-align:middle;"></i> שינויי סטטוס (${statusChanges.size}):</h4>`;
         summary += '<ul class="changes-list">';
         statusChanges.forEach((newStatus, docId) => {
             const doc = currentDocuments.find(d => d.id === docId);
             if (doc) {
                 const toLabel = STATUS_LABELS[newStatus] || newStatus;
-                summary += `<li class="change-status">🔀 ${stripHtml(doc.name)} — שונה ל: ${toLabel}</li>`;
+                summary += `<li class="change-status">${stripHtml(doc.name)} — שונה ל: ${toLabel}</li>`;
             }
         });
         summary += '</ul>';
@@ -622,13 +649,13 @@ function openConfirmation() {
 
     // Note changes (teal)
     if (noteChanges.size > 0) {
-        summary += `<h4 style="color: #00897b;">📝 עדכוני הערות (${noteChanges.size}):</h4>`;
+        summary += `<h4 style="color:#0D9488;"><i data-lucide="file-pen" class="icon-sm" style="display:inline;vertical-align:middle;"></i> עדכוני הערות (${noteChanges.size}):</h4>`;
         summary += '<ul class="changes-list">';
         noteChanges.forEach((noteText, docId) => {
             const doc = currentDocuments.find(d => d.id === docId);
             if (doc) {
                 const preview = noteText.length > 50 ? noteText.substring(0, 50) + '...' : noteText;
-                summary += `<li class="change-note">📝 ${stripHtml(doc.name)}: ${escapeHtml(preview || '(הערה נמחקה)')}</li>`;
+                summary += `<li class="change-note">${stripHtml(doc.name)}: ${escapeHtml(preview || '(הערה נמחקה)')}</li>`;
             }
         });
         summary += '</ul>';
@@ -636,14 +663,14 @@ function openConfirmation() {
 
     // Session notes
     if (notes) {
-        summary += '<h4>💬 הערות:</h4>';
+        summary += '<h4><i data-lucide="message-square" class="icon-sm" style="display:inline;vertical-align:middle;"></i> הערות:</h4>';
         summary += '<ul class="changes-list"><li>' + escapeHtml(notes) + '</li></ul>';
     }
 
     // Email toggle warning
     if (!sendEmailOnSave) {
         summary += `<div class="email-skip-warning">
-            <strong>⚠️ שים לב:</strong> אימייל התראה למשרד <strong>לא</strong> יישלח עבור שינויים אלו.
+            <strong>שים לב:</strong> אימייל התראה למשרד <strong>לא</strong> יישלח עבור שינויים אלו.
         </div>`;
     }
 
@@ -651,6 +678,7 @@ function openConfirmation() {
 
     document.getElementById('changesSummary').innerHTML = summary;
     document.getElementById('confirmModal').classList.add('show');
+    if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
 // Close confirmation
@@ -775,6 +803,7 @@ async function confirmSubmit() {
             document.getElementById('content').style.display = 'none';
             document.getElementById('success-message').style.display = 'block';
             window.scrollTo(0, 0);
+            if (typeof lucide !== 'undefined') lucide.createIcons();
         } else {
             throw new Error('Server error');
         }

@@ -28,18 +28,18 @@ const HE_B64 = {
     warn_docs_present: "15nXqSDXnteh157Xm9eZ150g16fXmdeZ157XmdedINec15PXldeXINeU15bXlC4=",
     warn_doc_count_label: "157Xodee15vXmdedINen15nXmdee15nXnQ==",
 
-    // Buttons - UPDATED
+    // Buttons
     btn_view_docs: "16bXpNeUINeR157Xodee15vXmdedINeU16DXk9eo16nXmded",
     btn_reset: "157Xl9enINeV15TXqteX15wg157XlNeU16rXl9dc15Q=",
     btn_reset_dev_note: "KNeW157XoNeZIC0g15zXpNeZ16rXldeXINeR15zXkdeTKQ==",
 
-    ready_title: "4pyFINee15XXm9efINec15TXqteX15nXnA==",
+    ready_title: "4pyFINee15XXm9efINec15PXqteX15nXnA==",
     choose_language: "15HXl9eoINeQ16og15TXqdek15Qg15TXnteV16LXk9ek16og16LXnNeZ15o6",
     reset_loading: "157XkNek16Eg16DXqteV16DXmdedLi4u",
     reset_done: "4pyFINeU16DXqteV16DXmdedINeQ15XXpNeh15U=",
     err_loading: "16nXkteZ15DXlCDXkdeY16LXmdeg16og15TXoNeq15XXoNeZ150=",
     err_reset: "16nXkteZ15DXlCDXkdeQ15nXpNeV16Eg15TXoNeq15XXoNeZ150=",
-    err_missing_params: "16TXqNee15jXqNeZ150g15fXodeo15nXnSDXkden15nXqdeV16g="
+    err_missing_params: "16TXqNee15jXqNeZ150g15fXqdeo15nXnSDXkden15nXqdeV16g="
 };
 
 function b64ToUtf8(b64) {
@@ -52,6 +52,17 @@ function b64ToUtf8(b64) {
 
 function t(key) {
     return b64ToUtf8(HE_B64[key] || '');
+}
+
+// --- Lucide icon helper ---
+function lucideIcon(name, cls = '') {
+    return `<i data-lucide="${name}" class="${cls}"></i>`;
+}
+
+function reinitIcons() {
+    if (typeof lucide !== 'undefined') {
+        lucide.createIcons();
+    }
 }
 
 // --- Logic ---
@@ -106,17 +117,19 @@ function showExistingProcessOptions({ docCount, hasDocs }) {
 
     content.innerHTML = `
         <div class="alert-box bilingual">
-            <div class="alert-icon">✋</div>
+            <div class="alert-icon-wrapper">
+                ${lucideIcon('alert-triangle', 'icon-lg')}
+            </div>
             <div class="alert-title">${t('warning_title')}</div>
             <div class="en text-sm">Existing data found for this report</div>
 
-            <p class="alert-text" style="margin-top:15px">
+            <p class="alert-text" style="margin-top: var(--sp-4)">
                 ${t('warn_existing_flow')}
             </p>
 
             ${hasDocs ? `
                 <div class="doc-badge">
-                    📎 ${docCount} ${t('warn_doc_count_label')}
+                    ${lucideIcon('paperclip', 'icon-sm')} ${docCount} ${t('warn_doc_count_label')}
                 </div>
                 <p class="alert-text text-sm">
                     ${t('warn_docs_present')}
@@ -125,10 +138,12 @@ function showExistingProcessOptions({ docCount, hasDocs }) {
         </div>
 
         <div class="actions">
-            <button class="btn btn-primary" onclick="viewDocuments()">
+            <button class="btn btn-primary btn-lg" onclick="viewDocuments()">
                 <div class="bilingual">
-                    <span>📄 ${t('btn_view_docs')}</span>
-                    <span class="en text-sm" style="color:rgba(255,255,255,0.8)">View Required Documents</span>
+                    <span class="flex items-center justify-center gap-2">
+                        ${lucideIcon('file-text', 'icon-sm')} ${t('btn_view_docs')}
+                    </span>
+                    <span class="en text-sm" style="opacity:0.8">View Required Documents</span>
                 </div>
             </button>
 
@@ -142,27 +157,32 @@ function showExistingProcessOptions({ docCount, hasDocs }) {
             </button>
         </div>
     `;
+    reinitIcons();
 }
 
 function showLanguageSelection() {
     const content = document.getElementById('content');
     content.innerHTML = `
         <div class="alert-box bilingual">
-            <div class="alert-title" style="font-size: 22px;">${t('ready_title')}</div>
+            <div class="ready-icon-wrapper">
+                ${lucideIcon('circle-check', 'icon-lg')}
+            </div>
+            <div class="alert-title">${t('ready_title')}</div>
             <p class="alert-text">${t('choose_language')}</p>
         </div>
 
         <div class="lang-grid">
-            <div class="lang-card" onclick="goToForm('he')">
-                <span class="lang-flag">🇮🇱</span>
+            <div class="lang-card" onclick="goToForm('he')" role="button" tabindex="0" onkeydown="if(event.key==='Enter')goToForm('he')">
+                <img src="https://flagcdn.com/w40/il.png" alt="Israel" class="lang-flag">
                 <span class="lang-name">עברית</span>
             </div>
-            <div class="lang-card" onclick="goToForm('en')">
-                <span class="lang-flag">🇬🇧</span>
+            <div class="lang-card" onclick="goToForm('en')" role="button" tabindex="0" onkeydown="if(event.key==='Enter')goToForm('en')">
+                <img src="https://flagcdn.com/w40/gb.png" alt="UK" class="lang-flag">
                 <span class="lang-name">English</span>
             </div>
         </div>
     `;
+    reinitIcons();
 }
 
 function viewDocuments() {
@@ -186,22 +206,25 @@ async function resetAndContinue() {
 
         content.innerHTML = `
             <div class="alert-box bilingual">
-                <div class="alert-icon">✅</div>
-                <div class="alert-title" style="color:var(--success)">${t('reset_done')}</div>
+                <div class="ready-icon-wrapper">
+                    ${lucideIcon('circle-check', 'icon-lg')}
+                </div>
+                <div class="alert-title" style="color: var(--success-700)">${t('reset_done')}</div>
                 <p class="alert-text">${t('choose_language')}</p>
             </div>
 
             <div class="lang-grid">
-                <div class="lang-card" onclick="goToForm('he')">
-                    <span class="lang-flag">🇮🇱</span>
+                <div class="lang-card" onclick="goToForm('he')" role="button" tabindex="0" onkeydown="if(event.key==='Enter')goToForm('he')">
+                    <img src="https://flagcdn.com/w40/il.png" alt="Israel" class="lang-flag">
                     <span class="lang-name">עברית</span>
                 </div>
-                <div class="lang-card" onclick="goToForm('en')">
-                    <span class="lang-flag">🇬🇧</span>
+                <div class="lang-card" onclick="goToForm('en')" role="button" tabindex="0" onkeydown="if(event.key==='Enter')goToForm('en')">
+                    <img src="https://flagcdn.com/w40/gb.png" alt="UK" class="lang-flag">
                     <span class="lang-name">English</span>
                 </div>
             </div>
         `;
+        reinitIcons();
     } catch (error) {
         showError(`${t('err_reset')}`);
     }
@@ -225,16 +248,18 @@ function showError(msg) {
     const content = document.getElementById('content');
     content.innerHTML = `
         <div class="error-state bilingual">
-            <div style="font-size:30px; margin-bottom:10px">⚠️</div>
+            <div class="error-icon-wrapper" style="margin: 0 auto var(--sp-4)">
+                ${lucideIcon('alert-triangle', 'icon-lg')}
+            </div>
             <h3>Error</h3>
             <p>${msg}</p>
         </div>
     `;
+    reinitIcons();
 }
 
 function init() {
     document.getElementById('headerTitle').textContent = t('header_title') || 'Tax Questionnaire';
-    document.getElementById('loadingText').innerHTML = t('loading_check');
 
     if (!reportId || !clientId || !year || !token) {
         showError(t('err_missing_params'));
@@ -244,4 +269,9 @@ function init() {
 }
 
 // Initialize on load
-init();
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => { init(); reinitIcons(); });
+} else {
+    init();
+    reinitIcons();
+}

@@ -34,6 +34,7 @@ async function login() {
             document.getElementById('loginScreen').style.display = 'none';
             document.getElementById('app').classList.add('visible');
             loadDashboard();
+            if (typeof lucide !== 'undefined') lucide.createIcons();
         } else {
             document.getElementById('loginError').style.display = 'block';
         }
@@ -60,6 +61,7 @@ async function checkAuth() {
         document.getElementById('loginScreen').style.display = 'none';
         document.getElementById('app').classList.add('visible');
         loadDashboard();
+        if (typeof lucide !== 'undefined') lucide.createIcons();
         return;
     }
 
@@ -73,6 +75,7 @@ async function checkAuth() {
             document.getElementById('loginScreen').style.display = 'none';
             document.getElementById('app').classList.add('visible');
             loadDashboard();
+            if (typeof lucide !== 'undefined') lucide.createIcons();
         } else {
             localStorage.removeItem(ADMIN_TOKEN_KEY);
             sessionStorage.removeItem(SESSION_FLAG_KEY);
@@ -91,11 +94,12 @@ document.getElementById('passwordInput').addEventListener('keypress', (e) => {
 // ==================== TABS ====================
 
 function switchTab(tabName) {
-    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'));
     document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
 
-    event.target.classList.add('active');
+    event.currentTarget.classList.add('active');
     document.getElementById(`tab-${tabName}`).classList.add('active');
+    if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
 // ==================== DASHBOARD ====================
@@ -136,6 +140,8 @@ async function loadDashboard() {
         // Ensure the correct stat card is active based on current filter
         const currentStageFilter = document.getElementById('stageFilter').value;
         toggleStageFilter(currentStageFilter, false); // Pass false to prevent re-filtering
+
+        if (typeof lucide !== 'undefined') lucide.createIcons();
     } catch (error) {
         hideLoading();
         console.error('Dashboard error:', error);
@@ -149,19 +155,20 @@ function renderClientsTable(clients) {
     if (!clients || clients.length === 0) {
         container.innerHTML = `
             <div class="empty-state">
-                <div class="empty-state-icon"><i class="fa-solid fa-folder-open"></i></div>
+                <div class="empty-state-icon"><i data-lucide="folder-open" class="icon-2xl"></i></div>
                 <p>לא נמצאו לקוחות</p>
             </div>
         `;
+        if (typeof lucide !== 'undefined') lucide.createIcons();
         return;
     }
 
     const stageLabels = {
-        '1-Send_Questionnaire': { text: '<i class="fa-solid fa-clipboard-list"></i> ממתין לשליחה', class: 'stage-1' },
-        '2-Waiting_For_Answers': { text: '<i class="fa-solid fa-hourglass-half"></i> ממתין לתשובה', class: 'stage-2' },
-        '3-Collecting_Docs': { text: '<i class="fa-solid fa-folder-open"></i> אוסף מסמכים', class: 'stage-3' },
-        '4-Review': { text: '<i class="fa-solid fa-magnifying-glass"></i> בבדיקה', class: 'stage-4' },
-        '5-Completed': { text: '<i class="fa-solid fa-check-circle"></i> הושלם', class: 'stage-5' }
+        '1-Send_Questionnaire': { text: '<i data-lucide="clipboard-list" class="icon-sm"></i> ממתין לשליחה', class: 'stage-1' },
+        '2-Waiting_For_Answers': { text: '<i data-lucide="hourglass" class="icon-sm"></i> ממתין לתשובה', class: 'stage-2' },
+        '3-Collecting_Docs': { text: '<i data-lucide="folder-open" class="icon-sm"></i> אוסף מסמכים', class: 'stage-3' },
+        '4-Review': { text: '<i data-lucide="search" class="icon-sm"></i> בבדיקה', class: 'stage-4' },
+        '5-Completed': { text: '<i data-lucide="circle-check" class="icon-sm"></i> הושלם', class: 'stage-5' }
     };
 
     let html = `
@@ -188,9 +195,8 @@ function renderClientsTable(clients) {
         html += `
             <tr>
                 <td>
-                    <strong 
-                        class="client-link" 
-                        style="cursor: pointer; color: var(--primary-color); text-decoration: underline;"
+                    <strong
+                        class="client-link"
                         onclick="viewClientDocs('${client.report_id}', '${escapeHtml(client.name)}', '${escapeHtml(client.email || '')}', '${client.year}')"
                     >
                         ${escapeHtml(client.name)}
@@ -208,9 +214,9 @@ function renderClientsTable(clients) {
                     </div>
                 </td>
                 <td>
-                    <button class="action-btn view" onclick="viewClient('${client.report_id}')" title="צפה בתיק"><i class="fa-solid fa-eye"></i></button>
+                    <button class="action-btn view" onclick="viewClient('${client.report_id}')" title="צפה בתיק"><i data-lucide="eye" class="icon-sm"></i></button>
                     ${client.stage === '1-Send_Questionnaire' ?
-                `<button class="action-btn send" onclick="sendSingle('${client.report_id}')" title="שלח שאלון"><i class="fa-solid fa-paper-plane"></i></button>` :
+                `<button class="action-btn send" onclick="sendSingle('${client.report_id}')" title="שלח שאלון"><i data-lucide="send" class="icon-sm"></i></button>` :
                 ''}
                 </td>
             </tr>
@@ -219,6 +225,7 @@ function renderClientsTable(clients) {
 
     html += '</tbody></table>';
     container.innerHTML = html;
+    if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
 function filterClients() {
@@ -460,14 +467,16 @@ function setAddMode(mode) {
     if (mode === 'import') {
         btnImport.className = 'btn btn-primary';
         btnImport.disabled = true;
-        btnManual.className = 'btn btn-outline';
+        btnManual.className = 'btn btn-secondary';
         btnManual.disabled = false;
     } else {
-        btnImport.className = 'btn btn-outline';
+        btnImport.className = 'btn btn-secondary';
         btnImport.disabled = false;
         btnManual.className = 'btn btn-primary';
         btnManual.disabled = true;
     }
+
+    if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
 async function addManualClient() {
@@ -532,11 +541,12 @@ function renderPendingClients() {
     if (pendingClients.length === 0) {
         container.innerHTML = `
             <div class="empty-state">
-                <div class="empty-state-icon"><i class="fa-solid fa-check-circle"></i></div>
+                <div class="empty-state-icon"><i data-lucide="circle-check" class="icon-2xl"></i></div>
                 <p>אין לקוחות ממתינים לשליחת שאלון</p>
             </div>
         `;
         document.getElementById('sendActions').style.display = 'none';
+        if (typeof lucide !== 'undefined') lucide.createIcons();
         return;
     }
 
@@ -566,6 +576,7 @@ function renderPendingClients() {
     container.innerHTML = html;
     document.getElementById('sendActions').style.display = 'block';
     updateSelectedCount();
+    if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
 function toggleSelectAll() {
@@ -645,13 +656,13 @@ function viewClientDocs(reportId, name, email, year) {
         year: year
     });
     // Add spouse if available (fetching from spouseName if we had it, but currently we rely on URL params or fetching in next page)
-    // Note: The renderClientsTable logic doesn't seemingly pass spouse_name directly. 
+    // Note: The renderClientsTable logic doesn't seemingly pass spouse_name directly.
     // We'll pass what we have. Document manager usually fetches details or uses params for display.
     // If 'spouse_name' is missing in clientsData, we can't pass it yet.
     // However, document-manager fetches get-documents which might return spouse name?
-    // Let's check: document-manager.js uses params.get('spouse_name') for display. 
-    // Admin dashboard 'clientsData' might not have spouse_name? 
-    // Checking dashboard response... usually has 'name', 'email', 'year', 'stage'. 
+    // Let's check: document-manager.js uses params.get('spouse_name') for display.
+    // Admin dashboard 'clientsData' might not have spouse_name?
+    // Checking dashboard response... usually has 'name', 'email', 'year', 'stage'.
     // If spouse_name isn't in dashboard data, it will be '-' on the next page until we fetch it there.
     // We will proceed with available data.
 
@@ -686,8 +697,12 @@ function hideLoading() {
 }
 
 function showModal(type, title, body, stats = null) {
-    const icons = { success: '<i class="fa-solid fa-check-circle"></i>', error: '<i class="fa-solid fa-circle-exclamation"></i>', warning: '<i class="fa-solid fa-triangle-exclamation"></i>' };
-    document.getElementById('modalIcon').innerHTML = icons[type] || '<i class="fa-solid fa-check-circle"></i>';
+    const icons = {
+        success: '<i data-lucide="circle-check" class="icon-2xl"></i>',
+        error: '<i data-lucide="circle-alert" class="icon-2xl"></i>',
+        warning: '<i data-lucide="alert-triangle" class="icon-2xl"></i>'
+    };
+    document.getElementById('modalIcon').innerHTML = icons[type] || '<i data-lucide="circle-check" class="icon-2xl"></i>';
     document.getElementById('modalTitle').textContent = title;
     document.getElementById('modalBody').textContent = body;
 
@@ -697,7 +712,7 @@ function showModal(type, title, body, stats = null) {
             statsHtml += `<div class="modal-stat"><div class="modal-stat-number">${stats.created}</div><div class="modal-stat-label">נוצרו</div></div>`;
         }
         if (stats.skipped !== undefined) {
-            statsHtml += `<div class="modal-stat"><div class="modal-stat-number" style="color: #f59e0b">${stats.skipped}</div><div class="modal-stat-label">נדלגו</div></div>`;
+            statsHtml += `<div class="modal-stat"><div class="modal-stat-number" style="color: var(--warning-500)">${stats.skipped}</div><div class="modal-stat-label">נדלגו</div></div>`;
         }
         if (stats.sent !== undefined) {
             statsHtml += `<div class="modal-stat"><div class="modal-stat-number">${stats.sent}</div><div class="modal-stat-label">נשלחו</div></div>`;
@@ -708,6 +723,7 @@ function showModal(type, title, body, stats = null) {
     }
 
     document.getElementById('resultModal').classList.add('visible');
+    if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
 function closeModal() {
@@ -723,6 +739,13 @@ function escapeHtml(text) {
 function isValidEmail(email) {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
+
+// ==================== INIT ====================
+
+// Initialize Lucide icons when DOM is ready
+document.addEventListener('DOMContentLoaded', () => {
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+});
 
 // Initialize
 checkAuth();

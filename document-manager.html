@@ -1,252 +1,231 @@
 <!DOCTYPE html>
 <html dir="rtl" lang="he">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ניהול מסמכים - משופר</title>
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📋</text></svg>">
+    <title>ניהול מסמכים</title>
+    <link rel="stylesheet" href="assets/css/design-system.css">
     <link rel="stylesheet" href="assets/css/common.css">
     <link rel="stylesheet" href="assets/css/document-manager.css">
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js" defer></script>
 </head>
-
 <body>
-    <div class="container">
-        <div class="header">
-            <div style="margin-bottom: 10px;">
-                <a href="admin/index.html" class="btn-return">🔙 חזרה לפורטל ניהול</a>
-            </div>
-            <h1>🗂️ ניהול מסמכים</h1>
-            <p>משרד רו״ח Client Name</p>
-        </div>
-
-        <div class="help-banner">
-            <h2>
-                <span>💡</span>
-                <span>ברוכים הבאים למערכת ניהול המסמכים</span>
-            </h2>
-            <p>כאן תוכלו להסיר מסמכים לא רלוונטיים ללקוח ולהוסיף מסמכים שחסרים לו</p>
-        </div>
-
-        <div id="alert" class="alert"></div>
-
-        <div class="instructions">
-            <h3>
-                <span>📝</span>
-                <span>איך להשתמש במערכת?</span>
-            </h3>
-            <ul class="instruction-steps">
-                <li><strong>הסרת מסמכים:</strong> סמן את התיבות ליד מסמכים שאינם רלוונטיים - הם יוסרו מרשימת הלקוח</li>
-                <li><strong>שחזור מסמכים:</strong> מסמכים שהוסרו בעבר מוצגים עם תיבת סימון כחולה - סמן כדי לשחזר</li>
-                <li><strong>שינוי סטטוס:</strong> לחץ על תג הסטטוס (חסר/התקבל/נדרש תיקון) כדי לשנות סטטוס מסמך</li>
-                <li><strong>הערות למסמך:</strong> לחץ על אייקון ההערה ליד כל מסמך כדי להוסיף הערת משרד</li>
-                <li><strong>הוסף מסמכים חדשים:</strong> בחר מהרשימה הנפתחת או הזן שם מסמך מותאם אישית</li>
-                <li><strong>שמור שינויים:</strong> לחץ על "שמור שינויים" - ניתן לבטל שליחת אימייל למשרד</li>
-            </ul>
-        </div>
-
-        <div class="client-info">
-            <h2>👤 פרטי לקוח</h2>
-            <div class="info-grid">
-                <div class="info-item">
-                    <div class="info-label">
-                        <span>👤</span>
-                        <span>שם לקוח</span>
+    <div class="page-wrapper">
+        <div class="container">
+            <!-- Header bar -->
+            <div class="page-header">
+                <a href="admin/index.html" class="btn btn-ghost btn-sm">
+                    <i data-lucide="arrow-right" class="icon-sm"></i>
+                    חזרה לפורטל ניהול
+                </a>
+                <div class="header-title-row">
+                    <i data-lucide="folder-open" class="icon-lg"></i>
+                    <div>
+                        <h1>ניהול מסמכים</h1>
+                        <p class="text-muted text-sm">משרד רו״ח Client Name</p>
                     </div>
-                    <div class="info-value" id="clientName">-</div>
-                </div>
-                <div class="info-item">
-                    <div class="info-label">
-                        <span>💑</span>
-                        <span>בן/בת זוג</span>
-                    </div>
-                    <div class="info-value" id="spouseName">-</div>
-                </div>
-                <div class="info-item">
-                    <div class="info-label">
-                        <span>📅</span>
-                        <span>שנת מס</span>
-                    </div>
-                    <div class="info-value" id="year">-</div>
                 </div>
             </div>
-        </div>
 
-        <div id="loading" class="loading">
-            <div class="spinner"></div>
-            <p>טוען מסמכים...</p>
-        </div>
-
-        <div id="not-started-view"
-            style="display: none; text-align: center; padding: 40px; background: white; border-radius: 12px; margin-top: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.05);">
-            <div style="font-size: 60px; margin-bottom: 20px;">📝</div>
-            <h2>שאלון טרם מולא</h2>
-            <p style="font-size: 18px; color: #666; margin-bottom: 30px;">
-                ללקוח זה עדיין אין תיק מסמכים מכיוון שטרם מילא את השאלון השנתי.
-            </p>
-            <button onclick="confirmSendQuestionnaire()" class="button"
-                style="background: var(--primary-color); font-size: 18px; padding: 12px 30px;">
-                📬 שלח שאלון ללקוח
-            </button>
-        </div>
-
-        <div id="content" style="display:none;">
-            <div class="section">
-                <div class="stats">
-                    <div class="stat-box">
-                        <div class="stat-number" id="totalDocs">0</div>
-                        <div class="stat-label">📄 מסמכים נדרשים כרגע</div>
-                    </div>
-                    <div class="stat-box removal">
-                        <div class="stat-number" id="markedDocs">0</div>
-                        <div class="stat-label">🚫 מסומנים להסרה</div>
-                    </div>
-                    <div class="stat-box addition">
-                        <div class="stat-number" id="addedDocs">0</div>
-                        <div class="stat-label">➕ מסומנים להוספה</div>
-                    </div>
-                    <div class="stat-box restore">
-                        <div class="stat-number" id="restoredDocs">0</div>
-                        <div class="stat-label">🔄 מסומנים לשחזור</div>
+            <!-- Collapsible instructions -->
+            <div class="instructions-section">
+                <button class="collapsible-trigger" onclick="this.setAttribute('aria-expanded', this.getAttribute('aria-expanded')==='true'?'false':'true'); this.nextElementSibling.classList.toggle('open')" aria-expanded="false">
+                    <span class="flex items-center gap-2">
+                        <i data-lucide="lightbulb" class="icon-sm"></i>
+                        איך להשתמש במערכת?
+                    </span>
+                    <i data-lucide="chevron-down" class="icon-sm"></i>
+                </button>
+                <div class="collapsible-content">
+                    <div class="instructions-body">
+                        <ul class="instruction-list">
+                            <li><strong>הסרת מסמכים:</strong> סמן את התיבות ליד מסמכים שאינם רלוונטיים</li>
+                            <li><strong>שחזור מסמכים:</strong> מסמכים שהוסרו מוצגים עם תיבת סימון כחולה</li>
+                            <li><strong>שינוי סטטוס:</strong> לחץ על תג הסטטוס כדי לשנות</li>
+                            <li><strong>הערות למסמך:</strong> לחץ על אייקון ההערה</li>
+                            <li><strong>הוסף מסמכים:</strong> בחר מהרשימה או הזן שם מותאם אישית</li>
+                            <li><strong>שמור שינויים:</strong> לחץ על "שמור שינויים"</li>
+                        </ul>
                     </div>
                 </div>
+            </div>
 
-                <!-- Static header removed in favor of dynamic category headers -->
+            <div id="alert" class="alert" style="display:none;"></div>
+
+            <!-- Client info bar -->
+            <div class="client-bar">
+                <div class="client-bar-item">
+                    <i data-lucide="user" class="icon-sm"></i>
+                    <span class="text-muted text-sm">שם לקוח:</span>
+                    <strong id="clientName">-</strong>
+                </div>
+                <div class="client-bar-item">
+                    <i data-lucide="heart" class="icon-sm"></i>
+                    <span class="text-muted text-sm">בן/בת זוג:</span>
+                    <strong id="spouseName">-</strong>
+                </div>
+                <div class="client-bar-item">
+                    <i data-lucide="calendar" class="icon-sm"></i>
+                    <span class="text-muted text-sm">שנת מס:</span>
+                    <strong id="year">-</strong>
+                </div>
+            </div>
+
+            <!-- Loading -->
+            <div id="loading" class="loading">
+                <div class="spinner"></div>
+                <p>טוען מסמכים...</p>
+            </div>
+
+            <!-- Not started view -->
+            <div id="not-started-view" class="not-started-view" style="display:none;">
+                <i data-lucide="pencil" class="icon-2xl"></i>
+                <h2>שאלון טרם מולא</h2>
+                <p>ללקוח זה עדיין אין תיק מסמכים מכיוון שטרם מילא את השאלון השנתי.</p>
+                <button onclick="confirmSendQuestionnaire()" class="btn btn-primary btn-lg">
+                    <i data-lucide="send" class="icon-sm"></i>
+                    שלח שאלון ללקוח
+                </button>
+            </div>
+
+            <!-- Main content -->
+            <div id="content" style="display:none;">
+                <!-- Stats -->
+                <div class="stats-bar">
+                    <span class="stat-pill">
+                        <i data-lucide="file-text" class="icon-sm"></i>
+                        <strong id="totalDocs">0</strong> נדרשים
+                    </span>
+                    <span class="stat-pill stat-pill-danger">
+                        <i data-lucide="circle-x" class="icon-sm"></i>
+                        <strong id="markedDocs">0</strong> להסרה
+                    </span>
+                    <span class="stat-pill stat-pill-success">
+                        <i data-lucide="plus" class="icon-sm"></i>
+                        <strong id="addedDocs">0</strong> להוספה
+                    </span>
+                    <span class="stat-pill stat-pill-info">
+                        <i data-lucide="refresh-cw" class="icon-sm"></i>
+                        <strong id="restoredDocs">0</strong> לשחזור
+                    </span>
+                </div>
+
+                <!-- Document list -->
                 <div id="existingDocs" class="document-list"></div>
-            </div>
 
-            <div class="section">
-                <h2 class="section-title">
-                    <span>➕</span>
-                    <span>הוספת מסמכים</span>
-                </h2>
-                <div class="section-subtitle">
-                    💡 בחר מסמכים מהרשימה או הוסף מסמך מותאם אישית. המסמכים שתבחר יתוספו לרשימת המסמכים הנדרשים.
-                </div>
-
+                <!-- Add documents section -->
                 <div class="add-section">
-                    <div class="form-group">
-                        <label class="form-label">
-                            <span>📑</span>
-                            <span>בחר מסמכים להוספה</span>
-                        </label>
-                        <div class="form-help">
-                            👆 בחר מסמך מהרשימה - המסמך יתוסף אוטומטית למטה
-                        </div>
+                    <h2 class="section-title">
+                        <i data-lucide="plus" class="icon"></i>
+                        הוספת מסמכים
+                    </h2>
+                    <p class="text-sm text-muted mb-4">בחר מסמכים מהרשימה או הוסף מסמך מותאם אישית</p>
+
+                    <div class="form-group mb-4">
+                        <label class="form-label">בחר מסמכים להוספה</label>
                         <select id="docTypeSelect">
                             <option value="">-- בחר מסמך מהרשימה --</option>
-                            <!-- Options populated dynamically from document-types.js -->
                         </select>
 
-                        <!-- Detail Input Section -->
                         <div id="detailInput" class="detail-input">
-                            <label id="detailLabel">פרטים נוספים:</label>
+                            <label id="detailLabel" class="form-label">פרטים נוספים:</label>
                             <input type="text" id="detailValue" placeholder="לדוגמה: שם המעסיק, שם הבנק, וכו'">
-                            <button onclick="addDocumentWithDetail()">➕ הוסף מסמך</button>
+                            <button onclick="addDocumentWithDetail()" class="btn btn-success btn-sm mt-2">
+                                <i data-lucide="plus" class="icon-sm"></i> הוסף מסמך
+                            </button>
                         </div>
                     </div>
 
                     <div id="selectedDocs" class="selected-docs empty"></div>
 
-                    <div class="form-group">
+                    <div class="form-group mb-4">
                         <label class="form-label">
-                            <span>✏️</span>
-                            <span>מסמך מותאם אישית</span>
+                            <i data-lucide="pen-line" class="icon-sm"></i>
+                            מסמך מותאם אישית
                         </label>
-                        <div class="form-help">
-                            📝 אם המסמך שאתה מחפש לא ברשימה, הזן את שמו כאן
-                        </div>
                         <input type="text" id="customDoc" placeholder="לדוגמה: אישור מיוחד מהמוסד לביטוח לאומי..."
                             onblur="checkCustomDocDuplicate()">
-                        <div id="customDocWarning"
-                            style="display: none; color: #dc3545; margin-top: 8px; font-size: 14px; font-weight: bold;">
-                            ⚠️ שים לב: מסמך זה כבר נבחר ברשימה למעלה
+                        <div id="customDocWarning" class="alert alert-warning mt-2" style="display:none;">
+                            שים לב: מסמך זה כבר נבחר ברשימה למעלה
                         </div>
                     </div>
 
-                    <div class="form-group">
+                    <div class="form-group mb-4">
                         <label class="form-label">
-                            <span>💬</span>
-                            <span>הערות נוספות</span>
+                            <i data-lucide="message-square" class="icon-sm"></i>
+                            הערות נוספות
                         </label>
-                        <div class="form-help">
-                            📋 הוסף כל הערה או הבהרה שתרצה להעביר למשרד (לא חובה)
-                        </div>
-                        <textarea id="notes"
-                            placeholder="לדוגמה: נא לבקש את המסמכים ב-PDF בלבד, או כל הערה אחרת..."></textarea>
+                        <textarea id="notes" placeholder="לדוגמה: נא לבקש את המסמכים ב-PDF בלבד..."></textarea>
+                    </div>
+
+                    <div class="email-toggle">
+                        <label class="switch">
+                            <input type="checkbox" id="emailToggle" checked onchange="sendEmailOnSave = this.checked">
+                            <span class="switch-slider"></span>
+                        </label>
+                        <label for="emailToggle" class="text-sm">שלח אימייל התראה למשרד לאחר השמירה</label>
+                    </div>
+
+                    <div class="actions-row">
+                        <button class="btn btn-primary btn-lg" onclick="openConfirmation()">
+                            <i data-lucide="save" class="icon-sm"></i> שמור שינויים
+                        </button>
+                        <button class="btn btn-ghost" onclick="resetForm()">
+                            <i data-lucide="refresh-cw" class="icon-sm"></i> אפס טופס
+                        </button>
                     </div>
                 </div>
+            </div>
 
-                <div class="email-toggle-section">
-                    <input type="checkbox" id="emailToggle" checked
-                           onchange="sendEmailOnSave = this.checked">
-                    <label for="emailToggle">📧 שלח אימייל התראה למשרד לאחר השמירה</label>
-                </div>
-
-                <div class="actions">
-                    <button class="button" onclick="openConfirmation()">
-                        <span style="position: relative; z-index: 1;">💾 שמור שינויים</span>
-                    </button>
-                    <button class="button secondary" onclick="resetForm()">
-                        <span style="position: relative; z-index: 1;">🔄 אפס טופס</span>
-                    </button>
-                </div>
+            <!-- Success message -->
+            <div id="success-message" class="success-view" style="display:none;">
+                <i data-lucide="circle-check" class="icon-2xl"></i>
+                <h2>הבקשה נשלחה בהצלחה!</h2>
+                <p>רשימת המסמכים עודכנה והודעה נשלחה למשרד.</p>
+                <p class="text-sm text-muted mt-2">אתה יכול לסגור את הדף כעת.</p>
             </div>
         </div>
-
-        <div id="success-message" class="empty-state" style="display: none; padding-top: 50px;">
-            <div style="font-size: 80px; margin-bottom: 20px;">✅</div>
-            <h2 style="color: #2c5282; margin-bottom: 15px;">הבקשה נשלחה בהצלחה!</h2>
-            <p style="font-size: 18px; color: #555;">רשימת המסמכים עודכנה והודעה נשלחה למשרד.</p>
-            <p style="font-size: 16px; color: #777; margin-top: 10px;">אתה יכול לסגור את הדף כעת.</p>
-        </div>
-
     </div>
 
-    <div id="confirmModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <span>⚠️</span>
-                <span>אישור שינויים</span>
+    <!-- Confirmation Modal -->
+    <div id="confirmModal" class="modal-overlay" role="dialog" aria-modal="true">
+        <div class="modal-panel">
+            <div class="modal-panel-header">
+                <i data-lucide="alert-triangle" class="icon-lg" style="color:var(--warning-500)"></i>
+                אישור שינויים
             </div>
-            <div class="modal-body">
-                <p style="margin-bottom: 20px;">אנא אשר את השינויים הבאים:</p>
+            <div class="modal-panel-body">
+                <p class="mb-4">אנא אשר את השינויים הבאים:</p>
                 <div id="changesSummary" class="changes-summary"></div>
-                <p
-                    style="margin-top: 20px; padding: 12px; background: #fff3cd; border-radius: 8px; border-right: 4px solid #ffc107;">
-                    <strong>💡 הבהרה:</strong> הסרת מסמכים: סמן את התיבות ליד מסמכים לא רלוונטיים — הם יוסרו מרשימת
-                    המסמכים של הלקוח
-                </p>
-                <p style="margin-top: 15px; color: #666;">
-                    <strong>שים לב:</strong> לאחר שמירת השינויים, יישלח אימייל אוטומטי למשרד הרואה חשבון עם פירוט
-                    השינויים.
+                <div class="alert alert-warning mt-4">
+                    <strong>הבהרה:</strong> הסרת מסמכים: סמן את התיבות ליד מסמכים לא רלוונטיים — הם יוסרו מרשימת המסמכים של הלקוח
+                </div>
+                <p class="text-sm text-muted mt-3">
+                    <strong>שים לב:</strong> לאחר שמירת השינויים, יישלח אימייל אוטומטי למשרד הרואה חשבון עם פירוט השינויים.
                 </p>
             </div>
-            <div class="modal-actions">
-                <button class="button" onclick="confirmSubmit()">
-                    <span style="position: relative; z-index: 1;">✅ אישור ושליחה</span>
-                </button>
-                <button class="button secondary" onclick="closeConfirmation()">
-                    <span style="position: relative; z-index: 1;">❌ ביטול</span>
+            <div class="modal-panel-footer">
+                <button class="btn btn-ghost" onclick="closeConfirmation()">ביטול</button>
+                <button class="btn btn-primary" onclick="confirmSubmit()">
+                    <i data-lucide="circle-check" class="icon-sm"></i> אישור ושליחה
                 </button>
             </div>
         </div>
     </div>
 
-    <!-- Status dropdown (shared floating panel) -->
+    <!-- Status dropdown -->
     <div id="statusDropdown" class="status-dropdown" style="display:none;">
         <div class="dropdown-option" data-status="Required_Missing" onclick="setDocStatus('Required_Missing')">
-            <span class="status-badge missing">חסר</span>
+            <span class="badge badge-danger">חסר</span>
         </div>
         <div class="dropdown-option" data-status="Received" onclick="setDocStatus('Received')">
-            <span class="status-badge received">התקבל</span>
+            <span class="badge badge-success">התקבל</span>
         </div>
         <div class="dropdown-option" data-status="Requires_Fix" onclick="setDocStatus('Requires_Fix')">
-            <span class="status-badge review">נדרש תיקון</span>
+            <span class="badge badge-warning">נדרש תיקון</span>
         </div>
     </div>
 
     <script src="assets/js/document-manager.js"></script>
 </body>
-
 </html>
