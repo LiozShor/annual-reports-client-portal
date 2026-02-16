@@ -461,7 +461,7 @@ function buildDocMeta(tpl, collectedValues) {
     const issuerKey = issuerParts.join(' ').trim();
     return {
         template_id: tpl.template_id,
-        category: tpl.category || 'other',
+        category: tpl.category || 'general',
         issuer_name: nameHe,
         name_en: nameEn,
         person: person,
@@ -794,7 +794,7 @@ async function confirmSubmit() {
                 issuer_name: name,
                 issuer_name_en: '',
                 template_id: 'general_doc',
-                category: 'other',
+                category: 'general',
                 person: 'client',
                 issuer_key: name
             };
