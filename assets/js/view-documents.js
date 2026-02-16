@@ -43,7 +43,6 @@ async function loadDocuments() {
         }
 
         const data = await response.json();
-        console.log('API Response:', data);
         currentData = data;
 
         document.getElementById('loading').style.display = 'none';

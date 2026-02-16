@@ -93,11 +93,11 @@ document.getElementById('passwordInput').addEventListener('keypress', (e) => {
 
 // ==================== TABS ====================
 
-function switchTab(tabName) {
+function switchTab(tabName, evt) {
     document.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'));
     document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
 
-    event.currentTarget.classList.add('active');
+    if (evt && evt.currentTarget) evt.currentTarget.classList.add('active');
     document.getElementById(`tab-${tabName}`).classList.add('active');
     if (typeof lucide !== 'undefined') lucide.createIcons();
 }
