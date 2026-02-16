@@ -50,6 +50,10 @@
             <button class="tab-item active" onclick="switchTab('dashboard', event)"><i data-lucide="bar-chart-3" class="icon-sm"></i> לוח בקרה</button>
             <button class="tab-item" onclick="switchTab('import', event)"><i data-lucide="upload" class="icon-sm"></i> הוספת לקוחות</button>
             <button class="tab-item" onclick="switchTab('send', event)"><i data-lucide="mail" class="icon-sm"></i> שליחת שאלונים</button>
+            <button class="tab-item" onclick="switchTab('review', event)">
+                <i data-lucide="clipboard-check" class="icon-sm"></i> מוכנים לבדיקה
+                <span class="review-count-badge" id="reviewCountBadge" style="display:none;">0</span>
+            </button>
         </div>
 
         <div class="content">
@@ -295,6 +299,29 @@
                                 <i data-lucide="mail" class="icon-sm"></i> שלח לכולם
                             </button>
                         </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Review Tab -->
+            <div id="tab-review" class="tab-content">
+                <div class="review-header-bar">
+                    <div class="review-header-info">
+                        <h2><i data-lucide="clipboard-check" class="icon"></i> מוכנים לבדיקה</h2>
+                        <span class="review-header-count" id="reviewHeaderCount">0 לקוחות בתור</span>
+                    </div>
+                    <div class="review-header-actions">
+                        <button class="btn btn-secondary" onclick="exportReviewToExcel()">
+                            <i data-lucide="download" class="icon-sm"></i> ייצוא לאקסל
+                        </button>
+                    </div>
+                </div>
+                <p class="review-fifo-hint"><i data-lucide="info" class="icon-sm"></i> הרשימה ממוינת לפי סדר השלמה — מי שסיים ראשון מופיע ראשון (FIFO)</p>
+
+                <div id="reviewTableContainer">
+                    <div class="empty-state">
+                        <div class="empty-state-icon"><i data-lucide="inbox" class="icon-2xl"></i></div>
+                        <p>אין לקוחות מוכנים לבדיקה כרגע</p>
                     </div>
                 </div>
             </div>
