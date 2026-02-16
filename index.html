@@ -38,14 +38,14 @@
     </div>
 
     <!-- Reset Confirmation Modal -->
-    <div class="modal-overlay" id="resetModal">
+    <div class="modal-overlay" id="resetModal" role="dialog" aria-modal="true" aria-labelledby="resetModalTitle">
         <div class="modal-panel" style="max-width: 400px;">
             <div class="modal-panel-header" style="justify-content: center; flex-direction: column; align-items: center; padding-bottom: 0;">
                 <div class="error-icon-wrapper" style="margin-bottom: var(--sp-3);">
                     <i data-lucide="trash-2" class="icon-lg"></i>
                 </div>
                 <div class="bilingual" style="text-align: center;">
-                    <span>מחיקה והתחלה מחדש</span>
+                    <span id="resetModalTitle">מחיקה והתחלה מחדש</span>
                     <span class="en">Delete & Start Over</span>
                 </div>
             </div>
@@ -60,7 +60,7 @@
                 </div>
             </div>
             <div class="modal-panel-footer" style="flex-direction: column; gap: var(--sp-3);">
-                <button class="btn btn-danger w-full" onclick="closeResetModal(); resetAndContinue();" style="padding: var(--sp-4);">
+                <button type="button" class="btn btn-danger w-full" onclick="closeResetModal(); resetAndContinue();" style="padding: var(--sp-4);" aria-label="כן, מחק והתחל מחדש">
                     <div class="bilingual" style="width: 100%;">
                         <span style="display: flex; align-items: center; justify-content: center; gap: var(--sp-2);">
                             <i data-lucide="trash-2" class="icon-sm"></i>
@@ -69,7 +69,7 @@
                         <span class="en text-sm">Yes, Delete & Start Over</span>
                     </div>
                 </button>
-                <button class="btn btn-secondary w-full" onclick="closeResetModal();" style="padding: var(--sp-4);">
+                <button type="button" class="btn btn-secondary w-full" onclick="closeResetModal();" style="padding: var(--sp-4);" aria-label="ביטול">
                     <div class="bilingual" style="width: 100%;">
                         <span>ביטול</span>
                         <span class="en text-sm">Cancel</span>

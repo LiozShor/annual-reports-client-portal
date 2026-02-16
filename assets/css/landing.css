@@ -153,18 +153,6 @@ body {
     font-size: var(--text-base);
 }
 
-/* Dev badge */
-.dev-badge {
-    display: inline-block;
-    background: var(--warning-100);
-    color: var(--warning-700);
-    font-size: 11px;
-    padding: 2px var(--sp-2);
-    border-radius: var(--radius-sm);
-    margin-top: var(--sp-1);
-    font-weight: 500;
-}
-
 /* Skeleton loader */
 .skeleton-loader {
     text-align: center;
@@ -195,6 +183,11 @@ body {
     color: var(--danger-500);
     border-radius: var(--radius-full);
     margin: 0 auto var(--sp-4);
+}
+
+.lang-card:focus-visible {
+    outline: 2px solid var(--brand-500);
+    outline-offset: 2px;
 }
 
 @media (max-width: 480px) {

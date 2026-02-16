@@ -82,17 +82,10 @@ function stageRank(s) {
 async function checkExistingSubmission() {
     try {
         const url = `${CHECK_ENDPOINT}?report_id=${encodeURIComponent(reportId)}`;
-        console.log('[landing] checkExistingSubmission URL:', url);
         const response = await fetch(url, { cache: 'no-store' });
-        console.log('[landing] response status:', response.status);
-        if (!response.ok) {
-            const errorText = await response.text();
-            console.error('[landing] response error body:', errorText);
-            throw new Error(`HTTP ${response.status}`);
-        }
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
         const data = await response.json();
-        console.log('[landing] response data:', JSON.stringify(data));
         if (data && data.ok === false) {
             showError('Invalid link or report not found. Please contact the office.');
             return;
@@ -114,7 +107,6 @@ async function checkExistingSubmission() {
             showExistingProcessOptions({ docCount, hasDocs });
         }
     } catch (error) {
-        console.error('[landing] checkExistingSubmission error:', error);
         showError(`${t('err_loading')}`);
     }
 }
@@ -221,14 +213,8 @@ async function resetAndContinue() {
 
     try {
         const url = `${RESET_ENDPOINT}?report_id=${encodeURIComponent(reportId)}&token=${encodeURIComponent(token)}`;
-        console.log('[landing] resetAndContinue URL:', url);
         const res = await fetch(url, { cache: 'no-store' });
-        console.log('[landing] reset response status:', res.status);
-        if (!res.ok) {
-            const errorText = await res.text();
-            console.error('[landing] reset error body:', errorText);
-            throw new Error(`HTTP ${res.status}`);
-        }
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
         content.innerHTML = `
             <div class="alert-box bilingual">
@@ -252,7 +238,6 @@ async function resetAndContinue() {
         `;
         reinitIcons();
     } catch (error) {
-        console.error('[landing] resetAndContinue error:', error);
         showError(`${t('err_reset')}`);
     }
 }
@@ -274,7 +259,7 @@ function goToForm(lang) {
 function showError(msg) {
     const content = document.getElementById('content');
     content.innerHTML = `
-        <div class="error-state bilingual">
+        <div class="error-state bilingual" role="alert" aria-live="assertive">
             <div class="error-icon-wrapper" style="margin: 0 auto var(--sp-4)">
                 ${lucideIcon('alert-triangle', 'icon-lg')}
             </div>
@@ -286,11 +271,9 @@ function showError(msg) {
 }
 
 function init() {
-    console.log('[landing] init — params:', { reportId, clientId, year, token: token ? '***' : null, fullName, email });
     document.getElementById('headerTitle').textContent = t('header_title') || 'Tax Questionnaire';
 
     if (!reportId || !clientId || !year || !token) {
-        console.warn('[landing] missing params, showing error');
         showError(t('err_missing_params'));
     } else {
         checkExistingSubmission();
