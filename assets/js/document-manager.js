@@ -745,7 +745,6 @@ async function confirmSubmit() {
     const notes = document.getElementById('notes').value.trim();
 
     const docsToRemoveObjs = currentDocuments.filter(doc => markedForRemoval.has(doc.id));
-    const docsToRemoveNames = docsToRemoveObjs.map(d => d.name);
     const docsToRemoveIds = docsToRemoveObjs.map(d => d.id);
 
     const docsToAddNames = Array.from(docsToAdd.keys());
