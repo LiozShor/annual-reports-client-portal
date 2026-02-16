@@ -20,6 +20,13 @@ let pendingTemplate = null; // Template awaiting detail input
 let apiTemplates = [];      // Templates from Airtable (SSOT)
 let apiCategories = [];     // Categories from Airtable (SSOT)
 
+// Enhanced operations state
+let markedForRestore = new Set();   // doc IDs to un-waive
+let statusChanges = new Map();      // docId → newStatus
+let noteChanges = new Map();        // docId → noteText
+let sendEmailOnSave = true;
+let currentDropdownDocId = null;    // currently open status dropdown target
+
 // Variable name → Hebrew label mapping (UI only)
 const VAR_LABELS = {
     employer_name: 'שם המעסיק',
@@ -45,6 +52,14 @@ const VAR_LABELS = {
     survivor_details: 'פרטי שארים',
     relationship_details: 'פרטי ההנצחה',
     medical_details: 'פרטים רפואיים'
+};
+
+// Hebrew status labels
+const STATUS_LABELS = {
+    'Required_Missing': 'חסר',
+    'Received': 'התקבל',
+    'Requires_Fix': 'נדרש תיקון',
+    'Waived': 'ויתור'
 };
 
 // Initialize
@@ -177,24 +192,50 @@ function displayDocuments() {
             `;
 
             for (const doc of cat.docs) {
-                const status = getStatusBadge(doc.status);
                 const isWaived = doc.status === 'Waived';
+                const effectiveStatus = statusChanges.get(doc.id) || doc.status;
+                const status = getStatusBadge(isWaived ? doc.status : effectiveStatus);
+                const hasNote = (doc.bookkeepers_notes && doc.bookkeepers_notes.trim()) || noteChanges.has(doc.id);
+                const noteIcon = hasNote ? '📝' : '✏️';
+                const isRestoreMarked = markedForRestore.has(doc.id);
+                const isStatusChanged = statusChanges.has(doc.id);
+
+                html += `<div class="document-wrapper" id="wrapper-${doc.id}">`;
                 html += `
-                    <div class="document-item ${isWaived ? 'waived-item' : ''}" id="doc-${doc.id}">
+                    <div class="document-item ${isWaived ? 'waived-item' : ''} ${isRestoreMarked ? 'marked-for-restore' : ''} ${isStatusChanged ? 'status-changed' : ''} ${markedForRemoval.has(doc.id) ? 'marked-for-removal' : ''}" id="doc-${doc.id}">
                         ${isWaived
-                            ? '<span class="waived-placeholder"></span>'
+                            ? `<input type="checkbox" class="restore-checkbox"
+                                onchange="toggleRestore('${doc.id}')"
+                                id="restore-${doc.id}"
+                                ${isRestoreMarked ? 'checked' : ''}
+                                aria-label="שחזר מסמך">`
                             : `<input type="checkbox"
                                 onchange="toggleRemoval('${doc.id}')"
                                 id="checkbox-${doc.id}"
+                                ${markedForRemoval.has(doc.id) ? 'checked' : ''}
                                 aria-label="סמן להסרה">`
                         }
                         <span class="document-icon">📄</span>
                         <div class="document-name">${doc.name}</div>
-                        <span class="status-badge ${status.class}">${status.text}</span>
+                        ${isWaived
+                            ? `<span class="status-badge ${status.class}">${status.text}</span>`
+                            : `<span class="status-badge ${status.class} clickable"
+                                    onclick="openStatusDropdown(event, '${doc.id}', '${effectiveStatus}')"
+                                    id="badge-${doc.id}"
+                                    title="לחץ לשינוי סטטוס">${status.text} ▾</span>`
+                        }
+                        <button class="note-btn ${hasNote ? 'has-note' : ''} ${noteChanges.has(doc.id) ? 'note-modified' : ''}"
+                                onclick="toggleNote('${doc.id}')"
+                                title="הערת משרד">${noteIcon}</button>
                         <button class="download-btn" disabled
                                 title="הורדה (בקרוב)">⬇️</button>
                     </div>
-                `;
+                    <div class="note-editor" id="note-${doc.id}" style="display:none;">
+                        <textarea class="note-textarea" id="notetext-${doc.id}"
+                                  oninput="trackNoteChange('${doc.id}')"
+                                  placeholder="הערת משרד...">${escapeHtml(doc.bookkeepers_notes || '')}</textarea>
+                    </div>
+                </div>`;
             }
 
             html += `</div>`;
@@ -219,7 +260,7 @@ function getStatusBadge(status) {
     }
 }
 
-// Toggle removal
+// Toggle removal (waive)
 function toggleRemoval(id) {
     const checkbox = document.getElementById(`checkbox-${id}`);
     const item = document.getElementById(`doc-${id}`);
@@ -227,12 +268,131 @@ function toggleRemoval(id) {
     if (checkbox.checked) {
         markedForRemoval.add(id);
         item.classList.add('marked-for-removal');
+        // Waive wins: remove any status change for this doc
+        if (statusChanges.has(id)) {
+            statusChanges.delete(id);
+            item.classList.remove('status-changed');
+        }
     } else {
         markedForRemoval.delete(id);
         item.classList.remove('marked-for-removal');
     }
 
     updateStats();
+}
+
+// Toggle restore (un-waive)
+function toggleRestore(id) {
+    const checkbox = document.getElementById(`restore-${id}`);
+    const item = document.getElementById(`doc-${id}`);
+
+    if (checkbox.checked) {
+        markedForRestore.add(id);
+        item.classList.add('marked-for-restore');
+    } else {
+        markedForRestore.delete(id);
+        item.classList.remove('marked-for-restore');
+    }
+
+    updateStats();
+}
+
+// Status dropdown
+function openStatusDropdown(event, docId, currentStatus) {
+    event.stopPropagation();
+    currentDropdownDocId = docId;
+    const dropdown = document.getElementById('statusDropdown');
+    const rect = event.target.getBoundingClientRect();
+
+    // Position dropdown below the clicked badge (RTL-aware)
+    dropdown.style.top = (rect.bottom + 5) + 'px';
+    dropdown.style.right = (window.innerWidth - rect.right) + 'px';
+    dropdown.style.left = 'auto';
+    dropdown.style.display = 'block';
+
+    // Highlight current/effective status
+    const effectiveStatus = statusChanges.get(docId) || currentStatus;
+    dropdown.querySelectorAll('.dropdown-option').forEach(opt => {
+        opt.classList.toggle('active', opt.dataset.status === effectiveStatus);
+    });
+}
+
+function setDocStatus(newStatus) {
+    if (!currentDropdownDocId) return;
+    const docId = currentDropdownDocId;
+    const doc = currentDocuments.find(d => d.id === docId);
+
+    if (doc && doc.status === newStatus) {
+        // Reset to original — remove from changes
+        statusChanges.delete(docId);
+    } else {
+        statusChanges.set(docId, newStatus);
+    }
+
+    updateDocStatusVisual(docId);
+    closeStatusDropdown();
+    updateStats();
+}
+
+function updateDocStatusVisual(docId) {
+    const doc = currentDocuments.find(d => d.id === docId);
+    if (!doc) return;
+
+    const effectiveStatus = statusChanges.get(docId) || doc.status;
+    const status = getStatusBadge(effectiveStatus);
+    const badge = document.getElementById(`badge-${docId}`);
+    const item = document.getElementById(`doc-${docId}`);
+
+    if (badge) {
+        badge.className = `status-badge ${status.class} clickable`;
+        badge.textContent = status.text + ' ▾';
+    }
+    if (item) {
+        item.classList.toggle('status-changed', statusChanges.has(docId));
+    }
+}
+
+function closeStatusDropdown() {
+    document.getElementById('statusDropdown').style.display = 'none';
+    currentDropdownDocId = null;
+}
+
+// Per-document notes
+function toggleNote(docId) {
+    const editor = document.getElementById(`note-${docId}`);
+    if (!editor) return;
+
+    const isVisible = editor.style.display !== 'none';
+    editor.style.display = isVisible ? 'none' : 'block';
+
+    if (!isVisible) {
+        const textarea = document.getElementById(`notetext-${docId}`);
+        if (textarea) textarea.focus();
+    }
+}
+
+function trackNoteChange(docId) {
+    const textarea = document.getElementById(`notetext-${docId}`);
+    if (!textarea) return;
+
+    const newText = textarea.value;
+    const doc = currentDocuments.find(d => d.id === docId);
+    const originalNote = doc ? (doc.bookkeepers_notes || '') : '';
+
+    if (newText === originalNote) {
+        noteChanges.delete(docId);
+    } else {
+        noteChanges.set(docId, newText);
+    }
+
+    // Update note button icon
+    const btn = document.querySelector(`#doc-${docId} .note-btn`);
+    if (btn) {
+        const hasContent = newText.trim().length > 0;
+        btn.textContent = hasContent ? '📝' : '✏️';
+        btn.classList.toggle('has-note', hasContent);
+        btn.classList.toggle('note-modified', noteChanges.has(docId));
+    }
 }
 
 // Handle document selection from dropdown
@@ -362,6 +522,7 @@ function updateStats() {
     document.getElementById('totalDocs').textContent = activeDocs.length;
     document.getElementById('markedDocs').textContent = markedForRemoval.size;
     document.getElementById('addedDocs').textContent = docsToAdd.size;
+    document.getElementById('restoredDocs').textContent = markedForRestore.size;
 }
 
 // Strip HTML tags for plain text display
@@ -399,23 +560,43 @@ function openConfirmation() {
 
     const uniqueDocsToAdd = [...new Set(docsToAddArray)];
 
-    if (docsToRemove.length === 0 && uniqueDocsToAdd.length === 0 && !notes) {
+    // Check if there are any changes at all
+    const hasChanges = docsToRemove.length > 0 ||
+        uniqueDocsToAdd.length > 0 ||
+        notes ||
+        markedForRestore.size > 0 ||
+        statusChanges.size > 0 ||
+        noteChanges.size > 0;
+
+    if (!hasChanges) {
         showAlert(TXT_NO_CHANGES, 'error');
         return;
     }
 
     let summary = '<div>';
 
+    // Restores (blue)
+    if (markedForRestore.size > 0) {
+        const restoreDocs = currentDocuments.filter(d => markedForRestore.has(d.id));
+        summary += `<h4 style="color: #2196f3;">🔄 מסמכים שישוחזרו (${restoreDocs.length}):</h4>`;
+        summary += '<ul class="changes-list">';
+        restoreDocs.forEach(doc => {
+            summary += `<li class="change-restore">🔄 ${stripHtml(doc.name)}</li>`;
+        });
+        summary += '</ul>';
+    }
+
+    // Removals (red)
     if (docsToRemove.length > 0) {
         summary += `<h4 style="color: #dc3545;">🚫 מסמכים שיוסרו מרשימת הלקוח (${docsToRemove.length}):</h4>`;
         summary += '<ul class="changes-list">';
         docsToRemove.forEach(doc => {
-            // Doc names may contain <b> tags — strip for plain text display in dialog
             summary += `<li class="change-remove">🚫 ${stripHtml(doc)}</li>`;
         });
         summary += '</ul>';
     }
 
+    // Additions (green)
     if (uniqueDocsToAdd.length > 0) {
         summary += `<h4 style="color: #28a745;">➕ מסמכים שיתווספו (${uniqueDocsToAdd.length}):</h4>`;
         summary += '<ul class="changes-list">';
@@ -425,9 +606,45 @@ function openConfirmation() {
         summary += '</ul>';
     }
 
+    // Status changes (purple)
+    if (statusChanges.size > 0) {
+        summary += `<h4 style="color: #7b1fa2;">🔀 שינויי סטטוס (${statusChanges.size}):</h4>`;
+        summary += '<ul class="changes-list">';
+        statusChanges.forEach((newStatus, docId) => {
+            const doc = currentDocuments.find(d => d.id === docId);
+            if (doc) {
+                const toLabel = STATUS_LABELS[newStatus] || newStatus;
+                summary += `<li class="change-status">🔀 ${stripHtml(doc.name)} — שונה ל: ${toLabel}</li>`;
+            }
+        });
+        summary += '</ul>';
+    }
+
+    // Note changes (teal)
+    if (noteChanges.size > 0) {
+        summary += `<h4 style="color: #00897b;">📝 עדכוני הערות (${noteChanges.size}):</h4>`;
+        summary += '<ul class="changes-list">';
+        noteChanges.forEach((noteText, docId) => {
+            const doc = currentDocuments.find(d => d.id === docId);
+            if (doc) {
+                const preview = noteText.length > 50 ? noteText.substring(0, 50) + '...' : noteText;
+                summary += `<li class="change-note">📝 ${stripHtml(doc.name)}: ${escapeHtml(preview || '(הערה נמחקה)')}</li>`;
+            }
+        });
+        summary += '</ul>';
+    }
+
+    // Session notes
     if (notes) {
         summary += '<h4>💬 הערות:</h4>';
         summary += '<ul class="changes-list"><li>' + escapeHtml(notes) + '</li></ul>';
+    }
+
+    // Email toggle warning
+    if (!sendEmailOnSave) {
+        summary += `<div class="email-skip-warning">
+            <strong>⚠️ שים לב:</strong> אימייל התראה למשרד <strong>לא</strong> יישלח עבור שינויים אלו.
+        </div>`;
     }
 
     summary += '</div>';
@@ -469,6 +686,39 @@ async function confirmSubmit() {
 
     const uniqueDocsToAdd = [...new Set(docsToAddArray)];
 
+    // Build extensions object
+    const extensions = { send_email: sendEmailOnSave };
+
+    // Restores
+    if (markedForRestore.size > 0) {
+        extensions.docs_to_restore = currentDocuments
+            .filter(d => markedForRestore.has(d.id))
+            .map(d => ({ id: d.id, text: d.name }));
+    }
+
+    // Status changes (exclude docs being waived — waive wins)
+    const filteredStatusChanges = new Map(statusChanges);
+    for (const id of markedForRemoval) {
+        filteredStatusChanges.delete(id);
+    }
+    if (filteredStatusChanges.size > 0) {
+        extensions.status_changes = [];
+        filteredStatusChanges.forEach((newStatus, docId) => {
+            const doc = currentDocuments.find(d => d.id === docId);
+            if (doc) {
+                extensions.status_changes.push({ id: docId, new_status: newStatus, name: doc.name });
+            }
+        });
+    }
+
+    // Note updates
+    if (noteChanges.size > 0) {
+        extensions.note_updates = [];
+        noteChanges.forEach((noteText, docId) => {
+            extensions.note_updates.push({ id: docId, note: noteText });
+        });
+    }
+
     const payload = {
         data: {
             fields: [
@@ -509,7 +759,8 @@ async function confirmSubmit() {
                     type: 'TEXTAREA',
                     value: notes
                 }
-            ]
+            ],
+            extensions: extensions
         }
     };
 
@@ -536,17 +787,23 @@ async function confirmSubmit() {
 // Reset form
 function resetForm() {
     markedForRemoval.clear();
+    markedForRestore.clear();
+    statusChanges.clear();
+    noteChanges.clear();
     docsToAdd.clear();
+    sendEmailOnSave = true;
     document.getElementById('customDoc').value = '';
     document.getElementById('notes').value = '';
     document.getElementById('detailInput').classList.remove('show');
     document.getElementById('docTypeSelect').value = '';
     pendingTemplate = null;
 
-    document.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = false);
-    document.querySelectorAll('.document-item').forEach(item => {
-        item.classList.remove('marked-for-removal');
-    });
+    // Reset email toggle checkbox
+    const emailToggle = document.getElementById('emailToggle');
+    if (emailToggle) emailToggle.checked = true;
+
+    // Re-render documents to clear all visual states
+    displayDocuments();
     updateSelectedDocs();
     updateStats();
     showAlert('הטופס אופס בהצלחה', 'success');
@@ -611,7 +868,7 @@ function escapeHtml(text) {
     return div.innerHTML;
 }
 
-// Close detail input when clicking outside
+// Close detail input and status dropdown when clicking outside
 document.addEventListener('click', function (e) {
     const detailInput = document.getElementById('detailInput');
     const select = document.getElementById('docTypeSelect');
@@ -622,5 +879,11 @@ document.addEventListener('click', function (e) {
         detailInput.classList.remove('show');
         select.value = '';
         pendingTemplate = null;
+    }
+
+    // Close status dropdown on outside click
+    const dropdown = document.getElementById('statusDropdown');
+    if (dropdown && dropdown.style.display === 'block' && !dropdown.contains(e.target)) {
+        closeStatusDropdown();
     }
 });

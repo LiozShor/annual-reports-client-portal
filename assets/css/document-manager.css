@@ -840,3 +840,226 @@ body {
 .download-btn:not(:disabled):hover {
     transform: scale(1.1);
 }
+
+/* ===========================================
+   ENHANCED OPERATIONS STYLES
+   =========================================== */
+
+/* Restore Checkbox (blue accent) */
+.restore-checkbox {
+    width: 24px;
+    height: 24px;
+    margin-left: 15px;
+    cursor: pointer;
+    accent-color: #2196f3;
+}
+
+/* Marked for restore (blue highlight) */
+.document-item.marked-for-restore {
+    background: #e3f2fd !important;
+    border-color: #2196f3 !important;
+    opacity: 1 !important;
+}
+
+.document-item.marked-for-restore .document-name {
+    text-decoration: none !important;
+    color: #1565c0 !important;
+    font-weight: 600;
+}
+
+.document-item.marked-for-restore::before {
+    content: "\1F504 ישוחזר";
+    position: absolute;
+    left: 20px;
+    background: #2196f3;
+    color: white;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: bold;
+}
+
+/* Stat box restore */
+.stat-box.restore {
+    border-right-color: #2196f3;
+}
+
+/* Clickable status badge */
+.status-badge.clickable {
+    cursor: pointer;
+    transition: all 0.2s ease;
+    user-select: none;
+}
+
+.status-badge.clickable:hover {
+    filter: brightness(0.9);
+    transform: scale(1.05);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+}
+
+/* Status dropdown */
+.status-dropdown {
+    position: fixed;
+    z-index: 1001;
+    background: white;
+    border-radius: 10px;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
+    padding: 8px;
+    min-width: 160px;
+    animation: fadeIn 0.15s ease;
+}
+
+.dropdown-option {
+    padding: 8px 12px;
+    cursor: pointer;
+    border-radius: 6px;
+    transition: background 0.15s ease;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.dropdown-option:hover {
+    background: #f0f0f0;
+}
+
+.dropdown-option.active {
+    background: #e8eaf6;
+    font-weight: bold;
+}
+
+.dropdown-option .status-badge {
+    pointer-events: none;
+}
+
+/* Status changed indicator */
+.document-item.status-changed {
+    border-right: 4px solid #7b1fa2 !important;
+}
+
+/* Note button */
+.note-btn {
+    background: none;
+    border: 1px solid transparent;
+    cursor: pointer;
+    padding: 4px 8px;
+    margin-right: 5px;
+    font-size: 16px;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+}
+
+.note-btn:hover {
+    background: #f0f0f0;
+    border-color: #ddd;
+}
+
+.note-btn.has-note {
+    background: #fff8e1;
+    border-color: #ffcc02;
+}
+
+.note-btn.note-modified {
+    animation: notePulse 1.5s infinite;
+}
+
+@keyframes notePulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(0, 137, 123, 0.4); }
+    50% { box-shadow: 0 0 0 6px rgba(0, 137, 123, 0); }
+}
+
+/* Note editor */
+.note-editor {
+    padding: 0 18px 12px 18px;
+    animation: slideDown 0.2s ease;
+}
+
+.note-textarea {
+    width: 100%;
+    min-height: 60px;
+    padding: 10px;
+    border: 2px solid #b2dfdb;
+    border-radius: 8px;
+    font-family: inherit;
+    font-size: 14px;
+    resize: vertical;
+    direction: rtl;
+    transition: border-color 0.2s ease;
+    box-sizing: border-box;
+}
+
+.note-textarea:focus {
+    outline: none;
+    border-color: #00897b;
+    box-shadow: 0 0 0 3px rgba(0, 137, 123, 0.15);
+}
+
+/* Email toggle */
+.email-toggle-section {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 16px;
+    background: #e3f2fd;
+    border-radius: 8px;
+    margin-bottom: 15px;
+    border-right: 4px solid #2196f3;
+}
+
+.email-toggle-section input[type="checkbox"] {
+    width: 20px;
+    height: 20px;
+    accent-color: #2196f3;
+    cursor: pointer;
+}
+
+.email-toggle-section label {
+    cursor: pointer;
+    font-size: 15px;
+    color: #333;
+}
+
+/* Email skip warning in confirmation modal */
+.email-skip-warning {
+    margin-top: 15px;
+    padding: 12px;
+    background: #fff3cd;
+    border-radius: 8px;
+    border-right: 4px solid #ff9800;
+    color: #856404;
+}
+
+/* Confirmation modal change type colors */
+.change-restore {
+    color: #2196f3;
+    font-weight: 600;
+}
+
+.change-status {
+    color: #7b1fa2;
+    font-weight: 600;
+}
+
+.change-note {
+    color: #00897b;
+    font-weight: 600;
+}
+
+/* Document wrapper for note editors */
+.document-wrapper {
+    margin-bottom: 2px;
+}
+
+/* Person header */
+.person-header {
+    background: linear-gradient(135deg, #e8eaf6, #c5cae9);
+    padding: 14px 20px;
+    margin-top: 20px;
+    margin-bottom: 10px;
+    border-radius: 12px;
+    color: #283593;
+    font-weight: 700;
+    font-size: 18px;
+    text-align: center;
+    border-right: 5px solid #3f51b5;
+}

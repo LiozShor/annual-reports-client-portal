@@ -36,11 +36,12 @@
                 <span>איך להשתמש במערכת?</span>
             </h3>
             <ul class="instruction-steps">
-                <li><strong>הסרת מסמכים:</strong> סמן את התיבות ליד מסמכים שאינם רלוונטיים - הם יוסרו מרשימת המסמכים של
-                    הלקוח</li>
-                <li><strong>הוסף מסמכים חדשים:</strong> בחר מסמכים מהרשימה הנפתחת או הזן שם מסמך מותאם אישית</li>
-                <li><strong>הוסף הערות:</strong> אם יש הערות נוספות, הוסף אותן בשדה ההערות</li>
-                <li><strong>שמור שינויים:</strong> לחץ על כפתור "שמור שינויים" - אימייל יישלח אוטומטית למשרד</li>
+                <li><strong>הסרת מסמכים:</strong> סמן את התיבות ליד מסמכים שאינם רלוונטיים - הם יוסרו מרשימת הלקוח</li>
+                <li><strong>שחזור מסמכים:</strong> מסמכים שהוסרו בעבר מוצגים עם תיבת סימון כחולה - סמן כדי לשחזר</li>
+                <li><strong>שינוי סטטוס:</strong> לחץ על תג הסטטוס (חסר/התקבל/נדרש תיקון) כדי לשנות סטטוס מסמך</li>
+                <li><strong>הערות למסמך:</strong> לחץ על אייקון ההערה ליד כל מסמך כדי להוסיף הערת משרד</li>
+                <li><strong>הוסף מסמכים חדשים:</strong> בחר מהרשימה הנפתחת או הזן שם מסמך מותאם אישית</li>
+                <li><strong>שמור שינויים:</strong> לחץ על "שמור שינויים" - ניתן לבטל שליחת אימייל למשרד</li>
             </ul>
         </div>
 
@@ -103,6 +104,10 @@
                     <div class="stat-box addition">
                         <div class="stat-number" id="addedDocs">0</div>
                         <div class="stat-label">➕ מסומנים להוספה</div>
+                    </div>
+                    <div class="stat-box restore">
+                        <div class="stat-number" id="restoredDocs">0</div>
+                        <div class="stat-label">🔄 מסומנים לשחזור</div>
                     </div>
                 </div>
 
@@ -172,6 +177,12 @@
                     </div>
                 </div>
 
+                <div class="email-toggle-section">
+                    <input type="checkbox" id="emailToggle" checked
+                           onchange="sendEmailOnSave = this.checked">
+                    <label for="emailToggle">📧 שלח אימייל התראה למשרד לאחר השמירה</label>
+                </div>
+
                 <div class="actions">
                     <button class="button" onclick="openConfirmation()">
                         <span style="position: relative; z-index: 1;">💾 שמור שינויים</span>
@@ -219,6 +230,19 @@
                     <span style="position: relative; z-index: 1;">❌ ביטול</span>
                 </button>
             </div>
+        </div>
+    </div>
+
+    <!-- Status dropdown (shared floating panel) -->
+    <div id="statusDropdown" class="status-dropdown" style="display:none;">
+        <div class="dropdown-option" data-status="Required_Missing" onclick="setDocStatus('Required_Missing')">
+            <span class="status-badge missing">חסר</span>
+        </div>
+        <div class="dropdown-option" data-status="Received" onclick="setDocStatus('Received')">
+            <span class="status-badge received">התקבל</span>
+        </div>
+        <div class="dropdown-option" data-status="Requires_Fix" onclick="setDocStatus('Requires_Fix')">
+            <span class="status-badge review">נדרש תיקון</span>
         </div>
     </div>
 
