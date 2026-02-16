@@ -8,6 +8,7 @@ let authToken = localStorage.getItem(ADMIN_TOKEN_KEY) || '';
 let clientsData = [];
 let importData = [];
 let existingEmails = new Set();
+let reviewQueueData = [];
 
 // ==================== AUTH ====================
 
@@ -133,6 +134,18 @@ async function loadDashboard() {
         // Store clients data
         clientsData = data.clients || [];
         existingEmails = new Set(clientsData.map(c => c.email?.toLowerCase()));
+
+        // Store review queue data
+        reviewQueueData = data.review_queue || [];
+        const badge = document.getElementById('reviewCountBadge');
+        if (reviewQueueData.length > 0) {
+            badge.textContent = reviewQueueData.length;
+            badge.style.display = 'inline-flex';
+        } else {
+            badge.style.display = 'none';
+        }
+        document.getElementById('reviewHeaderCount').textContent = `${reviewQueueData.length} לקוחות בתור`;
+        renderReviewTable(reviewQueueData);
 
         // Render table
         renderClientsTable(clientsData);
@@ -639,6 +652,136 @@ async function sendQuestionnaires(reportIds) {
         hideLoading();
         showModal('error', 'שגיאה', 'לא ניתן לשלוח: ' + error.message);
     }
+}
+
+// ==================== REVIEW QUEUE ====================
+
+function renderReviewTable(queue) {
+    const container = document.getElementById('reviewTableContainer');
+
+    if (!queue || queue.length === 0) {
+        container.innerHTML = `
+            <div class="empty-state">
+                <div class="empty-state-icon"><i data-lucide="inbox" class="icon-2xl"></i></div>
+                <p>אין לקוחות מוכנים לבדיקה כרגע</p>
+            </div>
+        `;
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+        return;
+    }
+
+    const now = new Date();
+
+    let html = `
+        <table>
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>שם</th>
+                    <th>אימייל</th>
+                    <th>שנה</th>
+                    <th>מסמכים</th>
+                    <th>תאריך השלמה</th>
+                    <th>ממתין</th>
+                    <th>פעולות</th>
+                </tr>
+            </thead>
+            <tbody>
+    `;
+
+    for (let i = 0; i < queue.length; i++) {
+        const client = queue[i];
+        const completedAt = new Date(client.docs_completed_at);
+        const diffMs = now - completedAt;
+        const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+        let waitingClass = '';
+        if (diffDays >= 14) waitingClass = 'waiting-urgent';
+        else if (diffDays >= 7) waitingClass = 'waiting-warn';
+
+        const waitingText = diffDays === 0 ? 'היום' : diffDays === 1 ? 'יום אחד' : `${diffDays} ימים`;
+        const dateStr = completedAt.toLocaleDateString('he-IL', { day: '2-digit', month: '2-digit', year: 'numeric' });
+
+        html += `
+            <tr>
+                <td><span class="fifo-number">${i + 1}</span></td>
+                <td>
+                    <strong
+                        class="client-link"
+                        onclick="viewClientDocs('${client.report_id}', '${escapeHtml(client.name)}', '${escapeHtml(client.email || '')}', '${client.year}')"
+                    >
+                        ${escapeHtml(client.name)}
+                    </strong>
+                </td>
+                <td>${escapeHtml(client.email)}</td>
+                <td>${client.year}</td>
+                <td>${client.docs_received}/${client.docs_total}</td>
+                <td>${dateStr}</td>
+                <td><span class="waiting-badge ${waitingClass}">${waitingText}</span></td>
+                <td>
+                    <button class="action-btn view" onclick="viewClient('${client.report_id}')" title="צפה בתיק"><i data-lucide="eye" class="icon-sm"></i></button>
+                    <button class="action-btn complete" onclick="markComplete('${client.report_id}', '${escapeHtml(client.name)}')" title="סמן כהושלם"><i data-lucide="circle-check" class="icon-sm"></i></button>
+                </td>
+            </tr>
+        `;
+    }
+
+    html += '</tbody></table>';
+    container.innerHTML = html;
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+async function markComplete(reportId, name) {
+    if (!confirm(`לסמן את "${name}" כהושלם?`)) return;
+
+    showLoading('מעדכן...');
+
+    try {
+        const response = await fetch(`${API_BASE}/admin-mark-complete`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                token: authToken,
+                report_id: reportId
+            })
+        });
+
+        const data = await response.json();
+        hideLoading();
+
+        if (!data.ok) throw new Error(data.error);
+
+        showModal('success', 'הושלם!', `"${name}" סומן כהושלם בהצלחה.`);
+        loadDashboard();
+
+    } catch (error) {
+        hideLoading();
+        showModal('error', 'שגיאה', 'לא ניתן לעדכן: ' + error.message);
+    }
+}
+
+function exportReviewToExcel() {
+    if (!reviewQueueData.length) return;
+
+    const now = new Date();
+    const exportData = reviewQueueData.map((c, i) => {
+        const completedAt = new Date(c.docs_completed_at);
+        const diffDays = Math.floor((now - completedAt) / (1000 * 60 * 60 * 24));
+        return {
+            '#': i + 1,
+            'שם': c.name,
+            'אימייל': c.email,
+            'שנה': c.year,
+            'מסמכים': `${c.docs_received}/${c.docs_total}`,
+            'תאריך השלמה': completedAt.toLocaleDateString('he-IL'),
+            'ימי המתנה': diffDays
+        };
+    });
+
+    const ws = XLSX.utils.json_to_sheet(exportData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'מוכנים לבדיקה');
+    XLSX.writeFile(wb, `review_queue_${new Date().toISOString().split('T')[0]}.xlsx`);
 }
 
 // ==================== UTILITIES ====================
