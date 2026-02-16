@@ -30,16 +30,16 @@ const HE_B64 = {
 
     // Buttons
     btn_view_docs: "16bXpNeUINeR157Xodee15vXmdedINeU16DXk9eo16nXmded",
-    btn_reset: "157Xl9enINeV15TXqteX15wg157XlNeU16rXl9dc15Q=",
-    btn_reset_dev_note: "KNeW157XoNeZIC0g15zXpNeZ16rXldeXINeR15zXkdeTKQ==",
+    btn_reset: "157Xl9enINeV15TXqteX15wg157XlNeU16rXl9ec15Q=",
+    btn_reset_confirm: "15TXkNedINeR16jXpteV16DXmiDXnNee15fXldenINeQ16og15vXnCDXlNee16HXnteb15nXnSDXldec15TXqteX15nXnCDXnteX15PXqT8=",
 
-    ready_title: "4pyFINee15XXm9efINec15PXqteX15nXnA==",
+    ready_title: "4pyFINee15XXm9efINec15TXqteX15nXnA==",
     choose_language: "15HXl9eoINeQ16og15TXqdek15Qg15TXnteV16LXk9ek16og16LXnNeZ15o6",
     reset_loading: "157XkNek16Eg16DXqteV16DXmdedLi4u",
     reset_done: "4pyFINeU16DXqteV16DXmdedINeQ15XXpNeh15U=",
     err_loading: "16nXkteZ15DXlCDXkdeY16LXmdeg16og15TXoNeq15XXoNeZ150=",
     err_reset: "16nXkteZ15DXlCDXkdeQ15nXpNeV16Eg15TXoNeq15XXoNeZ150=",
-    err_missing_params: "16TXqNee15jXqNeZ150g15fXqdeo15nXnSDXkden15nXqdeV16g="
+    err_missing_params: "16TXqNee15jXqNeZ150g15fXodeo15nXnSDXkden15nXqdeV16g="
 };
 
 function b64ToUtf8(b64) {
@@ -147,12 +147,10 @@ function showExistingProcessOptions({ docCount, hasDocs }) {
                 </div>
             </button>
 
-            <button class="btn btn-outline-danger" onclick="resetAndContinue()">
+            <button class="btn btn-outline-danger" onclick="confirmReset()">
                 <div class="bilingual">
                     <span>${t('btn_reset')}</span>
-                    <span class="dev-badge">${t('btn_reset_dev_note')}</span>
                     <span class="en text-sm">Delete & Start Over</span>
-                    <span class="en dev-badge">temporary - dev only</span>
                 </div>
             </button>
         </div>
@@ -190,6 +188,11 @@ function viewDocuments() {
     window.location.href = `view-documents.html?report_id=${reportId}`;
 }
 
+function confirmReset() {
+    if (!confirm(t('btn_reset_confirm'))) return;
+    resetAndContinue();
+}
+
 async function resetAndContinue() {
     const content = document.getElementById('content');
     content.innerHTML = `
@@ -200,7 +203,7 @@ async function resetAndContinue() {
     `;
 
     try {
-        const url = `${RESET_ENDPOINT}?report_id=${encodeURIComponent(reportId)}`;
+        const url = `${RESET_ENDPOINT}?report_id=${encodeURIComponent(reportId)}&token=${encodeURIComponent(token)}`;
         const res = await fetch(url, { cache: 'no-store' });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
