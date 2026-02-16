@@ -37,6 +37,48 @@
         </div>
     </div>
 
+    <!-- Reset Confirmation Modal -->
+    <div class="modal-overlay" id="resetModal">
+        <div class="modal-panel" style="max-width: 400px;">
+            <div class="modal-panel-header" style="justify-content: center; flex-direction: column; align-items: center; padding-bottom: 0;">
+                <div class="error-icon-wrapper" style="margin-bottom: var(--sp-3);">
+                    <i data-lucide="trash-2" class="icon-lg"></i>
+                </div>
+                <div class="bilingual" style="text-align: center;">
+                    <span>מחיקה והתחלה מחדש</span>
+                    <span class="en">Delete & Start Over</span>
+                </div>
+            </div>
+            <div class="modal-panel-body" style="text-align: center;">
+                <div class="bilingual">
+                    <p>פעולה זו תמחק את כל המסמכים שנוצרו עבור הדוח הזה ותאפשר לך למלא את השאלון מחדש.</p>
+                    <p class="en">This will delete all documents generated for this report and allow you to fill the questionnaire again.</p>
+                </div>
+                <div class="bilingual" style="margin-top: var(--sp-4); font-weight: 600; color: var(--danger-700);">
+                    <span>לא ניתן לבטל פעולה זו.</span>
+                    <span class="en">This action cannot be undone.</span>
+                </div>
+            </div>
+            <div class="modal-panel-footer" style="flex-direction: column; gap: var(--sp-3);">
+                <button class="btn btn-danger w-full" onclick="closeResetModal(); resetAndContinue();" style="padding: var(--sp-4);">
+                    <div class="bilingual" style="width: 100%;">
+                        <span style="display: flex; align-items: center; justify-content: center; gap: var(--sp-2);">
+                            <i data-lucide="trash-2" class="icon-sm"></i>
+                            כן, מחק והתחל מחדש
+                        </span>
+                        <span class="en text-sm">Yes, Delete & Start Over</span>
+                    </div>
+                </button>
+                <button class="btn btn-secondary w-full" onclick="closeResetModal();" style="padding: var(--sp-4);">
+                    <div class="bilingual" style="width: 100%;">
+                        <span>ביטול</span>
+                        <span class="en text-sm">Cancel</span>
+                    </div>
+                </button>
+            </div>
+        </div>
+    </div>
+
     <script src="assets/js/landing.js"></script>
 </body>
 

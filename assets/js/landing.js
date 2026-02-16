@@ -31,7 +31,6 @@ const HE_B64 = {
     // Buttons
     btn_view_docs: "16bXpNeUINeR157Xodee15vXmdedINeU16DXk9eo16nXmded",
     btn_reset: "157Xl9enINeV15TXqteX15wg157XlNeU16rXl9ec15Q=",
-    btn_reset_confirm: "15TXkNedINeR16jXpteV16DXmiDXnNee15fXldenINeQ16og15vXnCDXlNee16HXnteb15nXnSDXldec15TXqteX15nXnCDXnteX15PXqT8=",
 
     ready_title: "4pyFINee15XXm9efINec15TXqteX15nXnA==",
     choose_language: "15HXl9eoINeQ16og15TXqdek15Qg15TXnteV16LXk9ek16og16LXnNeZ15o6",
@@ -197,9 +196,19 @@ function viewDocuments() {
 }
 
 function confirmReset() {
-    if (!confirm(t('btn_reset_confirm'))) return;
-    resetAndContinue();
+    const modal = document.getElementById('resetModal');
+    modal.classList.add('show');
+    reinitIcons();
 }
+
+function closeResetModal() {
+    document.getElementById('resetModal').classList.remove('show');
+}
+
+// Close modal on backdrop click
+document.getElementById('resetModal')?.addEventListener('click', (e) => {
+    if (e.target === e.currentTarget) closeResetModal();
+});
 
 async function resetAndContinue() {
     const content = document.getElementById('content');
