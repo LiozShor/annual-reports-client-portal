@@ -1,54 +1,77 @@
 <!DOCTYPE html>
 <html lang="he" dir="rtl">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>רשימת מסמכים נדרשים - Annual Report Documents</title>
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📄</text></svg>">
+    <link rel="stylesheet" href="assets/css/design-system.css">
     <link rel="stylesheet" href="assets/css/common.css">
     <link rel="stylesheet" href="assets/css/view-documents.css">
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js" defer></script>
 </head>
-
 <body>
-    <div class="container">
-        <div class="header">
-            <h1 id="title-he">רשימת מסמכים נדרשים</h1>
-            <h1 id="title-en" style="display: none;">Required Documents List</h1>
-            <div class="subtitle" id="subtitle"></div>
-        </div>
-
-        <div class="content">
-            <div class="loading" id="loading">
-                <div class="spinner"></div>
-                <p id="loading-text-he">טוען את רשימת המסמכים...</p>
-                <p id="loading-text-en" style="display: none;">Loading document list...</p>
+    <div class="page-wrapper">
+        <div class="container">
+            <div class="page-header">
+                <div class="header-top">
+                    <div class="header-brand">
+                        <i data-lucide="file-text" class="icon-lg"></i>
+                        <div>
+                            <h1 id="title-he">רשימת מסמכים נדרשים</h1>
+                            <h1 id="title-en" class="hidden">Required Documents List</h1>
+                        </div>
+                    </div>
+                    <div class="lang-toggle" id="lang-toggle" style="display:none;">
+                        <button class="lang-pill active" id="btn-he" onclick="switchLanguage('he')">עברית</button>
+                        <button class="lang-pill" id="btn-en" onclick="switchLanguage('en')">English</button>
+                    </div>
+                </div>
+                <div class="header-subtitle" id="subtitle"></div>
+                <div class="progress-section" id="progress-section" style="display:none;">
+                    <div class="progress-info">
+                        <span id="progress-text-he"></span>
+                        <span id="progress-text-en" class="hidden"></span>
+                        <span class="progress-percent" id="progress-percent"></span>
+                    </div>
+                    <div class="progress-bar progress-bar-lg">
+                        <div class="progress-fill" id="progress-fill" style="width:0%"></div>
+                    </div>
+                </div>
             </div>
 
-            <div id="error" class="error" style="display: none;"></div>
-
-            <div id="results" style="display: none;">
-                <div class="lang-toggle">
-                    <button class="lang-button active" id="btn-he" onclick="switchLanguage('he')">עברית</button>
-                    <button class="lang-button" id="btn-en" onclick="switchLanguage('en')">English</button>
+            <div class="content">
+                <div class="loading" id="loading">
+                    <div class="spinner"></div>
+                    <p id="loading-text-he">טוען את רשימת המסמכים...</p>
+                    <p id="loading-text-en" class="hidden">Loading document list...</p>
                 </div>
 
-                <div id="documents-container"></div>
+                <div id="error" class="error-state" style="display: none;"></div>
 
-                <div class="contact-box">
-                    <h3 id="contact-title-he">איך שולחים את המסמכים?</h3>
-                    <h3 id="contact-title-en" style="display: none;">How to Submit Documents?</h3>
+                <div id="results" style="display: none;">
+                    <div id="documents-container"></div>
 
-                    <p id="contact-text-he">
-                        שלחו את המסמכים במייל בקובץ מצורף:<br>
-                        <strong id="email-display"></strong>
-                    </p>
-                    <p id="contact-text-en" style="display: none;">
-                        Send the documents via email as attachments:<br>
-                        <strong id="email-display-en"></strong>
-                    </p>
-
-                    <a href="#" id="email-button" class="email-link">📧 שליחת מייל</a>
+                    <div class="contact-card">
+                        <div class="contact-icon">
+                            <i data-lucide="mail" class="icon"></i>
+                        </div>
+                        <div class="contact-body">
+                            <h3 id="contact-title-he">איך שולחים את המסמכים?</h3>
+                            <h3 id="contact-title-en" class="hidden">How to Submit Documents?</h3>
+                            <p id="contact-text-he">
+                                שלחו את המסמכים במייל בקובץ מצורף:<br>
+                                <strong id="email-display"></strong>
+                            </p>
+                            <p id="contact-text-en" class="hidden">
+                                Send the documents via email as attachments:<br>
+                                <strong id="email-display-en"></strong>
+                            </p>
+                        </div>
+                        <a href="#" id="email-button" class="btn btn-primary">
+                            <i data-lucide="send" class="icon-sm"></i>
+                            <span id="email-btn-text">שליחת מייל</span>
+                        </a>
+                    </div>
                 </div>
             </div>
         </div>
@@ -56,5 +79,4 @@
 
     <script src="assets/js/view-documents.js"></script>
 </body>
-
 </html>

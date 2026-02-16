@@ -6,6 +6,24 @@
 let currentData = null;
 let currentLang = 'he';
 
+// Emoji → Lucide icon mapping for categories
+const CATEGORY_ICONS = {
+    '\u{1F4BC}': 'briefcase',     // 💼
+    '\u{1F3E6}': 'landmark',      // 🏦
+    '\u{1F3E5}': 'heart-pulse',   // 🏥
+    '\u{1F3E0}': 'house',         // 🏠
+    '\u{1F4CB}': 'clipboard-list',// 📋
+    '\u{1F4B0}': 'coins',         // 💰
+    '\u{1F393}': 'graduation-cap',// 🎓
+    '\u{1F468}\u{200D}\u{1F469}\u{200D}\u{1F467}\u{200D}\u{1F466}': 'users', // 👨‍👩‍👧‍👦
+    '\u{1F464}': 'user',          // 👤
+    '\u{1F491}': 'heart'          // 💑
+};
+
+function getCategoryIcon(emoji) {
+    return CATEGORY_ICONS[emoji] || 'file-text';
+}
+
 // Get report_id from URL
 const params = new URLSearchParams(window.location.search);
 const reportId = params.get('report_id');
@@ -45,11 +63,11 @@ async function loadDocuments() {
         const displayNameEn = spouseName ? `${clientName} & ${spouseName}` : clientName;
 
         // Update subtitle
-        const subtitleHe = `${displayName} • שנת מס ${year}`;
-        const subtitleEn = `${displayNameEn} • Tax Year ${year}`;
+        const subtitleHe = `${displayName} \u2022 שנת מס ${year}`;
+        const subtitleEn = `${displayNameEn} \u2022 Tax Year ${year}`;
         document.getElementById('subtitle').innerHTML = `
             <span id="subtitle-he">${subtitleHe}</span>
-            <span id="subtitle-en" style="display: none;">${subtitleEn}</span>
+            <span id="subtitle-en" class="hidden">${subtitleEn}</span>
         `;
 
         // Set email
@@ -64,6 +82,9 @@ async function loadDocuments() {
 
         renderDocuments();
         document.getElementById('results').style.display = 'block';
+
+        // Show language toggle once results load
+        document.getElementById('lang-toggle').style.display = 'flex';
 
     } catch (error) {
         console.error('Error:', error);
@@ -81,52 +102,79 @@ function renderDocuments() {
         container.innerHTML = isHe
             ? '<div class="success-message">כל המסמכים התקבלו! אין מסמכים חסרים.</div>'
             : '<div class="success-message">All documents received! No missing documents.</div>';
+        // Initialize Lucide icons after render
+        if (typeof lucide !== 'undefined') lucide.createIcons();
         return;
     }
 
     let html = '';
+    let totalDocs = 0;
+    let receivedDocs = 0;
 
     for (const group of currentData.groups) {
         // Person header (only if multiple groups = married couple)
         if (currentData.groups.length > 1) {
             const label = isHe ? group.person_label_he : group.person_label_en;
-            html += `<div class="person-header">${label}</div>`;
+            html += `<div class="person-header"><i data-lucide="user" class="icon"></i>${label}</div>`;
         }
 
         for (const cat of group.categories) {
-            const catName = `${cat.emoji} ${isHe ? cat.name_he : cat.name_en}`;
+            const catName = isHe ? cat.name_he : cat.name_en;
+            const iconName = getCategoryIcon(cat.emoji);
 
-            html += `<div class="category">`;
-            html += `<div class="category-header">${catName}</div>`;
-            html += `<ul class="document-list">`;
+            html += `<div class="category-group">`;
+            html += `<div class="category-header">`;
+            html += `<i data-lucide="${iconName}" class="icon"></i>`;
+            html += `<span>${catName}</span>`;
+            html += `<span class="doc-count">${cat.docs.length}</span>`;
+            html += `</div>`;
 
             for (const doc of cat.docs) {
+                totalDocs++;
                 // Document names may contain <b> tags from SSOT — render as HTML
                 const docName = isHe ? doc.name_he : (doc.name_en || doc.name_he);
 
-                let statusBadge = '';
+                let badgeClass = '';
+                let badgeText = '';
                 if (doc.status === 'Received') {
-                    statusBadge = isHe
-                        ? '<span class="status-badge status-received">התקבל</span>'
-                        : '<span class="status-badge status-received">Received</span>';
+                    receivedDocs++;
+                    badgeClass = 'badge badge-success';
+                    badgeText = isHe ? 'התקבל' : 'Received';
                 } else if (doc.status === 'Requires_Fix') {
-                    statusBadge = isHe
-                        ? '<span class="status-badge status-fix">דורש תיקון</span>'
-                        : '<span class="status-badge status-fix">Needs Fix</span>';
+                    badgeClass = 'badge badge-danger';
+                    badgeText = isHe ? 'דורש תיקון' : 'Needs Fix';
                 } else {
-                    statusBadge = isHe
-                        ? '<span class="status-badge status-missing">נדרש</span>'
-                        : '<span class="status-badge status-missing">Required</span>';
+                    badgeClass = 'badge badge-warning';
+                    badgeText = isHe ? 'נדרש' : 'Required';
                 }
 
-                html += `<li class="document-item">${statusBadge}${docName}</li>`;
+                html += `<div class="doc-row">`;
+                html += `<i data-lucide="file" class="icon-sm doc-icon"></i>`;
+                html += `<span class="doc-name">${docName}</span>`;
+                html += `<span class="${badgeClass}">${badgeText}</span>`;
+                html += `</div>`;
             }
 
-            html += `</ul></div>`;
+            html += `</div>`;
         }
     }
 
     container.innerHTML = html;
+
+    // Calculate and show progress
+    const percent = totalDocs > 0 ? Math.round((receivedDocs / totalDocs) * 100) : 0;
+    document.getElementById('progress-fill').style.width = percent + '%';
+    document.getElementById('progress-percent').textContent = percent + '%';
+    document.getElementById('progress-text-he').textContent = `${receivedDocs} מתוך ${totalDocs} מסמכים התקבלו`;
+    document.getElementById('progress-text-en').textContent = `${receivedDocs} of ${totalDocs} documents received`;
+    document.getElementById('progress-section').style.display = 'block';
+
+    // Toggle progress text visibility based on language
+    document.getElementById('progress-text-he').classList.toggle('hidden', !isHe);
+    document.getElementById('progress-text-en').classList.toggle('hidden', isHe);
+
+    // Initialize Lucide icons after rendering new HTML
+    if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
 function switchLanguage(lang) {
@@ -142,26 +190,32 @@ function switchLanguage(lang) {
     document.getElementById('btn-en').classList.toggle('active', !isHe);
 
     // Toggle titles
-    document.getElementById('title-he').style.display = isHe ? 'block' : 'none';
-    document.getElementById('title-en').style.display = isHe ? 'none' : 'block';
+    document.getElementById('title-he').classList.toggle('hidden', !isHe);
+    document.getElementById('title-en').classList.toggle('hidden', isHe);
 
     const subtitleHe = document.getElementById('subtitle-he');
     const subtitleEn = document.getElementById('subtitle-en');
-    if (subtitleHe) subtitleHe.style.display = isHe ? 'inline' : 'none';
-    if (subtitleEn) subtitleEn.style.display = isHe ? 'none' : 'inline';
+    if (subtitleHe) subtitleHe.classList.toggle('hidden', !isHe);
+    if (subtitleEn) subtitleEn.classList.toggle('hidden', isHe);
 
     // Toggle loading texts
-    document.getElementById('loading-text-he').style.display = isHe ? 'block' : 'none';
-    document.getElementById('loading-text-en').style.display = isHe ? 'none' : 'block';
+    document.getElementById('loading-text-he').classList.toggle('hidden', !isHe);
+    document.getElementById('loading-text-en').classList.toggle('hidden', isHe);
 
     // Toggle contact section
-    document.getElementById('contact-title-he').style.display = isHe ? 'block' : 'none';
-    document.getElementById('contact-title-en').style.display = isHe ? 'none' : 'block';
-    document.getElementById('contact-text-he').style.display = isHe ? 'block' : 'none';
-    document.getElementById('contact-text-en').style.display = isHe ? 'none' : 'block';
+    document.getElementById('contact-title-he').classList.toggle('hidden', !isHe);
+    document.getElementById('contact-title-en').classList.toggle('hidden', isHe);
+    document.getElementById('contact-text-he').classList.toggle('hidden', !isHe);
+    document.getElementById('contact-text-en').classList.toggle('hidden', isHe);
 
     // Update email button text
-    document.getElementById('email-button').textContent = isHe ? '📧 שליחת מייל' : '📧 Send Email';
+    document.getElementById('email-btn-text').textContent = isHe ? 'שליחת מייל' : 'Send Email';
+
+    // Toggle progress text
+    const progressTextHe = document.getElementById('progress-text-he');
+    const progressTextEn = document.getElementById('progress-text-en');
+    if (progressTextHe) progressTextHe.classList.toggle('hidden', !isHe);
+    if (progressTextEn) progressTextEn.classList.toggle('hidden', isHe);
 
     // Re-render documents
     renderDocuments();
