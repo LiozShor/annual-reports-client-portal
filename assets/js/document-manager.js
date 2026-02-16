@@ -448,11 +448,18 @@ function buildDocMeta(tpl, collectedValues) {
     }
     // Determine person based on scope
     const person = (tpl.scope === 'SPOUSE') ? 'spouse' : 'client';
+    // Build issuer_key from user-provided variable values (exclude auto-filled year/spouse_name)
+    const autoVars = ['year', 'spouse_name'];
+    const issuerParts = Object.entries(collectedValues)
+        .filter(([k]) => !autoVars.includes(k))
+        .map(([, v]) => v);
+    const issuerKey = issuerParts.join(' ').trim();
     return {
         template_id: tpl.template_id,
         category: tpl.category || 'other',
         name_en: nameEn,
-        person: person
+        person: person,
+        issuer_key: issuerKey
     };
 }
 
@@ -771,7 +778,8 @@ async function confirmSubmit() {
                     issuer_name_en: meta.name_en || '',
                     template_id: meta.template_id,
                     category: meta.category,
-                    person: meta.person
+                    person: meta.person,
+                    issuer_key: meta.issuer_key || ''
                 };
             }
             // Custom doc (not from dropdown)
@@ -780,7 +788,8 @@ async function confirmSubmit() {
                 issuer_name_en: '',
                 template_id: 'general_doc',
                 category: 'other',
-                person: 'client'
+                person: 'client',
+                issuer_key: name
             };
         });
     }
