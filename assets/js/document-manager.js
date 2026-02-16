@@ -15,7 +15,7 @@ const API_BASE = 'https://liozshor.app.n8n.cloud/webhook';
 let currentGroups = [];
 let currentDocuments = [];
 let markedForRemoval = new Set();
-let docsToAdd = new Set();
+let docsToAdd = new Map(); // displayName → {template_id, category, name_en, person}
 let pendingTemplate = null; // Template awaiting detail input
 let apiTemplates = [];      // Templates from Airtable (SSOT)
 let apiCategories = [];     // Categories from Airtable (SSOT)
@@ -158,6 +158,14 @@ function initDocumentDropdown() {
     const select = document.getElementById('docTypeSelect');
     let html = '<option value="">-- בחר מסמך מהרשימה --</option>\n';
 
+    // Build set of existing active template IDs (no user vars = single instance)
+    const existingTemplateIds = new Set();
+    for (const doc of currentDocuments) {
+        if (doc.status !== 'Waived') {
+            existingTemplateIds.add(doc.type);
+        }
+    }
+
     // Group templates by category
     const groups = {};
     for (const tpl of apiTemplates) {
@@ -171,15 +179,23 @@ function initDocumentDropdown() {
         const catTemplates = groups[cat.id];
         if (!catTemplates || catTemplates.length === 0) continue;
 
-        html += `<optgroup label="${cat.emoji} ${cat.name_he}">`;
+        let groupHtml = '';
         for (const tpl of catTemplates) {
-            // Show template name with placeholders replaced by [...]
+            // Skip templates that already exist and have no user variables
+            const userVars = (tpl.variables || []).filter(v => v !== 'year' && v !== 'spouse_name');
+            if (userVars.length === 0 && existingTemplateIds.has(tpl.template_id)) {
+                continue;
+            }
+
             const displayName = tpl.name_he
                 .replace(/\{year\}/g, YEAR || 'YYYY')
                 .replace(/\{[^}]+\}/g, '[...]');
-            html += `<option value="${tpl.template_id}">${displayName}</option>`;
+            groupHtml += `<option value="${tpl.template_id}">${displayName}</option>`;
         }
-        html += '</optgroup>';
+
+        if (groupHtml) {
+            html += `<optgroup label="${cat.emoji} ${cat.name_he}">${groupHtml}</optgroup>`;
+        }
     }
 
     select.innerHTML = html;
@@ -422,6 +438,24 @@ function trackNoteChange(docId) {
     }
 }
 
+// Build metadata object for a template with collected variable values
+function buildDocMeta(tpl, collectedValues) {
+    let nameHe = tpl.name_he;
+    let nameEn = tpl.name_en || '';
+    for (const [key, val] of Object.entries(collectedValues)) {
+        nameHe = nameHe.replace(new RegExp(`\\{${key}\\}`, 'g'), val);
+        nameEn = nameEn.replace(new RegExp(`\\{${key}\\}`, 'g'), val);
+    }
+    // Determine person based on scope
+    const person = (tpl.scope === 'SPOUSE') ? 'spouse' : 'client';
+    return {
+        template_id: tpl.template_id,
+        category: tpl.category || 'other',
+        name_en: nameEn,
+        person: person
+    };
+}
+
 // Handle document selection from dropdown
 document.getElementById('docTypeSelect').addEventListener('change', function (e) {
     const templateId = e.target.value;
@@ -430,21 +464,31 @@ document.getElementById('docTypeSelect').addEventListener('change', function (e)
     const tpl = apiTemplates.find(t => t.template_id === templateId);
     if (!tpl) return;
 
-    // Check if template has variables beyond 'year'
-    const userVars = (tpl.variables || []).filter(v => v !== 'year');
+    // Check if template has variables beyond 'year' and auto-filled ones
+    const autoVars = ['year', 'spouse_name'];
+    const userVars = (tpl.variables || []).filter(v => !autoVars.includes(v));
+
+    // Pre-fill auto variables
+    const collectedValues = { year: YEAR || '' };
+    if ((tpl.variables || []).includes('spouse_name')) {
+        collectedValues.spouse_name = SPOUSE_NAME || '';
+    }
 
     if (userVars.length > 0) {
         // Show detail input for the first user variable
-        pendingTemplate = { tpl, userVars, collectedValues: { year: YEAR || '' } };
+        pendingTemplate = { tpl, userVars, collectedValues };
         promptNextVariable();
     } else {
-        // No variables needed — generate name directly
-        const displayName = tpl.name_he.replace(/\{year\}/g, YEAR || '');
+        // No user variables needed — generate name directly
+        let displayName = tpl.name_he;
+        for (const [key, val] of Object.entries(collectedValues)) {
+            displayName = displayName.replace(new RegExp(`\\{${key}\\}`, 'g'), val);
+        }
 
         if (docsToAdd.has(displayName)) {
             showAlert('מסמך זה כבר נמצא ברשימה', 'error');
         } else {
-            docsToAdd.add(displayName);
+            docsToAdd.set(displayName, buildDocMeta(tpl, collectedValues));
             updateSelectedDocs();
             updateStats();
         }
@@ -470,7 +514,7 @@ function promptNextVariable() {
         if (docsToAdd.has(name)) {
             showAlert('מסמך זה כבר נמצא ברשימה', 'error');
         } else {
-            docsToAdd.add(name);
+            docsToAdd.set(name, buildDocMeta(tpl, collectedValues));
             updateSelectedDocs();
             updateStats();
         }
@@ -523,7 +567,7 @@ function updateSelectedDocs() {
 
     container.className = 'selected-docs';
 
-    container.innerHTML = Array.from(docsToAdd).map(doc => {
+    container.innerHTML = Array.from(docsToAdd.keys()).map(doc => {
         const safeArg = encodeURIComponent(doc);
         return `
             <div class="doc-tag">
@@ -570,7 +614,7 @@ function openConfirmation() {
         .filter(doc => markedForRemoval.has(doc.id))
         .map(doc => doc.name);
 
-    const docsToAddArray = Array.from(docsToAdd);
+    const docsToAddNames = Array.from(docsToAdd.keys());
 
     if (customDocRaw) {
         const customDocs = customDocRaw
@@ -579,13 +623,13 @@ function openConfirmation() {
             .filter(Boolean);
 
         for (const cd of customDocs) {
-            if (!docsToAddArray.includes(cd)) {
-                docsToAddArray.push(cd);
+            if (!docsToAddNames.includes(cd)) {
+                docsToAddNames.push(cd);
             }
         }
     }
 
-    const uniqueDocsToAdd = [...new Set(docsToAddArray)];
+    const uniqueDocsToAdd = [...new Set(docsToAddNames)];
 
     // Check if there are any changes at all
     const hasChanges = docsToRemove.length > 0 ||
@@ -697,7 +741,7 @@ async function confirmSubmit() {
     const docsToRemoveNames = docsToRemoveObjs.map(d => d.name);
     const docsToRemoveIds = docsToRemoveObjs.map(d => d.id);
 
-    const docsToAddArray = Array.from(docsToAdd);
+    const docsToAddNames = Array.from(docsToAdd.keys());
 
     if (customDoc) {
         const customDocs = customDoc
@@ -706,16 +750,40 @@ async function confirmSubmit() {
             .filter(Boolean);
 
         for (const cd of customDocs) {
-            if (!docsToAddArray.includes(cd)) {
-                docsToAddArray.push(cd);
+            if (!docsToAddNames.includes(cd)) {
+                docsToAddNames.push(cd);
             }
         }
     }
 
-    const uniqueDocsToAdd = [...new Set(docsToAddArray)];
+    const uniqueDocsToAdd = [...new Set(docsToAddNames)];
 
     // Build extensions object
     const extensions = { send_email: sendEmailOnSave };
+
+    // Structured docs_to_create with full metadata
+    if (uniqueDocsToAdd.length > 0) {
+        extensions.docs_to_create = uniqueDocsToAdd.map(name => {
+            const meta = docsToAdd.get(name);
+            if (meta) {
+                return {
+                    issuer_name: name,
+                    issuer_name_en: meta.name_en || '',
+                    template_id: meta.template_id,
+                    category: meta.category,
+                    person: meta.person
+                };
+            }
+            // Custom doc (not from dropdown)
+            return {
+                issuer_name: name,
+                issuer_name_en: '',
+                template_id: 'general_doc',
+                category: 'other',
+                person: 'client'
+            };
+        });
+    }
 
     // Restores
     if (markedForRestore.size > 0) {
