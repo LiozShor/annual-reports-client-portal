@@ -187,9 +187,9 @@ function initDocumentDropdown() {
                 continue;
             }
 
-            const displayName = tpl.name_he
+            const displayName = stripBold(tpl.name_he
                 .replace(/\{year\}/g, YEAR || 'YYYY')
-                .replace(/\{[^}]+\}/g, '[...]');
+                .replace(/\{[^}]+\}/g, '[...]'));
             groupHtml += `<option value="${tpl.template_id}">${displayName}</option>`;
         }
 
@@ -438,6 +438,11 @@ function trackNoteChange(docId) {
     }
 }
 
+// Strip **bold** markdown markers for UI display
+function stripBold(str) {
+    return (str || '').replace(/\*\*(.+?)\*\*/g, '$1');
+}
+
 // Build metadata object for a template with collected variable values
 function buildDocMeta(tpl, collectedValues) {
     let nameHe = tpl.name_he;
@@ -457,6 +462,7 @@ function buildDocMeta(tpl, collectedValues) {
     return {
         template_id: tpl.template_id,
         category: tpl.category || 'other',
+        issuer_name: nameHe,
         name_en: nameEn,
         person: person,
         issuer_key: issuerKey
@@ -491,6 +497,7 @@ document.getElementById('docTypeSelect').addEventListener('change', function (e)
         for (const [key, val] of Object.entries(collectedValues)) {
             displayName = displayName.replace(new RegExp(`\\{${key}\\}`, 'g'), val);
         }
+        displayName = stripBold(displayName);
 
         if (docsToAdd.has(displayName)) {
             showAlert('מסמך זה כבר נמצא ברשימה', 'error');
@@ -517,6 +524,7 @@ function promptNextVariable() {
         for (const [key, val] of Object.entries(collectedValues)) {
             name = name.replace(new RegExp(`\\{${key}\\}`, 'g'), val);
         }
+        name = stripBold(name);
 
         if (docsToAdd.has(name)) {
             showAlert('מסמך זה כבר נמצא ברשימה', 'error');
@@ -773,7 +781,7 @@ async function confirmSubmit() {
             const meta = docsToAdd.get(name);
             if (meta) {
                 return {
-                    issuer_name: name,
+                    issuer_name: meta.issuer_name || name,
                     issuer_name_en: meta.name_en || '',
                     template_id: meta.template_id,
                     category: meta.category,
