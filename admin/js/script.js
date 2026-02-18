@@ -1086,9 +1086,9 @@ function renderAICard(item) {
     }
 
     const viewFileBtn = item.file_url
-        ? `<a href="${escapeAttr(item.file_url)}" target="_blank" class="btn btn-ghost btn-sm">
-               <i data-lucide="external-link" class="icon-sm"></i> צפה בקובץ
-           </a>`
+        ? `<button class="btn btn-ghost btn-sm" onclick="openFilePreview('${escapeAttr(item.file_url)}', '${escapeAttr(item.attachment_name || '')}')">
+               <i data-lucide="eye" class="icon-sm"></i> צפה בקובץ
+           </button>`
         : '';
 
     return `
@@ -1132,61 +1132,61 @@ function toggleAIAccordion(header) {
 
 // AI Review Actions
 async function approveAIClassification(recordId) {
-    if (!confirm('לאשר את הסיווג?')) return;
+    showConfirmDialog('לאשר את הסיווג?', async () => {
+        showLoading('מאשר סיווג...');
 
-    showLoading('מאשר סיווג...');
+        try {
+            const response = await fetch(`${API_BASE}/review-classification`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    token: authToken,
+                    classification_id: recordId,
+                    action: 'approve'
+                })
+            });
 
-    try {
-        const response = await fetch(`${API_BASE}/review-classification`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                token: authToken,
-                classification_id: recordId,
-                action: 'approve'
-            })
-        });
+            const data = await response.json();
+            hideLoading();
 
-        const data = await response.json();
-        hideLoading();
+            if (!data.ok) throw new Error(data.error || 'שגיאה באישור הסיווג');
 
-        if (!data.ok) throw new Error(data.error || 'שגיאה באישור הסיווג');
-
-        animateAndRemoveAI(recordId);
-        showAIToast('הסיווג אושר בהצלחה', 'success');
-    } catch (error) {
-        hideLoading();
-        showModal('error', 'שגיאה', error.message);
-    }
+            animateAndRemoveAI(recordId);
+            showAIToast('הסיווג אושר בהצלחה', 'success');
+        } catch (error) {
+            hideLoading();
+            showModal('error', 'שגיאה', error.message);
+        }
+    });
 }
 
 async function rejectAIClassification(recordId) {
-    if (!confirm('לדחות את הסיווג? המסמך יוסר מהתור.')) return;
+    showConfirmDialog('לדחות את הסיווג? המסמך יוסר מהתור.', async () => {
+        showLoading('דוחה סיווג...');
 
-    showLoading('דוחה סיווג...');
+        try {
+            const response = await fetch(`${API_BASE}/review-classification`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    token: authToken,
+                    classification_id: recordId,
+                    action: 'reject'
+                })
+            });
 
-    try {
-        const response = await fetch(`${API_BASE}/review-classification`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                token: authToken,
-                classification_id: recordId,
-                action: 'reject'
-            })
-        });
+            const data = await response.json();
+            hideLoading();
 
-        const data = await response.json();
-        hideLoading();
+            if (!data.ok) throw new Error(data.error || 'שגיאה בדחיית הסיווג');
 
-        if (!data.ok) throw new Error(data.error || 'שגיאה בדחיית הסיווג');
-
-        animateAndRemoveAI(recordId);
-        showAIToast('הסיווג נדחה', 'danger');
-    } catch (error) {
-        hideLoading();
-        showModal('error', 'שגיאה', error.message);
-    }
+            animateAndRemoveAI(recordId);
+            showAIToast('הסיווג נדחה', 'danger');
+        } catch (error) {
+            hideLoading();
+            showModal('error', 'שגיאה', error.message);
+        }
+    }, 'דחה', true);
 }
 
 function showAIReassignModal(recordId, missingDocs) {
@@ -1476,6 +1476,74 @@ function escapeHtml(text) {
 
 function isValidEmail(email) {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
+// ==================== FILE PREVIEW DRAWER ====================
+
+function openFilePreview(url, filename) {
+    const drawer = document.getElementById('filePreviewDrawer');
+    const overlay = document.getElementById('filePreviewOverlay');
+    const iframe = document.getElementById('filePreviewIframe');
+    const fallback = document.getElementById('filePreviewFallback');
+    const title = document.getElementById('filePreviewTitle');
+    const openBtn = document.getElementById('filePreviewOpenBtn');
+    const fallbackLink = document.getElementById('filePreviewFallbackLink');
+
+    title.textContent = filename || 'תצוגה מקדימה';
+    openBtn.href = url;
+    fallbackLink.href = url;
+
+    iframe.style.display = 'block';
+    fallback.style.display = 'none';
+    iframe.src = url;
+
+    // Show blocked page fallback if iframe cannot load (X-Frame-Options / CSP)
+    iframe.onload = () => {
+        try {
+            if (iframe.contentDocument && iframe.contentDocument.body &&
+                iframe.contentDocument.body.innerHTML === '') {
+                iframe.style.display = 'none';
+                fallback.style.display = 'flex';
+            }
+        } catch (e) {
+            // Cross-origin — assume loaded fine
+        }
+    };
+
+    overlay.classList.add('show');
+    drawer.classList.add('open');
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function closeFilePreview() {
+    const drawer = document.getElementById('filePreviewDrawer');
+    const overlay = document.getElementById('filePreviewOverlay');
+    const iframe = document.getElementById('filePreviewIframe');
+
+    drawer.classList.remove('open');
+    overlay.classList.remove('show');
+    setTimeout(() => { iframe.src = ''; }, 300);
+}
+
+// ==================== CONFIRM DIALOG ====================
+
+let _confirmCallback = null;
+
+function showConfirmDialog(message, onConfirm, confirmText = 'אישור', danger = false) {
+    _confirmCallback = onConfirm;
+    document.getElementById('confirmDialogMessage').textContent = message;
+    const btn = document.getElementById('confirmDialogBtn');
+    btn.textContent = confirmText;
+    btn.className = danger ? 'btn confirm-btn-danger' : 'btn btn-primary';
+    document.getElementById('confirmDialog').classList.add('show');
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function closeConfirmDialog(confirmed) {
+    document.getElementById('confirmDialog').classList.remove('show');
+    const cb = _confirmCallback;
+    _confirmCallback = null;
+    if (confirmed && cb) cb();
 }
 
 // ==================== INIT ====================
