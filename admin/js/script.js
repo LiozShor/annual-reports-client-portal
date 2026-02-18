@@ -1005,13 +1005,35 @@ function renderAICard(item) {
     const cardClass = isMatched ? 'matched' : 'unmatched';
 
     const fileIcon = getAIFileIcon(item.attachment_content_type || item.attachment_name || '');
-    const fileMeta = formatAIFileMeta(item.attachment_size, item.attachment_content_type);
+    const fileMeta = formatAIFileMeta(item.attachment_size);
     const receivedAt = item.received_at ? formatAIDate(item.received_at) : '';
     const senderEmail = item.sender_email || '';
 
+    const AI_DOC_NAMES = {
+        T001:'אישור תושב', T002:'ספח תעודת זהות', T003:'מסמכי שינוי מצב משפחתי',
+        T101:'אישור ועדת השמה', T102:'אישור קצבת ילד נכה',
+        T201:'טופס 106', T202:'טופס 106 (מעסיק נוסף)',
+        T301:'אישור קצבה ביטוח לאומי', T302:'אישור קצבה ביטוח לאומי (בן/בת זוג)',
+        T303:'אישור קצבת נכות', T304:'אישור דמי לידה',
+        T305:'אישור קצבת שאירים', T306:'אישור קצבת שאירים (בן/בת זוג)',
+        T401:'אישור משיכת ביטוח', T402:'אישור משיכת ביטוח (נוסף)',
+        T501:'אישור שנתי קופת גמל', T601:'טופס 867',
+        T701:'דוח רווחי קריפטו', T801:'אישור זכייה',
+        T901:'חוזה שכירות (הכנסה)', T902:'חוזה שכירות (הוצאה)',
+        T1001:'רשימת מלאי', T1101:'אישור ניכוי מס הכנסה', T1102:'אישור ניכוי ביטוח לאומי',
+        T1201:'קבלות תרומה', T1301:'תעודת שחרור צבאי',
+        T1401:'קבלות הוצאות אבל', T1402:'מסמכי מוסד', T1403:'מסמכי פטור ממס',
+        T1501:'תעודת השכלה', T1601:'אסמכתאות הכנסה מחול', T1602:'דוח מס מחול',
+        T1701:'מסמכי הכנסה אחרת'
+    };
+
     const missingDocs = item.missing_docs || [];
     const missingDocsHtml = missingDocs.length > 0
-        ? missingDocs.map(d => `<span class="ai-missing-doc-tag">${escapeHtml(d.name || '')}</span>`).join(' ')
+        ? missingDocs.map(d => {
+            const id = d.template_id || d.name || '';
+            const label = AI_DOC_NAMES[id] || d.name || id;
+            return `<span class="ai-missing-doc-tag">${escapeHtml(label)}</span>`;
+          }).join(' ')
         : '<span style="color: var(--gray-400)">אין מסמכים חסרים</span>';
 
     let classificationHtml;
@@ -1311,18 +1333,11 @@ function getAIFileIcon(contentTypeOrName) {
     return 'file';
 }
 
-function formatAIFileMeta(size, contentType) {
-    const parts = [];
-    if (size) {
-        if (size < 1024) parts.push(`${size}B`);
-        else if (size < 1024 * 1024) parts.push(`${Math.round(size / 1024)}KB`);
-        else parts.push(`${(size / (1024 * 1024)).toFixed(1)}MB`);
-    }
-    if (contentType) {
-        const short = contentType.replace('application/', '').replace('image/', '').split(';')[0];
-        parts.push(short);
-    }
-    return parts.join(' \u2022 ');
+function formatAIFileMeta(size) {
+    if (!size) return '';
+    if (size < 1024) return `${size}B`;
+    if (size < 1024 * 1024) return `${Math.round(size / 1024)}KB`;
+    return `${(size / (1024 * 1024)).toFixed(1)}MB`;
 }
 
 function formatAIDate(dateStr) {
