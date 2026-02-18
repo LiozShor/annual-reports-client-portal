@@ -1292,6 +1292,18 @@ tr:hover .client-view-link {
     color: var(--gray-400);
 }
 
+.ai-missing-docs-group {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--sp-1);
+    padding: var(--sp-2) var(--sp-4) var(--sp-3);
+    border-bottom: 1px solid var(--gray-100);
+    font-size: var(--text-xs);
+    color: var(--gray-500);
+    background: var(--gray-50);
+}
+
 .ai-context-label {
     font-weight: 600;
     color: var(--gray-500);
