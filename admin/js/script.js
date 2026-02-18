@@ -910,6 +910,24 @@ function applyAIFilters() {
     renderAICards(filtered);
 }
 
+const AI_DOC_NAMES = {
+    T001:'אישור תושב', T002:'ספח תעודת זהות', T003:'מסמכי שינוי מצב משפחתי',
+    T101:'אישור ועדת השמה', T102:'אישור קצבת ילד נכה',
+    T201:'טופס 106', T202:'טופס 106 (מעסיק נוסף)',
+    T301:'אישור קצבה ביטוח לאומי', T302:'אישור קצבה ביטוח לאומי (בן/בת זוג)',
+    T303:'אישור קצבת נכות', T304:'אישור דמי לידה',
+    T305:'אישור קצבת שאירים', T306:'אישור קצבת שאירים (בן/בת זוג)',
+    T401:'אישור משיכת ביטוח', T402:'אישור משיכת ביטוח (נוסף)',
+    T501:'אישור שנתי קופת גמל', T601:'טופס 867',
+    T701:'דוח רווחי קריפטו', T801:'אישור זכייה',
+    T901:'חוזה שכירות (הכנסה)', T902:'חוזה שכירות (הוצאה)',
+    T1001:'רשימת מלאי', T1101:'אישור ניכוי מס הכנסה', T1102:'אישור ניכוי ביטוח לאומי',
+    T1201:'קבלות תרומה', T1301:'תעודת שחרור צבאי',
+    T1401:'קבלות הוצאות אבל', T1402:'מסמכי מוסד', T1403:'מסמכי פטור ממס',
+    T1501:'תעודת השכלה', T1601:'אסמכתאות הכנסה מחול', T1602:'דוח מס מחול',
+    T1701:'מסמכי הכנסה אחרת'
+};
+
 function renderAICards(items) {
     const container = document.getElementById('aiCardsContainer');
     const emptyState = document.getElementById('aiEmptyState');
@@ -969,6 +987,25 @@ function renderAICards(items) {
                     <span class="ai-accordion-icon">▾</span>
                 </div>
                 <div class="ai-accordion-body">
+        `;
+
+        // Missing docs — shown once per client group
+        const groupMissingDocs = (clientItems[0].missing_docs || []);
+        if (groupMissingDocs.length > 0) {
+            const missingTagsHtml = groupMissingDocs.map(d => {
+                const id = d.template_id || d.name || '';
+                const label = AI_DOC_NAMES[id] || d.name || id;
+                return `<span class="ai-missing-doc-tag">${escapeHtml(label)}</span>`;
+            }).join(' ');
+            html += `
+                    <div class="ai-missing-docs-group">
+                        <span class="ai-context-label">מסמכים חסרים:</span>
+                        ${missingTagsHtml}
+                    </div>
+            `;
+        }
+
+        html += `
                     <div class="ai-accordion-content">
         `;
 
@@ -1009,32 +1046,7 @@ function renderAICard(item) {
     const receivedAt = item.received_at ? formatAIDate(item.received_at) : '';
     const senderEmail = item.sender_email || '';
 
-    const AI_DOC_NAMES = {
-        T001:'אישור תושב', T002:'ספח תעודת זהות', T003:'מסמכי שינוי מצב משפחתי',
-        T101:'אישור ועדת השמה', T102:'אישור קצבת ילד נכה',
-        T201:'טופס 106', T202:'טופס 106 (מעסיק נוסף)',
-        T301:'אישור קצבה ביטוח לאומי', T302:'אישור קצבה ביטוח לאומי (בן/בת זוג)',
-        T303:'אישור קצבת נכות', T304:'אישור דמי לידה',
-        T305:'אישור קצבת שאירים', T306:'אישור קצבת שאירים (בן/בת זוג)',
-        T401:'אישור משיכת ביטוח', T402:'אישור משיכת ביטוח (נוסף)',
-        T501:'אישור שנתי קופת גמל', T601:'טופס 867',
-        T701:'דוח רווחי קריפטו', T801:'אישור זכייה',
-        T901:'חוזה שכירות (הכנסה)', T902:'חוזה שכירות (הוצאה)',
-        T1001:'רשימת מלאי', T1101:'אישור ניכוי מס הכנסה', T1102:'אישור ניכוי ביטוח לאומי',
-        T1201:'קבלות תרומה', T1301:'תעודת שחרור צבאי',
-        T1401:'קבלות הוצאות אבל', T1402:'מסמכי מוסד', T1403:'מסמכי פטור ממס',
-        T1501:'תעודת השכלה', T1601:'אסמכתאות הכנסה מחול', T1602:'דוח מס מחול',
-        T1701:'מסמכי הכנסה אחרת'
-    };
-
     const missingDocs = item.missing_docs || [];
-    const missingDocsHtml = missingDocs.length > 0
-        ? missingDocs.map(d => {
-            const id = d.template_id || d.name || '';
-            const label = AI_DOC_NAMES[id] || d.name || id;
-            return `<span class="ai-missing-doc-tag">${escapeHtml(label)}</span>`;
-          }).join(' ')
-        : '<span style="color: var(--gray-400)">אין מסמכים חסרים</span>';
 
     let classificationHtml;
     if (isMatched) {
@@ -1112,10 +1124,6 @@ function renderAICard(item) {
                     </div>
                     ${item.ai_reason ? `<div class="ai-evidence">${escapeHtml(item.ai_reason)}</div>` : ''}
                     ${item.issuer_name ? `<div class="ai-issuer-info"><i data-lucide="building-2" class="icon-sm"></i> ${escapeHtml(item.issuer_name)}</div>` : ''}
-                </div>
-                <div class="ai-missing-docs-context">
-                    <span class="ai-context-label">מסמכים חסרים:</span>
-                    ${missingDocsHtml}
                 </div>
             </div>
             <div class="ai-card-actions">
