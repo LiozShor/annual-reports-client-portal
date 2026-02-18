@@ -1493,22 +1493,30 @@ function openFilePreview(url, filename) {
     openBtn.href = url;
     fallbackLink.href = url;
 
-    iframe.style.display = 'block';
-    fallback.style.display = 'none';
-    iframe.src = url;
+    // SharePoint/OneDrive blocks iframe embedding via CSP — skip iframe entirely
+    const isSharePoint = /sharepoint\.com|onedrive\.live\.com|1drv\.ms/i.test(url);
 
-    // Show blocked page fallback if iframe cannot load (X-Frame-Options / CSP)
-    iframe.onload = () => {
-        try {
-            if (iframe.contentDocument && iframe.contentDocument.body &&
-                iframe.contentDocument.body.innerHTML === '') {
-                iframe.style.display = 'none';
-                fallback.style.display = 'flex';
+    if (isSharePoint) {
+        iframe.style.display = 'none';
+        fallback.style.display = 'flex';
+        iframe.src = '';
+    } else {
+        iframe.style.display = 'block';
+        fallback.style.display = 'none';
+        iframe.src = url;
+
+        iframe.onload = () => {
+            try {
+                if (iframe.contentDocument && iframe.contentDocument.body &&
+                    iframe.contentDocument.body.innerHTML === '') {
+                    iframe.style.display = 'none';
+                    fallback.style.display = 'flex';
+                }
+            } catch (e) {
+                // Cross-origin — assume loaded fine
             }
-        } catch (e) {
-            // Cross-origin — assume loaded fine
-        }
-    };
+        };
+    }
 
     overlay.classList.add('show');
     drawer.classList.add('open');

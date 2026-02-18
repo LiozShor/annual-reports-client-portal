@@ -5,6 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>פורטל ניהול - משרד רו"ח Client Name</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📋</text></svg>">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <link rel="stylesheet" href="../assets/css/design-system.css">
     <link rel="stylesheet" href="css/style.css">
@@ -19,6 +20,7 @@
             <h1>פורטל ניהול</h1>
             <p>משרד רו"ח Client Name</p>
             <form onsubmit="login(); return false;">
+                <input type="text" name="username" value="admin" autocomplete="username" style="display:none" aria-hidden="true">
                 <input type="password" id="passwordInput" placeholder="הזן סיסמה" autocomplete="current-password">
             </form>
             <div id="loginError" class="login-error">סיסמה שגויה</div>
@@ -469,7 +471,7 @@
             <iframe id="filePreviewIframe" src="" title="תצוגה מקדימה של קובץ"></iframe>
             <div id="filePreviewFallback" class="file-preview-fallback" style="display:none">
                 <i data-lucide="file-x" class="icon-2xl"></i>
-                <p>לא ניתן להציג את הקובץ בתוך הדף</p>
+                <p>קבצי OneDrive לא ניתן להציג בתוך הדף</p>
                 <a id="filePreviewFallbackLink" href="#" target="_blank" class="btn btn-primary">
                     <i data-lucide="external-link" class="icon-sm"></i> פתח בכרטיסייה חדשה
                 </a>
