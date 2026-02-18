@@ -1604,8 +1604,27 @@ tr:hover .client-view-link {
     margin: 0;
 }
 
+.confirm-dialog-panel .ai-modal-panel-footer {
+    justify-content: flex-start;
+}
+
+.confirm-dialog-panel .btn-primary {
+    background: var(--brand-600, #4F46E5);
+    color: white;
+    border: none;
+    padding: var(--sp-2) var(--sp-4);
+    border-radius: var(--radius-md);
+    font-size: var(--text-sm);
+    font-weight: 500;
+    cursor: pointer;
+}
+
+.confirm-dialog-panel .btn-primary:hover {
+    background: var(--brand-700, #4338CA);
+}
+
 .confirm-btn-danger {
-    background: var(--danger-600);
+    background: var(--danger-500, #EF4444);
     color: white;
     border: none;
     padding: var(--sp-2) var(--sp-4);
@@ -1617,5 +1636,5 @@ tr:hover .client-view-link {
 }
 
 .confirm-btn-danger:hover {
-    background: var(--danger-700);
+    background: var(--danger-700, #B91C1C);
 }
