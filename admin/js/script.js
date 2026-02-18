@@ -1040,7 +1040,7 @@ function renderAICard(item) {
     if (isMatched) {
         classificationHtml = `
             <span class="ai-confidence-badge ${confidenceClass}">${confidencePercent}%</span>
-            <span class="ai-template-match">${escapeHtml(item.matched_template_name || '')}</span>
+            <span class="ai-template-match">${escapeHtml(AI_DOC_NAMES[item.matched_template_id] || item.matched_template_name || item.matched_template_id || '')}</span>
         `;
     } else {
         classificationHtml = `
