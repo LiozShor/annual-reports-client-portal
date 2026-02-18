@@ -453,32 +453,6 @@
         <span id="aiToastText"></span>
     </div>
 
-    <!-- File Preview Drawer -->
-    <div id="filePreviewOverlay" class="file-preview-overlay" onclick="closeFilePreview()"></div>
-    <div id="filePreviewDrawer" class="file-preview-drawer">
-        <div class="file-preview-header">
-            <span id="filePreviewTitle" class="file-preview-title">תצוגה מקדימה</span>
-            <div class="file-preview-actions">
-                <a id="filePreviewOpenBtn" href="#" target="_blank" class="btn btn-ghost btn-sm">
-                    <i data-lucide="external-link" class="icon-sm"></i> פתח בכרטיסייה
-                </a>
-                <button onclick="closeFilePreview()" class="btn btn-ghost btn-sm">
-                    <i data-lucide="x" class="icon-sm"></i>
-                </button>
-            </div>
-        </div>
-        <div class="file-preview-body">
-            <iframe id="filePreviewIframe" src="" title="תצוגה מקדימה של קובץ"></iframe>
-            <div id="filePreviewFallback" class="file-preview-fallback" style="display:none">
-                <i data-lucide="file-x" class="icon-2xl"></i>
-                <p>קבצי OneDrive לא ניתן להציג בתוך הדף</p>
-                <a id="filePreviewFallbackLink" href="#" target="_blank" class="btn btn-primary">
-                    <i data-lucide="external-link" class="icon-sm"></i> פתח בכרטיסייה חדשה
-                </a>
-            </div>
-        </div>
-    </div>
-
     <!-- Confirm Dialog -->
     <div id="confirmDialog" class="ai-modal-overlay">
         <div class="ai-modal-panel confirm-dialog-panel">

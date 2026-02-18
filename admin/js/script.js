@@ -1085,12 +1085,6 @@ function renderAICard(item) {
         `;
     }
 
-    const viewFileBtn = item.file_url
-        ? `<button class="btn btn-ghost btn-sm" onclick="openFilePreview('${escapeAttr(item.file_url)}', '${escapeAttr(item.attachment_name || '')}')">
-               <i data-lucide="eye" class="icon-sm"></i> צפה בקובץ
-           </button>`
-        : '';
-
     return `
         <div class="ai-review-card ${cardClass}" data-id="${escapeAttr(item.id)}">
             <div class="ai-card-top">
@@ -1099,7 +1093,6 @@ function renderAICard(item) {
                     <span class="ai-file-name">${escapeHtml(item.attachment_name || 'ללא שם')}</span>
                     <span class="ai-file-meta">${escapeHtml(fileMeta)}</span>
                 </div>
-                ${viewFileBtn}
             </div>
             <div class="ai-card-body">
                 <div class="ai-sender-info">
@@ -1476,61 +1469,6 @@ function escapeHtml(text) {
 
 function isValidEmail(email) {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-}
-
-// ==================== FILE PREVIEW DRAWER ====================
-
-function openFilePreview(url, filename) {
-    const drawer = document.getElementById('filePreviewDrawer');
-    const overlay = document.getElementById('filePreviewOverlay');
-    const iframe = document.getElementById('filePreviewIframe');
-    const fallback = document.getElementById('filePreviewFallback');
-    const title = document.getElementById('filePreviewTitle');
-    const openBtn = document.getElementById('filePreviewOpenBtn');
-    const fallbackLink = document.getElementById('filePreviewFallbackLink');
-
-    title.textContent = filename || 'תצוגה מקדימה';
-    openBtn.href = url;
-    fallbackLink.href = url;
-
-    // SharePoint/OneDrive blocks iframe embedding via CSP — skip iframe entirely
-    const isSharePoint = /sharepoint\.com|onedrive\.live\.com|1drv\.ms/i.test(url);
-
-    if (isSharePoint) {
-        iframe.style.display = 'none';
-        fallback.style.display = 'flex';
-        iframe.src = '';
-    } else {
-        iframe.style.display = 'block';
-        fallback.style.display = 'none';
-        iframe.src = url;
-
-        iframe.onload = () => {
-            try {
-                if (iframe.contentDocument && iframe.contentDocument.body &&
-                    iframe.contentDocument.body.innerHTML === '') {
-                    iframe.style.display = 'none';
-                    fallback.style.display = 'flex';
-                }
-            } catch (e) {
-                // Cross-origin — assume loaded fine
-            }
-        };
-    }
-
-    overlay.classList.add('show');
-    drawer.classList.add('open');
-    if (typeof lucide !== 'undefined') lucide.createIcons();
-}
-
-function closeFilePreview() {
-    const drawer = document.getElementById('filePreviewDrawer');
-    const overlay = document.getElementById('filePreviewOverlay');
-    const iframe = document.getElementById('filePreviewIframe');
-
-    drawer.classList.remove('open');
-    overlay.classList.remove('show');
-    setTimeout(() => { iframe.src = ''; }, 300);
 }
 
 // ==================== CONFIRM DIALOG ====================
