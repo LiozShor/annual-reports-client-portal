@@ -101,6 +101,11 @@ function switchTab(tabName, evt) {
     if (evt && evt.currentTarget) evt.currentTarget.classList.add('active');
     document.getElementById(`tab-${tabName}`).classList.add('active');
     if (typeof lucide !== 'undefined') lucide.createIcons();
+
+    // Load AI review data fresh each time tab is opened
+    if (tabName === 'ai-review') {
+        loadAIClassifications();
+    }
 }
 
 // ==================== DASHBOARD ====================
@@ -192,10 +197,9 @@ function renderClientsTable(clients) {
             <thead>
                 <tr>
                     <th>שם</th>
-                    <th>אימייל</th>
-                    <th>שנה</th>
                     <th>שלב</th>
                     <th>מסמכים</th>
+                    <th>חסרים</th>
                     <th>פעולות</th>
                 </tr>
             </thead>
@@ -207,30 +211,37 @@ function renderClientsTable(clients) {
         const docsReceived = client.docs_received || 0;
         const docsTotal = client.docs_total || 0;
         const progressPercent = docsTotal > 0 ? Math.round((docsReceived / docsTotal) * 100) : 0;
+        const missingCount = docsTotal - docsReceived;
 
         html += `
             <tr>
                 <td>
-                    <strong
-                        class="client-link"
-                        onclick="viewClientDocs('${client.report_id}', '${escapeHtml(client.name)}', '${escapeHtml(client.email || '')}', '${client.year}')"
-                    >
-                        ${escapeHtml(client.name)}
-                    </strong>
+                    <div class="client-name-cell">
+                        <strong
+                            class="client-link"
+                            onclick="viewClientDocs('${client.report_id}', '${escapeHtml(client.name)}', '${escapeHtml(client.email || '')}', '${client.year}')"
+                            title="${escapeHtml(client.email || '')}"
+                        >
+                            ${escapeHtml(client.name)}
+                        </strong>
+                        <a class="client-view-link" href="javascript:void(0)" onclick="event.stopPropagation(); viewClient('${client.report_id}')" title="צפייה כלקוח">
+                            <i data-lucide="external-link" class="icon-xs"></i>
+                        </a>
+                    </div>
                 </td>
-                <td>${escapeHtml(client.email)}</td>
-                <td>${client.year}</td>
                 <td><span class="stage-badge ${stage.class}">${stage.text}</span></td>
                 <td>
-                    <div style="display: flex; align-items: center; gap: 10px;">
+                    <div class="docs-progress-cell">
                         <div class="progress-bar">
                             <div class="progress-fill" style="width: ${progressPercent}%"></div>
                         </div>
-                        <span>${docsReceived}/${docsTotal}</span>
+                        <span class="docs-count">${docsReceived}/${docsTotal}</span>
                     </div>
                 </td>
                 <td>
-                    <button class="action-btn view" onclick="viewClient('${client.report_id}')" title="צפה בתיק"><i data-lucide="eye" class="icon-sm"></i></button>
+                    <span class="missing-count ${missingCount > 0 ? 'has-missing' : 'all-done'}">${missingCount > 0 ? missingCount : '✓'}</span>
+                </td>
+                <td>
                     ${client.stage === '1-Send_Questionnaire' ?
                 `<button class="action-btn send" onclick="sendSingle('${client.report_id}')" title="שלח שאלון"><i data-lucide="send" class="icon-sm"></i></button>` :
                 ''}
@@ -307,12 +318,12 @@ function refreshData() {
     loadDashboard();
 }
 
-// Load AI review pending count for navbar badge
+// Load AI review pending count for tab badge
 async function loadAIReviewCount() {
     try {
         const resp = await fetch(`${API_BASE}/get-pending-classifications?token=${authToken}`);
         const data = await resp.json();
-        const badge = document.getElementById('aiReviewBadge');
+        const badge = document.getElementById('aiReviewTabBadge');
         if (data.ok && data.stats && data.stats.total_pending > 0) {
             badge.textContent = data.stats.total_pending;
             badge.style.display = 'inline-flex';
@@ -802,6 +813,555 @@ function exportReviewToExcel() {
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'מוכנים לבדיקה');
     XLSX.writeFile(wb, `review_queue_${new Date().toISOString().split('T')[0]}.xlsx`);
+}
+
+// ==================== AI REVIEW ====================
+
+let aiClassificationsData = [];
+let aiCurrentReassignId = null;
+let aiReviewLoaded = false;
+
+async function loadAIClassifications() {
+    showLoading('טוען סיווגים...');
+
+    try {
+        const response = await fetch(`${API_BASE}/get-pending-classifications?token=${authToken}`);
+        const data = await response.json();
+
+        hideLoading();
+
+        if (!data.ok) {
+            if (data.error === 'unauthorized') {
+                logout();
+                return;
+            }
+            throw new Error(data.error || 'שגיאה בטעינת הנתונים');
+        }
+
+        aiClassificationsData = data.items || [];
+        aiReviewLoaded = true;
+        updateAIStats(data.stats || {});
+        applyAIFilters();
+
+        // Update tab badge
+        const badge = document.getElementById('aiReviewTabBadge');
+        const total = data.stats?.total_pending || 0;
+        if (total > 0) {
+            badge.textContent = total;
+            badge.style.display = 'inline-flex';
+        } else {
+            badge.style.display = 'none';
+        }
+    } catch (error) {
+        hideLoading();
+        console.error('AI Review load error:', error);
+        const container = document.getElementById('aiCardsContainer');
+        container.innerHTML = `
+            <div class="empty-state">
+                <div class="empty-state-icon"><i data-lucide="alert-triangle" class="icon-2xl"></i></div>
+                <p style="color: var(--danger-500);">לא ניתן לטעון את הסיווגים. נסה שוב.</p>
+                <button class="btn btn-secondary mt-4" onclick="loadAIClassifications()">
+                    <i data-lucide="refresh-cw" class="icon-sm"></i> נסה שוב
+                </button>
+            </div>
+        `;
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+    }
+}
+
+function updateAIStats(stats) {
+    document.getElementById('ai-stat-pending').textContent = stats.total_pending || 0;
+    document.getElementById('ai-stat-matched').textContent = stats.matched || 0;
+    document.getElementById('ai-stat-unmatched').textContent = stats.unmatched || 0;
+    document.getElementById('ai-stat-high-confidence').textContent = stats.high_confidence || 0;
+}
+
+function applyAIFilters() {
+    const searchText = (document.getElementById('aiSearchInput').value || '').trim().toLowerCase();
+    const confidenceFilter = document.getElementById('aiConfidenceFilter').value;
+    const typeFilter = document.getElementById('aiTypeFilter').value;
+
+    let filtered = aiClassificationsData;
+
+    if (searchText) {
+        filtered = filtered.filter(item =>
+            (item.client_name || '').toLowerCase().includes(searchText)
+        );
+    }
+
+    if (confidenceFilter) {
+        filtered = filtered.filter(item => {
+            const conf = item.ai_confidence || 0;
+            if (confidenceFilter === 'high') return conf >= 0.85;
+            if (confidenceFilter === 'medium') return conf >= 0.50 && conf < 0.85;
+            if (confidenceFilter === 'low') return conf < 0.50;
+            return true;
+        });
+    }
+
+    if (typeFilter) {
+        filtered = filtered.filter(item => {
+            if (typeFilter === 'matched') return !!item.matched_template_id;
+            if (typeFilter === 'unmatched') return !item.matched_template_id;
+            return true;
+        });
+    }
+
+    renderAICards(filtered);
+}
+
+function renderAICards(items) {
+    const container = document.getElementById('aiCardsContainer');
+    const emptyState = document.getElementById('aiEmptyState');
+
+    if (!items || items.length === 0) {
+        container.innerHTML = '';
+
+        if (aiClassificationsData.length === 0) {
+            container.style.display = 'none';
+            emptyState.style.display = 'block';
+        } else {
+            container.style.display = 'block';
+            emptyState.style.display = 'none';
+            container.innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-state-icon"><i data-lucide="filter-x" class="icon-2xl"></i></div>
+                    <p>אין תוצאות לסינון הנוכחי</p>
+                </div>
+            `;
+        }
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+        return;
+    }
+
+    container.style.display = 'block';
+    emptyState.style.display = 'none';
+
+    // Group by client_name
+    const groups = {};
+    for (const item of items) {
+        const clientName = item.client_name || 'לא ידוע';
+        if (!groups[clientName]) groups[clientName] = [];
+        groups[clientName].push(item);
+    }
+
+    let html = '';
+
+    for (const [clientName, clientItems] of Object.entries(groups)) {
+        const matchedCount = clientItems.filter(i => !!i.matched_template_id).length;
+        const unmatchedCount = clientItems.length - matchedCount;
+        const avgConf = clientItems.reduce((sum, i) => sum + (i.ai_confidence || 0), 0) / clientItems.length;
+        const avgConfPct = Math.round(avgConf * 100);
+
+        html += `
+            <div class="ai-accordion" data-client="${escapeHtml(clientName)}">
+                <div class="ai-accordion-header" onclick="toggleAIAccordion(this)">
+                    <div class="ai-accordion-title">
+                        <i data-lucide="user" class="icon-sm"></i>
+                        ${escapeHtml(clientName)}
+                    </div>
+                    <div class="ai-accordion-stats">
+                        <span class="ai-accordion-stat"><span class="stat-dot pending"></span> ${clientItems.length} ממתינים</span>
+                        <span class="ai-accordion-stat"><span class="stat-dot matched"></span> ${matchedCount} זוהו</span>
+                        <span class="ai-accordion-stat"><span class="stat-dot unmatched"></span> ${unmatchedCount} לא זוהו</span>
+                        <span class="ai-accordion-stat">⌀ ${avgConfPct}%</span>
+                    </div>
+                    <span class="ai-accordion-icon">▾</span>
+                </div>
+                <div class="ai-accordion-body">
+                    <div class="ai-accordion-content">
+        `;
+
+        for (const item of clientItems) {
+            html += renderAICard(item);
+        }
+
+        html += `
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    container.innerHTML = html;
+
+    // Wire up assign dropdowns
+    container.querySelectorAll('.ai-assign-select-inline').forEach(select => {
+        select.addEventListener('change', function() {
+            const btn = this.closest('.ai-card-actions').querySelector('.btn-ai-assign-confirm');
+            if (btn) btn.disabled = !this.value;
+        });
+    });
+
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function renderAICard(item) {
+    const isMatched = !!item.matched_template_id;
+    const confidence = item.ai_confidence || 0;
+    const confidencePercent = Math.round(confidence * 100);
+    const confidenceClass = confidence >= 0.85 ? 'ai-confidence-high' :
+                           confidence >= 0.50 ? 'ai-confidence-medium' : 'ai-confidence-low';
+    const cardClass = isMatched ? 'matched' : 'unmatched';
+
+    const fileIcon = getAIFileIcon(item.attachment_content_type || item.attachment_name || '');
+    const fileMeta = formatAIFileMeta(item.attachment_size, item.attachment_content_type);
+    const receivedAt = item.received_at ? formatAIDate(item.received_at) : '';
+    const senderEmail = item.sender_email || '';
+
+    const missingDocs = item.missing_docs || [];
+    const missingDocsHtml = missingDocs.length > 0
+        ? missingDocs.map(d => `<span class="ai-missing-doc-tag">${escapeHtml(d.name || '')}</span>`).join(' ')
+        : '<span style="color: var(--gray-400)">אין מסמכים חסרים</span>';
+
+    let classificationHtml;
+    if (isMatched) {
+        classificationHtml = `
+            <span class="ai-confidence-badge ${confidenceClass}">${confidencePercent}%</span>
+            <span class="ai-template-match">${escapeHtml(item.matched_template_name || '')}</span>
+        `;
+    } else {
+        classificationHtml = `
+            <span class="ai-confidence-badge ai-confidence-low">--</span>
+            <span class="ai-template-unmatched">לא זוהה</span>
+        `;
+    }
+
+    let actionsHtml;
+    if (isMatched) {
+        actionsHtml = `
+            <button class="btn btn-success btn-sm" onclick="approveAIClassification('${escapeAttr(item.id)}')">
+                <i data-lucide="check" class="icon-sm"></i> אשר
+            </button>
+            <button class="btn btn-danger btn-sm" onclick="rejectAIClassification('${escapeAttr(item.id)}')">
+                <i data-lucide="x" class="icon-sm"></i> דחה
+            </button>
+            <button class="btn btn-ghost btn-sm" onclick="showAIReassignModal('${escapeAttr(item.id)}', ${escapeAttr(JSON.stringify(missingDocs))})">
+                <i data-lucide="arrow-right-left" class="icon-sm"></i> שייך מחדש
+            </button>
+        `;
+    } else {
+        const optionsHtml = missingDocs.map(d =>
+            `<option value="${escapeAttr(d.template_id || '')}">${escapeHtml(d.name || '')}</option>`
+        ).join('');
+
+        actionsHtml = `
+            <div class="ai-assign-section">
+                <span class="ai-assign-label">שייך ל:</span>
+                <select class="ai-assign-select-inline" data-record-id="${escapeAttr(item.id)}">
+                    <option value="">-- בחר מסמך --</option>
+                    ${optionsHtml}
+                </select>
+                <button class="btn btn-primary btn-sm btn-ai-assign-confirm" disabled
+                    onclick="assignAIUnmatched('${escapeAttr(item.id)}', this)">
+                    <i data-lucide="check" class="icon-sm"></i> שייך
+                </button>
+            </div>
+            <button class="btn btn-danger btn-sm" onclick="rejectAIClassification('${escapeAttr(item.id)}')">
+                <i data-lucide="x" class="icon-sm"></i> דחה
+            </button>
+        `;
+    }
+
+    const viewFileBtn = item.file_url
+        ? `<a href="${escapeAttr(item.file_url)}" target="_blank" class="btn btn-ghost btn-sm">
+               <i data-lucide="external-link" class="icon-sm"></i> צפה בקובץ
+           </a>`
+        : '';
+
+    return `
+        <div class="ai-review-card ${cardClass}" data-id="${escapeAttr(item.id)}">
+            <div class="ai-card-top">
+                <div class="ai-file-info">
+                    <i data-lucide="${fileIcon}" class="icon-sm"></i>
+                    <span class="ai-file-name">${escapeHtml(item.attachment_name || 'ללא שם')}</span>
+                    <span class="ai-file-meta">${escapeHtml(fileMeta)}</span>
+                </div>
+                ${viewFileBtn}
+            </div>
+            <div class="ai-card-body">
+                <div class="ai-sender-info">
+                    ${senderEmail ? `<span class="ai-sender-detail"><i data-lucide="mail" class="icon-sm"></i> ${escapeHtml(senderEmail)}</span>` : ''}
+                    ${receivedAt ? `<span class="ai-sender-detail"><i data-lucide="calendar" class="icon-sm"></i> ${escapeHtml(receivedAt)}</span>` : ''}
+                </div>
+                <div class="ai-classification-result">
+                    <div class="ai-classification-label">
+                        ${classificationHtml}
+                    </div>
+                    ${item.ai_reason ? `<div class="ai-evidence">${escapeHtml(item.ai_reason)}</div>` : ''}
+                    ${item.issuer_name ? `<div class="ai-issuer-info"><i data-lucide="building-2" class="icon-sm"></i> ${escapeHtml(item.issuer_name)}</div>` : ''}
+                </div>
+                <div class="ai-missing-docs-context">
+                    <span class="ai-context-label">מסמכים חסרים:</span>
+                    ${missingDocsHtml}
+                </div>
+            </div>
+            <div class="ai-card-actions">
+                ${actionsHtml}
+            </div>
+        </div>
+    `;
+}
+
+function toggleAIAccordion(header) {
+    const accordion = header.closest('.ai-accordion');
+    accordion.classList.toggle('open');
+}
+
+// AI Review Actions
+async function approveAIClassification(recordId) {
+    if (!confirm('לאשר את הסיווג?')) return;
+
+    showLoading('מאשר סיווג...');
+
+    try {
+        const response = await fetch(`${API_BASE}/review-classification`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                token: authToken,
+                classification_id: recordId,
+                action: 'approve'
+            })
+        });
+
+        const data = await response.json();
+        hideLoading();
+
+        if (!data.ok) throw new Error(data.error || 'שגיאה באישור הסיווג');
+
+        animateAndRemoveAI(recordId);
+        showAIToast('הסיווג אושר בהצלחה', 'success');
+    } catch (error) {
+        hideLoading();
+        showModal('error', 'שגיאה', error.message);
+    }
+}
+
+async function rejectAIClassification(recordId) {
+    if (!confirm('לדחות את הסיווג? המסמך יוסר מהתור.')) return;
+
+    showLoading('דוחה סיווג...');
+
+    try {
+        const response = await fetch(`${API_BASE}/review-classification`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                token: authToken,
+                classification_id: recordId,
+                action: 'reject'
+            })
+        });
+
+        const data = await response.json();
+        hideLoading();
+
+        if (!data.ok) throw new Error(data.error || 'שגיאה בדחיית הסיווג');
+
+        animateAndRemoveAI(recordId);
+        showAIToast('הסיווג נדחה', 'danger');
+    } catch (error) {
+        hideLoading();
+        showModal('error', 'שגיאה', error.message);
+    }
+}
+
+function showAIReassignModal(recordId, missingDocs) {
+    if (typeof missingDocs === 'string') {
+        try { missingDocs = JSON.parse(missingDocs); } catch (e) { missingDocs = []; }
+    }
+
+    aiCurrentReassignId = recordId;
+
+    const item = aiClassificationsData.find(i => i.id === recordId);
+    const fileInfoEl = document.getElementById('aiReassignFileInfo');
+    if (item) {
+        fileInfoEl.innerHTML = `<i data-lucide="file" class="icon-sm" style="display:inline;vertical-align:middle;"></i> ${escapeHtml(item.attachment_name || 'ללא שם')}`;
+    } else {
+        fileInfoEl.textContent = '';
+    }
+
+    const select = document.getElementById('aiReassignSelect');
+    select.innerHTML = '<option value="">-- בחר מסמך --</option>';
+    for (const doc of missingDocs) {
+        const opt = document.createElement('option');
+        opt.value = doc.template_id || '';
+        opt.textContent = doc.name || '';
+        select.appendChild(opt);
+    }
+
+    document.getElementById('aiReassignConfirmBtn').disabled = true;
+    select.onchange = function () {
+        document.getElementById('aiReassignConfirmBtn').disabled = !this.value;
+    };
+
+    document.getElementById('aiReassignModal').classList.add('show');
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function closeAIReassignModal() {
+    document.getElementById('aiReassignModal').classList.remove('show');
+    aiCurrentReassignId = null;
+}
+
+async function confirmAIReassign() {
+    const templateId = document.getElementById('aiReassignSelect').value;
+    if (!templateId || !aiCurrentReassignId) return;
+
+    closeAIReassignModal();
+    await submitAIReassign(aiCurrentReassignId, templateId);
+}
+
+async function submitAIReassign(recordId, templateId) {
+    showLoading('משייך מחדש...');
+
+    try {
+        const response = await fetch(`${API_BASE}/review-classification`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                token: authToken,
+                classification_id: recordId,
+                action: 'reassign',
+                reassign_template_id: templateId
+            })
+        });
+
+        const data = await response.json();
+        hideLoading();
+
+        if (!data.ok) throw new Error(data.error || 'שגיאה בשיוך מחדש');
+
+        animateAndRemoveAI(recordId);
+        showAIToast('המסמך שויך מחדש בהצלחה', 'success');
+    } catch (error) {
+        hideLoading();
+        showModal('error', 'שגיאה', error.message);
+    }
+}
+
+async function assignAIUnmatched(recordId, btnEl) {
+    const actionsContainer = btnEl.closest('.ai-card-actions');
+    const select = actionsContainer.querySelector('.ai-assign-select-inline');
+    const templateId = select ? select.value : '';
+    if (!templateId) return;
+    await submitAIReassign(recordId, templateId);
+}
+
+function animateAndRemoveAI(recordId) {
+    aiClassificationsData = aiClassificationsData.filter(item => item.id !== recordId);
+
+    const card = document.querySelector(`.ai-review-card[data-id="${recordId}"]`);
+    if (card) {
+        card.classList.add('removing');
+        setTimeout(() => {
+            card.remove();
+
+            // Check if parent accordion group is now empty
+            document.querySelectorAll('.ai-accordion').forEach(accordion => {
+                const cards = accordion.querySelectorAll('.ai-review-card');
+                if (cards.length === 0) {
+                    accordion.remove();
+                }
+            });
+
+            // Check if everything is empty
+            if (aiClassificationsData.length === 0) {
+                document.getElementById('aiCardsContainer').style.display = 'none';
+                document.getElementById('aiEmptyState').style.display = 'block';
+                if (typeof lucide !== 'undefined') lucide.createIcons();
+            }
+
+            recalcAIStats();
+        }, 350);
+    } else {
+        recalcAIStats();
+    }
+}
+
+function recalcAIStats() {
+    const total = aiClassificationsData.length;
+    const matched = aiClassificationsData.filter(i => !!i.matched_template_id).length;
+    const unmatched = total - matched;
+    const highConf = aiClassificationsData.filter(i => (i.ai_confidence || 0) >= 0.85).length;
+
+    document.getElementById('ai-stat-pending').textContent = total;
+    document.getElementById('ai-stat-matched').textContent = matched;
+    document.getElementById('ai-stat-unmatched').textContent = unmatched;
+    document.getElementById('ai-stat-high-confidence').textContent = highConf;
+
+    // Update tab badge
+    const badge = document.getElementById('aiReviewTabBadge');
+    if (total > 0) {
+        badge.textContent = total;
+        badge.style.display = 'inline-flex';
+    } else {
+        badge.style.display = 'none';
+    }
+}
+
+// AI helper functions
+function getAIFileIcon(contentTypeOrName) {
+    const str = (contentTypeOrName || '').toLowerCase();
+    if (str.includes('pdf')) return 'file-text';
+    if (str.includes('word') || str.includes('.doc')) return 'file-type';
+    if (str.includes('excel') || str.includes('sheet') || str.includes('.xls')) return 'file-spreadsheet';
+    if (str.includes('image') || str.includes('.png') || str.includes('.jpg') || str.includes('.jpeg')) return 'image';
+    return 'file';
+}
+
+function formatAIFileMeta(size, contentType) {
+    const parts = [];
+    if (size) {
+        if (size < 1024) parts.push(`${size}B`);
+        else if (size < 1024 * 1024) parts.push(`${Math.round(size / 1024)}KB`);
+        else parts.push(`${(size / (1024 * 1024)).toFixed(1)}MB`);
+    }
+    if (contentType) {
+        const short = contentType.replace('application/', '').replace('image/', '').split(';')[0];
+        parts.push(short);
+    }
+    return parts.join(' \u2022 ');
+}
+
+function formatAIDate(dateStr) {
+    try {
+        const d = new Date(dateStr);
+        return d.toLocaleDateString('he-IL', {
+            day: '2-digit', month: '2-digit', year: 'numeric',
+            hour: '2-digit', minute: '2-digit'
+        });
+    } catch (e) {
+        return dateStr;
+    }
+}
+
+function escapeAttr(text) {
+    if (typeof text !== 'string') text = String(text || '');
+    return text.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/'/g, '&#39;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function showAIToast(message, type) {
+    const toast = document.getElementById('aiToast');
+    const toastText = document.getElementById('aiToastText');
+    const toastIcon = document.getElementById('aiToastIcon');
+
+    toastText.textContent = message;
+    toast.className = 'ai-toast ai-toast-' + (type || 'success');
+
+    if (type === 'danger') {
+        toastIcon.setAttribute('data-lucide', 'x-circle');
+    } else {
+        toastIcon.setAttribute('data-lucide', 'check-circle');
+    }
+
+    toast.classList.add('show');
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+
+    setTimeout(() => {
+        toast.classList.remove('show');
+    }, 3000);
 }
 
 // ==================== UTILITIES ====================

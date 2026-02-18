@@ -883,6 +883,595 @@ tr.duplicate {
     background: var(--success-100);
 }
 
+/* ==================== CLIENT NAME CELL ==================== */
+.client-name-cell {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
+}
+
+.client-view-link {
+    color: var(--gray-400);
+    display: inline-flex;
+    align-items: center;
+    opacity: 0;
+    transition: opacity var(--transition-fast), color var(--transition-fast);
+}
+
+tr:hover .client-view-link {
+    opacity: 1;
+}
+
+.client-view-link:hover {
+    color: var(--brand-600);
+}
+
+.icon-xs {
+    width: 14px;
+    height: 14px;
+}
+
+/* ==================== DOCS PROGRESS CELL ==================== */
+.docs-progress-cell {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.docs-count {
+    font-size: var(--text-xs);
+    white-space: nowrap;
+}
+
+/* ==================== MISSING COUNT ==================== */
+.missing-count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 24px;
+    height: 24px;
+    padding: 0 var(--sp-2);
+    border-radius: var(--radius-full);
+    font-size: var(--text-xs);
+    font-weight: 700;
+}
+
+.missing-count.has-missing {
+    background: var(--danger-100);
+    color: var(--danger-700);
+}
+
+.missing-count.all-done {
+    background: var(--success-100);
+    color: var(--success-700);
+}
+
+/* ==================== AI REVIEW TAB ==================== */
+
+/* Tab Badge */
+.ai-review-tab-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 20px;
+    height: 20px;
+    padding: 0 6px;
+    border-radius: var(--radius-full);
+    background: var(--warning-500);
+    color: white;
+    font-size: 11px;
+    font-weight: 700;
+    margin-inline-start: var(--sp-2);
+}
+
+/* Stats Bar */
+.ai-stats-bar {
+    display: flex;
+    gap: var(--sp-3);
+    margin-bottom: var(--sp-5);
+    flex-wrap: wrap;
+}
+
+.ai-stat-item {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
+    padding: var(--sp-3) var(--sp-4);
+    background: white;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--gray-200);
+    box-shadow: var(--shadow-xs);
+    min-width: 130px;
+}
+
+.ai-stat-item .ai-stat-value {
+    font-size: var(--text-xl);
+    font-weight: 700;
+    color: var(--gray-800);
+}
+
+.ai-stat-item .ai-stat-label {
+    font-size: var(--text-xs);
+    color: var(--gray-500);
+    font-weight: 500;
+}
+
+.ai-stat-item.ai-stat-pending { border-inline-start: 3px solid var(--brand-500); }
+.ai-stat-item.ai-stat-pending .icon-sm { color: var(--brand-500); }
+.ai-stat-item.ai-stat-matched { border-inline-start: 3px solid var(--success-500); }
+.ai-stat-item.ai-stat-matched .icon-sm { color: var(--success-500); }
+.ai-stat-item.ai-stat-unmatched { border-inline-start: 3px solid var(--danger-500); }
+.ai-stat-item.ai-stat-unmatched .icon-sm { color: var(--danger-500); }
+.ai-stat-item.ai-stat-high-conf { border-inline-start: 3px solid var(--info-500); }
+.ai-stat-item.ai-stat-high-conf .icon-sm { color: var(--info-500); }
+
+/* Filter Bar */
+.ai-filter-bar {
+    display: flex;
+    gap: var(--sp-4);
+    margin-bottom: var(--sp-6);
+    flex-wrap: wrap;
+    align-items: center;
+    background: white;
+    padding: var(--sp-4) var(--sp-5);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--gray-200);
+    box-shadow: var(--shadow-xs);
+}
+
+/* AI Accordion */
+.ai-accordion {
+    margin-bottom: var(--sp-4);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    box-shadow: var(--shadow-xs);
+    animation: aiSlideUp 300ms ease-out;
+}
+
+@keyframes aiSlideUp {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.ai-accordion-header {
+    background: var(--gray-50);
+    padding: var(--sp-4) var(--sp-5);
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius-lg);
+    transition: all var(--transition-fast);
+    user-select: none;
+    gap: var(--sp-3);
+}
+
+.ai-accordion-header:hover {
+    background: var(--gray-100);
+}
+
+.ai-accordion.open .ai-accordion-header {
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+    border-bottom-color: transparent;
+    background: var(--brand-600);
+    color: white;
+}
+
+.ai-accordion-title {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
+    font-size: var(--text-base);
+    font-weight: 600;
+}
+
+.ai-accordion-stats {
+    display: flex;
+    gap: var(--sp-4);
+    align-items: center;
+    font-size: var(--text-xs);
+    font-weight: 500;
+}
+
+.ai-accordion-stat {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-1);
+    white-space: nowrap;
+}
+
+.ai-accordion-stat .stat-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.stat-dot.pending { background: var(--brand-500); }
+.stat-dot.matched { background: var(--success-500); }
+.stat-dot.unmatched { background: var(--danger-500); }
+
+.ai-accordion.open .ai-accordion-stats {
+    opacity: 0.85;
+}
+
+.ai-accordion-icon {
+    font-size: var(--text-sm);
+    transition: transform var(--transition-base);
+    flex-shrink: 0;
+}
+
+.ai-accordion.open .ai-accordion-icon {
+    transform: rotate(180deg);
+}
+
+.ai-accordion-body {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height var(--transition-slow);
+    background: white;
+    border: 1px solid var(--gray-200);
+    border-top: none;
+    border-bottom-left-radius: var(--radius-lg);
+    border-bottom-right-radius: var(--radius-lg);
+}
+
+.ai-accordion.open .ai-accordion-body {
+    max-height: 5000px;
+    transition: max-height 0.5s ease-in;
+}
+
+.ai-accordion-content {
+    padding: var(--sp-4) var(--sp-5);
+}
+
+/* Review Cards */
+.ai-review-card {
+    background: white;
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
+    margin-bottom: var(--sp-3);
+    transition: all var(--transition-base);
+    overflow: hidden;
+}
+
+.ai-review-card:hover {
+    box-shadow: var(--shadow-md);
+}
+
+.ai-review-card.removing {
+    opacity: 0;
+    transform: translateX(40px);
+    max-height: 0;
+    margin-bottom: 0;
+    padding: 0;
+    border-width: 0;
+    overflow: hidden;
+    transition: all 350ms ease-out;
+}
+
+.ai-review-card.unmatched {
+    border-inline-start: 3px solid var(--warning-500);
+}
+
+.ai-review-card.matched {
+    border-inline-start: 3px solid var(--success-500);
+}
+
+.ai-card-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--sp-4) var(--sp-5);
+    border-bottom: 1px solid var(--gray-100);
+    gap: var(--sp-3);
+}
+
+.ai-file-info {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
+    min-width: 0;
+    flex: 1;
+}
+
+.ai-file-info .icon-sm {
+    color: var(--gray-400);
+    flex-shrink: 0;
+}
+
+.ai-file-name {
+    font-weight: 600;
+    color: var(--gray-800);
+    font-size: var(--text-sm);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.ai-file-meta {
+    font-size: var(--text-xs);
+    color: var(--gray-400);
+    white-space: nowrap;
+}
+
+.ai-card-body {
+    padding: var(--sp-4) var(--sp-5);
+}
+
+.ai-sender-info {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-4);
+    font-size: var(--text-xs);
+    color: var(--gray-400);
+    margin-bottom: var(--sp-3);
+    flex-wrap: wrap;
+}
+
+.ai-sender-detail {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-1);
+}
+
+.ai-classification-result {
+    margin-bottom: var(--sp-3);
+}
+
+.ai-classification-label {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
+    margin-bottom: var(--sp-2);
+    flex-wrap: wrap;
+}
+
+.ai-confidence-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px var(--sp-3);
+    border-radius: var(--radius-full);
+    font-size: var(--text-xs);
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.ai-confidence-high {
+    background: var(--success-100);
+    color: var(--success-700);
+}
+
+.ai-confidence-medium {
+    background: var(--warning-100);
+    color: var(--warning-700);
+}
+
+.ai-confidence-low {
+    background: var(--danger-100);
+    color: var(--danger-700);
+}
+
+.ai-template-match {
+    font-weight: 600;
+    font-size: var(--text-sm);
+    color: var(--gray-800);
+}
+
+.ai-template-unmatched {
+    font-weight: 600;
+    font-size: var(--text-sm);
+    color: var(--warning-700);
+}
+
+.ai-evidence {
+    font-size: var(--text-xs);
+    color: var(--gray-500);
+    line-height: 1.6;
+    padding: var(--sp-2) var(--sp-3);
+    background: var(--gray-50);
+    border-radius: var(--radius-sm);
+    margin-bottom: var(--sp-2);
+}
+
+.ai-issuer-info {
+    font-size: var(--text-xs);
+    color: var(--gray-600);
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: var(--sp-1);
+}
+
+.ai-missing-docs-context {
+    padding: var(--sp-2) var(--sp-5) var(--sp-3);
+    font-size: var(--text-xs);
+    color: var(--gray-400);
+}
+
+.ai-context-label {
+    font-weight: 600;
+    color: var(--gray-500);
+    margin-inline-end: var(--sp-1);
+}
+
+.ai-missing-doc-tag {
+    display: inline-block;
+    background: var(--gray-100);
+    padding: 1px var(--sp-2);
+    border-radius: var(--radius-sm);
+    margin: 1px;
+    font-size: 11px;
+}
+
+.ai-card-actions {
+    display: flex;
+    gap: var(--sp-2);
+    padding: var(--sp-3) var(--sp-5);
+    border-top: 1px solid var(--gray-100);
+    background: var(--gray-50);
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.ai-card-actions .btn {
+    flex-shrink: 0;
+}
+
+.ai-assign-section {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
+    flex: 1;
+    min-width: 0;
+}
+
+.ai-assign-section select {
+    min-width: 200px;
+    max-width: 350px;
+    font-size: var(--text-xs);
+    padding: var(--sp-1) var(--sp-3);
+}
+
+.ai-assign-section .ai-assign-label {
+    font-size: var(--text-xs);
+    font-weight: 600;
+    color: var(--gray-600);
+    white-space: nowrap;
+}
+
+/* AI Empty State */
+.ai-empty-done {
+    text-align: center;
+    padding: var(--sp-16) var(--sp-6);
+}
+
+.ai-empty-done-icon {
+    display: flex;
+    justify-content: center;
+    margin-bottom: var(--sp-5);
+    color: var(--success-500);
+}
+
+.ai-empty-done h2 {
+    font-size: var(--text-xl);
+    color: var(--gray-800);
+    margin-bottom: var(--sp-2);
+}
+
+.ai-empty-done p {
+    font-size: var(--text-sm);
+    color: var(--gray-500);
+}
+
+/* AI Reassign Modal */
+.ai-modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(2px);
+}
+
+.ai-modal-overlay.show {
+    display: flex;
+}
+
+.ai-modal-panel {
+    background: white;
+    border-radius: var(--radius-xl);
+    max-width: 560px;
+    width: 90%;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: var(--shadow-lg);
+    animation: modalSlideUp 200ms ease-out;
+}
+
+.ai-modal-panel-header {
+    padding: var(--sp-6) var(--sp-6) 0;
+    display: flex;
+    align-items: center;
+    gap: var(--sp-3);
+    font-size: var(--text-xl);
+    font-weight: 700;
+    color: var(--gray-800);
+}
+
+.ai-modal-panel-body {
+    padding: var(--sp-5) var(--sp-6);
+    color: var(--gray-600);
+    line-height: 1.7;
+}
+
+.ai-modal-panel-footer {
+    padding: 0 var(--sp-6) var(--sp-6);
+    display: flex;
+    gap: var(--sp-3);
+    justify-content: flex-end;
+}
+
+.ai-reassign-file-info {
+    background: var(--gray-50);
+    border-radius: var(--radius-md);
+    padding: var(--sp-3) var(--sp-4);
+    font-size: var(--text-sm);
+    color: var(--gray-700);
+    font-weight: 500;
+    border: 1px solid var(--gray-200);
+}
+
+.ai-reassign-select {
+    width: 100%;
+    padding: var(--sp-3) var(--sp-4);
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius-md);
+    font-family: inherit;
+    font-size: var(--text-sm);
+    color: var(--gray-800);
+    background: white;
+    cursor: pointer;
+}
+
+.ai-reassign-select:focus {
+    outline: none;
+    border-color: var(--brand-500);
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+}
+
+/* AI Toast */
+.ai-toast {
+    position: fixed;
+    top: var(--sp-5);
+    left: 50%;
+    transform: translateX(-50%) translateY(-120%);
+    background: var(--gray-800);
+    color: white;
+    padding: var(--sp-3) var(--sp-5);
+    border-radius: var(--radius-lg);
+    font-size: var(--text-sm);
+    font-weight: 500;
+    box-shadow: var(--shadow-lg);
+    z-index: 2000;
+    transition: transform var(--transition-base);
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
+}
+
+.ai-toast.show {
+    transform: translateX(-50%) translateY(0);
+}
+
+.ai-toast.ai-toast-success { background: var(--success-700); }
+.ai-toast.ai-toast-danger  { background: var(--danger-700); }
+
 /* ==================== RESPONSIVE ==================== */
 @media (max-width: 768px) {
     .admin-navbar {
@@ -934,5 +1523,58 @@ tr.duplicate {
         flex-direction: column;
         display: flex;
         gap: var(--sp-3);
+    }
+
+    /* AI Review responsive */
+    .ai-stats-bar {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: var(--sp-2);
+    }
+
+    .ai-stat-item {
+        min-width: unset;
+    }
+
+    .ai-filter-bar {
+        flex-direction: column;
+        align-items: stretch;
+        gap: var(--sp-3);
+    }
+
+    .ai-card-top {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: var(--sp-2);
+    }
+
+    .ai-card-actions {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .ai-card-actions .btn {
+        width: 100%;
+    }
+
+    .ai-assign-section {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .ai-assign-section select {
+        min-width: unset;
+        max-width: unset;
+        width: 100%;
+    }
+
+    .ai-accordion-stats {
+        display: none;
+    }
+
+    .ai-sender-info {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: var(--sp-1);
     }
 }
