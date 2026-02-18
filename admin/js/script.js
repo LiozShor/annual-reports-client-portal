@@ -1085,6 +1085,12 @@ function renderAICard(item) {
         `;
     }
 
+    const viewFileBtn = item.file_url
+        ? `<a href="${escapeAttr(item.file_url)}" target="_blank" class="btn btn-ghost btn-sm">
+               <i data-lucide="external-link" class="icon-sm"></i> פתח בקובץ
+           </a>`
+        : '';
+
     return `
         <div class="ai-review-card ${cardClass}" data-id="${escapeAttr(item.id)}">
             <div class="ai-card-top">
@@ -1093,6 +1099,7 @@ function renderAICard(item) {
                     <span class="ai-file-name">${escapeHtml(item.attachment_name || 'ללא שם')}</span>
                     <span class="ai-file-meta">${escapeHtml(fileMeta)}</span>
                 </div>
+                ${viewFileBtn}
             </div>
             <div class="ai-card-body">
                 <div class="ai-sender-info">
