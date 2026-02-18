@@ -155,6 +155,9 @@ async function loadDashboard() {
         toggleStageFilter(currentStageFilter, false); // Pass false to prevent re-filtering
 
         if (typeof lucide !== 'undefined') lucide.createIcons();
+
+        // Load AI review badge count (async, non-blocking)
+        loadAIReviewCount();
     } catch (error) {
         hideLoading();
         console.error('Dashboard error:', error);
@@ -302,6 +305,23 @@ function toggleStageFilter(stage) {
 
 function refreshData() {
     loadDashboard();
+}
+
+// Load AI review pending count for navbar badge
+async function loadAIReviewCount() {
+    try {
+        const resp = await fetch(`${API_BASE}/get-pending-classifications?token=${authToken}`);
+        const data = await resp.json();
+        const badge = document.getElementById('aiReviewBadge');
+        if (data.ok && data.stats && data.stats.total_pending > 0) {
+            badge.textContent = data.stats.total_pending;
+            badge.style.display = 'inline-flex';
+        } else {
+            badge.style.display = 'none';
+        }
+    } catch (e) {
+        // Silently fail - badge stays hidden
+    }
 }
 
 // ==================== IMPORT ====================
