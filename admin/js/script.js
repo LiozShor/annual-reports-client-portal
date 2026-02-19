@@ -102,23 +102,27 @@ function switchTab(tabName, evt) {
     document.getElementById(`tab-${tabName}`).classList.add('active');
     if (typeof lucide !== 'undefined') lucide.createIcons();
 
-    // Load AI review data fresh each time tab is opened
-    if (tabName === 'ai-review') {
+    // Silent refresh on every tab switch
+    if (tabName === 'dashboard' || tabName === 'review') {
+        loadDashboard(true);
+    } else if (tabName === 'send') {
+        loadPendingClients(true);
+    } else if (tabName === 'ai-review') {
         loadAIClassifications();
     }
 }
 
 // ==================== DASHBOARD ====================
 
-async function loadDashboard() {
-    showLoading('טוען נתונים...');
+async function loadDashboard(silent = false) {
+    if (!silent) showLoading('טוען נתונים...');
 
     try {
         const year = document.getElementById('yearFilter')?.value || '2025';
         const response = await fetch(`${API_BASE}/admin-dashboard?token=${authToken}&year=${year}`);
         const data = await response.json();
 
-        hideLoading();
+        if (!silent) hideLoading();
 
         if (!data.ok) {
             if (data.error === 'unauthorized') {
@@ -164,9 +168,9 @@ async function loadDashboard() {
         // Load AI review badge count (async, non-blocking)
         loadAIReviewCount();
     } catch (error) {
-        hideLoading();
+        if (!silent) hideLoading();
         console.error('Dashboard error:', error);
-        showModal('error', 'שגיאה', 'לא ניתן לטעון את הנתונים');
+        if (!silent) showModal('error', 'שגיאה', 'לא ניתן לטעון את הנתונים');
     }
 }
 
@@ -558,15 +562,15 @@ async function addManualClient() {
 
 let pendingClients = [];
 
-async function loadPendingClients() {
-    showLoading('טוען לקוחות ממתינים...');
+async function loadPendingClients(silent = false) {
+    if (!silent) showLoading('טוען לקוחות ממתינים...');
 
     try {
         const year = document.getElementById('sendYearFilter').value;
         const response = await fetch(`${API_BASE}/admin-pending?token=${authToken}&year=${year}`);
         const data = await response.json();
 
-        hideLoading();
+        if (!silent) hideLoading();
 
         if (!data.ok) throw new Error(data.error);
 
@@ -574,8 +578,8 @@ async function loadPendingClients() {
         renderPendingClients();
 
     } catch (error) {
-        hideLoading();
-        showModal('error', 'שגיאה', 'לא ניתן לטעון את הרשימה');
+        if (!silent) hideLoading();
+        if (!silent) showModal('error', 'שגיאה', 'לא ניתן לטעון את הרשימה');
     }
 }
 
