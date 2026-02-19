@@ -1302,6 +1302,37 @@ tr:hover .client-view-link {
     gap: var(--sp-1);
 }
 
+.ai-quality-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 1px var(--sp-2);
+    border-radius: var(--radius-full);
+    font-size: 10px;
+    font-weight: 600;
+    margin-right: var(--sp-2);
+    white-space: nowrap;
+}
+
+.ai-quality-exact {
+    background: var(--success-100);
+    color: var(--success-700);
+}
+
+.ai-quality-fuzzy {
+    background: var(--warning-100);
+    color: var(--warning-700);
+}
+
+.ai-quality-single {
+    background: var(--gray-100);
+    color: var(--gray-600);
+}
+
+.ai-quality-mismatch {
+    background: var(--danger-100);
+    color: var(--danger-700);
+}
+
 .ai-missing-docs-context {
     padding: var(--sp-2) var(--sp-5) var(--sp-3);
     font-size: var(--text-xs);
