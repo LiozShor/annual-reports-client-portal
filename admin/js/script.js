@@ -829,9 +829,8 @@ function createDocCombobox(container, docs, { currentMatchId = null, onSelect = 
         groups[groups.length - 1].docs.push(doc);
     }
 
-    const id = 'dcb-' + Math.random().toString(36).slice(2, 8);
     container.innerHTML = `
-        <div class="doc-combobox" id="${id}">
+        <div class="doc-combobox">
             <input class="doc-combobox-input" placeholder="\ud83d\udd0d \u05d7\u05e4\u05e9 \u05de\u05e1\u05de\u05da..." autocomplete="off" />
             <div class="doc-combobox-dropdown"></div>
         </div>
@@ -870,7 +869,8 @@ function createDocCombobox(container, docs, { currentMatchId = null, onSelect = 
 
         // Bind clicks
         dropdown.querySelectorAll('.doc-combobox-option').forEach(opt => {
-            opt.addEventListener('click', () => {
+            opt.addEventListener('mousedown', (e) => {
+                e.preventDefault();
                 selectedValue = opt.dataset.value;
                 input.value = opt.dataset.name;
                 input.classList.add('has-value');
@@ -887,8 +887,24 @@ function createDocCombobox(container, docs, { currentMatchId = null, onSelect = 
         return words.every(w => name.includes(w));
     }
 
+    function positionDropdown() {
+        const rect = input.getBoundingClientRect();
+        const spaceBelow = window.innerHeight - rect.bottom - 10;
+        const spaceAbove = rect.top - 10;
+        const dropHeight = Math.min(280, Math.max(spaceBelow, spaceAbove));
+
+        if (spaceBelow >= 200 || spaceBelow >= spaceAbove) {
+            dropdown.style.top = rect.bottom + 4 + 'px';
+        } else {
+            dropdown.style.top = (rect.top - dropHeight - 4) + 'px';
+        }
+        dropdown.style.right = (window.innerWidth - rect.right) + 'px';
+        dropdown.style.maxHeight = dropHeight + 'px';
+    }
+
     function open() {
         combobox.classList.add('open');
+        positionDropdown();
         renderOptions(input.classList.contains('has-value') ? '' : input.value);
     }
 
@@ -902,12 +918,13 @@ function createDocCombobox(container, docs, { currentMatchId = null, onSelect = 
         selectedValue = null;
         combobox.dataset.selectedValue = '';
         if (onSelect) onSelect(null, null);
+        positionDropdown();
         renderOptions(input.value);
     });
 
-    // Close on click outside
-    document.addEventListener('click', (e) => {
-        if (!combobox.contains(e.target)) close();
+    // Close on blur (with delay so mousedown on option fires first)
+    input.addEventListener('blur', () => {
+        setTimeout(close, 150);
     });
 
     // Close on Escape
@@ -923,15 +940,14 @@ function createDocCombobox(container, docs, { currentMatchId = null, onSelect = 
                 selectedValue = val;
                 input.value = doc.name || val;
                 input.classList.add('has-value');
+                combobox.dataset.selectedValue = val;
             }
         },
         clear: () => {
             selectedValue = null;
             input.value = '';
             input.classList.remove('has-value');
-        },
-        destroy: () => {
-            container.innerHTML = '';
+            combobox.dataset.selectedValue = '';
         }
     };
 }
