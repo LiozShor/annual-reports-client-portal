@@ -879,6 +879,7 @@ function createDocCombobox(container, docs, { currentMatchId = null, onSelect = 
                 input.value = opt.dataset.name;
                 input.classList.add('has-value');
                 combobox.dataset.selectedValue = selectedValue;
+                combobox.dataset.selectedDocId = opt.dataset.docId || '';
                 close();
                 if (onSelect) onSelect(selectedValue, opt.dataset.docId);
             });
@@ -1069,6 +1070,14 @@ const AI_DOC_NAMES = {
     T1701:'מסמכי הכנסה אחרת'
 };
 
+function getQualityBadgeHtml(quality) {
+    if (!quality || quality === 'single') return '';
+    const labels = { exact: 'התאמה מדויקת', fuzzy: 'התאמה חלקית', mismatch: 'לא תואם' };
+    const label = labels[quality];
+    if (!label) return '';
+    return `<span class="ai-quality-badge ai-quality-${quality}">${label}</span>`;
+}
+
 function renderAICards(items) {
     const container = document.getElementById('aiCardsContainer');
     const emptyState = document.getElementById('aiEmptyState');
@@ -1196,9 +1205,11 @@ function renderAICard(item) {
 
     let classificationHtml;
     if (isMatched) {
+        const docDisplayName = item.matched_doc_name || AI_DOC_NAMES[item.matched_template_id] || item.matched_template_name || item.matched_template_id || '';
         classificationHtml = `
             <span class="ai-confidence-badge ${confidenceClass}">${confidencePercent}%</span>
-            <span class="ai-template-match">${escapeHtml(AI_DOC_NAMES[item.matched_template_id] || item.matched_template_name || item.matched_template_id || '')}</span>
+            <span class="ai-template-match">${escapeHtml(docDisplayName)}</span>
+            ${getQualityBadgeHtml(item.issuer_match_quality)}
         `;
     } else {
         classificationHtml = `
@@ -1374,13 +1385,14 @@ function closeAIReassignModal() {
 async function confirmAIReassign() {
     const combobox = document.querySelector('#aiReassignComboboxContainer .doc-combobox');
     const templateId = combobox ? combobox.dataset.selectedValue : '';
+    const docRecordId = combobox ? combobox.dataset.selectedDocId : '';
     if (!templateId || !aiCurrentReassignId) return;
 
     closeAIReassignModal();
-    await submitAIReassign(aiCurrentReassignId, templateId);
+    await submitAIReassign(aiCurrentReassignId, templateId, docRecordId);
 }
 
-async function submitAIReassign(recordId, templateId) {
+async function submitAIReassign(recordId, templateId, docRecordId) {
     showLoading('משייך מחדש...');
 
     try {
@@ -1391,7 +1403,8 @@ async function submitAIReassign(recordId, templateId) {
                 token: authToken,
                 classification_id: recordId,
                 action: 'reassign',
-                reassign_template_id: templateId
+                reassign_template_id: templateId,
+                reassign_doc_record_id: docRecordId || null
             })
         });
 
@@ -1412,8 +1425,9 @@ async function assignAIUnmatched(recordId, btnEl) {
     const actionsContainer = btnEl.closest('.ai-card-actions');
     const comboboxEl = actionsContainer.querySelector('.doc-combobox');
     const templateId = comboboxEl ? comboboxEl.dataset.selectedValue : '';
+    const docRecordId = comboboxEl ? comboboxEl.dataset.selectedDocId : '';
     if (!templateId) return;
-    await submitAIReassign(recordId, templateId);
+    await submitAIReassign(recordId, templateId, docRecordId);
 }
 
 function animateAndRemoveAI(recordId) {
