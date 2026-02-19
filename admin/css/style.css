@@ -1658,6 +1658,7 @@ tr:hover .client-view-link {
     text-align: right;
     cursor: pointer;
     transition: border-color 150ms, box-shadow 150ms;
+    box-sizing: border-box;
 }
 
 .doc-combobox-input::placeholder {
@@ -1677,17 +1678,15 @@ tr:hover .client-view-link {
 
 .doc-combobox-dropdown {
     display: none;
-    position: absolute;
-    top: calc(100% + 4px);
-    right: 0;
-    left: 0;
-    max-height: 300px;
+    position: fixed;
+    max-height: 280px;
+    width: 420px;
     overflow-y: auto;
     background: white;
     border: 1px solid var(--gray-200);
     border-radius: var(--radius-md);
     box-shadow: var(--shadow-lg);
-    z-index: 1000;
+    z-index: 9999;
     direction: rtl;
 }
 
@@ -1696,14 +1695,14 @@ tr:hover .client-view-link {
 }
 
 .doc-combobox-category {
-    position: sticky;
-    top: 0;
     padding: var(--sp-2) var(--sp-3);
     font-size: var(--text-xs);
     font-weight: 700;
     color: var(--gray-500);
     background: var(--gray-50);
     border-bottom: 1px solid var(--gray-100);
+    position: sticky;
+    top: 0;
     z-index: 1;
 }
 
@@ -1743,14 +1742,20 @@ tr:hover .client-view-link {
 }
 
 /* Inline combobox in card actions */
-.ai-assign-section .doc-combobox {
-    min-width: 200px;
-    max-width: 350px;
+.ai-assign-section .doc-combobox-container {
+    flex: 1;
+    min-width: 180px;
+    max-width: 300px;
 }
 
 .ai-assign-section .doc-combobox-input {
     font-size: var(--text-xs);
     padding: var(--sp-1) var(--sp-3);
+}
+
+/* Allow dropdown to escape card overflow */
+.ai-card-actions {
+    overflow: visible;
 }
 
 /* Modal combobox */
@@ -1760,9 +1765,13 @@ tr:hover .client-view-link {
 
 /* Mobile responsive */
 @media (max-width: 768px) {
-    .ai-assign-section .doc-combobox {
+    .ai-assign-section .doc-combobox-container {
         min-width: unset;
         max-width: unset;
         width: 100%;
+    }
+
+    .doc-combobox-dropdown {
+        width: calc(100vw - 40px);
     }
 }
