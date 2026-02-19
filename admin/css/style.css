@@ -1208,30 +1208,8 @@ tr:hover .client-view-link {
     text-overflow: ellipsis;
 }
 
-.ai-file-meta {
-    font-size: var(--text-xs);
-    color: var(--gray-400);
-    white-space: nowrap;
-}
-
 .ai-card-body {
     padding: var(--sp-4) var(--sp-5);
-}
-
-.ai-sender-info {
-    display: flex;
-    align-items: center;
-    gap: var(--sp-4);
-    font-size: var(--text-xs);
-    color: var(--gray-400);
-    margin-bottom: var(--sp-3);
-    flex-wrap: wrap;
-}
-
-.ai-sender-detail {
-    display: flex;
-    align-items: center;
-    gap: var(--sp-1);
 }
 
 .ai-classification-result {
@@ -1283,23 +1261,52 @@ tr:hover .client-view-link {
     color: var(--warning-700);
 }
 
-.ai-evidence {
-    font-size: var(--text-xs);
-    color: var(--gray-500);
-    line-height: 1.6;
-    padding: var(--sp-2) var(--sp-3);
-    background: var(--gray-50);
+/* Evidence tooltip trigger (AI icon with ?) */
+.ai-evidence-trigger {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 1px;
+    cursor: help;
+    color: var(--gray-400);
+    font-size: 11px;
+    font-weight: 600;
+    margin-inline-start: var(--sp-2);
+    padding: 1px var(--sp-1);
     border-radius: var(--radius-sm);
-    margin-bottom: var(--sp-2);
+    background: var(--gray-100);
+    transition: color 0.15s, background 0.15s;
 }
 
-.ai-issuer-info {
+.ai-evidence-trigger:hover {
+    color: var(--primary-700);
+    background: var(--primary-100);
+}
+
+.ai-evidence-trigger::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    top: calc(100% + 6px);
+    right: 0;
+    z-index: 100;
+    width: 300px;
+    max-width: 90vw;
+    padding: var(--sp-3);
+    background: var(--gray-800);
+    color: var(--gray-50);
     font-size: var(--text-xs);
-    color: var(--gray-600);
-    font-weight: 500;
-    display: flex;
-    align-items: center;
-    gap: var(--sp-1);
+    font-weight: 400;
+    line-height: 1.6;
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-lg);
+    white-space: normal;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.15s;
+}
+
+.ai-evidence-trigger:hover::after {
+    opacity: 1;
 }
 
 .ai-quality-badge {
@@ -1629,12 +1636,6 @@ tr:hover .client-view-link {
 
     .ai-accordion-stats {
         display: none;
-    }
-
-    .ai-sender-info {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: var(--sp-1);
     }
 
 }

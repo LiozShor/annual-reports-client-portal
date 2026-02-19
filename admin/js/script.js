@@ -1118,7 +1118,11 @@ function renderAICards(items) {
     for (const [clientName, clientItems] of Object.entries(groups)) {
         const matchedCount = clientItems.filter(i => !!i.matched_template_id).length;
         const unmatchedCount = clientItems.length - matchedCount;
-        const avgConf = clientItems.reduce((sum, i) => sum + (i.ai_confidence || 0), 0) / clientItems.length;
+        const issuerMults = { exact: 1.0, single: 1.0, fuzzy: 0.7, mismatch: 0.3 };
+        const avgConf = clientItems.reduce((sum, i) => {
+            const mult = issuerMults[i.issuer_match_quality] ?? 1.0;
+            return sum + (i.ai_confidence || 0) * mult;
+        }, 0) / clientItems.length;
         const avgConfPct = Math.round(avgConf * 100);
 
         html += `
@@ -1190,16 +1194,22 @@ function renderAICards(items) {
 
 function renderAICard(item) {
     const isMatched = !!item.matched_template_id;
-    const confidence = item.ai_confidence || 0;
+    const rawConfidence = item.ai_confidence || 0;
+    // Combined confidence: adjust by issuer match quality
+    const issuerMultipliers = { exact: 1.0, single: 1.0, fuzzy: 0.7, mismatch: 0.3 };
+    const issuerMultiplier = issuerMultipliers[item.issuer_match_quality] ?? 1.0;
+    const confidence = rawConfidence * issuerMultiplier;
     const confidencePercent = Math.round(confidence * 100);
     const confidenceClass = confidence >= 0.85 ? 'ai-confidence-high' :
                            confidence >= 0.50 ? 'ai-confidence-medium' : 'ai-confidence-low';
     const cardClass = isMatched ? 'matched' : 'unmatched';
 
     const fileIcon = getAIFileIcon(item.attachment_content_type || item.attachment_name || '');
-    const fileMeta = formatAIFileMeta(item.attachment_size);
     const receivedAt = item.received_at ? formatAIDate(item.received_at) : '';
     const senderEmail = item.sender_email || '';
+    // Sender info as tooltip on filename
+    const senderTooltipParts = [senderEmail, receivedAt].filter(Boolean);
+    const senderTooltip = senderTooltipParts.join(' | ');
 
     const missingDocs = item.missing_docs || [];
 
@@ -1253,27 +1263,26 @@ function renderAICard(item) {
            </a>`
         : '';
 
+    // AI evidence tooltip icon
+    const evidenceIcon = item.ai_reason
+        ? `<span class="ai-evidence-trigger" data-tooltip="${escapeAttr(item.ai_reason)}"><i data-lucide="bot" class="icon-sm"></i>?</span>`
+        : '';
+
     return `
         <div class="ai-review-card ${cardClass}" data-id="${escapeAttr(item.id)}">
             <div class="ai-card-top">
                 <div class="ai-file-info">
                     <i data-lucide="${fileIcon}" class="icon-sm"></i>
-                    <span class="ai-file-name">${escapeHtml(item.attachment_name || 'ללא שם')}</span>
-                    <span class="ai-file-meta">${escapeHtml(fileMeta)}</span>
+                    <span class="ai-file-name" ${senderTooltip ? `title="${escapeAttr(senderTooltip)}"` : ''}>${escapeHtml(item.attachment_name || 'ללא שם')}</span>
+                    ${evidenceIcon}
                 </div>
                 ${viewFileBtn}
             </div>
             <div class="ai-card-body">
-                <div class="ai-sender-info">
-                    ${senderEmail ? `<span class="ai-sender-detail"><i data-lucide="mail" class="icon-sm"></i> ${escapeHtml(senderEmail)}</span>` : ''}
-                    ${receivedAt ? `<span class="ai-sender-detail"><i data-lucide="calendar" class="icon-sm"></i> ${escapeHtml(receivedAt)}</span>` : ''}
-                </div>
                 <div class="ai-classification-result">
                     <div class="ai-classification-label">
                         ${classificationHtml}
                     </div>
-                    ${item.ai_reason ? `<div class="ai-evidence">${escapeHtml(item.ai_reason)}</div>` : ''}
-                    ${item.issuer_name ? `<div class="ai-issuer-info"><i data-lucide="building-2" class="icon-sm"></i> ${escapeHtml(item.issuer_name)}</div>` : ''}
                 </div>
             </div>
             <div class="ai-card-actions">
@@ -1490,13 +1499,6 @@ function getAIFileIcon(contentTypeOrName) {
     if (str.includes('excel') || str.includes('sheet') || str.includes('.xls')) return 'file-spreadsheet';
     if (str.includes('image') || str.includes('.png') || str.includes('.jpg') || str.includes('.jpeg')) return 'image';
     return 'file';
-}
-
-function formatAIFileMeta(size) {
-    if (!size) return '';
-    if (size < 1024) return `${size}B`;
-    if (size < 1024 * 1024) return `${Math.round(size / 1024)}KB`;
-    return `${(size / (1024 * 1024)).toFixed(1)}MB`;
 }
 
 function formatAIDate(dateStr) {
