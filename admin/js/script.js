@@ -815,6 +815,127 @@ function exportReviewToExcel() {
     XLSX.writeFile(wb, `review_queue_${new Date().toISOString().split('T')[0]}.xlsx`);
 }
 
+// ==================== DOC SEARCH COMBOBOX ====================
+
+function createDocCombobox(container, docs, { currentMatchId = null, onSelect = null } = {}) {
+    // Group docs by category, skip empty categories
+    const groups = [];
+    let currentCat = null;
+    for (const doc of docs) {
+        if (doc.category !== currentCat) {
+            currentCat = doc.category;
+            groups.push({ category: doc.category, name: doc.category_name || doc.category, emoji: doc.category_emoji || '', docs: [] });
+        }
+        groups[groups.length - 1].docs.push(doc);
+    }
+
+    const id = 'dcb-' + Math.random().toString(36).slice(2, 8);
+    container.innerHTML = `
+        <div class="doc-combobox" id="${id}">
+            <input class="doc-combobox-input" placeholder="\ud83d\udd0d \u05d7\u05e4\u05e9 \u05de\u05e1\u05de\u05da..." autocomplete="off" />
+            <div class="doc-combobox-dropdown"></div>
+        </div>
+    `;
+
+    const combobox = container.querySelector('.doc-combobox');
+    const input = combobox.querySelector('.doc-combobox-input');
+    const dropdown = combobox.querySelector('.doc-combobox-dropdown');
+    let selectedValue = null;
+
+    function renderOptions(filter = '') {
+        let html = '';
+        let hasResults = false;
+
+        for (const group of groups) {
+            const filtered = group.docs.filter(d =>
+                !filter || matchesFilter(d.name, filter)
+            );
+            if (filtered.length === 0) continue;
+            hasResults = true;
+
+            html += `<div class="doc-combobox-category">${escapeHtml(group.emoji)} ${escapeHtml(group.name)}</div>`;
+            for (const doc of filtered) {
+                const isCurrent = currentMatchId && doc.template_id === currentMatchId;
+                const cls = isCurrent ? ' current-match' : '';
+                const badge = isCurrent ? `<span class="current-badge">\u25c0 \u05e0\u05d5\u05db\u05d7\u05d9</span>` : '';
+                html += `<div class="doc-combobox-option${cls}" data-value="${escapeAttr(doc.template_id)}" data-doc-id="${escapeAttr(doc.doc_record_id || '')}" data-name="${escapeAttr(doc.name || '')}">${escapeHtml(doc.name || '')}${badge}</div>`;
+            }
+        }
+
+        if (!hasResults) {
+            html = `<div class="doc-combobox-empty">\u05dc\u05d0 \u05e0\u05de\u05e6\u05d0\u05d5 \u05ea\u05d5\u05e6\u05d0\u05d5\u05ea</div>`;
+        }
+
+        dropdown.innerHTML = html;
+
+        // Bind clicks
+        dropdown.querySelectorAll('.doc-combobox-option').forEach(opt => {
+            opt.addEventListener('click', () => {
+                selectedValue = opt.dataset.value;
+                input.value = opt.dataset.name;
+                input.classList.add('has-value');
+                combobox.dataset.selectedValue = selectedValue;
+                close();
+                if (onSelect) onSelect(selectedValue, opt.dataset.docId);
+            });
+        });
+    }
+
+    function matchesFilter(docName, searchText) {
+        const name = (docName || '').toLowerCase();
+        const words = searchText.toLowerCase().split(/\s+/).filter(Boolean);
+        return words.every(w => name.includes(w));
+    }
+
+    function open() {
+        combobox.classList.add('open');
+        renderOptions(input.classList.contains('has-value') ? '' : input.value);
+    }
+
+    function close() {
+        combobox.classList.remove('open');
+    }
+
+    input.addEventListener('focus', open);
+    input.addEventListener('input', () => {
+        input.classList.remove('has-value');
+        selectedValue = null;
+        combobox.dataset.selectedValue = '';
+        if (onSelect) onSelect(null, null);
+        renderOptions(input.value);
+    });
+
+    // Close on click outside
+    document.addEventListener('click', (e) => {
+        if (!combobox.contains(e.target)) close();
+    });
+
+    // Close on Escape
+    input.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') { close(); input.blur(); }
+    });
+
+    return {
+        getValue: () => selectedValue,
+        setValue: (val) => {
+            const doc = docs.find(d => d.template_id === val);
+            if (doc) {
+                selectedValue = val;
+                input.value = doc.name || val;
+                input.classList.add('has-value');
+            }
+        },
+        clear: () => {
+            selectedValue = null;
+            input.value = '';
+            input.classList.remove('has-value');
+        },
+        destroy: () => {
+            container.innerHTML = '';
+        }
+    };
+}
+
 // ==================== AI REVIEW ====================
 
 let aiClassificationsData = [];
@@ -1022,11 +1143,16 @@ function renderAICards(items) {
 
     container.innerHTML = html;
 
-    // Wire up assign dropdowns
-    container.querySelectorAll('.ai-assign-select-inline').forEach(select => {
-        select.addEventListener('change', function() {
-            const btn = this.closest('.ai-card-actions').querySelector('.btn-ai-assign-confirm');
-            if (btn) btn.disabled = !this.value;
+    // Initialize inline comboboxes for unmatched cards
+    container.querySelectorAll('.doc-combobox-container').forEach(el => {
+        const recordId = el.dataset.recordId;
+        let docs = [];
+        try { docs = JSON.parse(el.dataset.docs); } catch (e) { /* skip */ }
+        createDocCombobox(el, docs, {
+            onSelect: (templateId) => {
+                const btn = el.closest('.ai-card-actions').querySelector('.btn-ai-assign-confirm');
+                if (btn) btn.disabled = !templateId;
+            }
         });
     });
 
@@ -1075,17 +1201,10 @@ function renderAICard(item) {
             </button>
         `;
     } else {
-        const optionsHtml = missingDocs.map(d =>
-            `<option value="${escapeAttr(d.template_id || '')}">${escapeHtml(d.name || '')}</option>`
-        ).join('');
-
         actionsHtml = `
             <div class="ai-assign-section">
                 <span class="ai-assign-label">שייך ל:</span>
-                <select class="ai-assign-select-inline" data-record-id="${escapeAttr(item.id)}">
-                    <option value="">-- בחר מסמך --</option>
-                    ${optionsHtml}
-                </select>
+                <div class="doc-combobox-container" data-record-id="${escapeAttr(item.id)}" data-docs='${escapeAttr(JSON.stringify(missingDocs))}'></div>
                 <button class="btn btn-primary btn-sm btn-ai-assign-confirm" disabled
                     onclick="assignAIUnmatched('${escapeAttr(item.id)}', this)">
                     <i data-lucide="check" class="icon-sm"></i> שייך
@@ -1212,19 +1331,16 @@ function showAIReassignModal(recordId, missingDocs) {
         fileInfoEl.textContent = '';
     }
 
-    const select = document.getElementById('aiReassignSelect');
-    select.innerHTML = '<option value="">-- בחר מסמך --</option>';
-    for (const doc of missingDocs) {
-        const opt = document.createElement('option');
-        opt.value = doc.template_id || '';
-        opt.textContent = doc.name || '';
-        select.appendChild(opt);
-    }
+    const comboContainer = document.getElementById('aiReassignComboboxContainer');
+    const currentMatchId = item ? item.matched_template_id : null;
 
     document.getElementById('aiReassignConfirmBtn').disabled = true;
-    select.onchange = function () {
-        document.getElementById('aiReassignConfirmBtn').disabled = !this.value;
-    };
+    createDocCombobox(comboContainer, missingDocs, {
+        currentMatchId,
+        onSelect: (templateId) => {
+            document.getElementById('aiReassignConfirmBtn').disabled = !templateId;
+        }
+    });
 
     document.getElementById('aiReassignModal').classList.add('show');
     if (typeof lucide !== 'undefined') lucide.createIcons();
@@ -1236,7 +1352,8 @@ function closeAIReassignModal() {
 }
 
 async function confirmAIReassign() {
-    const templateId = document.getElementById('aiReassignSelect').value;
+    const combobox = document.querySelector('#aiReassignComboboxContainer .doc-combobox');
+    const templateId = combobox ? combobox.dataset.selectedValue : '';
     if (!templateId || !aiCurrentReassignId) return;
 
     closeAIReassignModal();
@@ -1273,8 +1390,8 @@ async function submitAIReassign(recordId, templateId) {
 
 async function assignAIUnmatched(recordId, btnEl) {
     const actionsContainer = btnEl.closest('.ai-card-actions');
-    const select = actionsContainer.querySelector('.ai-assign-select-inline');
-    const templateId = select ? select.value : '';
+    const comboboxEl = actionsContainer.querySelector('.doc-combobox');
+    const templateId = comboboxEl ? comboboxEl.dataset.selectedValue : '';
     if (!templateId) return;
     await submitAIReassign(recordId, templateId);
 }

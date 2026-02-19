@@ -1605,7 +1605,7 @@ tr:hover .client-view-link {
 }
 
 .confirm-dialog-panel .ai-modal-panel-footer {
-    justify-content: flex-start;
+    justify-content: flex-end;
 }
 
 .confirm-dialog-panel .btn-primary {
@@ -1637,4 +1637,132 @@ tr:hover .client-view-link {
 
 .confirm-btn-danger:hover {
     background: var(--danger-700, #B91C1C);
+}
+
+/* ==================== DOC SEARCH COMBOBOX ==================== */
+.doc-combobox {
+    position: relative;
+    width: 100%;
+}
+
+.doc-combobox-input {
+    width: 100%;
+    padding: var(--sp-2) var(--sp-3);
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius-md);
+    font-family: inherit;
+    font-size: var(--text-sm);
+    background: white;
+    color: var(--gray-800);
+    direction: rtl;
+    text-align: right;
+    cursor: pointer;
+    transition: border-color 150ms, box-shadow 150ms;
+}
+
+.doc-combobox-input::placeholder {
+    color: var(--gray-400);
+}
+
+.doc-combobox-input:focus {
+    outline: none;
+    border-color: var(--brand-500);
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+}
+
+.doc-combobox-input.has-value {
+    font-weight: 500;
+    color: var(--gray-800);
+}
+
+.doc-combobox-dropdown {
+    display: none;
+    position: absolute;
+    top: calc(100% + 4px);
+    right: 0;
+    left: 0;
+    max-height: 300px;
+    overflow-y: auto;
+    background: white;
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-lg);
+    z-index: 1000;
+    direction: rtl;
+}
+
+.doc-combobox.open .doc-combobox-dropdown {
+    display: block;
+}
+
+.doc-combobox-category {
+    position: sticky;
+    top: 0;
+    padding: var(--sp-2) var(--sp-3);
+    font-size: var(--text-xs);
+    font-weight: 700;
+    color: var(--gray-500);
+    background: var(--gray-50);
+    border-bottom: 1px solid var(--gray-100);
+    z-index: 1;
+}
+
+.doc-combobox-option {
+    padding: var(--sp-2) var(--sp-4);
+    font-size: var(--text-sm);
+    color: var(--gray-700);
+    cursor: pointer;
+    transition: background 100ms;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--sp-2);
+}
+
+.doc-combobox-option:hover {
+    background: var(--brand-50, #EEF2FF);
+}
+
+.doc-combobox-option.current-match {
+    background: var(--warning-50, #FFFBEB);
+    border-right: 3px solid var(--warning-500, #F59E0B);
+}
+
+.doc-combobox-option .current-badge {
+    font-size: var(--text-xs);
+    color: var(--warning-600, #D97706);
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.doc-combobox-empty {
+    padding: var(--sp-4);
+    text-align: center;
+    color: var(--gray-400);
+    font-size: var(--text-sm);
+}
+
+/* Inline combobox in card actions */
+.ai-assign-section .doc-combobox {
+    min-width: 200px;
+    max-width: 350px;
+}
+
+.ai-assign-section .doc-combobox-input {
+    font-size: var(--text-xs);
+    padding: var(--sp-1) var(--sp-3);
+}
+
+/* Modal combobox */
+.ai-modal-panel-body .doc-combobox-input {
+    padding: var(--sp-3) var(--sp-4);
+}
+
+/* Mobile responsive */
+@media (max-width: 768px) {
+    .ai-assign-section .doc-combobox {
+        min-width: unset;
+        max-width: unset;
+        width: 100%;
+    }
 }
