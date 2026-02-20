@@ -1169,12 +1169,14 @@ tr:hover .client-view-link {
     transition: all 350ms ease-out;
 }
 
-.ai-review-card.unmatched {
-    border-inline-start: 3px solid var(--warning-500);
+.ai-review-card.match-full,
+.ai-review-card.match-fuzzy {
+    border-inline-start: 3px solid var(--success-500);
 }
 
-.ai-review-card.matched {
-    border-inline-start: 3px solid var(--success-500);
+.ai-review-card.match-issuer-mismatch,
+.ai-review-card.match-unmatched {
+    border-inline-start: 3px solid var(--warning-500);
 }
 
 .ai-card-top {
@@ -1309,59 +1311,202 @@ tr:hover .client-view-link {
     opacity: 1;
 }
 
-.ai-quality-badge {
+/* Confidence prefix label */
+.ai-confidence-prefix {
+    font-size: var(--text-xs);
+    font-weight: 500;
+    color: var(--gray-500);
+    margin-inline-end: var(--sp-1);
+}
+
+/* Issuer Comparison Box */
+.ai-issuer-comparison {
+    background: var(--gray-50);
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius-md);
+    padding: var(--sp-3) var(--sp-4);
+    margin-top: var(--sp-2);
+}
+
+.ai-issuer-comparison .ai-comparison-header {
+    font-size: var(--text-xs);
+    color: var(--gray-500);
+    font-weight: 600;
+    margin-bottom: var(--sp-1);
+    display: flex;
+    align-items: center;
+    gap: var(--sp-1);
+}
+
+.ai-issuer-comparison .ai-issuer-value {
+    font-weight: 700;
+    color: var(--gray-800);
+}
+
+.ai-comparison-divider {
+    height: 1px;
+    background: var(--gray-200);
+    margin: var(--sp-2) 0;
+}
+
+/* Radio list for same-type docs */
+.ai-comparison-radio-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-1);
+}
+
+.ai-comparison-radio {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
+    padding: var(--sp-2) var(--sp-3);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: background var(--transition-fast);
+    font-size: var(--text-sm);
+    color: var(--gray-700);
+}
+
+.ai-comparison-radio:hover {
+    background: var(--brand-50);
+}
+
+.ai-comparison-radio.selected {
+    background: var(--brand-50);
+    outline: 2px solid var(--brand-500);
+}
+
+.ai-comparison-radio input[type="radio"] {
+    accent-color: var(--brand-600);
+    margin: 0;
+    flex-shrink: 0;
+}
+
+/* Fuzzy match hint */
+.ai-fuzzy-hint {
+    font-size: var(--text-xs);
+    color: var(--gray-400);
+    margin-top: var(--sp-1);
+    display: flex;
+    align-items: center;
+    gap: var(--sp-1);
+}
+
+/* Accordion stat badges */
+.ai-accordion-stat-badge {
     display: inline-flex;
     align-items: center;
-    padding: 1px var(--sp-2);
+    gap: var(--sp-1);
+    padding: 2px var(--sp-2);
     border-radius: var(--radius-full);
-    font-size: 10px;
+    font-size: var(--text-xs);
     font-weight: 600;
-    margin-right: var(--sp-2);
     white-space: nowrap;
 }
 
-.ai-quality-exact {
+.ai-accordion-stat-badge.badge-matched {
     background: var(--success-100);
     color: var(--success-700);
 }
 
-.ai-quality-fuzzy {
+.ai-accordion-stat-badge.badge-mismatch {
     background: var(--warning-100);
     color: var(--warning-700);
 }
 
-.ai-quality-single {
-    background: var(--gray-100);
-    color: var(--gray-600);
-}
-
-.ai-quality-mismatch {
+.ai-accordion-stat-badge.badge-unmatched {
     background: var(--danger-100);
     color: var(--danger-700);
 }
 
-.ai-missing-docs-context {
-    padding: var(--sp-2) var(--sp-5) var(--sp-3);
-    font-size: var(--text-xs);
-    color: var(--gray-400);
+/* Stat item mismatch variant */
+.ai-stat-item.ai-stat-mismatch {
+    border-inline-start: 3px solid var(--warning-500);
 }
 
+.ai-stat-item.ai-stat-mismatch .icon-sm {
+    color: var(--warning-500);
+}
+
+/* Approve-anyway ghost button */
+.btn-ghost-warning {
+    color: var(--warning-700);
+    background: transparent;
+    border: 1px solid var(--warning-300);
+}
+
+.btn-ghost-warning:hover {
+    background: var(--warning-50);
+}
+
+/* Missing docs collapsible container */
 .ai-missing-docs-group {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: var(--sp-1);
-    padding: var(--sp-2) var(--sp-4) var(--sp-3);
     border-bottom: 1px solid var(--gray-100);
+    background: var(--gray-50);
     font-size: var(--text-xs);
     color: var(--gray-500);
-    background: var(--gray-50);
 }
 
-.ai-context-label {
+.ai-missing-docs-toggle {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
+    padding: var(--sp-2) var(--sp-4);
+    cursor: pointer;
+    user-select: none;
     font-weight: 600;
     color: var(--gray-500);
-    margin-inline-end: var(--sp-1);
+    transition: color var(--transition-fast);
+}
+
+.ai-missing-docs-toggle:hover {
+    color: var(--gray-700);
+}
+
+.ai-missing-docs-toggle .toggle-arrow {
+    font-size: 10px;
+    transition: transform var(--transition-fast);
+}
+
+.ai-missing-docs-group.open .ai-missing-docs-toggle .toggle-arrow {
+    transform: rotate(180deg);
+}
+
+.ai-missing-docs-body {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height var(--transition-slow);
+    padding: 0 var(--sp-4);
+}
+
+.ai-missing-docs-group.open .ai-missing-docs-body {
+    max-height: 2000px;
+    padding: 0 var(--sp-4) var(--sp-3);
+}
+
+/* Category sub-header */
+.ai-missing-category {
+    font-size: var(--text-xs);
+    font-weight: 600;
+    color: var(--gray-600);
+    margin-top: var(--sp-2);
+    margin-bottom: var(--sp-1);
+    display: flex;
+    align-items: center;
+    gap: var(--sp-1);
+}
+
+.ai-missing-category:first-child {
+    margin-top: 0;
+}
+
+/* Tags container per category */
+.ai-missing-category-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--sp-1);
+    margin-bottom: var(--sp-1);
 }
 
 .ai-missing-doc-tag {
@@ -1371,6 +1516,7 @@ tr:hover .client-view-link {
     border-radius: var(--radius-sm);
     margin: 1px;
     font-size: 11px;
+    color: var(--gray-600);
 }
 
 .ai-card-actions {
@@ -1636,6 +1782,15 @@ tr:hover .client-view-link {
 
     .ai-accordion-stats {
         display: none;
+    }
+
+    .ai-issuer-comparison {
+        padding: var(--sp-2) var(--sp-3);
+    }
+
+    .ai-comparison-radio {
+        padding: var(--sp-2);
+        font-size: var(--text-xs);
     }
 
 }
