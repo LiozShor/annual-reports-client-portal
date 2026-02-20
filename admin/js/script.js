@@ -1331,7 +1331,12 @@ function renderAICard(item) {
 
     if (state === 'full') {
         // State A: Full match — green border, raw confidence, doc name
-        const docDisplayName = item.matched_doc_name || AI_DOC_NAMES[item.matched_template_id] || item.matched_template_name || '';
+        const templateLabel = AI_DOC_NAMES[item.matched_template_id] || item.matched_template_name || '';
+        const docName = item.matched_doc_name || '';
+        // Always show template type; append doc name if it adds info beyond the template label
+        const docDisplayName = templateLabel && docName && !docName.includes(templateLabel)
+            ? `${templateLabel} – ${docName}`
+            : (docName || templateLabel);
         classificationHtml = `
             <span class="ai-confidence-badge ${confidenceClass}">${confidencePercent}%</span>
             <span class="ai-template-match">${escapeHtml(docDisplayName)}</span>
@@ -1432,7 +1437,11 @@ function renderAICard(item) {
 
     } else if (state === 'fuzzy') {
         // State C: Fuzzy match — green border, doc name, hint line
-        const docDisplayName = item.matched_doc_name || AI_DOC_NAMES[item.matched_template_id] || item.matched_template_name || '';
+        const templateLabel = AI_DOC_NAMES[item.matched_template_id] || item.matched_template_name || '';
+        const docName = item.matched_doc_name || '';
+        const docDisplayName = templateLabel && docName && !docName.includes(templateLabel)
+            ? `${templateLabel} – ${docName}`
+            : (docName || templateLabel);
         const aiIssuer = item.issuer_name || '';
         // Extract doc issuer from matched_doc_name (after – separator)
         const docIssuer = (item.matched_doc_name || '').split('–').slice(1).join('–').trim()
