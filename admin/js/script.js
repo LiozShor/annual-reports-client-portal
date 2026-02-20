@@ -1111,7 +1111,7 @@ async function approveAIDespiteMismatch(recordId) {
                     action: 'approve'
                 })
             });
-            const data = await response.json();
+            const data = await parseAIResponse(response);
             hideLoading();
             if (!data.ok) throw new Error(data.error || 'שגיאה באישור הסיווג');
             animateAndRemoveAI(recordId);
@@ -1514,6 +1514,16 @@ function toggleAIAccordion(header) {
 }
 
 // AI Review Actions
+async function parseAIResponse(response) {
+    const text = await response.text();
+    if (!text) throw new Error('השרת לא החזיר תשובה — ייתכן שגיאה פנימית. נסה שוב.');
+    try {
+        return JSON.parse(text);
+    } catch {
+        throw new Error('תשובה לא תקינה מהשרת. נסה שוב או בדוק את הלוגים.');
+    }
+}
+
 async function approveAIClassification(recordId) {
     showConfirmDialog('לאשר את הסיווג?', async () => {
         showLoading('מאשר סיווג...');
@@ -1529,7 +1539,7 @@ async function approveAIClassification(recordId) {
                 })
             });
 
-            const data = await response.json();
+            const data = await parseAIResponse(response);
             hideLoading();
 
             if (!data.ok) throw new Error(data.error || 'שגיאה באישור הסיווג');
@@ -1558,7 +1568,7 @@ async function rejectAIClassification(recordId) {
                 })
             });
 
-            const data = await response.json();
+            const data = await parseAIResponse(response);
             hideLoading();
 
             if (!data.ok) throw new Error(data.error || 'שגיאה בדחיית הסיווג');
@@ -1633,7 +1643,7 @@ async function submitAIReassign(recordId, templateId, docRecordId) {
             })
         });
 
-        const data = await response.json();
+        const data = await parseAIResponse(response);
         hideLoading();
 
         if (!data.ok) throw new Error(data.error || 'שגיאה בשיוך מחדש');
