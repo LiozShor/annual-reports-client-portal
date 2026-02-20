@@ -10,6 +10,14 @@
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js" defer></script>
 </head>
 <body>
+    <noscript>
+        <div class="noscript-fallback">
+            <h2>JavaScript Required / נדרש JavaScript</h2>
+            <p>דף זה דורש JavaScript כדי לפעול. אנא הפעילו JavaScript בדפדפן או פנו למשרד:</p>
+            <p>This page requires JavaScript. Please enable JavaScript or contact the office:</p>
+            <p><a href="mailto:reports@moshe-atsits.co.il">reports@moshe-atsits.co.il</a></p>
+        </div>
+    </noscript>
     <div class="page-wrapper">
         <div class="container">
             <!-- Header bar -->
@@ -226,6 +234,8 @@
         </div>
     </div>
 
+    <script src="assets/js/error-handler.js"></script>
+    <script src="assets/js/resilient-fetch.js"></script>
     <script src="assets/js/document-manager.js"></script>
 </body>
 </html>

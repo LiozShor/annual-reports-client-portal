@@ -74,11 +74,15 @@ function initIcons() {
     }
 }
 
+// Initialize offline detection
+initOfflineDetection();
+
 // Call once on load
 if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initIcons);
+    document.addEventListener('DOMContentLoaded', () => { initIcons(); initOfflineDetection('he'); });
 } else {
     initIcons();
+    initOfflineDetection('he');
 }
 
 // Check if we have a report ID (if not, show "Not Started" state)
@@ -111,8 +115,15 @@ function showAlert(msg, type = 'success') {
 
 // Load documents
 async function loadDocuments() {
+    const loadingEl = document.getElementById('loading');
+    const cleanupEscalation = startLoadingEscalation(loadingEl);
+
     try {
-        const response = await fetch(`${API_BASE}/get-client-documents?report_id=${REPORT_ID}&mode=office`);
+        const response = await retryWithBackoff(
+            () => fetchWithTimeout(`${API_BASE}/get-client-documents?report_id=${REPORT_ID}&mode=office`, {}, FETCH_TIMEOUTS.load),
+            { maxRetries: 1 }
+        );
+        cleanupEscalation();
         const data = await response.json();
 
         // Handle case where report is found but stage is 1 (Not Started)
@@ -148,8 +159,10 @@ async function loadDocuments() {
         document.getElementById('content').style.display = 'block';
         setTimeout(initIcons, 50);
     } catch (error) {
+        cleanupEscalation();
         console.error(error);
-        showAlert('שגיאה בטעינת מסמכים. אנא נסה לרענן את הדף.', 'error');
+        document.getElementById('loading').style.display = 'none';
+        showAlert(getErrorMessage(error, 'he'), 'error');
     }
 }
 
@@ -746,7 +759,11 @@ function closeConfirmation() {
 }
 
 // Confirm and submit
+let _submitLocked = false;
+
 async function confirmSubmit() {
+    if (_submitLocked) return;
+    _submitLocked = true;
     closeConfirmation();
 
     const customDoc = document.getElementById('customDoc').value.trim();
@@ -877,11 +894,11 @@ async function confirmSubmit() {
     };
 
     try {
-        const response = await fetch(`${API_BASE}/edit-documents`, {
+        const response = await fetchWithTimeout(`${API_BASE}/edit-documents`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
-        });
+        }, FETCH_TIMEOUTS.mutate);
 
         if (response.ok) {
             document.getElementById('content').style.display = 'none';
@@ -893,7 +910,9 @@ async function confirmSubmit() {
         }
     } catch (error) {
         console.error(error);
-        showAlert('שגיאה בשמירת השינויים. אנא נסה שוב או פנה למשרד.', 'error');
+        showAlert(getErrorMessage(error, 'he'), 'error');
+    } finally {
+        _submitLocked = false;
     }
 }
 
@@ -935,7 +954,10 @@ function checkCustomDocDuplicate() {
 }
 
 // Send Questionnaire for Not-Started Clients
+let _sendQuestionnaireLocked = false;
+
 async function confirmSendQuestionnaire() {
+    if (_sendQuestionnaireLocked) return;
     if (!confirm("האם אתה בטוח שברצונך לשלוח את השאלון ללקוח זה?")) return;
 
     const token = localStorage.getItem('QKiwUBXVH@%#1gD7t@rB]<,dM.[NC5b_');
@@ -944,20 +966,21 @@ async function confirmSendQuestionnaire() {
         return;
     }
 
+    _sendQuestionnaireLocked = true;
     const btn = document.querySelector('#not-started-view button');
     const originalText = btn.textContent;
     btn.textContent = 'שולח...';
     btn.disabled = true;
 
     try {
-        const response = await fetch(`${API_BASE}/admin-send-questionnaires`, {
+        const response = await fetchWithTimeout(`${API_BASE}/admin-send-questionnaires`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 token: token,
                 report_ids: [REPORT_ID]
             })
-        });
+        }, FETCH_TIMEOUTS.mutate);
 
         const data = await response.json();
 
@@ -967,10 +990,11 @@ async function confirmSendQuestionnaire() {
             alert("שגיאה בשליחה: " + (data.error || 'Unknown error'));
         }
     } catch (e) {
-        alert("שגיאת תקשורת");
+        alert(getErrorMessage(e, 'he'));
     } finally {
         btn.textContent = originalText;
         btn.disabled = false;
+        _sendQuestionnaireLocked = false;
     }
 }
 

@@ -19,11 +19,11 @@ async function login() {
     showLoading('מאמת...');
 
     try {
-        const response = await fetch(`${API_BASE}/admin-auth`, {
+        const response = await fetchWithTimeout(`${API_BASE}/admin-auth`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ password })
-        });
+        }, FETCH_TIMEOUTS.quick);
 
         const data = await response.json();
         hideLoading();
@@ -68,7 +68,7 @@ async function checkAuth() {
 
     // New tab/window - verify token with API
     try {
-        const response = await fetch(`${API_BASE}/admin-verify?token=${authToken}`);
+        const response = await fetchWithTimeout(`${API_BASE}/admin-verify?token=${authToken}`, {}, FETCH_TIMEOUTS.quick);
         const data = await response.json();
 
         if (data.ok) {
@@ -119,7 +119,7 @@ async function loadDashboard(silent = false) {
 
     try {
         const year = document.getElementById('yearFilter')?.value || '2025';
-        const response = await fetch(`${API_BASE}/admin-dashboard?token=${authToken}&year=${year}`);
+        const response = await fetchWithTimeout(`${API_BASE}/admin-dashboard?token=${authToken}&year=${year}`, {}, FETCH_TIMEOUTS.load);
         const data = await response.json();
 
         if (!silent) hideLoading();
@@ -325,7 +325,7 @@ function refreshData() {
 // Load AI review pending count for tab badge
 async function loadAIReviewCount() {
     try {
-        const resp = await fetch(`${API_BASE}/get-pending-classifications?token=${authToken}`);
+        const resp = await fetchWithTimeout(`${API_BASE}/get-pending-classifications?token=${authToken}`, {}, FETCH_TIMEOUTS.quick);
         const data = await resp.json();
         const badge = document.getElementById('aiReviewTabBadge');
         if (data.ok && data.stats && data.stats.total_pending > 0) {
@@ -456,7 +456,7 @@ async function performServerImport(clients, year, successMessage) {
     showLoading(clients.length > 1 ? `מייבא ${clients.length} לקוחות...` : 'מוסיף לקוח...');
 
     try {
-        const response = await fetch(`${API_BASE}/admin-bulk-import`, {
+        const response = await fetchWithTimeout(`${API_BASE}/admin-bulk-import`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -464,7 +464,7 @@ async function performServerImport(clients, year, successMessage) {
                 year: parseInt(year),
                 clients: clients
             })
-        });
+        }, FETCH_TIMEOUTS.slow);
 
         const data = await response.json();
         hideLoading();
@@ -567,7 +567,7 @@ async function loadPendingClients(silent = false) {
 
     try {
         const year = document.getElementById('sendYearFilter').value;
-        const response = await fetch(`${API_BASE}/admin-pending?token=${authToken}&year=${year}`);
+        const response = await fetchWithTimeout(`${API_BASE}/admin-pending?token=${authToken}&year=${year}`, {}, FETCH_TIMEOUTS.load);
         const data = await response.json();
 
         if (!silent) hideLoading();
@@ -657,18 +657,22 @@ async function sendSingle(reportId) {
     await sendQuestionnaires([reportId]);
 }
 
+let _sendQuestionnairesLocked = false;
+
 async function sendQuestionnaires(reportIds) {
+    if (_sendQuestionnairesLocked) return;
+    _sendQuestionnairesLocked = true;
     showLoading(`שולח ${reportIds.length} שאלונים...`);
 
     try {
-        const response = await fetch(`${API_BASE}/admin-send-questionnaires`, {
+        const response = await fetchWithTimeout(`${API_BASE}/admin-send-questionnaires`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 token: authToken,
                 report_ids: reportIds
             })
-        });
+        }, FETCH_TIMEOUTS.slow);
 
         const data = await response.json();
         hideLoading();
@@ -685,7 +689,9 @@ async function sendQuestionnaires(reportIds) {
 
     } catch (error) {
         hideLoading();
-        showModal('error', 'שגיאה', 'לא ניתן לשלוח: ' + error.message);
+        showModal('error', 'שגיאה', getErrorMessage(error, 'he'));
+    } finally {
+        _sendQuestionnairesLocked = false;
     }
 }
 
@@ -766,20 +772,24 @@ function renderReviewTable(queue) {
     if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
+let _markCompleteLocked = false;
+
 async function markComplete(reportId, name) {
+    if (_markCompleteLocked) return;
     if (!confirm(`לסמן את "${name}" כהושלם?`)) return;
+    _markCompleteLocked = true;
 
     showLoading('מעדכן...');
 
     try {
-        const response = await fetch(`${API_BASE}/admin-mark-complete`, {
+        const response = await fetchWithTimeout(`${API_BASE}/admin-mark-complete`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 token: authToken,
                 report_id: reportId
             })
-        });
+        }, FETCH_TIMEOUTS.mutate);
 
         const data = await response.json();
         hideLoading();
@@ -791,7 +801,9 @@ async function markComplete(reportId, name) {
 
     } catch (error) {
         hideLoading();
-        showModal('error', 'שגיאה', 'לא ניתן לעדכן: ' + error.message);
+        showModal('error', 'שגיאה', getErrorMessage(error, 'he'));
+    } finally {
+        _markCompleteLocked = false;
     }
 }
 
@@ -967,7 +979,7 @@ async function loadAIClassifications() {
     showLoading('טוען סיווגים...');
 
     try {
-        const response = await fetch(`${API_BASE}/get-pending-classifications?token=${authToken}`);
+        const response = await fetchWithTimeout(`${API_BASE}/get-pending-classifications?token=${authToken}`, {}, FETCH_TIMEOUTS.load);
         const data = await response.json();
 
         hideLoading();
@@ -1102,7 +1114,7 @@ async function approveAIDespiteMismatch(recordId) {
     showConfirmDialog('לאשר את הסיווג למרות שהמנפיק לא תואם?', async () => {
         showLoading('מאשר סיווג...');
         try {
-            const response = await fetch(`${API_BASE}/review-classification`, {
+            const response = await fetchWithTimeout(`${API_BASE}/review-classification`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -1110,7 +1122,7 @@ async function approveAIDespiteMismatch(recordId) {
                     classification_id: recordId,
                     action: 'approve'
                 })
-            });
+            }, FETCH_TIMEOUTS.mutate);
             const data = await parseAIResponse(response);
             hideLoading();
             if (!data.ok) throw new Error(data.error || 'שגיאה באישור הסיווג');
@@ -1538,7 +1550,7 @@ async function approveAIClassification(recordId) {
         showLoading('מאשר סיווג...');
 
         try {
-            const response = await fetch(`${API_BASE}/review-classification`, {
+            const response = await fetchWithTimeout(`${API_BASE}/review-classification`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -1546,7 +1558,7 @@ async function approveAIClassification(recordId) {
                     classification_id: recordId,
                     action: 'approve'
                 })
-            });
+            }, FETCH_TIMEOUTS.mutate);
 
             const data = await parseAIResponse(response);
             hideLoading();
@@ -1567,7 +1579,7 @@ async function rejectAIClassification(recordId) {
         showLoading('דוחה סיווג...');
 
         try {
-            const response = await fetch(`${API_BASE}/review-classification`, {
+            const response = await fetchWithTimeout(`${API_BASE}/review-classification`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -1575,7 +1587,7 @@ async function rejectAIClassification(recordId) {
                     classification_id: recordId,
                     action: 'reject'
                 })
-            });
+            }, FETCH_TIMEOUTS.mutate);
 
             const data = await parseAIResponse(response);
             hideLoading();
@@ -1640,7 +1652,7 @@ async function submitAIReassign(recordId, templateId, docRecordId) {
     showLoading('משייך מחדש...');
 
     try {
-        const response = await fetch(`${API_BASE}/review-classification`, {
+        const response = await fetchWithTimeout(`${API_BASE}/review-classification`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -1650,7 +1662,7 @@ async function submitAIReassign(recordId, templateId, docRecordId) {
                 reassign_template_id: templateId,
                 reassign_doc_record_id: docRecordId || null
             })
-        });
+        }, FETCH_TIMEOUTS.mutate);
 
         const data = await parseAIResponse(response);
         hideLoading();
@@ -1823,12 +1835,23 @@ function exportToExcel() {
     XLSX.writeFile(wb, `clients_export_${new Date().toISOString().split('T')[0]}.xlsx`);
 }
 
+let _loadingSafetyTimer = null;
+
 function showLoading(text) {
     document.getElementById('loadingText').textContent = text || 'מעבד...';
     document.getElementById('loadingOverlay').classList.add('visible');
+
+    // Safety timeout: auto-hide after 25s and show error
+    clearTimeout(_loadingSafetyTimer);
+    _loadingSafetyTimer = setTimeout(function () {
+        hideLoading();
+        showModal('error', 'שגיאה', 'הפעולה ארכה זמן רב מדי. אנא נסו שוב.');
+    }, 25000);
 }
 
 function hideLoading() {
+    clearTimeout(_loadingSafetyTimer);
+    _loadingSafetyTimer = null;
     document.getElementById('loadingOverlay').classList.remove('visible');
 }
 
@@ -1899,9 +1922,10 @@ function closeConfirmDialog(confirmed) {
 
 // ==================== INIT ====================
 
-// Initialize Lucide icons when DOM is ready
+// Initialize Lucide icons and offline detection when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
     if (typeof lucide !== 'undefined') lucide.createIcons();
+    initOfflineDetection();
 });
 
 // Initialize

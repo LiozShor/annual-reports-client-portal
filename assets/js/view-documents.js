@@ -28,6 +28,9 @@ function getCategoryIcon(emoji) {
 const params = new URLSearchParams(window.location.search);
 const reportId = params.get('report_id');
 
+// Initialize offline detection
+initOfflineDetection();
+
 if (!reportId) {
     showError('Missing report ID / חסר מזהה דוח');
 } else {
@@ -35,8 +38,14 @@ if (!reportId) {
 }
 
 async function loadDocuments() {
+    const loadingEl = document.getElementById('loading');
+    const cancelEscalation = startLoadingEscalation(loadingEl, { lang: currentLang });
+
     try {
-        const response = await fetch(`https://liozshor.app.n8n.cloud/webhook/get-client-documents?report_id=${reportId}`);
+        const url = `https://liozshor.app.n8n.cloud/webhook/get-client-documents?report_id=${reportId}`;
+        const response = await fetchWithTimeout(url, {}, FETCH_TIMEOUTS.load);
+
+        cancelEscalation();
 
         if (!response.ok) {
             throw new Error('Failed to load documents');
@@ -44,6 +53,9 @@ async function loadDocuments() {
 
         const data = await response.json();
         currentData = data;
+
+        // Cache successful response
+        cacheResponse('docs_' + reportId, data);
 
         document.getElementById('loading').style.display = 'none';
 
@@ -86,9 +98,57 @@ async function loadDocuments() {
         document.getElementById('lang-toggle').style.display = 'flex';
 
     } catch (error) {
+        cancelEscalation();
         console.error('Error:', error);
-        showError('Error loading documents / שגיאה בטעינת המסמכים');
+
+        // Hide loading spinner on error
+        document.getElementById('loading').style.display = 'none';
+
+        // Try to show cached data
+        const cached = getCachedResponse('docs_' + reportId);
+        if (cached && cached.data && cached.data.ok) {
+            currentData = cached.data;
+            renderFromData(cached.data);
+            // Show stale data warning
+            showStaleBanner(document.getElementById('results'), { cachedAt: cached.cachedAt, lang: currentLang, onRefresh: function() { location.reload(); } });
+            document.getElementById('results').style.display = 'block';
+            document.getElementById('lang-toggle').style.display = 'flex';
+        } else {
+            showErrorWithRetry(document.getElementById('error').parentElement || document.getElementById('loading').parentElement, error, {
+                lang: currentLang,
+                onRetry: function () {
+                    document.getElementById('loading').style.display = 'block';
+                    loadDocuments();
+                }
+            });
+        }
     }
+}
+
+function renderFromData(data) {
+    const clientName = data.report?.client_name || '';
+    const spouseName = data.report?.spouse_name || '';
+    const year = data.report?.year || '';
+    const sourceLanguage = data.report?.source_language || 'he';
+
+    const displayName = spouseName ? `${clientName} ו${spouseName}` : clientName;
+    const displayNameEn = spouseName ? `${clientName} & ${spouseName}` : clientName;
+
+    const subtitleHe = `${displayName} \u2022 שנת מס ${year}`;
+    const subtitleEn = `${displayNameEn} \u2022 Tax Year ${year}`;
+    document.getElementById('subtitle').innerHTML = `
+        <span id="subtitle-he">${subtitleHe}</span>
+        <span id="subtitle-en" class="hidden">${subtitleEn}</span>
+    `;
+
+    const email = data.support_email || 'reports@moshe-atsits.co.il';
+    document.getElementById('email-display').textContent = email;
+    document.getElementById('email-display-en').textContent = email;
+    document.getElementById('email-button').href = `mailto:${email}?subject=מסמכים לדוח שנתי ${year} - ${displayName}`;
+
+    currentLang = sourceLanguage || 'he';
+    switchLanguage(currentLang);
+    renderDocuments();
 }
 
 function renderDocuments() {

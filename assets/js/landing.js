@@ -32,7 +32,7 @@ const HE_B64 = {
     btn_view_docs: "16bXpNeUINeR157Xodee15vXmdedINeU16DXk9eo16nXmded",
     btn_reset: "157Xl9enINeV15TXqteX15wg157XlNeU16rXl9ec15Q=",
 
-    ready_title: "4pyFINee15XXm9efINec15TXqteX15nXnA==",
+    ready_title: "4pyFINee15XXm9efINec15PXqteX15nXnA==",
     choose_language: "15HXl9eoINeQ16og15TXqdek15Qg15TXnteV16LXk9ek16og16LXnNeZ15o6",
     reset_loading: "157XkNek16Eg16DXqteV16DXmdedLi4u",
     reset_done: "4pyFINeU16DXqteV16DXmdedINeQ15XXpNeh15U=",
@@ -80,9 +80,14 @@ function stageRank(s) {
 }
 
 async function checkExistingSubmission() {
+    const loadingEl = document.getElementById('content');
+    const cancelEscalation = startLoadingEscalation(loadingEl);
+
     try {
         const url = `${CHECK_ENDPOINT}?report_id=${encodeURIComponent(reportId)}`;
-        const response = await fetch(url, { cache: 'no-store' });
+        const response = await fetchWithTimeout(url, { cache: 'no-store' }, FETCH_TIMEOUTS.quick);
+        cancelEscalation();
+
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
         const data = await response.json();
@@ -107,7 +112,11 @@ async function checkExistingSubmission() {
             showExistingProcessOptions({ docCount, hasDocs });
         }
     } catch (error) {
-        showError(`${t('err_loading')}`);
+        cancelEscalation();
+        showErrorWithRetry(document.getElementById('content'), error, {
+            lang: 'he',
+            onRetry: function () { checkExistingSubmission(); }
+        });
     }
 }
 
@@ -146,7 +155,7 @@ function showExistingProcessOptions({ docCount, hasDocs }) {
                 </div>
             </button>
 
-            <button class="btn btn-outline-danger" onclick="confirmReset()">
+            <button class="btn btn-outline-danger" id="resetBtn" onclick="confirmReset()">
                 <div class="bilingual">
                     <span>${t('btn_reset')}</span>
                     <span class="en text-sm">Delete & Start Over</span>
@@ -202,7 +211,19 @@ document.getElementById('resetModal')?.addEventListener('click', (e) => {
     if (e.target === e.currentTarget) closeResetModal();
 });
 
+// --- Double-submit lock for reset ---
+let _resetLocked = false;
+
 async function resetAndContinue() {
+    if (_resetLocked) return;
+    _resetLocked = true;
+
+    // Disable the confirm button in modal
+    const confirmBtn = document.querySelector('#resetModal .btn-primary, #resetModal .btn-outline-danger');
+    if (confirmBtn) confirmBtn.disabled = true;
+
+    closeResetModal();
+
     const content = document.getElementById('content');
     content.innerHTML = `
         <div class="loading">
@@ -211,9 +232,13 @@ async function resetAndContinue() {
         </div>
     `;
 
+    const cancelEscalation = startLoadingEscalation(content.querySelector('.loading'));
+
     try {
         const url = `${RESET_ENDPOINT}?report_id=${encodeURIComponent(reportId)}&token=${encodeURIComponent(token)}`;
-        const res = await fetch(url, { cache: 'no-store' });
+        const res = await fetchWithTimeout(url, { cache: 'no-store' }, FETCH_TIMEOUTS.mutate);
+        cancelEscalation();
+
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
         content.innerHTML = `
@@ -238,7 +263,14 @@ async function resetAndContinue() {
         `;
         reinitIcons();
     } catch (error) {
-        showError(`${t('err_reset')}`);
+        cancelEscalation();
+        showErrorWithRetry(content, error, {
+            lang: 'he',
+            onRetry: function () { _resetLocked = false; resetAndContinue(); }
+        });
+    } finally {
+        _resetLocked = false;
+        if (confirmBtn) confirmBtn.disabled = false;
     }
 }
 
@@ -272,6 +304,9 @@ function showError(msg) {
 
 function init() {
     document.getElementById('headerTitle').textContent = t('header_title') || 'Tax Questionnaire';
+
+    // Initialize offline detection
+    initOfflineDetection();
 
     if (!reportId || !clientId || !year || !token) {
         showError(t('err_missing_params'));
