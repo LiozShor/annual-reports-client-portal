@@ -1015,7 +1015,23 @@ function updateAIStats(stats) {
     document.getElementById('ai-stat-pending').textContent = stats.total_pending || 0;
     document.getElementById('ai-stat-matched').textContent = stats.matched || 0;
     document.getElementById('ai-stat-unmatched').textContent = stats.unmatched || 0;
-    document.getElementById('ai-stat-high-confidence').textContent = stats.high_confidence || 0;
+
+    // Repurpose 4th stat: "ביטחון גבוה" → "מנפיק שונה"
+    const mismatchCount = aiClassificationsData.filter(i =>
+        i.matched_template_id && i.issuer_match_quality === 'mismatch'
+    ).length;
+    document.getElementById('ai-stat-high-confidence').textContent = mismatchCount;
+
+    // Update 4th stat label and styling
+    const highConfItem = document.getElementById('ai-stat-high-confidence').closest('.ai-stat-item');
+    if (highConfItem) {
+        const label = highConfItem.querySelector('.ai-stat-label');
+        if (label) label.textContent = 'מנפיק שונה';
+        highConfItem.classList.remove('ai-stat-high-conf');
+        highConfItem.classList.add('ai-stat-mismatch');
+        const icon = highConfItem.querySelector('.icon-sm');
+        if (icon) icon.setAttribute('data-lucide', 'alert-triangle');
+    }
 }
 
 function applyAIFilters() {
@@ -1070,12 +1086,69 @@ const AI_DOC_NAMES = {
     T1701:'מסמכי הכנסה אחרת'
 };
 
-function getQualityBadgeHtml(quality) {
-    if (!quality || quality === 'single') return '';
-    const labels = { exact: 'התאמה מדויקת', fuzzy: 'התאמה חלקית', mismatch: 'לא תואם' };
-    const label = labels[quality];
-    if (!label) return '';
-    return `<span class="ai-quality-badge ai-quality-${quality}">${label}</span>`;
+function getCardState(item) {
+    if (!item.matched_template_id) return 'unmatched';
+    const q = item.issuer_match_quality;
+    if (q === 'mismatch') return 'issuer-mismatch';
+    if (q === 'fuzzy') return 'fuzzy';
+    return 'full';
+}
+
+function toggleMissingDocs(el) {
+    el.closest('.ai-missing-docs-group').classList.toggle('open');
+}
+
+async function approveAIDespiteMismatch(recordId) {
+    showConfirmDialog('לאשר את הסיווג למרות שהמנפיק לא תואם?', async () => {
+        showLoading('מאשר סיווג...');
+        try {
+            const response = await fetch(`${API_BASE}/review-classification`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    token: authToken,
+                    classification_id: recordId,
+                    action: 'approve'
+                })
+            });
+            const data = await response.json();
+            hideLoading();
+            if (!data.ok) throw new Error(data.error || 'שגיאה באישור הסיווג');
+            animateAndRemoveAI(recordId);
+            showAIToast('הסיווג אושר בהצלחה', 'success');
+        } catch (error) {
+            hideLoading();
+            showModal('error', 'שגיאה', error.message);
+        }
+    });
+}
+
+function handleComparisonRadio(recordId, radioEl) {
+    const card = document.querySelector(`.ai-review-card[data-id="${recordId}"]`);
+    if (!card) return;
+    // Deselect all radios in this card
+    card.querySelectorAll('.ai-comparison-radio').forEach(r => r.classList.remove('selected'));
+    radioEl.closest('.ai-comparison-radio').classList.add('selected');
+    // Enable assign button
+    const assignBtn = card.querySelector('.btn-ai-comparison-assign');
+    if (assignBtn) assignBtn.disabled = false;
+}
+
+function quickAssignSelected(recordId) {
+    const card = document.querySelector(`.ai-review-card[data-id="${recordId}"]`);
+    if (!card) return;
+    const selectedRadio = card.querySelector('.ai-comparison-radio-list input[type="radio"]:checked');
+    if (!selectedRadio) return;
+    const templateId = selectedRadio.dataset.templateId;
+    const docRecordId = selectedRadio.dataset.docRecordId || '';
+    const docName = selectedRadio.dataset.docName || '';
+    quickAssignFromComparison(recordId, templateId, docRecordId, docName);
+}
+
+function quickAssignFromComparison(recordId, templateId, docRecordId, docName) {
+    showConfirmDialog(`לשייך את הקובץ ל: ${docName}?`, async () => {
+        await submitAIReassign(recordId, templateId, docRecordId);
+    });
 }
 
 function renderAICards(items) {
@@ -1116,14 +1189,22 @@ function renderAICards(items) {
     let html = '';
 
     for (const [clientName, clientItems] of Object.entries(groups)) {
-        const matchedCount = clientItems.filter(i => !!i.matched_template_id).length;
-        const unmatchedCount = clientItems.length - matchedCount;
-        const issuerMults = { exact: 1.0, single: 1.0, fuzzy: 0.7, mismatch: 0.3 };
-        const avgConf = clientItems.reduce((sum, i) => {
-            const mult = issuerMults[i.issuer_match_quality] ?? 1.0;
-            return sum + (i.ai_confidence || 0) * mult;
-        }, 0) / clientItems.length;
-        const avgConfPct = Math.round(avgConf * 100);
+        // Count by card state for accordion badges
+        let identifiedCount = 0; // full + fuzzy
+        let mismatchCount = 0;   // issuer-mismatch
+        let unmatchedCount = 0;  // unmatched
+        for (const i of clientItems) {
+            const s = getCardState(i);
+            if (s === 'full' || s === 'fuzzy') identifiedCount++;
+            else if (s === 'issuer-mismatch') mismatchCount++;
+            else unmatchedCount++;
+        }
+
+        // Build accordion stat badges (only show if count > 0)
+        let badgesHtml = '';
+        if (identifiedCount > 0) badgesHtml += `<span class="ai-accordion-stat-badge badge-matched">✅ ${identifiedCount} זוהו</span>`;
+        if (mismatchCount > 0) badgesHtml += `<span class="ai-accordion-stat-badge badge-mismatch">⚠️ ${mismatchCount} מנפיק שונה</span>`;
+        if (unmatchedCount > 0) badgesHtml += `<span class="ai-accordion-stat-badge badge-unmatched">❌ ${unmatchedCount} לא זוהו</span>`;
 
         html += `
             <div class="ai-accordion" data-client="${escapeHtml(clientName)}">
@@ -1133,28 +1214,55 @@ function renderAICards(items) {
                         ${escapeHtml(clientName)}
                     </div>
                     <div class="ai-accordion-stats">
-                        <span class="ai-accordion-stat"><span class="stat-dot pending"></span> ${clientItems.length} ממתינים</span>
-                        <span class="ai-accordion-stat"><span class="stat-dot matched"></span> ${matchedCount} זוהו</span>
-                        <span class="ai-accordion-stat"><span class="stat-dot unmatched"></span> ${unmatchedCount} לא זוהו</span>
-                        <span class="ai-accordion-stat">⌀ ${avgConfPct}%</span>
+                        ${badgesHtml}
                     </div>
                     <span class="ai-accordion-icon">▾</span>
                 </div>
                 <div class="ai-accordion-body">
         `;
 
-        // Missing docs — shown once per client group
+        // Missing docs — grouped by category, collapsible
         const groupMissingDocs = (clientItems[0].missing_docs || []);
         if (groupMissingDocs.length > 0) {
-            const missingTagsHtml = groupMissingDocs.map(d => {
-                const id = d.template_id || d.name || '';
-                const label = AI_DOC_NAMES[id] || d.name || id;
-                return `<span class="ai-missing-doc-tag">${escapeHtml(label)}</span>`;
-            }).join(' ');
+            // Group by category
+            const catGroups = [];
+            let currentCat = null;
+            for (const d of groupMissingDocs) {
+                const cat = d.category || 'other';
+                if (cat !== currentCat) {
+                    currentCat = cat;
+                    catGroups.push({
+                        category: cat,
+                        name: d.category_name || cat,
+                        emoji: d.category_emoji || '',
+                        docs: []
+                    });
+                }
+                catGroups[catGroups.length - 1].docs.push(d);
+            }
+
+            let categoriesHtml = '';
+            for (const group of catGroups) {
+                const tagsHtml = group.docs.map(d => {
+                    const id = d.template_id || d.name || '';
+                    const label = d.name || AI_DOC_NAMES[id] || id;
+                    return `<span class="ai-missing-doc-tag">${escapeHtml(label)}</span>`;
+                }).join('');
+                categoriesHtml += `
+                    <div class="ai-missing-category">${escapeHtml(group.emoji)} ${escapeHtml(group.name)}</div>
+                    <div class="ai-missing-category-tags">${tagsHtml}</div>
+                `;
+            }
+
             html += `
                     <div class="ai-missing-docs-group">
-                        <span class="ai-context-label">מסמכים חסרים:</span>
-                        ${missingTagsHtml}
+                        <div class="ai-missing-docs-toggle" onclick="toggleMissingDocs(this)">
+                            <span class="toggle-arrow">▸</span>
+                            מסמכים חסרים (${groupMissingDocs.length})
+                        </div>
+                        <div class="ai-missing-docs-body">
+                            ${categoriesHtml}
+                        </div>
                     </div>
             `;
         }
@@ -1176,7 +1284,7 @@ function renderAICards(items) {
 
     container.innerHTML = html;
 
-    // Initialize inline comboboxes for unmatched cards
+    // Initialize inline comboboxes (unmatched + mismatch fallback)
     container.querySelectorAll('.doc-combobox-container').forEach(el => {
         const recordId = el.dataset.recordId;
         let docs = [];
@@ -1193,43 +1301,41 @@ function renderAICards(items) {
 }
 
 function renderAICard(item) {
-    const isMatched = !!item.matched_template_id;
+    const state = getCardState(item);
     const rawConfidence = item.ai_confidence || 0;
-    // Combined confidence: adjust by issuer match quality
-    const issuerMultipliers = { exact: 1.0, single: 1.0, fuzzy: 0.7, mismatch: 0.3 };
-    const issuerMultiplier = issuerMultipliers[item.issuer_match_quality] ?? 1.0;
-    const confidence = rawConfidence * issuerMultiplier;
-    const confidencePercent = Math.round(confidence * 100);
-    const confidenceClass = confidence >= 0.85 ? 'ai-confidence-high' :
-                           confidence >= 0.50 ? 'ai-confidence-medium' : 'ai-confidence-low';
-    const cardClass = isMatched ? 'matched' : 'unmatched';
+    const confidencePercent = Math.round(rawConfidence * 100);
+    const confidenceClass = rawConfidence >= 0.85 ? 'ai-confidence-high' :
+                           rawConfidence >= 0.50 ? 'ai-confidence-medium' : 'ai-confidence-low';
+    const cardClass = 'match-' + state;
 
     const fileIcon = getAIFileIcon(item.attachment_content_type || item.attachment_name || '');
     const receivedAt = item.received_at ? formatAIDate(item.received_at) : '';
     const senderEmail = item.sender_email || '';
-    // Sender info as tooltip on filename
     const senderTooltipParts = [senderEmail, receivedAt].filter(Boolean);
     const senderTooltip = senderTooltipParts.join(' | ');
 
     const missingDocs = item.missing_docs || [];
 
-    let classificationHtml;
-    if (isMatched) {
-        const docDisplayName = item.matched_doc_name || AI_DOC_NAMES[item.matched_template_id] || item.matched_template_name || item.matched_template_id || '';
+    const viewFileBtn = item.file_url
+        ? `<a href="${escapeAttr(item.file_url)}" target="_blank" class="btn btn-ghost btn-sm">
+               <i data-lucide="external-link" class="icon-sm"></i> פתח בקובץ
+           </a>`
+        : '';
+
+    const evidenceIcon = item.ai_reason
+        ? `<span class="ai-evidence-trigger" data-tooltip="${escapeAttr(item.ai_reason)}"><i data-lucide="bot" class="icon-sm"></i>?</span>`
+        : '';
+
+    let classificationHtml = '';
+    let actionsHtml = '';
+
+    if (state === 'full') {
+        // State A: Full match — green border, raw confidence, doc name
+        const docDisplayName = item.matched_doc_name || AI_DOC_NAMES[item.matched_template_id] || item.matched_template_name || '';
         classificationHtml = `
             <span class="ai-confidence-badge ${confidenceClass}">${confidencePercent}%</span>
             <span class="ai-template-match">${escapeHtml(docDisplayName)}</span>
-            ${getQualityBadgeHtml(item.issuer_match_quality)}
         `;
-    } else {
-        classificationHtml = `
-            <span class="ai-confidence-badge ai-confidence-low">--</span>
-            <span class="ai-template-unmatched">לא זוהה</span>
-        `;
-    }
-
-    let actionsHtml;
-    if (isMatched) {
         actionsHtml = `
             <button class="btn btn-success btn-sm" onclick="approveAIClassification('${escapeAttr(item.id)}')">
                 <i data-lucide="check" class="icon-sm"></i> אשר
@@ -1241,7 +1347,124 @@ function renderAICard(item) {
                 <i data-lucide="arrow-right-left" class="icon-sm"></i> שייך מחדש
             </button>
         `;
+
+    } else if (state === 'issuer-mismatch') {
+        // State B: Issuer mismatch — amber border, type confidence with prefix, comparison box
+        const templateName = item.matched_template_name || AI_DOC_NAMES[item.matched_template_id] || item.matched_template_id || '';
+        const aiIssuer = item.issuer_name || 'לא ידוע';
+
+        // Filter same-type docs from missing_docs
+        const sameTypeDocs = missingDocs.filter(d => d.template_id === item.matched_template_id);
+
+        let comparisonHtml;
+        if (sameTypeDocs.length > 0) {
+            // Radio list of same-type required docs
+            const radiosHtml = sameTypeDocs.map(d => {
+                const docName = d.name || AI_DOC_NAMES[d.template_id] || d.template_id;
+                return `
+                    <label class="ai-comparison-radio">
+                        <input type="radio" name="compare_${escapeAttr(item.id)}"
+                            data-template-id="${escapeAttr(d.template_id)}"
+                            data-doc-record-id="${escapeAttr(d.doc_record_id || '')}"
+                            data-doc-name="${escapeAttr(docName)}"
+                            onchange="handleComparisonRadio('${escapeAttr(item.id)}', this)">
+                        ${escapeHtml(docName)}
+                    </label>
+                `;
+            }).join('');
+
+            comparisonHtml = `
+                <div class="ai-issuer-comparison">
+                    <div class="ai-comparison-header">📥 התקבל מ: <span class="ai-issuer-value">${escapeHtml(aiIssuer)}</span></div>
+                    <div class="ai-comparison-divider"></div>
+                    <div class="ai-comparison-header">📋 נדרשים (${sameTypeDocs.length}):</div>
+                    <div class="ai-comparison-radio-list">
+                        ${radiosHtml}
+                    </div>
+                </div>
+            `;
+
+            actionsHtml = `
+                <button class="btn btn-primary btn-sm btn-ai-comparison-assign" disabled
+                    onclick="quickAssignSelected('${escapeAttr(item.id)}')">
+                    <i data-lucide="check" class="icon-sm"></i> שייך
+                </button>
+                <button class="btn btn-ghost-warning btn-sm" onclick="approveAIDespiteMismatch('${escapeAttr(item.id)}')">
+                    <i data-lucide="check" class="icon-sm"></i> אשר בכל זאת
+                </button>
+                <button class="btn btn-danger btn-sm" onclick="rejectAIClassification('${escapeAttr(item.id)}')">
+                    <i data-lucide="x" class="icon-sm"></i> דחה
+                </button>
+            `;
+        } else {
+            // Edge case: no same-type docs in missing — fall back to full combobox
+            comparisonHtml = `
+                <div class="ai-issuer-comparison">
+                    <div class="ai-comparison-header">📥 התקבל מ: <span class="ai-issuer-value">${escapeHtml(aiIssuer)}</span></div>
+                    <div class="ai-comparison-divider"></div>
+                    <div class="ai-comparison-header">⚠️ כל מסמכי ${escapeHtml(templateName)} כבר התקבלו</div>
+                </div>
+            `;
+            actionsHtml = `
+                <div class="ai-assign-section">
+                    <span class="ai-assign-label">שייך ל:</span>
+                    <div class="doc-combobox-container" data-record-id="${escapeAttr(item.id)}" data-docs='${escapeAttr(JSON.stringify(missingDocs))}'></div>
+                    <button class="btn btn-primary btn-sm btn-ai-assign-confirm" disabled
+                        onclick="assignAIUnmatched('${escapeAttr(item.id)}', this)">
+                        <i data-lucide="check" class="icon-sm"></i> שייך
+                    </button>
+                </div>
+                <button class="btn btn-ghost-warning btn-sm" onclick="approveAIDespiteMismatch('${escapeAttr(item.id)}')">
+                    <i data-lucide="check" class="icon-sm"></i> אשר בכל זאת
+                </button>
+                <button class="btn btn-danger btn-sm" onclick="rejectAIClassification('${escapeAttr(item.id)}')">
+                    <i data-lucide="x" class="icon-sm"></i> דחה
+                </button>
+            `;
+        }
+
+        classificationHtml = `
+            <span class="ai-confidence-prefix">סוג מסמך:</span>
+            <span class="ai-confidence-badge ${confidenceClass}">${confidencePercent}%</span>
+            <span class="ai-template-match">${escapeHtml(templateName)}</span>
+            ${comparisonHtml}
+        `;
+
+    } else if (state === 'fuzzy') {
+        // State C: Fuzzy match — green border, doc name, hint line
+        const docDisplayName = item.matched_doc_name || AI_DOC_NAMES[item.matched_template_id] || item.matched_template_name || '';
+        const aiIssuer = item.issuer_name || '';
+        // Extract doc issuer from matched_doc_name (after – separator)
+        const docIssuer = (item.matched_doc_name || '').split('–').slice(1).join('–').trim()
+                       || (item.matched_doc_name || '').split('-').slice(1).join('-').trim()
+                       || '';
+        const fuzzyHintHtml = aiIssuer && docIssuer
+            ? `<div class="ai-fuzzy-hint">💡 ${escapeHtml(aiIssuer)} ≈ ${escapeHtml(docIssuer)}</div>`
+            : '';
+
+        classificationHtml = `
+            <span class="ai-confidence-badge ${confidenceClass}">${confidencePercent}%</span>
+            <span class="ai-template-match">${escapeHtml(docDisplayName)}</span>
+            ${fuzzyHintHtml}
+        `;
+        actionsHtml = `
+            <button class="btn btn-success btn-sm" onclick="approveAIClassification('${escapeAttr(item.id)}')">
+                <i data-lucide="check" class="icon-sm"></i> אשר
+            </button>
+            <button class="btn btn-danger btn-sm" onclick="rejectAIClassification('${escapeAttr(item.id)}')">
+                <i data-lucide="x" class="icon-sm"></i> דחה
+            </button>
+            <button class="btn btn-ghost btn-sm" onclick="showAIReassignModal('${escapeAttr(item.id)}', ${escapeAttr(JSON.stringify(missingDocs))})">
+                <i data-lucide="arrow-right-left" class="icon-sm"></i> שייך מחדש
+            </button>
+        `;
+
     } else {
+        // State D: Unmatched — amber border, unchanged
+        classificationHtml = `
+            <span class="ai-confidence-badge ai-confidence-low">--</span>
+            <span class="ai-template-unmatched">לא זוהה</span>
+        `;
         actionsHtml = `
             <div class="ai-assign-section">
                 <span class="ai-assign-label">שייך ל:</span>
@@ -1256,17 +1479,6 @@ function renderAICard(item) {
             </button>
         `;
     }
-
-    const viewFileBtn = item.file_url
-        ? `<a href="${escapeAttr(item.file_url)}" target="_blank" class="btn btn-ghost btn-sm">
-               <i data-lucide="external-link" class="icon-sm"></i> פתח בקובץ
-           </a>`
-        : '';
-
-    // AI evidence tooltip icon
-    const evidenceIcon = item.ai_reason
-        ? `<span class="ai-evidence-trigger" data-tooltip="${escapeAttr(item.ai_reason)}"><i data-lucide="bot" class="icon-sm"></i>?</span>`
-        : '';
 
     return `
         <div class="ai-review-card ${cardClass}" data-id="${escapeAttr(item.id)}">
@@ -1474,12 +1686,14 @@ function recalcAIStats() {
     const total = aiClassificationsData.length;
     const matched = aiClassificationsData.filter(i => !!i.matched_template_id).length;
     const unmatched = total - matched;
-    const highConf = aiClassificationsData.filter(i => (i.ai_confidence || 0) >= 0.85).length;
+    const mismatchCount = aiClassificationsData.filter(i =>
+        i.matched_template_id && i.issuer_match_quality === 'mismatch'
+    ).length;
 
     document.getElementById('ai-stat-pending').textContent = total;
     document.getElementById('ai-stat-matched').textContent = matched;
     document.getElementById('ai-stat-unmatched').textContent = unmatched;
-    document.getElementById('ai-stat-high-confidence').textContent = highConf;
+    document.getElementById('ai-stat-high-confidence').textContent = mismatchCount;
 
     // Update tab badge
     const badge = document.getElementById('aiReviewTabBadge');
