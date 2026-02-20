@@ -1350,7 +1350,7 @@ function renderAICard(item) {
 
     } else if (state === 'issuer-mismatch') {
         // State B: Issuer mismatch — amber border, type confidence with prefix, comparison box
-        const templateName = item.matched_template_name || AI_DOC_NAMES[item.matched_template_id] || item.matched_template_id || '';
+        const templateName = AI_DOC_NAMES[item.matched_template_id] || item.matched_template_name || item.matched_template_id || '';
         const aiIssuer = item.issuer_name || 'לא ידוע';
 
         // Filter same-type docs from missing_docs
@@ -1460,10 +1460,14 @@ function renderAICard(item) {
         `;
 
     } else {
-        // State D: Unmatched — amber border, unchanged
+        // State D: Unmatched — amber border, show AI reason inline
+        const reasonHtml = item.ai_reason
+            ? `<div class="ai-reason-inline">${escapeHtml(item.ai_reason)}</div>`
+            : '';
         classificationHtml = `
             <span class="ai-confidence-badge ai-confidence-low">--</span>
             <span class="ai-template-unmatched">לא זוהה</span>
+            ${reasonHtml}
         `;
         actionsHtml = `
             <div class="ai-assign-section">
