@@ -98,24 +98,59 @@
 
             <!-- Main content -->
             <div id="content" style="display:none;">
-                <!-- Stats -->
-                <div class="stats-bar">
-                    <span class="stat-pill">
-                        <i data-lucide="file-text" class="icon-sm"></i>
-                        <strong id="totalDocs">0</strong> נדרשים
-                    </span>
-                    <span class="stat-pill stat-pill-danger">
-                        <i data-lucide="circle-x" class="icon-sm"></i>
-                        <strong id="markedDocs">0</strong> להסרה
-                    </span>
-                    <span class="stat-pill stat-pill-success">
-                        <i data-lucide="plus" class="icon-sm"></i>
-                        <strong id="addedDocs">0</strong> להוספה
-                    </span>
-                    <span class="stat-pill stat-pill-info">
-                        <i data-lucide="refresh-cw" class="icon-sm"></i>
-                        <strong id="restoredDocs">0</strong> לשחזור
-                    </span>
+                <!-- Status Overview -->
+                <div id="statusOverview" class="status-overview" style="display:none;">
+                    <div class="status-overview-header">
+                        <span class="text-sm font-semibold">סטטוס מסמכים</span>
+                        <span id="statusSummaryText" class="text-sm text-muted"></span>
+                    </div>
+                    <div class="progress-bar-stacked" id="progressBarStacked" role="progressbar" aria-label="התקדמות מסמכים">
+                        <div class="progress-segment progress-segment-received" id="segReceived" style="width:0%"></div>
+                        <div class="progress-segment progress-segment-fix" id="segFix" style="width:0%"></div>
+                        <div class="progress-segment progress-segment-missing" id="segMissing" style="width:0%"></div>
+                        <div class="progress-segment progress-segment-waived" id="segWaived" style="width:0%"></div>
+                    </div>
+                    <div class="status-count-boxes">
+                        <div class="status-count-box status-count-received">
+                            <strong id="countReceived">0</strong>
+                            <span>התקבל</span>
+                        </div>
+                        <div class="status-count-box status-count-missing">
+                            <strong id="countMissing">0</strong>
+                            <span>חסר</span>
+                        </div>
+                        <div class="status-count-box status-count-fix">
+                            <strong id="countFix">0</strong>
+                            <span>נדרש תיקון</span>
+                        </div>
+                        <div class="status-count-box status-count-waived">
+                            <strong id="countWaived">0</strong>
+                            <span>ויתור</span>
+                        </div>
+                    </div>
+
+                    <!-- Edit session pills (shown only when changes pending) -->
+                    <div id="editSessionBar" class="edit-session-bar" style="display:none;">
+                        <div class="edit-session-divider"></div>
+                        <div class="edit-session-pills">
+                            <span class="stat-pill">
+                                <i data-lucide="file-text" class="icon-sm"></i>
+                                <strong id="totalDocs">0</strong> נדרשים
+                            </span>
+                            <span class="stat-pill stat-pill-danger">
+                                <i data-lucide="circle-x" class="icon-sm"></i>
+                                <strong id="markedDocs">0</strong> להסרה
+                            </span>
+                            <span class="stat-pill stat-pill-success">
+                                <i data-lucide="plus" class="icon-sm"></i>
+                                <strong id="addedDocs">0</strong> להוספה
+                            </span>
+                            <span class="stat-pill stat-pill-info">
+                                <i data-lucide="refresh-cw" class="icon-sm"></i>
+                                <strong id="restoredDocs">0</strong> לשחזור
+                            </span>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Document list -->

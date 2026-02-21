@@ -280,8 +280,12 @@ function displayDocuments() {
                         <button class="note-btn ${hasNote ? 'has-note' : ''} ${noteChanges.has(doc.id) ? 'note-modified' : ''}"
                                 onclick="toggleNote('${doc.id}')"
                                 title="הערת משרד"><i data-lucide="${hasNote ? 'file-pen' : 'pen-line'}" class="icon-sm"></i></button>
-                        <button class="download-btn" disabled
-                                title="הורדה (בקרוב)"><i data-lucide="download" class="icon-sm"></i></button>
+                        ${doc.file_url && (effectiveStatus === 'Received' || effectiveStatus === 'Requires_Fix')
+                            ? `<a href="${escapeHtml(doc.file_url)}" target="_blank" rel="noopener noreferrer"
+                                    class="file-action-btn" title="צפה בקובץ" aria-label="צפה בקובץ"><i data-lucide="external-link" class="icon-sm"></i></a>
+                               <a href="${escapeHtml(doc.file_url)}${doc.file_url.includes('?') ? '&' : '?'}download=1" target="_blank" rel="noopener noreferrer"
+                                    class="file-action-btn" title="הורד קובץ" aria-label="הורד קובץ"><i data-lucide="download" class="icon-sm"></i></a>`
+                            : ''}
                     </div>
                     <div class="note-editor" id="note-${doc.id}" style="display:none;">
                         <textarea class="note-textarea" id="notetext-${doc.id}"
@@ -622,6 +626,65 @@ function updateStats() {
     document.getElementById('markedDocs').textContent = markedForRemoval.size;
     document.getElementById('addedDocs').textContent = docsToAdd.size;
     document.getElementById('restoredDocs').textContent = markedForRestore.size;
+
+    updateStatusOverview();
+}
+
+// Update status overview panel (progress bar, count boxes, edit session visibility)
+function updateStatusOverview() {
+    const overview = document.getElementById('statusOverview');
+    if (!overview) return;
+
+    const total = currentDocuments.length;
+    if (total === 0) {
+        overview.style.display = 'none';
+        return;
+    }
+    overview.style.display = 'block';
+
+    // Count each status (use effective status accounting for pending changes)
+    let received = 0, missing = 0, fix = 0, waived = 0;
+    for (const doc of currentDocuments) {
+        const effectiveStatus = statusChanges.get(doc.id) || doc.status;
+        switch (effectiveStatus) {
+            case 'Received': received++; break;
+            case 'Requires_Fix': fix++; break;
+            case 'Waived': waived++; break;
+            default: missing++; break;
+        }
+    }
+
+    // Update count boxes
+    document.getElementById('countReceived').textContent = received;
+    document.getElementById('countMissing').textContent = missing;
+    document.getElementById('countFix').textContent = fix;
+    document.getElementById('countWaived').textContent = waived;
+
+    // Update progress bar segments
+    const pctReceived = (received / total) * 100;
+    const pctFix = (fix / total) * 100;
+    const pctMissing = (missing / total) * 100;
+    const pctWaived = (waived / total) * 100;
+
+    document.getElementById('segReceived').style.width = pctReceived + '%';
+    document.getElementById('segFix').style.width = pctFix + '%';
+    document.getElementById('segMissing').style.width = pctMissing + '%';
+    document.getElementById('segWaived').style.width = pctWaived + '%';
+
+    // Green glow when 100% complete (all received or waived, none missing/fix)
+    const progressBar = document.getElementById('progressBarStacked');
+    progressBar.classList.toggle('complete', missing === 0 && fix === 0 && received > 0);
+
+    // Summary text: "X מתוך Y (Z%)"
+    const activeTotal = total - waived;
+    const completePct = activeTotal > 0 ? Math.round((received / activeTotal) * 100) : 0;
+    document.getElementById('statusSummaryText').textContent =
+        `${received} מתוך ${activeTotal} (${completePct}%)`;
+
+    // Show edit session bar only when there are pending changes
+    const hasChanges = markedForRemoval.size > 0 || docsToAdd.size > 0 ||
+        markedForRestore.size > 0 || statusChanges.size > 0 || noteChanges.size > 0;
+    document.getElementById('editSessionBar').style.display = hasChanges ? 'block' : 'none';
 }
 
 // Strip HTML tags for plain text display
