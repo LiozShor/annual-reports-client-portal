@@ -1125,9 +1125,9 @@ async function approveAIDespiteMismatch(recordId) {
             }, FETCH_TIMEOUTS.mutate);
             const data = await parseAIResponse(response);
             hideLoading();
-            if (!data.ok) throw new Error(data.error || 'שגיאה באישור הסיווג');
+            if (!data.ok) throw new Error(formatAIResponseError(data));
             animateAndRemoveAI(recordId);
-            showAIToast('הסיווג אושר בהצלחה', 'success');
+            showAIToast(formatAISuccessToast(data), 'success');
         } catch (error) {
             hideLoading();
             showModal('error', 'שגיאה', error.message);
@@ -1545,6 +1545,23 @@ async function parseAIResponse(response) {
     }
 }
 
+function formatAIResponseError(data) {
+    if (!data.errors || data.errors.length === 0) return data.error || 'שגיאה לא ידועה';
+    return data.errors.map(e => `${e.node}: ${e.message}`).join('\n');
+}
+
+function formatAISuccessToast(data) {
+    const title = data.doc_title || '';
+    const parts = [];
+    if (data.action === 'approve') parts.push('אושר');
+    else if (data.action === 'reject') parts.push('נדחה');
+    else if (data.action === 'reassign') parts.push('שויך מחדש');
+    if (title) parts.push(`— ${title}`);
+    if (data.renamed) parts.push('(שם הקובץ עודכן)');
+    if (data.errors && data.errors.length > 0) parts.push(`⚠ ${data.errors.length} שגיאות`);
+    return parts.join(' ');
+}
+
 async function approveAIClassification(recordId) {
     showConfirmDialog('לאשר את הסיווג?', async () => {
         showLoading('מאשר סיווג...');
@@ -1563,10 +1580,10 @@ async function approveAIClassification(recordId) {
             const data = await parseAIResponse(response);
             hideLoading();
 
-            if (!data.ok) throw new Error(data.error || 'שגיאה באישור הסיווג');
+            if (!data.ok) throw new Error(formatAIResponseError(data));
 
             animateAndRemoveAI(recordId);
-            showAIToast('הסיווג אושר בהצלחה', 'success');
+            showAIToast(formatAISuccessToast(data), 'success');
         } catch (error) {
             hideLoading();
             showModal('error', 'שגיאה', error.message);
@@ -1592,10 +1609,10 @@ async function rejectAIClassification(recordId) {
             const data = await parseAIResponse(response);
             hideLoading();
 
-            if (!data.ok) throw new Error(data.error || 'שגיאה בדחיית הסיווג');
+            if (!data.ok) throw new Error(formatAIResponseError(data));
 
             animateAndRemoveAI(recordId);
-            showAIToast('הסיווג נדחה', 'danger');
+            showAIToast(formatAISuccessToast(data), 'danger');
         } catch (error) {
             hideLoading();
             showModal('error', 'שגיאה', error.message);
@@ -1667,10 +1684,10 @@ async function submitAIReassign(recordId, templateId, docRecordId) {
         const data = await parseAIResponse(response);
         hideLoading();
 
-        if (!data.ok) throw new Error(data.error || 'שגיאה בשיוך מחדש');
+        if (!data.ok) throw new Error(formatAIResponseError(data));
 
         animateAndRemoveAI(recordId);
-        showAIToast('המסמך שויך מחדש בהצלחה', 'success');
+        showAIToast(formatAISuccessToast(data), 'success');
     } catch (error) {
         hideLoading();
         showModal('error', 'שגיאה', error.message);
