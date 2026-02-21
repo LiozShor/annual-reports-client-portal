@@ -1664,8 +1664,9 @@ async function confirmAIReassign() {
     const docRecordId = combobox ? combobox.dataset.selectedDocId : '';
     if (!templateId || !aiCurrentReassignId) return;
 
+    const recordId = aiCurrentReassignId;
     closeAIReassignModal();
-    await submitAIReassign(aiCurrentReassignId, templateId, docRecordId);
+    await submitAIReassign(recordId, templateId, docRecordId);
 }
 
 async function submitAIReassign(recordId, templateId, docRecordId) {
