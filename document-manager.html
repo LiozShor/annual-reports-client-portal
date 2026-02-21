@@ -163,11 +163,15 @@
 
                 <!-- Add documents section -->
                 <div class="add-section">
-                    <h2 class="section-title">
-                        <i data-lucide="plus" class="icon"></i>
-                        הוספת מסמכים
-                    </h2>
-                    <p class="text-sm text-muted mb-4">בחר מסמכים מהרשימה או הוסף מסמך מותאם אישית</p>
+                    <button class="collapsible-trigger" onclick="this.setAttribute('aria-expanded', this.getAttribute('aria-expanded')==='true'?'false':'true'); this.nextElementSibling.classList.toggle('open')" aria-expanded="false">
+                        <span class="flex items-center gap-2">
+                            <i data-lucide="plus" class="icon-sm"></i>
+                            הוספת מסמכים
+                        </span>
+                        <i data-lucide="chevron-down" class="icon"></i>
+                    </button>
+                    <div class="collapsible-content">
+                    <p class="text-sm text-muted mb-4" style="margin-top: var(--sp-4);">בחר מסמכים מהרשימה או הוסף מסמך מותאם אישית</p>
 
                     <div class="form-group mb-4">
                         <label class="form-label" for="docTypeSelect">בחר מסמכים להוספה</label>
@@ -222,6 +226,7 @@
                             <i data-lucide="refresh-cw" class="icon-sm"></i> אפס טופס
                         </button>
                     </div>
+                    </div><!-- /.collapsible-content -->
                 </div>
             </div>
 
