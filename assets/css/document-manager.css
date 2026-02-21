@@ -482,10 +482,32 @@ body {
 /* ==================== ADD SECTION ==================== */
 .add-section {
     background: white;
-    border: 1px solid var(--gray-200);
+    border: 2px solid var(--brand-200);
     border-radius: var(--radius-lg);
-    padding: var(--sp-6);
+    padding: 0;
     margin: var(--sp-5) var(--sp-6);
+    overflow: hidden;
+}
+
+.add-section > .collapsible-trigger {
+    background: var(--brand-50);
+    padding: var(--sp-4) var(--sp-6);
+    font-size: var(--text-base);
+    font-weight: 700;
+    color: var(--brand-700);
+    border-bottom: 1px solid var(--brand-100);
+}
+
+.add-section > .collapsible-trigger:hover {
+    background: var(--brand-100);
+}
+
+.add-section > .collapsible-content {
+    padding: 0 var(--sp-6);
+}
+
+.add-section > .collapsible-content.open {
+    padding: 0 var(--sp-6) var(--sp-6);
 }
 
 .section-title {
