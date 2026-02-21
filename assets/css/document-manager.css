@@ -95,7 +95,7 @@ body {
 /* Count boxes */
 .status-count-boxes {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(5, 1fr);
     gap: var(--sp-3);
 }
 
@@ -106,6 +106,34 @@ body {
     padding: var(--sp-3) var(--sp-2);
     border-radius: var(--radius-md);
     text-align: center;
+    cursor: pointer;
+    position: relative;
+    border: 2px solid transparent;
+    transition: all var(--transition-fast);
+}
+
+.status-count-box:hover {
+    filter: brightness(0.95);
+}
+
+.status-count-total {
+    background: var(--brand-50);
+    color: var(--brand-700);
+}
+
+.status-count-box.active {
+    border-color: currentColor;
+}
+
+.status-count-box.active::after {
+    content: '';
+    position: absolute;
+    top: var(--sp-1);
+    left: var(--sp-1);
+    width: 8px;
+    height: 8px;
+    background: var(--brand-500);
+    border-radius: 50%;
 }
 
 .status-count-box strong {
@@ -692,6 +720,14 @@ body {
     /* container for docs within a category */
 }
 
+/* Filter hidden (status filter) */
+.document-wrapper.filter-hidden,
+.category-header.filter-hidden,
+.document-group.filter-hidden,
+.person-header.filter-hidden {
+    display: none;
+}
+
 /* ==================== ALERT OVERRIDES ==================== */
 .alert.show {
     display: flex;
@@ -716,7 +752,7 @@ body {
     }
 
     .status-count-boxes {
-        grid-template-columns: repeat(2, 1fr);
+        grid-template-columns: repeat(3, 1fr);
     }
 
     .edit-session-pills {

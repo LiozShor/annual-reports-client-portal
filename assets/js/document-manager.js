@@ -26,6 +26,7 @@ let statusChanges = new Map();      // docId → newStatus
 let noteChanges = new Map();        // docId → noteText
 let sendEmailOnSave = true;
 let currentDropdownDocId = null;    // currently open status dropdown target
+let activeStatusFilter = '';        // currently active status filter (empty = show all)
 
 // Variable name → Hebrew label mapping (UI only)
 const VAR_LABELS = {
@@ -301,6 +302,7 @@ function displayDocuments() {
 
     container.innerHTML = html;
     if (typeof lucide !== 'undefined') lucide.createIcons();
+    applyStatusFilter();
 }
 
 function getStatusBadge(status) {
@@ -390,6 +392,7 @@ function setDocStatus(newStatus) {
     updateDocStatusVisual(docId);
     closeStatusDropdown();
     updateStats();
+    applyStatusFilter();
 }
 
 function updateDocStatusVisual(docId) {
@@ -655,6 +658,7 @@ function updateStatusOverview() {
     }
 
     // Update count boxes
+    document.getElementById('countTotal').textContent = total;
     document.getElementById('countReceived').textContent = received;
     document.getElementById('countMissing').textContent = missing;
     document.getElementById('countFix').textContent = fix;
@@ -685,6 +689,88 @@ function updateStatusOverview() {
     const hasChanges = markedForRemoval.size > 0 || docsToAdd.size > 0 ||
         markedForRestore.size > 0 || statusChanges.size > 0 || noteChanges.size > 0;
     document.getElementById('editSessionBar').style.display = hasChanges ? 'block' : 'none';
+}
+
+// Toggle status filter (click on status count box)
+function toggleStatusFilter(status) {
+    // If clicking the same status, clear filter (toggle off)
+    if (activeStatusFilter === status && status !== '') {
+        activeStatusFilter = '';
+    } else {
+        activeStatusFilter = status;
+    }
+
+    // Update visual active state on boxes
+    const boxes = document.querySelectorAll('.status-count-box');
+    boxes.forEach(box => box.classList.remove('active'));
+
+    if (activeStatusFilter === '') {
+        // Activate total box
+        const totalBox = document.querySelector('.status-count-box[data-status=""]');
+        if (totalBox) totalBox.classList.add('active');
+    } else {
+        const activeBox = document.querySelector(`.status-count-box[data-status="${activeStatusFilter}"]`);
+        if (activeBox) activeBox.classList.add('active');
+    }
+
+    applyStatusFilter();
+}
+
+// Apply status filter — show/hide document wrappers based on active filter
+function applyStatusFilter() {
+    if (!activeStatusFilter) {
+        // Show all — remove filter-hidden from everything
+        document.querySelectorAll('.filter-hidden').forEach(el => el.classList.remove('filter-hidden'));
+        return;
+    }
+
+    // Show/hide each document wrapper based on effective status
+    document.querySelectorAll('.document-wrapper').forEach(wrapper => {
+        const docId = wrapper.id.replace('wrapper-', '');
+        const doc = currentDocuments.find(d => d.id === docId);
+        if (!doc) return;
+
+        const effectiveStatus = statusChanges.get(doc.id) || doc.status;
+        // Normalize: anything not Received/Requires_Fix/Waived is treated as Required_Missing
+        let normalizedStatus = effectiveStatus;
+        if (normalizedStatus !== 'Received' && normalizedStatus !== 'Requires_Fix' && normalizedStatus !== 'Waived') {
+            normalizedStatus = 'Required_Missing';
+        }
+
+        if (normalizedStatus === activeStatusFilter) {
+            wrapper.classList.remove('filter-hidden');
+        } else {
+            wrapper.classList.add('filter-hidden');
+        }
+    });
+
+    // Hide empty document-groups and their preceding category-headers
+    document.querySelectorAll('.document-group').forEach(group => {
+        const visibleWrappers = group.querySelectorAll('.document-wrapper:not(.filter-hidden)');
+        const isEmpty = visibleWrappers.length === 0;
+        group.classList.toggle('filter-hidden', isEmpty);
+
+        // Hide the category-header sibling (previous element)
+        const prev = group.previousElementSibling;
+        if (prev && prev.classList.contains('category-header')) {
+            prev.classList.toggle('filter-hidden', isEmpty);
+        }
+    });
+
+    // Hide person-headers when all their following content is hidden
+    document.querySelectorAll('.person-header').forEach(header => {
+        let allHidden = true;
+        let sibling = header.nextElementSibling;
+        while (sibling && !sibling.classList.contains('person-header')) {
+            if ((sibling.classList.contains('category-header') || sibling.classList.contains('document-group')) &&
+                !sibling.classList.contains('filter-hidden')) {
+                allHidden = false;
+                break;
+            }
+            sibling = sibling.nextElementSibling;
+        }
+        header.classList.toggle('filter-hidden', allHidden);
+    });
 }
 
 // Strip HTML tags for plain text display
@@ -996,6 +1082,13 @@ function resetForm() {
     // Reset email toggle checkbox
     const emailToggle = document.getElementById('emailToggle');
     if (emailToggle) emailToggle.checked = true;
+
+    // Reset status filter
+    activeStatusFilter = '';
+    const boxes = document.querySelectorAll('.status-count-box');
+    boxes.forEach(box => box.classList.remove('active'));
+    const totalBox = document.querySelector('.status-count-box[data-status=""]');
+    if (totalBox) totalBox.classList.add('active');
 
     // Re-render documents to clear all visual states
     displayDocuments();

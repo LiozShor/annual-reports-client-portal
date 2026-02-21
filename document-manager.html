@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ניהול מסמכים</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📋</text></svg>">
     <link rel="stylesheet" href="assets/css/design-system.css">
     <link rel="stylesheet" href="assets/css/common.css">
     <link rel="stylesheet" href="assets/css/document-manager.css">
@@ -111,19 +112,23 @@
                         <div class="progress-segment progress-segment-waived" id="segWaived" style="width:0%"></div>
                     </div>
                     <div class="status-count-boxes">
-                        <div class="status-count-box status-count-received">
+                        <div class="status-count-box status-count-total active" data-status="" onclick="toggleStatusFilter('')" ondblclick="toggleStatusFilter('')">
+                            <strong id="countTotal">0</strong>
+                            <span>סה"כ</span>
+                        </div>
+                        <div class="status-count-box status-count-received" data-status="Received" onclick="toggleStatusFilter('Received')" ondblclick="toggleStatusFilter('')">
                             <strong id="countReceived">0</strong>
                             <span>התקבל</span>
                         </div>
-                        <div class="status-count-box status-count-missing">
+                        <div class="status-count-box status-count-missing" data-status="Required_Missing" onclick="toggleStatusFilter('Required_Missing')" ondblclick="toggleStatusFilter('')">
                             <strong id="countMissing">0</strong>
                             <span>חסר</span>
                         </div>
-                        <div class="status-count-box status-count-fix">
+                        <div class="status-count-box status-count-fix" data-status="Requires_Fix" onclick="toggleStatusFilter('Requires_Fix')" ondblclick="toggleStatusFilter('')">
                             <strong id="countFix">0</strong>
                             <span>נדרש תיקון</span>
                         </div>
-                        <div class="status-count-box status-count-waived">
+                        <div class="status-count-box status-count-waived" data-status="Waived" onclick="toggleStatusFilter('Waived')" ondblclick="toggleStatusFilter('')">
                             <strong id="countWaived">0</strong>
                             <span>ויתור</span>
                         </div>
