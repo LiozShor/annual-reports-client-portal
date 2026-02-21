@@ -1551,7 +1551,7 @@ function formatAIResponseError(data) {
 }
 
 function formatAISuccessToast(data) {
-    const title = data.doc_title || '';
+    const title = (data.doc_title || '').replace(/<[^>]+>/g, '');
     const parts = [];
     if (data.action === 'approve') parts.push('אושר');
     else if (data.action === 'reject') parts.push('נדחה');
