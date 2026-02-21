@@ -1406,6 +1406,9 @@ function renderAICard(item) {
                     onclick="quickAssignSelected('${escapeAttr(item.id)}')">
                     <i data-lucide="check" class="icon-sm"></i> שייך
                 </button>
+                <button class="btn btn-ghost btn-sm" onclick="showAIReassignModal('${escapeAttr(item.id)}', ${escapeAttr(JSON.stringify(missingDocs))})">
+                    <i data-lucide="arrow-right-left" class="icon-sm"></i> שייך מחדש
+                </button>
                 <button class="btn btn-ghost-warning btn-sm" onclick="approveAIDespiteMismatch('${escapeAttr(item.id)}')">
                     <i data-lucide="check" class="icon-sm"></i> אשר בכל זאת
                 </button>
