@@ -1582,15 +1582,31 @@ function formatAISuccessToast(data) {
     else if (data.action === 'reject') parts.push('נדחה');
     else if (data.action === 'reassign') parts.push('שויך מחדש');
     if (title) parts.push(`— ${title}`);
-    if (data.moved_to_archive) parts.push('(הועבר לארכיון)');
-    if (data.renamed) parts.push('(שם הקובץ עודכן)');
     if (data.errors && data.errors.length > 0) parts.push(`⚠ ${data.errors.length} שגיאות`);
     return parts.join(' ');
 }
 
+function setCardLoading(recordId, text) {
+    const card = document.querySelector(`.ai-review-card[data-id="${recordId}"]`);
+    if (!card) return;
+    card.classList.add('ai-loading');
+    const overlay = document.createElement('div');
+    overlay.className = 'ai-card-loading-overlay';
+    overlay.innerHTML = `<div class="spinner"></div><span>${text || 'מעבד...'}</span>`;
+    card.appendChild(overlay);
+}
+
+function clearCardLoading(recordId) {
+    const card = document.querySelector(`.ai-review-card[data-id="${recordId}"]`);
+    if (!card) return;
+    card.classList.remove('ai-loading');
+    const overlay = card.querySelector('.ai-card-loading-overlay');
+    if (overlay) overlay.remove();
+}
+
 async function approveAIClassification(recordId) {
     showConfirmDialog('לאשר את הסיווג?', async () => {
-        showLoading('מאשר סיווג...');
+        setCardLoading(recordId, 'מאשר סיווג...');
 
         try {
             const response = await fetchWithTimeout(`${API_BASE}/review-classification`, {
@@ -1604,14 +1620,14 @@ async function approveAIClassification(recordId) {
             }, FETCH_TIMEOUTS.mutate);
 
             const data = await parseAIResponse(response);
-            hideLoading();
+            clearCardLoading(recordId);
 
             if (!data.ok) throw new Error(formatAIResponseError(data));
 
             animateAndRemoveAI(recordId);
             showAIToast(formatAISuccessToast(data), 'success');
         } catch (error) {
-            hideLoading();
+            clearCardLoading(recordId);
             showModal('error', 'שגיאה', error.message);
         }
     });
@@ -1619,7 +1635,7 @@ async function approveAIClassification(recordId) {
 
 async function rejectAIClassification(recordId) {
     showConfirmDialog('לדחות את הסיווג? המסמך יוסר מהתור.', async () => {
-        showLoading('דוחה סיווג...');
+        setCardLoading(recordId, 'דוחה סיווג...');
 
         try {
             const response = await fetchWithTimeout(`${API_BASE}/review-classification`, {
@@ -1633,14 +1649,14 @@ async function rejectAIClassification(recordId) {
             }, FETCH_TIMEOUTS.mutate);
 
             const data = await parseAIResponse(response);
-            hideLoading();
+            clearCardLoading(recordId);
 
             if (!data.ok) throw new Error(formatAIResponseError(data));
 
             animateAndRemoveAI(recordId);
             showAIToast(formatAISuccessToast(data), 'danger');
         } catch (error) {
-            hideLoading();
+            clearCardLoading(recordId);
             showModal('error', 'שגיאה', error.message);
         }
     }, 'דחה', true);
@@ -1693,7 +1709,7 @@ async function confirmAIReassign() {
 }
 
 async function submitAIReassign(recordId, templateId, docRecordId) {
-    showLoading('משייך מחדש...');
+    setCardLoading(recordId, 'משייך מחדש...');
 
     try {
         const response = await fetchWithTimeout(`${API_BASE}/review-classification`, {
@@ -1709,14 +1725,14 @@ async function submitAIReassign(recordId, templateId, docRecordId) {
         }, FETCH_TIMEOUTS.mutate);
 
         const data = await parseAIResponse(response);
-        hideLoading();
+        clearCardLoading(recordId);
 
         if (!data.ok) throw new Error(formatAIResponseError(data));
 
         animateAndRemoveAI(recordId);
         showAIToast(formatAISuccessToast(data), 'success');
     } catch (error) {
-        hideLoading();
+        clearCardLoading(recordId);
         showModal('error', 'שגיאה', error.message);
     }
 }

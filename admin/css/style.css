@@ -1169,6 +1169,37 @@ tr:hover .client-view-link {
     transition: all 350ms ease-out;
 }
 
+.ai-review-card.ai-loading {
+    position: relative;
+    pointer-events: none;
+}
+
+.ai-review-card.ai-loading .ai-card-actions {
+    opacity: 0.3;
+}
+
+.ai-card-loading-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(255, 255, 255, 0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--sp-2);
+    z-index: 2;
+    border-radius: var(--radius-lg);
+}
+
+.ai-card-loading-overlay .spinner {
+    width: 20px;
+    height: 20px;
+}
+
+.ai-card-loading-overlay span {
+    font-size: var(--fs-sm);
+    color: var(--gray-600);
+}
+
 .ai-review-card.match-full,
 .ai-review-card.match-fuzzy {
     border-inline-start: 3px solid var(--success-500);
