@@ -1730,6 +1730,8 @@ tr:hover .client-view-link {
     top: var(--sp-5);
     left: 50%;
     transform: translateX(-50%) translateY(-120%);
+    opacity: 0;
+    pointer-events: none;
     background: var(--gray-800);
     color: white;
     padding: var(--sp-3) var(--sp-5);
@@ -1738,7 +1740,7 @@ tr:hover .client-view-link {
     font-weight: 500;
     box-shadow: var(--shadow-lg);
     z-index: 2000;
-    transition: transform var(--transition-base);
+    transition: transform var(--transition-base), opacity var(--transition-base);
     display: flex;
     align-items: center;
     gap: var(--sp-2);
@@ -1746,6 +1748,8 @@ tr:hover .client-view-link {
 
 .ai-toast.show {
     transform: translateX(-50%) translateY(0);
+    opacity: 1;
+    pointer-events: auto;
 }
 
 .ai-toast.ai-toast-success { background: var(--success-700); }
