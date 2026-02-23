@@ -108,7 +108,7 @@ function switchTab(tabName, evt) {
     } else if (tabName === 'send') {
         loadPendingClients(true);
     } else if (tabName === 'ai-review') {
-        loadAIClassifications();
+        loadAIClassifications(aiReviewLoaded);
     }
 }
 
@@ -975,14 +975,14 @@ let aiClassificationsData = [];
 let aiCurrentReassignId = null;
 let aiReviewLoaded = false;
 
-async function loadAIClassifications() {
-    showLoading('טוען סיווגים...');
+async function loadAIClassifications(silent = false) {
+    if (!silent) showLoading('טוען סיווגים...');
 
     try {
         const response = await fetchWithTimeout(`${API_BASE}/get-pending-classifications?token=${authToken}`, {}, FETCH_TIMEOUTS.load);
         const data = await response.json();
 
-        hideLoading();
+        if (!silent) hideLoading();
 
         if (!data.ok) {
             if (data.error === 'unauthorized') {
@@ -1007,19 +1007,21 @@ async function loadAIClassifications() {
             badge.style.display = 'none';
         }
     } catch (error) {
-        hideLoading();
+        if (!silent) hideLoading();
         console.error('AI Review load error:', error);
-        const container = document.getElementById('aiCardsContainer');
-        container.innerHTML = `
-            <div class="empty-state">
-                <div class="empty-state-icon"><i data-lucide="alert-triangle" class="icon-2xl"></i></div>
-                <p style="color: var(--danger-500);">לא ניתן לטעון את הסיווגים. נסה שוב.</p>
-                <button class="btn btn-secondary mt-4" onclick="loadAIClassifications()">
-                    <i data-lucide="refresh-cw" class="icon-sm"></i> נסה שוב
-                </button>
-            </div>
-        `;
-        if (typeof lucide !== 'undefined') lucide.createIcons();
+        if (!silent) {
+            const container = document.getElementById('aiCardsContainer');
+            container.innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-state-icon"><i data-lucide="alert-triangle" class="icon-2xl"></i></div>
+                    <p style="color: var(--danger-500);">לא ניתן לטעון את הסיווגים. נסה שוב.</p>
+                    <button class="btn btn-secondary mt-4" onclick="loadAIClassifications()">
+                        <i data-lucide="refresh-cw" class="icon-sm"></i> נסה שוב
+                    </button>
+                </div>
+            `;
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+        }
     }
 }
 
