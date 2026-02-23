@@ -91,6 +91,7 @@ body {
 
 .nav-brand .site-logo {
     height: 28px;
+    max-height: 28px;
 }
 
 .nav-actions {
