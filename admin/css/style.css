@@ -89,9 +89,10 @@ body {
     gap: var(--sp-2);
 }
 
-.nav-brand .site-logo {
-    height: 28px;
-    max-height: 28px;
+.admin-logo-header {
+    text-align: center;
+    padding: var(--sp-4) 0 0;
+    background: white;
 }
 
 .nav-actions {

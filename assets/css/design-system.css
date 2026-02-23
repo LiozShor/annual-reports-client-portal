@@ -591,10 +591,11 @@ textarea {
 
 /* ==================== SITE LOGO ==================== */
 .site-logo {
-    height: 36px;
-    max-height: 36px;
+    height: 100px;
+    max-height: 100px;
     width: auto;
     display: block;
+    margin: var(--sp-4) auto 0;
     object-fit: contain;
 }
 
