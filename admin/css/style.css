@@ -70,9 +70,15 @@ body {
 }
 
 /* ==================== ADMIN NAVBAR ==================== */
-.admin-navbar {
+.admin-header {
+    position: sticky;
+    top: 0;
+    z-index: 100;
     background: white;
     border-bottom: 1px solid var(--gray-200);
+}
+
+.admin-navbar {
     padding: 0 var(--sp-6);
     display: flex;
     justify-content: space-between;
@@ -81,18 +87,9 @@ body {
 }
 
 .nav-brand {
-    font-size: var(--text-lg);
-    font-weight: 700;
-    color: var(--gray-800);
     display: flex;
     align-items: center;
-    gap: var(--sp-2);
-}
-
-.admin-logo-header {
-    text-align: center;
-    padding: var(--sp-4) 0 0;
-    background: white;
+    line-height: 0;
 }
 
 .nav-actions {

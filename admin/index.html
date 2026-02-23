@@ -40,26 +40,22 @@
 
     <!-- Main App -->
     <div id="app" class="app">
-        <!-- Site Logo -->
-        <div class="admin-logo-header">
-            <a href="../">
-                <img src="../assets/images/logo.png" alt="Moshe Atsits - רואה חשבון" class="site-logo" height="100">
-            </a>
-        </div>
         <!-- Persistent Navbar -->
-        <nav class="admin-navbar">
-            <div class="nav-brand">
-                פורטל ניהול
-            </div>
-            <div class="nav-actions">
-                <button class="btn btn-ghost btn-sm" onclick="refreshData()">
-                    <i data-lucide="refresh-cw" class="icon-sm"></i> רענן
-                </button>
-                <button class="btn btn-ghost btn-sm" onclick="logout()">
-                    <i data-lucide="log-out" class="icon-sm"></i> התנתק
-                </button>
-            </div>
-        </nav>
+        <header class="admin-header">
+            <nav class="admin-navbar">
+                <a href="../" class="nav-brand">
+                    <img src="../assets/images/logo.png" alt="משרד רו״ח Client Name" class="site-logo site-logo-sm" width="1016" height="318">
+                </a>
+                <div class="nav-actions">
+                    <button class="btn btn-ghost btn-sm" onclick="refreshData()">
+                        <i data-lucide="refresh-cw" class="icon-sm"></i> רענן
+                    </button>
+                    <button class="btn btn-ghost btn-sm" onclick="logout()">
+                        <i data-lucide="log-out" class="icon-sm"></i> התנתק
+                    </button>
+                </div>
+            </nav>
+        </header>
 
         <div class="tabs-nav">
             <button class="tab-item active" onclick="switchTab('dashboard', event)"><i data-lucide="bar-chart-3" class="icon-sm"></i> לוח בקרה</button>

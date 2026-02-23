@@ -34,10 +34,7 @@ body {
     margin: 0 auto var(--sp-4);
 }
 
-.header-logo .site-logo {
-    height: 100px;
-    max-height: 100px;
-}
+/* Logo size handled by .site-logo-lg in design-system.css */
 
 .header h1 {
     font-size: var(--text-xl);
