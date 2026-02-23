@@ -1083,7 +1083,7 @@ function applyAIFilters() {
 const AI_DOC_NAMES = {
     T001:'אישור תושב', T002:'ספח תעודת זהות', T003:'מסמכי שינוי מצב משפחתי',
     T101:'אישור ועדת השמה', T102:'אישור קצבת ילד נכה',
-    T201:'טופס 106', T202:'טופס 106 (מעסיק נוסף)',
+    T201:'טופס 106', T202:'טופס 106 (בן/בת זוג)',
     T301:'אישור קצבה ביטוח לאומי', T302:'אישור קצבה ביטוח לאומי (בן/בת זוג)',
     T303:'אישור קצבת נכות', T304:'אישור דמי לידה',
     T305:'אישור קצבת שאירים', T306:'אישור קצבת שאירים (בן/בת זוג)',
@@ -1096,6 +1096,13 @@ const AI_DOC_NAMES = {
     T1401:'קבלות הוצאות אבל', T1402:'מסמכי מוסד', T1403:'מסמכי פטור ממס',
     T1501:'תעודת השכלה', T1601:'אסמכתאות הכנסה מחול', T1602:'דוח מס מחול',
     T1701:'מסמכי הכנסה אחרת'
+};
+
+// Client/spouse template pairs — same document type, different person
+const RELATED_TEMPLATES = {
+    T201: ['T201', 'T202'], T202: ['T201', 'T202'],
+    T301: ['T301', 'T302'], T302: ['T301', 'T302'],
+    T305: ['T305', 'T306'], T306: ['T305', 'T306'],
 };
 
 function getCardState(item) {
@@ -1383,8 +1390,9 @@ function renderAICard(item) {
         const templateName = AI_DOC_NAMES[item.matched_template_id] || item.matched_template_name || item.matched_template_id || '';
         const aiIssuer = item.issuer_name || 'לא ידוע';
 
-        // Filter same-type docs from missing_docs
-        const sameTypeDocs = missingDocs.filter(d => d.template_id === item.matched_template_id);
+        // Filter same-type docs (including client/spouse pairs) from missing_docs
+        const relatedIds = RELATED_TEMPLATES[item.matched_template_id] || [item.matched_template_id];
+        const sameTypeDocs = missingDocs.filter(d => relatedIds.includes(d.template_id));
 
         let comparisonHtml;
         if (sameTypeDocs.length > 0) {
