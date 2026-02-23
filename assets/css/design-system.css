@@ -589,6 +589,13 @@ textarea {
     height: 48px;
 }
 
+/* ==================== SITE LOGO ==================== */
+.site-logo {
+    height: 36px;
+    width: auto;
+    display: block;
+}
+
 /* ==================== ALERTS ==================== */
 .alert {
     padding: var(--sp-4) var(--sp-5);

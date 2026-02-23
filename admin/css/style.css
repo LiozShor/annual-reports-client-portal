@@ -89,6 +89,10 @@ body {
     gap: var(--sp-2);
 }
 
+.nav-brand .site-logo {
+    height: 28px;
+}
+
 .nav-actions {
     display: flex;
     gap: var(--sp-2);
