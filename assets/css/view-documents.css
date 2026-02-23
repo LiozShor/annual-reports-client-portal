@@ -176,6 +176,11 @@ body {
     flex-shrink: 0;
 }
 
+.doc-row.doc-received .doc-name {
+    text-decoration: line-through;
+    color: var(--gray-400);
+}
+
 /* ==================== PERSON HEADER ==================== */
 .person-header {
     display: flex;

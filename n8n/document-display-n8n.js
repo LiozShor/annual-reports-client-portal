@@ -15,6 +15,16 @@ function formatDocumentName(doc, spouseName = null) {
   };
 }
 
+function renderDocLi(name, status) {
+  if (status === 'Received') {
+    return `<li style="color:#9ca3af;text-decoration:line-through;">&#x2713; ${name}</li>`;
+  }
+  if (status === 'Waived') {
+    return `<li style="color:#d1d5db;text-decoration:line-through;opacity:0.5;">— ${name}</li>`;
+  }
+  return `<li>• ${name}</li>`;
+}
+
 function groupDocumentsByCategory(documents) {
   const categories = {
     // Personal & Family
@@ -109,7 +119,7 @@ function generateDocumentListHTML(documents, options = {}) {
       category.docs.forEach(doc => {
         // SSOT already formatted titles - just pass through
         const name = doc.issuer_name || doc.description || 'מסמך';
-        html += `<li>• ${name}</li>`;
+        html += renderDocLi(name, doc.status);
       });
 
       html += `</ul></div>`;
@@ -138,7 +148,7 @@ function generateDocumentListHTML(documents, options = {}) {
       category.docs.forEach(doc => {
         // SSOT already formatted titles - just pass through
         const name = doc.issuer_name || doc.description || 'מסמך';
-        html += `<li>• ${name}</li>`;
+        html += renderDocLi(name, doc.status);
       });
 
       html += `</ul></div>`;
@@ -156,6 +166,7 @@ function generateDocumentListHTML(documents, options = {}) {
 // Exports for Node.js / n8n
 module.exports = {
   formatDocumentName,
+  renderDocLi,
   groupDocumentsByCategory,
   separateClientAndSpouse,
   generateDocumentListHTML

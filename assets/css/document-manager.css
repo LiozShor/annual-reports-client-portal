@@ -282,6 +282,11 @@ body {
     border-inline-start: 3px solid #7C3AED;
 }
 
+.document-item.status-received .document-name {
+    text-decoration: line-through;
+    color: var(--gray-400);
+}
+
 .document-item.waived-item {
     opacity: 0.5;
 }

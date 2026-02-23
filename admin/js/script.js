@@ -1233,13 +1233,19 @@ function renderAICards(items) {
                 <div class="ai-accordion-body">
         `;
 
-        // Missing docs — grouped by category, collapsible
+        // Document status overview — grouped by category, collapsible
+        const allDocs = (clientItems[0].all_docs || []);
         const groupMissingDocs = (clientItems[0].missing_docs || []);
-        if (groupMissingDocs.length > 0) {
+        const displayDocs = allDocs.length > 0 ? allDocs : groupMissingDocs;
+        const docsReceivedCount = clientItems[0].docs_received_count || 0;
+        const docsTotalCount = clientItems[0].docs_total_count || displayDocs.length;
+        const hasStatusVariation = allDocs.length > 0 && docsReceivedCount > 0;
+
+        if (displayDocs.length > 0) {
             // Group by category
             const catGroups = [];
             let currentCat = null;
-            for (const d of groupMissingDocs) {
+            for (const d of displayDocs) {
                 const cat = d.category || 'other';
                 if (cat !== currentCat) {
                     currentCat = cat;
@@ -1258,7 +1264,10 @@ function renderAICards(items) {
                 const tagsHtml = group.docs.map(d => {
                     const id = d.template_id || d.name || '';
                     const label = d.name || AI_DOC_NAMES[id] || id;
-                    return `<span class="ai-missing-doc-tag">${escapeHtml(label)}</span>`;
+                    const isReceived = d.status === 'Received';
+                    const tagClass = isReceived ? 'ai-doc-tag-received' : 'ai-missing-doc-tag';
+                    const prefix = isReceived ? '&#x2713; ' : '';
+                    return `<span class="${tagClass}">${prefix}${escapeHtml(label)}</span>`;
                 }).join('');
                 categoriesHtml += `
                     <div class="ai-missing-category">${escapeHtml(group.emoji)} ${escapeHtml(group.name)}</div>
@@ -1266,11 +1275,15 @@ function renderAICards(items) {
                 `;
             }
 
+            const toggleLabel = hasStatusVariation
+                ? `מסמכים נדרשים (${docsReceivedCount}/${docsTotalCount} התקבלו)`
+                : `מסמכים חסרים (${groupMissingDocs.length})`;
+
             html += `
                     <div class="ai-missing-docs-group">
                         <div class="ai-missing-docs-toggle" onclick="toggleMissingDocs(this)">
                             <span class="toggle-arrow">▸</span>
-                            מסמכים חסרים (${groupMissingDocs.length})
+                            ${toggleLabel}
                         </div>
                         <div class="ai-missing-docs-body">
                             ${categoriesHtml}

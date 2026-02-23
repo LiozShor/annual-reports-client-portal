@@ -256,7 +256,7 @@ function displayDocuments() {
 
                 html += `<div class="document-wrapper" id="wrapper-${doc.id}">`;
                 html += `
-                    <div class="document-item ${isWaived ? 'waived-item' : ''} ${isRestoreMarked ? 'marked-for-restore' : ''} ${isStatusChanged ? 'status-changed' : ''} ${markedForRemoval.has(doc.id) ? 'marked-for-removal' : ''}" id="doc-${doc.id}">
+                    <div class="document-item ${isWaived ? 'waived-item' : ''} ${!isWaived && effectiveStatus === 'Received' ? 'status-received' : ''} ${isRestoreMarked ? 'marked-for-restore' : ''} ${isStatusChanged ? 'status-changed' : ''} ${markedForRemoval.has(doc.id) ? 'marked-for-removal' : ''}" id="doc-${doc.id}">
                         ${isWaived
                             ? `<input type="checkbox" class="restore-checkbox"
                                 onchange="toggleRestore('${doc.id}')"
@@ -410,6 +410,7 @@ function updateDocStatusVisual(docId) {
     }
     if (item) {
         item.classList.toggle('status-changed', statusChanges.has(docId));
+        item.classList.toggle('status-received', effectiveStatus === 'Received' && !item.classList.contains('waived-item'));
     }
 }
 

@@ -1531,6 +1531,17 @@ tr:hover .client-view-link {
     color: var(--gray-600);
 }
 
+.ai-doc-tag-received {
+    display: inline-block;
+    background: var(--success-50);
+    padding: 1px var(--sp-2);
+    border-radius: var(--radius-sm);
+    margin: 1px;
+    font-size: 11px;
+    color: var(--gray-400);
+    text-decoration: line-through;
+}
+
 .ai-card-actions {
     display: flex;
     gap: var(--sp-2);

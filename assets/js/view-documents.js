@@ -207,7 +207,8 @@ function renderDocuments() {
                     badgeText = isHe ? 'נדרש' : 'Required';
                 }
 
-                html += `<div class="doc-row">`;
+                const rowClass = doc.status === 'Received' ? 'doc-row doc-received' : 'doc-row';
+                html += `<div class="${rowClass}">`;
                 html += `<i data-lucide="file" class="icon-sm doc-icon"></i>`;
                 html += `<span class="doc-name">${docName}</span>`;
                 html += `<span class="${badgeClass}">${badgeText}</span>`;
