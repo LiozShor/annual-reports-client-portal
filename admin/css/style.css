@@ -1210,6 +1210,19 @@ tr:hover .client-view-link {
     text-overflow: ellipsis;
 }
 
+.ai-duplicate-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 1px var(--sp-2);
+    border-radius: var(--radius-full);
+    font-size: var(--text-xs);
+    font-weight: 600;
+    background: var(--warning-50, #fff7ed);
+    color: var(--warning-700, #c2410c);
+    border: 1px solid var(--warning-200, #fed7aa);
+    flex-shrink: 0;
+}
+
 .ai-card-body {
     padding: var(--sp-4) var(--sp-5);
 }

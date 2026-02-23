@@ -1527,6 +1527,7 @@ function renderAICard(item) {
                 <div class="ai-file-info">
                     <i data-lucide="${fileIcon}" class="icon-sm"></i>
                     <span class="ai-file-name" ${senderTooltip ? `title="${escapeAttr(senderTooltip)}"` : ''}>${escapeHtml(item.attachment_name || 'ללא שם')}</span>
+                    ${item.is_duplicate ? '<span class="ai-duplicate-badge" title="קובץ כפול — אותו קובץ כבר קיים במערכת">כפול</span>' : ''}
                     ${evidenceIcon}
                 </div>
                 ${viewFileBtn}
@@ -1573,6 +1574,7 @@ function formatAISuccessToast(data) {
     else if (data.action === 'reject') parts.push('נדחה');
     else if (data.action === 'reassign') parts.push('שויך מחדש');
     if (title) parts.push(`— ${title}`);
+    if (data.moved_to_archive) parts.push('(הועבר לארכיון)');
     if (data.renamed) parts.push('(שם הקובץ עודכן)');
     if (data.errors && data.errors.length > 0) parts.push(`⚠ ${data.errors.length} שגיאות`);
     return parts.join(' ');
