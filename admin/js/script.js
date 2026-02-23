@@ -1117,30 +1117,6 @@ function toggleMissingDocs(el) {
     el.closest('.ai-missing-docs-group').classList.toggle('open');
 }
 
-async function approveAIDespiteMismatch(recordId) {
-    showConfirmDialog('לאשר את הסיווג למרות שהמנפיק לא תואם?', async () => {
-        showLoading('מאשר סיווג...');
-        try {
-            const response = await fetchWithTimeout(`${API_BASE}/review-classification`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    token: authToken,
-                    classification_id: recordId,
-                    action: 'approve'
-                })
-            }, FETCH_TIMEOUTS.mutate);
-            const data = await parseAIResponse(response);
-            hideLoading();
-            if (!data.ok) throw new Error(formatAIResponseError(data));
-            animateAndRemoveAI(recordId);
-            showAIToast(formatAISuccessToast(data), 'success');
-        } catch (error) {
-            hideLoading();
-            showModal('error', 'שגיאה', error.message);
-        }
-    });
-}
 
 function handleComparisonRadio(recordId, radioEl) {
     const card = document.querySelector(`.ai-review-card[data-id="${recordId}"]`);
@@ -1166,7 +1142,7 @@ function quickAssignSelected(recordId) {
 
 function quickAssignFromComparison(recordId, templateId, docRecordId, docName) {
     showConfirmDialog(`לשייך את הקובץ ל: ${docName}?`, async () => {
-        await submitAIReassign(recordId, templateId, docRecordId);
+        await submitAIReassign(recordId, templateId, docRecordId, 'משייך...');
     });
 }
 
@@ -1430,9 +1406,6 @@ function renderAICard(item) {
                 <button class="btn btn-ghost btn-sm" onclick="showAIReassignModal('${escapeAttr(item.id)}', ${escapeAttr(JSON.stringify(missingDocs))})">
                     <i data-lucide="arrow-right-left" class="icon-sm"></i> שייך מחדש
                 </button>
-                <button class="btn btn-ghost-warning btn-sm" onclick="approveAIDespiteMismatch('${escapeAttr(item.id)}')">
-                    <i data-lucide="check" class="icon-sm"></i> אשר בכל זאת
-                </button>
                 <button class="btn btn-danger btn-sm" onclick="rejectAIClassification('${escapeAttr(item.id)}')">
                     <i data-lucide="x" class="icon-sm"></i> דחה
                 </button>
@@ -1455,9 +1428,6 @@ function renderAICard(item) {
                         <i data-lucide="check" class="icon-sm"></i> שייך
                     </button>
                 </div>
-                <button class="btn btn-ghost-warning btn-sm" onclick="approveAIDespiteMismatch('${escapeAttr(item.id)}')">
-                    <i data-lucide="check" class="icon-sm"></i> אשר בכל זאת
-                </button>
                 <button class="btn btn-danger btn-sm" onclick="rejectAIClassification('${escapeAttr(item.id)}')">
                     <i data-lucide="x" class="icon-sm"></i> דחה
                 </button>
@@ -1708,8 +1678,8 @@ async function confirmAIReassign() {
     await submitAIReassign(recordId, templateId, docRecordId);
 }
 
-async function submitAIReassign(recordId, templateId, docRecordId) {
-    setCardLoading(recordId, 'משייך מחדש...');
+async function submitAIReassign(recordId, templateId, docRecordId, loadingText) {
+    setCardLoading(recordId, loadingText || 'משייך מחדש...');
 
     try {
         const response = await fetchWithTimeout(`${API_BASE}/review-classification`, {
@@ -1743,7 +1713,7 @@ async function assignAIUnmatched(recordId, btnEl) {
     const templateId = comboboxEl ? comboboxEl.dataset.selectedValue : '';
     const docRecordId = comboboxEl ? comboboxEl.dataset.selectedDocId : '';
     if (!templateId) return;
-    await submitAIReassign(recordId, templateId, docRecordId);
+    await submitAIReassign(recordId, templateId, docRecordId, 'משייך...');
 }
 
 function animateAndRemoveAI(recordId) {
