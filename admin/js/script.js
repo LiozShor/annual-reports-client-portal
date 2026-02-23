@@ -1141,9 +1141,9 @@ function quickAssignSelected(recordId) {
 }
 
 function quickAssignFromComparison(recordId, templateId, docRecordId, docName) {
-    showConfirmDialog(`לשייך את הקובץ ל: ${docName}?`, async () => {
+    showInlineConfirm(recordId, `לשייך ל: ${docName}?`, async () => {
         await submitAIReassign(recordId, templateId, docRecordId, 'משייך...');
-    });
+    }, { confirmText: 'שייך' });
 }
 
 function renderAICards(items) {
@@ -1575,7 +1575,7 @@ function clearCardLoading(recordId) {
 }
 
 async function approveAIClassification(recordId) {
-    showConfirmDialog('לאשר את הסיווג?', async () => {
+    showInlineConfirm(recordId, 'לאשר את הסיווג?', async () => {
         setCardLoading(recordId, 'מאשר סיווג...');
 
         try {
@@ -1600,11 +1600,11 @@ async function approveAIClassification(recordId) {
             clearCardLoading(recordId);
             showModal('error', 'שגיאה', error.message);
         }
-    });
+    }, { confirmText: 'אשר', btnClass: 'btn-success' });
 }
 
 async function rejectAIClassification(recordId) {
-    showConfirmDialog('לדחות את הסיווג? המסמך יוסר מהתור.', async () => {
+    showInlineConfirm(recordId, 'לדחות את הסיווג?', async () => {
         setCardLoading(recordId, 'דוחה סיווג...');
 
         try {
@@ -1629,7 +1629,7 @@ async function rejectAIClassification(recordId) {
             clearCardLoading(recordId);
             showModal('error', 'שגיאה', error.message);
         }
-    }, 'דחה', true);
+    }, { confirmText: 'דחה', danger: true });
 }
 
 function showAIReassignModal(recordId, missingDocs) {
@@ -1713,7 +1713,9 @@ async function assignAIUnmatched(recordId, btnEl) {
     const templateId = comboboxEl ? comboboxEl.dataset.selectedValue : '';
     const docRecordId = comboboxEl ? comboboxEl.dataset.selectedDocId : '';
     if (!templateId) return;
-    await submitAIReassign(recordId, templateId, docRecordId, 'משייך...');
+    showInlineConfirm(recordId, 'לשייך?', async () => {
+        await submitAIReassign(recordId, templateId, docRecordId, 'משייך...');
+    }, { confirmText: 'שייך' });
 }
 
 function animateAndRemoveAI(recordId) {
@@ -1927,6 +1929,79 @@ function escapeHtml(text) {
 
 function isValidEmail(email) {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
+// ==================== INLINE CONFIRM (AI Review cards) ====================
+
+function showInlineConfirm(recordId, message, onConfirm, opts = {}) {
+    const card = document.querySelector(`.ai-review-card[data-id="${recordId}"]`);
+    if (!card) return;
+    const actionsDiv = card.querySelector('.ai-card-actions');
+    if (!actionsDiv) return;
+
+    // Cancel any existing inline confirm on this card
+    cancelInlineConfirm(recordId);
+
+    // Store original HTML
+    actionsDiv.dataset.originalHtml = actionsDiv.innerHTML;
+
+    const dangerClass = opts.danger ? 'danger' : '';
+    const btnClass = opts.danger ? 'btn-danger' : (opts.btnClass || 'btn-primary');
+    const confirmText = opts.confirmText || 'אישור';
+
+    actionsDiv.innerHTML = `
+        <div class="ai-inline-confirm ${dangerClass}">
+            <span class="ai-inline-confirm-msg">${escapeHtml(message)}</span>
+            <button class="btn btn-sm ${btnClass} ai-inline-confirm-btn" disabled>${escapeHtml(confirmText)}</button>
+            <button class="btn btn-ghost btn-sm ai-inline-cancel-btn">ביטול</button>
+        </div>
+    `;
+
+    const confirmBtn = actionsDiv.querySelector('.ai-inline-confirm-btn');
+    const cancelBtn = actionsDiv.querySelector('.ai-inline-cancel-btn');
+
+    // Enable confirm button after 150ms (double-click protection)
+    setTimeout(() => { if (confirmBtn.isConnected) confirmBtn.disabled = false; }, 150);
+
+    // Escape key handler
+    function escapeHandler(e) {
+        if (e.key === 'Escape') cancelInlineConfirm(recordId);
+    }
+    document.addEventListener('keydown', escapeHandler);
+    card._inlineConfirmCleanup = () => document.removeEventListener('keydown', escapeHandler);
+
+    cancelBtn.addEventListener('click', () => cancelInlineConfirm(recordId));
+    confirmBtn.addEventListener('click', () => {
+        if (card._inlineConfirmCleanup) { card._inlineConfirmCleanup(); card._inlineConfirmCleanup = null; }
+        onConfirm();
+    });
+}
+
+function cancelInlineConfirm(recordId) {
+    const card = document.querySelector(`.ai-review-card[data-id="${recordId}"]`);
+    if (!card) return;
+    const actionsDiv = card.querySelector('.ai-card-actions');
+    if (!actionsDiv || !actionsDiv.dataset.originalHtml) return;
+
+    // Clean up escape handler
+    if (card._inlineConfirmCleanup) { card._inlineConfirmCleanup(); card._inlineConfirmCleanup = null; }
+
+    actionsDiv.innerHTML = actionsDiv.dataset.originalHtml;
+    delete actionsDiv.dataset.originalHtml;
+
+    // Re-initialize inline comboboxes if present
+    actionsDiv.querySelectorAll('.doc-combobox-container').forEach(el => {
+        let docs = [];
+        try { docs = JSON.parse(el.dataset.docs); } catch (e) { /* skip */ }
+        createDocCombobox(el, docs, {
+            onSelect: (templateId) => {
+                const btn = actionsDiv.querySelector('.btn-ai-assign-confirm');
+                if (btn) btn.disabled = !templateId;
+            }
+        });
+    });
+
+    if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
 // ==================== CONFIRM DIALOG ====================
