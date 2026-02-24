@@ -24,9 +24,11 @@ function getCategoryIcon(emoji) {
     return CATEGORY_ICONS[emoji] || 'file-text';
 }
 
-// Get report_id from URL
+// Get URL params
 const params = new URLSearchParams(window.location.search);
 const reportId = params.get('report_id');
+const clientToken = params.get('token') || '';
+const adminToken = params.get('admin_token') || '';
 
 // Initialize offline detection
 initOfflineDetection();
@@ -42,7 +44,10 @@ async function loadDocuments() {
     const cancelEscalation = startLoadingEscalation(loadingEl, { lang: currentLang });
 
     try {
-        const url = `https://liozshor.app.n8n.cloud/webhook/get-client-documents?report_id=${reportId}`;
+        const tokenParam = clientToken
+            ? `&token=${encodeURIComponent(clientToken)}`
+            : adminToken ? `&admin_token=${encodeURIComponent(adminToken)}` : '';
+        const url = `https://liozshor.app.n8n.cloud/webhook/get-client-documents?report_id=${reportId}${tokenParam}`;
         const response = await fetchWithTimeout(url, {}, FETCH_TIMEOUTS.load);
 
         cancelEscalation();

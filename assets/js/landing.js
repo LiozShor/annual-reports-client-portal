@@ -192,8 +192,8 @@ function showLanguageSelection() {
 }
 
 function viewDocuments() {
-    // Redirect to view documents page
-    window.location.href = `view-documents.html?report_id=${reportId}`;
+    // Redirect to view documents page — include token so server can authenticate
+    window.location.href = `view-documents.html?report_id=${reportId}&token=${encodeURIComponent(token || '')}`;
 }
 
 function confirmReset() {

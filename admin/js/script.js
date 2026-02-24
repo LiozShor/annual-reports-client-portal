@@ -1829,7 +1829,7 @@ function showAIToast(message, type) {
 // ==================== UTILITIES ====================
 
 function viewClient(reportId) {
-    window.open(`https://liozshor.github.io/annual-reports-client-portal/view-documents.html?report_id=${reportId}`, '_blank');
+    window.open(`https://liozshor.github.io/annual-reports-client-portal/view-documents.html?report_id=${reportId}&admin_token=${encodeURIComponent(authToken)}`, '_blank');
 }
 
 function viewClientDocs(reportId, name, email, year) {
