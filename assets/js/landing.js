@@ -192,8 +192,9 @@ function showLanguageSelection() {
 }
 
 function viewDocuments() {
-    // Redirect to view documents page — include token so server can authenticate
-    window.location.href = `view-documents.html?report_id=${reportId}&token=${encodeURIComponent(token || '')}`;
+    // Store token in sessionStorage — keeps it out of the URL bar and browser history
+    sessionStorage.setItem('client_doc_token', token || '');
+    window.location.href = `view-documents.html?report_id=${reportId}`;
 }
 
 function confirmReset() {

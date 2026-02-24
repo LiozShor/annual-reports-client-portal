@@ -27,8 +27,21 @@ function getCategoryIcon(emoji) {
 // Get URL params
 const params = new URLSearchParams(window.location.search);
 const reportId = params.get('report_id');
-const clientToken = params.get('token') || '';
-const adminToken = params.get('admin_token') || '';
+
+// Auth tokens — never exposed in the page URL
+// Client flow: token stored in sessionStorage by landing.js (or URL param for old links)
+// Admin flow: admin session token already in localStorage from admin login
+const ADMIN_TOKEN_KEY = 'QKiwUBXVH@%#1gD7t@rB]<,dM.[NC5b_';
+const clientToken = sessionStorage.getItem('client_doc_token') || params.get('token') || '';
+const adminToken = localStorage.getItem(ADMIN_TOKEN_KEY) || '';
+
+// Strip any tokens from URL to prevent exposure in address bar / browser history
+if (params.get('token') || params.get('admin_token')) {
+    const cleanUrl = new URL(window.location);
+    cleanUrl.searchParams.delete('token');
+    cleanUrl.searchParams.delete('admin_token');
+    history.replaceState(null, '', cleanUrl);
+}
 
 // Initialize offline detection
 initOfflineDetection();
