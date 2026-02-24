@@ -176,6 +176,25 @@ body {
     flex-shrink: 0;
 }
 
+.doc-view-link {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--sp-1);
+    font-size: var(--text-xs);
+    font-weight: 500;
+    color: var(--brand-600);
+    text-decoration: none;
+    padding: var(--sp-1) var(--sp-2);
+    border-radius: var(--radius-md);
+    transition: background var(--transition-fast);
+    flex-shrink: 0;
+}
+
+.doc-view-link:hover {
+    background: var(--brand-50);
+    color: var(--brand-700);
+}
+
 .doc-row.doc-received .doc-name {
     text-decoration: line-through;
     color: var(--gray-400);

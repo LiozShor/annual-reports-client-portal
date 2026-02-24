@@ -211,6 +211,12 @@ function renderDocuments() {
                 html += `<div class="${rowClass}">`;
                 html += `<i data-lucide="file" class="icon-sm doc-icon"></i>`;
                 html += `<span class="doc-name">${docName}</span>`;
+                if (doc.file_url) {
+                    const viewLabel = isHe ? 'צפה' : 'View';
+                    html += `<a href="${doc.file_url}" target="_blank" rel="noopener" class="doc-view-link">`;
+                    html += `<i data-lucide="external-link" class="icon-xs"></i> ${viewLabel}`;
+                    html += `</a>`;
+                }
                 html += `<span class="${badgeClass}">${badgeText}</span>`;
                 html += `</div>`;
             }
