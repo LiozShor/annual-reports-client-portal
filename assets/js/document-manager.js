@@ -11,6 +11,12 @@ const SPOUSE_NAME = params.get('spouse_name') || '';
 const YEAR = params.get('year');
 const API_BASE = 'https://liozshor.app.n8n.cloud/webhook';
 
+// Admin auth token — required for this office-only page
+const ADMIN_TOKEN = localStorage.getItem('QKiwUBXVH@%#1gD7t@rB]<,dM.[NC5b_') || '';
+if (!ADMIN_TOKEN) {
+    window.location.replace('admin/index.html');
+}
+
 // State
 let currentGroups = [];
 let currentDocuments = [];
@@ -121,7 +127,9 @@ async function loadDocuments() {
 
     try {
         const response = await retryWithBackoff(
-            () => fetchWithTimeout(`${API_BASE}/get-client-documents?report_id=${REPORT_ID}&mode=office`, {}, FETCH_TIMEOUTS.load),
+            () => fetchWithTimeout(`${API_BASE}/get-client-documents?report_id=${REPORT_ID}&mode=office`, {
+                headers: { 'Authorization': `Bearer ${ADMIN_TOKEN}` }
+            }, FETCH_TIMEOUTS.load),
             { maxRetries: 1 }
         );
         cleanupEscalation();
@@ -1046,7 +1054,10 @@ async function confirmSubmit() {
     try {
         const response = await fetchWithTimeout(`${API_BASE}/edit-documents`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${ADMIN_TOKEN}`
+            },
             body: JSON.stringify(payload)
         }, FETCH_TIMEOUTS.mutate);
 
