@@ -1889,13 +1889,10 @@ tr:hover .client-view-link {
 }
 
 .ai-inline-confirm-msg {
-    flex: 1;
     font-weight: 600;
     font-size: var(--text-sm);
     color: var(--gray-700);
     white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
 }
 
 .ai-inline-confirm.danger .ai-inline-confirm-msg {
