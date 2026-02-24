@@ -32,7 +32,7 @@ const HE_B64 = {
     btn_view_docs: "16bXpNeUINeR157Xodee15vXmdedINeU16DXk9eo16nXmded",
     btn_reset: "157Xl9enINeV15TXqteX15wg157XlNeU16rXl9ec15Q=",
 
-    ready_title: "4pyFINee15XXm9efINec15PXqteX15nXnA==",
+    ready_title: "4pyFINee15XXm9efINec15TXqteX15nXnD8=",
     choose_language: "15HXl9eoINeQ16og15TXqdek15Qg15TXnteV16LXk9ek16og16LXnNeZ15o6",
     reset_loading: "157XkNek16Eg16DXqteV16DXmdedLi4u",
     reset_done: "4pyFINeU16DXqteV16DXmdedINeQ15XXpNeh15U=",
