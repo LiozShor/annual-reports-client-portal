@@ -324,10 +324,11 @@ function refreshData() {
 
 // Load AI review pending count for tab badge
 async function loadAIReviewCount() {
+    const badge = document.getElementById('aiReviewTabBadge');
     try {
         const resp = await fetchWithTimeout(`${API_BASE}/get-pending-classifications?token=${authToken}`, {}, FETCH_TIMEOUTS.quick);
         const data = await resp.json();
-        const badge = document.getElementById('aiReviewTabBadge');
+        badge.classList.remove('ai-badge-loading');
         if (data.ok && data.stats && data.stats.total_pending > 0) {
             badge.textContent = data.stats.total_pending;
             badge.style.display = 'inline-flex';
@@ -335,7 +336,9 @@ async function loadAIReviewCount() {
             badge.style.display = 'none';
         }
     } catch (e) {
-        // Silently fail - badge stays hidden
+        // Fetch failed - hide the loading badge
+        badge.classList.remove('ai-badge-loading');
+        badge.style.display = 'none';
     }
 }
 

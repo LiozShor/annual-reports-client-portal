@@ -983,6 +983,18 @@ tr:hover .client-view-link {
     margin-inline-start: var(--sp-2);
 }
 
+.ai-review-tab-badge.ai-badge-loading {
+    background: var(--gray-300);
+    animation: badgePulse 1s ease-in-out infinite;
+    font-size: 9px;
+    letter-spacing: 1px;
+}
+
+@keyframes badgePulse {
+    0%, 100% { opacity: 0.5; }
+    50% { opacity: 1; }
+}
+
 /* Stats Bar */
 .ai-stats-bar {
     display: flex;
