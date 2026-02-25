@@ -2272,8 +2272,8 @@ function buildReminderTable(items, showDocs) {
                     <th><input type="checkbox" class="reminder-select-all" onchange="toggleReminderSelectAll(this)"></th>
                     <th>שם</th>
                     ${showDocs ? '<th>מסמכים</th>' : ''}
-                    <th>תאריך הבא</th>
                     <th>נשלח לאחרונה</th>
+                    <th>תאריך הבא</th>
                     <th>נשלחו/מקס</th>
                     <th>סטטוס</th>
                     <th>פעולות</th>
@@ -2311,8 +2311,8 @@ function buildReminderTable(items, showDocs) {
                     ` : '-'}
                 </td>
                 ` : ''}
-                <td><span class="reminder-date ${dateClass}">${nextDate}</span></td>
                 <td>${r.last_reminder_sent_at ? formatDateHe(r.last_reminder_sent_at.split('T')[0]) : '-'}</td>
+                <td><span class="reminder-date ${dateClass}">${nextDate}</span></td>
                 <td>${r.reminder_count}/${max}</td>
                 <td><span class="reminder-status ${status.class}">${status.label}</span></td>
                 <td>
@@ -2369,7 +2369,7 @@ function updateReminderSelectedCount() {
     document.getElementById('reminderBulkActions').style.display = count > 0 ? 'flex' : 'none';
 }
 
-async function reminderAction(action, reportId) {
+function reminderAction(action, reportId) {
     if (action === 'send_now') {
         const r = remindersData.find(x => x.report_id === reportId);
         if (r && r.last_reminder_sent_at) {
@@ -2379,14 +2379,15 @@ async function reminderAction(action, reportId) {
                 const msg = hoursAgo < 1
                     ? 'תזכורת נשלחה לפני פחות משעה. לשלוח שוב?'
                     : `תזכורת נשלחה לפני ${hoursAgo} שעות. לשלוח שוב?`;
-                if (!confirm(msg)) return;
+                showConfirmDialog(msg, () => executeReminderAction(action, [reportId]), 'שלח בכל זאת');
+                return;
             }
         }
     }
-    await executeReminderAction(action, [reportId]);
+    executeReminderAction(action, [reportId]);
 }
 
-async function reminderBulkAction(action) {
+function reminderBulkAction(action) {
     const reportIds = Array.from(document.querySelectorAll('.reminder-checkbox:checked')).map(cb => cb.value);
     if (reportIds.length === 0) return;
 
@@ -2398,11 +2399,15 @@ async function reminderBulkAction(action) {
         const msg = recentIds.length > 0
             ? `לשלוח תזכורת ל-${reportIds.length} לקוחות? (${recentIds.length} כבר קיבלו תזכורת היום)`
             : `לשלוח תזכורת ל-${reportIds.length} לקוחות?`;
-        if (!confirm(msg)) return;
+        showConfirmDialog(msg, () => executeReminderAction(action, reportIds), 'שלח');
+        return;
     }
-    if (action === 'suppress_forever' && !confirm(`להשתיק לצמיתות ${reportIds.length} לקוחות?`)) return;
+    if (action === 'suppress_forever') {
+        showConfirmDialog(`להשתיק לצמיתות ${reportIds.length} לקוחות?`, () => executeReminderAction(action, reportIds), 'השתק', true);
+        return;
+    }
 
-    await executeReminderAction(action, reportIds);
+    executeReminderAction(action, reportIds);
 }
 
 async function executeReminderAction(action, reportIds, value) {
