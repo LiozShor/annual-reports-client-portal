@@ -2057,6 +2057,89 @@ tr:hover .client-view-link {
     font-size: var(--text-sm);
 }
 
+/* Section Headers (Type A / Type B) */
+.reminder-section {
+    margin-bottom: var(--sp-6);
+}
+
+.reminder-section:last-child {
+    margin-bottom: 0;
+}
+
+.reminder-section-header {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-3);
+    padding: var(--sp-3) var(--sp-5);
+    border-radius: var(--radius-lg);
+    margin-bottom: var(--sp-3);
+}
+
+.reminder-section-header h3 {
+    margin: 0;
+    font-size: var(--text-base);
+    font-weight: 600;
+}
+
+.reminder-section-header .icon-sm {
+    flex-shrink: 0;
+}
+
+.reminder-section-count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 24px;
+    height: 24px;
+    padding: 0 var(--sp-2);
+    border-radius: 999px;
+    font-size: var(--text-xs);
+    font-weight: 700;
+}
+
+.reminder-section-a {
+    background: var(--warning-50);
+    border: 1px solid var(--warning-200);
+}
+
+.reminder-section-a .icon-sm {
+    color: var(--warning-600);
+}
+
+.reminder-section-a h3 {
+    color: var(--warning-800);
+}
+
+.reminder-section-a .reminder-section-count {
+    background: var(--warning-200);
+    color: var(--warning-800);
+}
+
+.reminder-section-b {
+    background: var(--brand-50);
+    border: 1px solid var(--brand-200);
+}
+
+.reminder-section-b .icon-sm {
+    color: var(--brand-600);
+}
+
+.reminder-section-b h3 {
+    color: var(--brand-800);
+}
+
+.reminder-section-b .reminder-section-count {
+    background: var(--brand-200);
+    color: var(--brand-800);
+}
+
+.reminder-section-empty {
+    text-align: center;
+    padding: var(--sp-6);
+    color: var(--text-secondary);
+    font-size: var(--text-sm);
+}
+
 /* Bulk Actions */
 .reminder-bulk-actions {
     display: flex;

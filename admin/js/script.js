@@ -2219,19 +2219,24 @@ function filterReminders() {
     }
 
     // Sort by next_date ascending (nulls last)
-    filtered.sort((a, b) => {
+    const sortFn = (a, b) => {
         const da = a.reminder_next_date || '9999';
         const db = b.reminder_next_date || '9999';
         return da.localeCompare(db);
-    });
+    };
 
-    renderRemindersTable(filtered);
+    // Split into Type A (stage 2) and Type B (stage 3)
+    const typeA = filtered.filter(r => r.stage === '2-Waiting_For_Answers').sort(sortFn);
+    const typeB = filtered.filter(r => r.stage === '3-Collecting_Docs').sort(sortFn);
+
+    renderRemindersTable(typeA, typeB);
 }
 
-function renderRemindersTable(items) {
+function renderRemindersTable(typeA, typeB) {
     const container = document.getElementById('reminderTableContainer');
+    const totalItems = typeA.length + typeB.length;
 
-    if (!items || items.length === 0) {
+    if (totalItems === 0) {
         container.innerHTML = `
             <div class="empty-state">
                 <div class="empty-state-icon"><i data-lucide="bell" class="icon-2xl"></i></div>
@@ -2242,6 +2247,43 @@ function renderRemindersTable(items) {
         return;
     }
 
+    let html = '';
+
+    // --- Type A: Haven't filled questionnaire (stage 2) ---
+    html += `<div class="reminder-section">`;
+    html += `<div class="reminder-section-header reminder-section-a">
+        <i data-lucide="clipboard-list" class="icon-sm"></i>
+        <h3>לא מילאו שאלון</h3>
+        <span class="reminder-section-count">${typeA.length}</span>
+    </div>`;
+
+    if (typeA.length > 0) {
+        html += buildReminderTable(typeA, false);
+    } else {
+        html += `<div class="reminder-section-empty">אין לקוחות בקטגוריה זו</div>`;
+    }
+    html += `</div>`;
+
+    // --- Type B: Filled but missing docs (stage 3) ---
+    html += `<div class="reminder-section">`;
+    html += `<div class="reminder-section-header reminder-section-b">
+        <i data-lucide="folder-open" class="icon-sm"></i>
+        <h3>חסרים מסמכים</h3>
+        <span class="reminder-section-count">${typeB.length}</span>
+    </div>`;
+
+    if (typeB.length > 0) {
+        html += buildReminderTable(typeB, true);
+    } else {
+        html += `<div class="reminder-section-empty">אין לקוחות בקטגוריה זו</div>`;
+    }
+    html += `</div>`;
+
+    container.innerHTML = html;
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function buildReminderTable(items, showDocs) {
     const today = new Date().toISOString().split('T')[0];
     const weekFromNow = new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0];
 
@@ -2249,10 +2291,9 @@ function renderRemindersTable(items) {
         <table>
             <thead>
                 <tr>
-                    <th><input type="checkbox" id="reminderSelectAll" onchange="toggleReminderSelectAll()"></th>
+                    <th><input type="checkbox" class="reminder-select-all" onchange="toggleReminderSelectAll(this)"></th>
                     <th>שם</th>
-                    <th>שלב</th>
-                    <th>מסמכים</th>
+                    ${showDocs ? '<th>מסמכים</th>' : ''}
                     <th>תאריך הבא</th>
                     <th>נשלח לאחרונה</th>
                     <th>נשלחו/מקס</th>
@@ -2264,7 +2305,6 @@ function renderRemindersTable(items) {
     `;
 
     for (const r of items) {
-        const stage = STAGES[r.stage] || { label: r.stage, icon: 'help-circle', class: '' };
         const status = getReminderStatus(r);
         const max = r.reminder_max != null ? r.reminder_max : 3;
         const nextDate = r.reminder_next_date ? formatDateHe(r.reminder_next_date) : '-';
@@ -2283,7 +2323,7 @@ function renderRemindersTable(items) {
                         ${escapeHtml(r.name)}
                     </strong>
                 </td>
-                <td><span class="stage-badge ${stage.class}"><i data-lucide="${stage.icon}" class="icon-sm"></i> ${stage.label}</span></td>
+                ${showDocs ? `
                 <td>
                     ${docsTotal > 0 ? `
                         <div class="docs-progress-cell">
@@ -2292,6 +2332,7 @@ function renderRemindersTable(items) {
                         </div>
                     ` : '-'}
                 </td>
+                ` : ''}
                 <td><span class="reminder-date ${dateClass}">${nextDate}</span></td>
                 <td>${r.last_reminder_sent_at ? formatDateHe(r.last_reminder_sent_at.split('T')[0]) : '-'}</td>
                 <td>${r.reminder_count}/${max}</td>
@@ -2320,8 +2361,7 @@ function renderRemindersTable(items) {
     }
 
     html += '</tbody></table>';
-    container.innerHTML = html;
-    if (typeof lucide !== 'undefined') lucide.createIcons();
+    return html;
 }
 
 function formatDateHe(dateStr) {
@@ -2334,9 +2374,10 @@ function formatDateHe(dateStr) {
     }
 }
 
-function toggleReminderSelectAll() {
-    const checked = document.getElementById('reminderSelectAll').checked;
-    document.querySelectorAll('.reminder-checkbox').forEach(cb => cb.checked = checked);
+function toggleReminderSelectAll(masterCb) {
+    // Only toggle checkboxes within the same table section
+    const table = masterCb.closest('table');
+    table.querySelectorAll('.reminder-checkbox').forEach(cb => cb.checked = masterCb.checked);
     updateReminderSelectedCount();
 }
 
