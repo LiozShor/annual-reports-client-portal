@@ -2206,17 +2206,12 @@ function getReminderStatus(r) {
 
 function filterReminders() {
     const search = (document.getElementById('reminderSearchInput').value || '').trim().toLowerCase();
-    const typeFilter = document.getElementById('reminderTypeFilter').value;
     const statusFilter = document.getElementById('reminderStatusFilter').value;
 
     let filtered = remindersData;
 
     if (search) {
         filtered = filtered.filter(r => (r.name || '').toLowerCase().includes(search));
-    }
-
-    if (typeFilter) {
-        filtered = filtered.filter(r => r.reminder_type === typeFilter);
     }
 
     if (statusFilter) {
@@ -2256,10 +2251,10 @@ function renderRemindersTable(items) {
                 <tr>
                     <th><input type="checkbox" id="reminderSelectAll" onchange="toggleReminderSelectAll()"></th>
                     <th>שם</th>
-                    <th>סוג</th>
                     <th>שלב</th>
                     <th>מסמכים</th>
                     <th>תאריך הבא</th>
+                    <th>נשלח לאחרונה</th>
                     <th>נשלחו/מקס</th>
                     <th>סטטוס</th>
                     <th>פעולות</th>
@@ -2288,10 +2283,9 @@ function renderRemindersTable(items) {
                         ${escapeHtml(r.name)}
                     </strong>
                 </td>
-                <td><span class="reminder-type-badge reminder-type-${r.reminder_type || 'A'}">${r.reminder_type || 'A'}</span></td>
                 <td><span class="stage-badge ${stage.class}"><i data-lucide="${stage.icon}" class="icon-sm"></i> ${stage.label}</span></td>
                 <td>
-                    ${r.reminder_type === 'B' ? `
+                    ${docsTotal > 0 ? `
                         <div class="docs-progress-cell">
                             <div class="progress-bar"><div class="progress-fill" style="width: ${progressPercent}%"></div></div>
                             <span class="docs-count">${docsReceived}/${docsTotal}</span>
@@ -2299,6 +2293,7 @@ function renderRemindersTable(items) {
                     ` : '-'}
                 </td>
                 <td><span class="reminder-date ${dateClass}">${nextDate}</span></td>
+                <td>${r.last_reminder_sent_at ? formatDateHe(r.last_reminder_sent_at.split('T')[0]) : '-'}</td>
                 <td>${r.reminder_count}/${max}</td>
                 <td><span class="reminder-status ${status.class}">${status.label}</span></td>
                 <td>
