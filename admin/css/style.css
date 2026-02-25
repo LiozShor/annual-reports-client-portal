@@ -1806,6 +1806,7 @@ tr:hover .client-view-link {
 .ai-card-actions .btn[aria-disabled="true"] {
     opacity: 0.45;
     cursor: not-allowed;
+    position: relative;
 }
 
 .ai-card-actions .btn[aria-disabled="true"]:hover {
@@ -1813,6 +1814,32 @@ tr:hover .client-view-link {
     background: inherit;
     border-color: inherit;
     box-shadow: none;
+}
+
+.ai-card-actions .btn[aria-disabled="true"]::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    top: calc(100% + 6px);
+    right: 0;
+    z-index: 100;
+    width: 220px;
+    padding: var(--sp-2) var(--sp-3);
+    background: var(--gray-800);
+    color: var(--gray-50);
+    font-size: var(--text-xs);
+    font-weight: 400;
+    line-height: 1.6;
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-lg);
+    white-space: normal;
+    text-align: right;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.15s;
+}
+
+.ai-card-actions .btn[aria-disabled="true"]:hover::after {
+    opacity: 1;
 }
 
 .ai-assign-section {
