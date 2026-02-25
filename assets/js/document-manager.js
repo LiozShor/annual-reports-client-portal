@@ -271,11 +271,11 @@ function displayDocuments() {
                                 id="restore-${doc.id}"
                                 ${isRestoreMarked ? 'checked' : ''}
                                 aria-label="שחזר מסמך">`
-                            : `<input type="checkbox"
-                                onchange="toggleRemoval('${doc.id}')"
-                                id="checkbox-${doc.id}"
-                                ${markedForRemoval.has(doc.id) ? 'checked' : ''}
-                                aria-label="סמן להסרה">`
+                            : `<button type="button" class="delete-toggle ${markedForRemoval.has(doc.id) ? 'active' : ''}"
+                                onclick="toggleRemoval('${doc.id}')"
+                                id="delete-btn-${doc.id}"
+                                aria-label="סמן להסרה"
+                                title="הסר מסמך"><i data-lucide="trash-2" class="icon-sm"></i></button>`
                         }
                         <span class="document-icon"><i data-lucide="file-text" class="icon-sm"></i></span>
                         <div class="document-name">${doc.name}</div>
@@ -332,12 +332,14 @@ function getStatusBadge(status) {
 
 // Toggle removal (waive)
 function toggleRemoval(id) {
-    const checkbox = document.getElementById(`checkbox-${id}`);
+    const btn = document.getElementById(`delete-btn-${id}`);
     const item = document.getElementById(`doc-${id}`);
+    const isActive = markedForRemoval.has(id);
 
-    if (checkbox.checked) {
+    if (!isActive) {
         markedForRemoval.add(id);
         item.classList.add('marked-for-removal');
+        btn.classList.add('active');
         // Waive wins: remove any status change for this doc
         if (statusChanges.has(id)) {
             statusChanges.delete(id);
@@ -346,6 +348,7 @@ function toggleRemoval(id) {
     } else {
         markedForRemoval.delete(id);
         item.classList.remove('marked-for-removal');
+        btn.classList.remove('active');
     }
 
     updateStats();
