@@ -2251,33 +2251,37 @@ function renderRemindersTable(typeA, typeB) {
 
     // --- Type A: Haven't filled questionnaire (stage 2) ---
     html += `<div class="reminder-section">`;
-    html += `<div class="reminder-section-header reminder-section-a">
+    html += `<div class="reminder-section-header reminder-section-a" onclick="toggleReminderSection(this)">
+        <i data-lucide="chevron-left" class="icon-sm reminder-chevron"></i>
         <i data-lucide="clipboard-list" class="icon-sm"></i>
         <h3>לא מילאו שאלון</h3>
         <span class="reminder-section-count">${typeA.length}</span>
     </div>`;
+    html += `<div class="reminder-section-body">`;
 
     if (typeA.length > 0) {
         html += buildReminderTable(typeA, false);
     } else {
         html += `<div class="reminder-section-empty">אין לקוחות בקטגוריה זו</div>`;
     }
-    html += `</div>`;
+    html += `</div></div>`;
 
     // --- Type B: Filled but missing docs (stage 3) ---
     html += `<div class="reminder-section">`;
-    html += `<div class="reminder-section-header reminder-section-b">
+    html += `<div class="reminder-section-header reminder-section-b" onclick="toggleReminderSection(this)">
+        <i data-lucide="chevron-left" class="icon-sm reminder-chevron"></i>
         <i data-lucide="folder-open" class="icon-sm"></i>
         <h3>חסרים מסמכים</h3>
         <span class="reminder-section-count">${typeB.length}</span>
     </div>`;
+    html += `<div class="reminder-section-body">`;
 
     if (typeB.length > 0) {
         html += buildReminderTable(typeB, true);
     } else {
         html += `<div class="reminder-section-empty">אין לקוחות בקטגוריה זו</div>`;
     }
-    html += `</div>`;
+    html += `</div></div>`;
 
     container.innerHTML = html;
     if (typeof lucide !== 'undefined') lucide.createIcons();
@@ -2362,6 +2366,10 @@ function buildReminderTable(items, showDocs) {
 
     html += '</tbody></table>';
     return html;
+}
+
+function toggleReminderSection(header) {
+    header.closest('.reminder-section').classList.toggle('open');
 }
 
 function formatDateHe(dateStr) {

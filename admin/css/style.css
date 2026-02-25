@@ -2072,7 +2072,30 @@ tr:hover .client-view-link {
     gap: var(--sp-3);
     padding: var(--sp-3) var(--sp-5);
     border-radius: var(--radius-lg);
+    cursor: pointer;
+    user-select: none;
+    transition: border-radius 0.2s;
+}
+
+.reminder-section.open .reminder-section-header {
     margin-bottom: var(--sp-3);
+}
+
+.reminder-section-body {
+    display: none;
+}
+
+.reminder-section.open .reminder-section-body {
+    display: block;
+}
+
+.reminder-chevron {
+    transition: transform 0.2s;
+    flex-shrink: 0;
+}
+
+.reminder-section.open .reminder-chevron {
+    transform: rotate(-90deg);
 }
 
 .reminder-section-header h3 {
