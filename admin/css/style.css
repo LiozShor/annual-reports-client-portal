@@ -2043,6 +2043,20 @@ tr:hover .client-view-link {
     box-shadow: var(--shadow-xs);
 }
 
+.reminder-global-date {
+    margin-right: auto;
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
+}
+
+.reminder-global-date input[type="date"] {
+    padding: 6px 10px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    font-size: var(--text-sm);
+}
+
 /* Bulk Actions */
 .reminder-bulk-actions {
     display: flex;

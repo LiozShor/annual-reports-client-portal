@@ -2408,6 +2408,25 @@ function setManualReminder(reportId, clientName) {
     document.getElementById('confirmDialog').classList.add('show');
 }
 
+function applyGlobalReminderDate() {
+    const dateInput = document.getElementById('reminderGlobalDate');
+    const date = dateInput.value;
+    if (!date) {
+        showModal('error', 'שגיאה', 'יש לבחור תאריך');
+        return;
+    }
+    const allIds = remindersData.filter(r => !r.reminder_suppress).map(r => r.report_id);
+    if (!allIds.length) {
+        showModal('error', 'שגיאה', 'אין לקוחות פעילים לעדכון');
+        return;
+    }
+    showConfirmDialog(
+        `לעדכן תאריך תזכורת הבא ל-${formatDateHe(date)} עבור ${allIds.length} לקוחות?`,
+        () => executeReminderAction('change_date', allIds, date),
+        'עדכן הכל'
+    );
+}
+
 function showReminderDatePicker(reportId, currentDate) {
     const input = document.createElement('input');
     input.type = 'date';
