@@ -2422,7 +2422,12 @@ async function executeReminderAction(action, reportIds, value) {
             body: JSON.stringify(body)
         }, FETCH_TIMEOUTS.mutate);
 
-        const data = await response.json();
+        let data;
+        try {
+            data = await response.json();
+        } catch (e) {
+            throw new Error('השרת לא החזיר תשובה תקינה. נסה שוב.');
+        }
         hideLoading();
 
         if (!data.ok) throw new Error(data.error || 'שגיאה לא ידועה');
