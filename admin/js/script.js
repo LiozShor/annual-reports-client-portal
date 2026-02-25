@@ -10,6 +10,27 @@ let importData = [];
 let existingEmails = new Set();
 let reviewQueueData = [];
 
+// ==================== SSOT CONSTANTS ====================
+
+const STAGES = {
+    '1-Send_Questionnaire':  { num: 1, label: 'ממתין לשליחה',  icon: 'clipboard-list', class: 'stage-1' },
+    '2-Waiting_For_Answers': { num: 2, label: 'ממתין לתשובה',  icon: 'hourglass',      class: 'stage-2' },
+    '3-Collecting_Docs':     { num: 3, label: 'אוסף מסמכים',   icon: 'folder-open',    class: 'stage-3' },
+    '4-Review':              { num: 4, label: 'בבדיקה',        icon: 'search',         class: 'stage-4' },
+    '5-Completed':           { num: 5, label: 'הושלם',         icon: 'circle-check',   class: 'stage-5' }
+};
+
+const STAGE_NUM_TO_KEY = Object.fromEntries(Object.entries(STAGES).map(([k, v]) => [v.num, k]));
+
+const SORT_CONFIG = {
+    name:    { accessor: c => c.name || '',    type: 'string' },
+    stage:   { accessor: c => STAGES[c.stage]?.num || 0, type: 'number' },
+    docs:    { accessor: c => c.docs_total > 0 ? c.docs_received / c.docs_total : 0, type: 'number' },
+    missing: { accessor: c => (c.docs_total || 0) - (c.docs_received || 0), type: 'number' }
+};
+
+let currentSort = { column: null, direction: 'asc' };
+
 // ==================== AUTH ====================
 
 async function login() {
@@ -188,22 +209,19 @@ function renderClientsTable(clients) {
         return;
     }
 
-    const stageLabels = {
-        '1-Send_Questionnaire': { text: '<i data-lucide="clipboard-list" class="icon-sm"></i> ממתין לשליחה', class: 'stage-1' },
-        '2-Waiting_For_Answers': { text: '<i data-lucide="hourglass" class="icon-sm"></i> ממתין לתשובה', class: 'stage-2' },
-        '3-Collecting_Docs': { text: '<i data-lucide="folder-open" class="icon-sm"></i> אוסף מסמכים', class: 'stage-3' },
-        '4-Review': { text: '<i data-lucide="search" class="icon-sm"></i> בבדיקה', class: 'stage-4' },
-        '5-Completed': { text: '<i data-lucide="circle-check" class="icon-sm"></i> הושלם', class: 'stage-5' }
-    };
+    function sortAttr(col) {
+        if (currentSort.column !== col) return 'none';
+        return currentSort.direction === 'asc' ? 'ascending' : 'descending';
+    }
 
     let html = `
         <table>
             <thead>
                 <tr>
-                    <th>שם</th>
-                    <th>שלב</th>
-                    <th>מסמכים</th>
-                    <th>חסרים</th>
+                    <th><button class="th-sort-btn" onclick="toggleSort('name')" aria-sort="${sortAttr('name')}">שם <span class="sort-arrows"><span class="sort-asc">▲</span><span class="sort-desc">▼</span></span></button></th>
+                    <th><button class="th-sort-btn" onclick="toggleSort('stage')" aria-sort="${sortAttr('stage')}">שלב <span class="sort-arrows"><span class="sort-asc">▲</span><span class="sort-desc">▼</span></span></button></th>
+                    <th><button class="th-sort-btn" onclick="toggleSort('docs')" aria-sort="${sortAttr('docs')}">מסמכים <span class="sort-arrows"><span class="sort-asc">▲</span><span class="sort-desc">▼</span></span></button></th>
+                    <th><button class="th-sort-btn" onclick="toggleSort('missing')" aria-sort="${sortAttr('missing')}">חסרים <span class="sort-arrows"><span class="sort-asc">▲</span><span class="sort-desc">▼</span></span></button></th>
                     <th>פעולות</th>
                 </tr>
             </thead>
@@ -211,7 +229,7 @@ function renderClientsTable(clients) {
     `;
 
     for (const client of clients) {
-        const stage = stageLabels[client.stage] || { text: client.stage, class: '' };
+        const stage = STAGES[client.stage] || { label: client.stage, icon: 'help-circle', class: '' };
         const docsReceived = client.docs_received || 0;
         const docsTotal = client.docs_total || 0;
         const progressPercent = docsTotal > 0 ? Math.round((docsReceived / docsTotal) * 100) : 0;
@@ -233,7 +251,13 @@ function renderClientsTable(clients) {
                         </a>
                     </div>
                 </td>
-                <td><span class="stage-badge ${stage.class}">${stage.text}</span></td>
+                <td>
+                    <span id="stage-badge-${escapeAttr(client.report_id)}" class="stage-badge ${stage.class} clickable"
+                        onclick="openStageDropdown(event, '${escapeAttr(client.report_id)}', '${escapeAttr(client.stage)}')"
+                        title="לחץ לשינוי שלב">
+                        <i data-lucide="${stage.icon}" class="icon-sm"></i> ${stage.label} <span class="stage-caret">&#x25BE;</span>
+                    </span>
+                </td>
                 <td>
                     <div class="docs-progress-cell">
                         <div class="progress-bar">
@@ -274,20 +298,14 @@ function filterClients() {
     }
 
     if (stage) {
-        const stageMap = {
-            '1': '1-Send_Questionnaire',
-            '2': '2-Waiting_For_Answers',
-            '3': '3-Collecting_Docs',
-            '4': '4-Review',
-            '5': '5-Completed'
-        };
-        filtered = filtered.filter(c => c.stage === stageMap[stage]);
+        filtered = filtered.filter(c => c.stage === STAGE_NUM_TO_KEY[stage]);
     }
 
     if (year) {
         filtered = filtered.filter(c => String(c.year) === year);
     }
 
+    filtered = sortClients(filtered);
     renderClientsTable(filtered);
 }
 
@@ -317,6 +335,174 @@ function toggleStageFilter(stage) {
 
     filterClients();
 }
+
+// ==================== SORTING ====================
+
+function toggleSort(column) {
+    if (currentSort.column === column) {
+        currentSort.direction = currentSort.direction === 'asc' ? 'desc' : 'asc';
+    } else {
+        currentSort.column = column;
+        currentSort.direction = 'asc';
+    }
+    filterClients();
+}
+
+function sortClients(clients) {
+    if (!currentSort.column) return clients;
+    const config = SORT_CONFIG[currentSort.column];
+    if (!config) return clients;
+
+    return [...clients].sort((a, b) => {
+        const aVal = config.accessor(a);
+        const bVal = config.accessor(b);
+        let cmp;
+        if (config.type === 'string') {
+            cmp = String(aVal).localeCompare(String(bVal), 'he');
+        } else {
+            cmp = (aVal || 0) - (bVal || 0);
+        }
+        return currentSort.direction === 'asc' ? cmp : -cmp;
+    });
+}
+
+// ==================== STAGE DROPDOWN ====================
+
+function openStageDropdown(event, reportId, currentStage) {
+    event.stopPropagation();
+    const dropdown = document.getElementById('stageDropdown');
+    const rect = event.currentTarget.getBoundingClientRect();
+    const currentNum = STAGES[currentStage]?.num || 0;
+
+    let html = '';
+    for (const [key, info] of Object.entries(STAGES)) {
+        const isActive = key === currentStage;
+        const isBackward = info.num < currentNum;
+        html += `<button class="stage-dropdown-option ${isActive ? 'active' : ''} ${isBackward ? 'warning' : ''}"
+                    onclick="changeClientStage('${escapeAttr(reportId)}', '${key}')" ${isActive ? 'disabled' : ''}>
+                    <i data-lucide="${info.icon}" class="icon-sm"></i>
+                    ${info.label}
+                    ${isBackward ? '<span class="backward-badge">← אחורה</span>' : ''}
+                </button>`;
+    }
+
+    dropdown.innerHTML = html;
+
+    // Position below badge (RTL-aware)
+    dropdown.style.top = (rect.bottom + 6) + 'px';
+    dropdown.style.right = (window.innerWidth - rect.right) + 'px';
+    dropdown.style.left = 'auto';
+    dropdown.style.display = 'block';
+
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+
+    // Prevent immediate close from the same click event bubbling to document
+    requestAnimationFrame(() => {
+        document.addEventListener('click', _closeStageDropdownOnClick, { once: true });
+    });
+}
+
+function _closeStageDropdownOnClick() {
+    closeStageDropdown();
+}
+
+function closeStageDropdown() {
+    const dropdown = document.getElementById('stageDropdown');
+    if (dropdown) dropdown.style.display = 'none';
+    document.removeEventListener('click', _closeStageDropdownOnClick);
+}
+
+function changeClientStage(reportId, newStage) {
+    closeStageDropdown();
+
+    const client = clientsData.find(c => c.report_id === reportId);
+    if (!client || client.stage === newStage) return;
+
+    const currentNum = STAGES[client.stage]?.num || 0;
+    const targetNum = STAGES[newStage]?.num || 0;
+    const isBackward = targetNum < currentNum;
+    const targetLabel = STAGES[newStage]?.label || newStage;
+
+    if (isBackward) {
+        showConfirmDialog(
+            `שינוי אחורה ל"${targetLabel}" — פעולה זו עלולה לאפס נתונים. להמשיך?`,
+            () => executeStageChange(reportId, newStage),
+            'שנה שלב',
+            true
+        );
+    } else {
+        executeStageChange(reportId, newStage);
+    }
+}
+
+async function executeStageChange(reportId, newStage) {
+    const client = clientsData.find(c => c.report_id === reportId);
+    if (!client) return;
+
+    const previousStage = client.stage;
+
+    // Optimistic update
+    client.stage = newStage;
+    updateClientStageInPlace(reportId, newStage);
+    recalculateStats();
+
+    try {
+        const response = await fetchWithTimeout(`${API_BASE}/admin-change-stage`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ token: authToken, report_id: reportId, target_stage: newStage })
+        }, FETCH_TIMEOUTS.mutate);
+
+        const data = await response.json();
+
+        if (!data.ok) {
+            throw new Error(data.error || 'שגיאה לא ידועה');
+        }
+
+        showAIToast(`שלב עודכן ל"${STAGES[newStage]?.label}"`, 'success');
+    } catch (error) {
+        // Revert optimistic update
+        client.stage = previousStage;
+        updateClientStageInPlace(reportId, previousStage);
+        recalculateStats();
+        showAIToast('שגיאה בעדכון שלב: ' + error.message, 'danger');
+    }
+}
+
+function updateClientStageInPlace(reportId, newStage) {
+    const badge = document.getElementById(`stage-badge-${reportId}`);
+    if (!badge) return;
+
+    const stage = STAGES[newStage] || { label: newStage, icon: 'help-circle', class: '' };
+
+    badge.className = `stage-badge ${stage.class} clickable`;
+    badge.setAttribute('onclick', `openStageDropdown(event, '${escapeAttr(reportId)}', '${escapeAttr(newStage)}')`);
+    badge.innerHTML = `<i data-lucide="${stage.icon}" class="icon-sm"></i> ${stage.label} <span class="stage-caret">&#x25BE;</span>`;
+
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function recalculateStats() {
+    const counts = { total: 0, stage1: 0, stage2: 0, stage3: 0, stage4: 0, stage5: 0 };
+
+    for (const client of clientsData) {
+        counts.total++;
+        const num = STAGES[client.stage]?.num;
+        if (num) counts['stage' + num]++;
+    }
+
+    document.getElementById('stat-total').textContent = counts.total;
+    document.getElementById('stat-stage1').textContent = counts.stage1;
+    document.getElementById('stat-stage2').textContent = counts.stage2;
+    document.getElementById('stat-stage3').textContent = counts.stage3;
+    document.getElementById('stat-stage4').textContent = counts.stage4;
+    document.getElementById('stat-stage5').textContent = counts.stage5;
+}
+
+// Close stage dropdown on Escape
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') closeStageDropdown();
+});
 
 function refreshData() {
     loadDashboard();

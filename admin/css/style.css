@@ -296,6 +296,181 @@ tr.duplicate {
     color: var(--success-700);
 }
 
+/* ==================== SORTABLE HEADERS ==================== */
+.th-sort-btn {
+    all: unset;
+    display: inline-flex;
+    align-items: center;
+    gap: var(--sp-2);
+    width: 100%;
+    cursor: pointer;
+    font-weight: 600;
+    color: var(--gray-600);
+    font-size: var(--text-sm);
+    font-family: inherit;
+    transition: color var(--transition-fast);
+    user-select: none;
+    box-sizing: border-box;
+}
+
+.th-sort-btn:hover {
+    color: var(--gray-800);
+}
+
+.th-sort-btn:focus-visible {
+    outline: 2px solid var(--brand-400);
+    outline-offset: 2px;
+    border-radius: var(--radius-sm);
+}
+
+.sort-arrows {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    line-height: 1;
+    font-size: 8px;
+    opacity: 0.25;
+    transition: opacity var(--transition-fast);
+}
+
+.th-sort-btn:hover .sort-arrows {
+    opacity: 0.5;
+}
+
+.sort-asc,
+.sort-desc {
+    transition: color var(--transition-fast), opacity var(--transition-fast);
+}
+
+.th-sort-btn[aria-sort="ascending"] .sort-arrows,
+.th-sort-btn[aria-sort="descending"] .sort-arrows {
+    opacity: 1;
+}
+
+.th-sort-btn[aria-sort="ascending"] .sort-asc {
+    color: var(--brand-500);
+}
+
+.th-sort-btn[aria-sort="ascending"] .sort-desc {
+    opacity: 0.15;
+}
+
+.th-sort-btn[aria-sort="descending"] .sort-desc {
+    color: var(--brand-500);
+}
+
+.th-sort-btn[aria-sort="descending"] .sort-asc {
+    opacity: 0.15;
+}
+
+.th-sort-btn[aria-sort="ascending"],
+.th-sort-btn[aria-sort="descending"] {
+    color: var(--brand-700);
+}
+
+/* ==================== CLICKABLE STAGE BADGES ==================== */
+.stage-badge.clickable {
+    cursor: pointer;
+    transition: box-shadow var(--transition-fast), transform var(--transition-fast);
+}
+
+.stage-badge.clickable:hover {
+    box-shadow: var(--shadow-sm);
+    transform: translateY(-1px);
+}
+
+.stage-badge.clickable:active {
+    transform: translateY(0);
+    box-shadow: none;
+}
+
+.stage-caret {
+    font-size: 10px;
+    opacity: 0.4;
+    transition: opacity var(--transition-fast);
+    margin-inline-start: var(--sp-1);
+}
+
+.stage-badge.clickable:hover .stage-caret {
+    opacity: 0.8;
+}
+
+/* ==================== STAGE DROPDOWN ==================== */
+.stage-dropdown {
+    position: fixed;
+    z-index: 1001;
+    background: white;
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-lg);
+    padding: var(--sp-2);
+    min-width: 190px;
+    animation: stageDropdownIn 120ms ease-out;
+}
+
+@keyframes stageDropdownIn {
+    from {
+        opacity: 0;
+        transform: translateY(-4px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.stage-dropdown-option {
+    all: unset;
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
+    width: 100%;
+    padding: var(--sp-2) var(--sp-3);
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    font-size: var(--text-sm);
+    font-family: inherit;
+    color: var(--gray-700);
+    transition: background var(--transition-fast);
+    box-sizing: border-box;
+}
+
+.stage-dropdown-option:hover {
+    background: var(--gray-50);
+}
+
+.stage-dropdown-option.active {
+    background: var(--brand-50);
+    color: var(--brand-700);
+    font-weight: 600;
+    cursor: default;
+}
+
+.stage-dropdown-option.warning {
+    color: var(--warning-700);
+}
+
+.stage-dropdown-option.warning:hover {
+    background: var(--warning-50);
+}
+
+.stage-dropdown-option:disabled {
+    cursor: default;
+}
+
+.stage-dropdown-option svg {
+    width: 14px;
+    height: 14px;
+    flex-shrink: 0;
+}
+
+.backward-badge {
+    font-size: var(--text-xs);
+    color: var(--warning-500);
+    margin-inline-start: auto;
+    font-weight: 400;
+}
+
 /* ==================== STATUS BADGES ==================== */
 .status-badge {
     display: inline-block;
@@ -1811,6 +1986,23 @@ tr:hover .client-view-link {
     td {
         padding: var(--sp-2) var(--sp-2);
         font-size: var(--text-xs);
+    }
+
+    .th-sort-btn {
+        font-size: var(--text-xs);
+        gap: var(--sp-1);
+    }
+
+    .sort-arrows {
+        font-size: 7px;
+    }
+
+    .stage-caret {
+        display: none;
+    }
+
+    .stage-dropdown {
+        min-width: 170px;
     }
 
     .preview-actions {
