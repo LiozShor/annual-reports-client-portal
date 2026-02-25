@@ -2399,10 +2399,13 @@ async function executeReminderAction(action, reportIds, value) {
     }
 }
 
-async function setManualReminder(reportId, clientName) {
+function setManualReminder(reportId, clientName) {
     const today = new Date().toISOString().split('T')[0];
-    if (!confirm(`להגדיר תזכורת ל-${clientName}?\nתאריך: ${today}`)) return;
-    await executeReminderAction('change_date', [reportId], today);
+    showConfirmDialog(
+        `להגדיר תזכורת ל-${clientName}?`,
+        () => executeReminderAction('change_date', [reportId], today),
+        'הגדר תזכורת'
+    );
 }
 
 function showReminderDatePicker(reportId, currentDate) {
