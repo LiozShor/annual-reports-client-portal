@@ -2370,6 +2370,19 @@ function updateReminderSelectedCount() {
 }
 
 async function reminderAction(action, reportId) {
+    if (action === 'send_now') {
+        const r = remindersData.find(x => x.report_id === reportId);
+        if (r && r.last_reminder_sent_at) {
+            const hoursSince = (Date.now() - new Date(r.last_reminder_sent_at).getTime()) / 3600000;
+            if (hoursSince < 24) {
+                const hoursAgo = Math.floor(hoursSince);
+                const msg = hoursAgo < 1
+                    ? 'תזכורת נשלחה לפני פחות משעה. לשלוח שוב?'
+                    : `תזכורת נשלחה לפני ${hoursAgo} שעות. לשלוח שוב?`;
+                if (!confirm(msg)) return;
+            }
+        }
+    }
     await executeReminderAction(action, [reportId]);
 }
 
@@ -2377,7 +2390,16 @@ async function reminderBulkAction(action) {
     const reportIds = Array.from(document.querySelectorAll('.reminder-checkbox:checked')).map(cb => cb.value);
     if (reportIds.length === 0) return;
 
-    if (action === 'send_now' && !confirm(`לשלוח תזכורת ל-${reportIds.length} לקוחות?`)) return;
+    if (action === 'send_now') {
+        const recentIds = reportIds.filter(id => {
+            const r = remindersData.find(x => x.report_id === id);
+            return r && r.last_reminder_sent_at && (Date.now() - new Date(r.last_reminder_sent_at).getTime()) < 86400000;
+        });
+        const msg = recentIds.length > 0
+            ? `לשלוח תזכורת ל-${reportIds.length} לקוחות? (${recentIds.length} כבר קיבלו תזכורת היום)`
+            : `לשלוח תזכורת ל-${reportIds.length} לקוחות?`;
+        if (!confirm(msg)) return;
+    }
     if (action === 'suppress_forever' && !confirm(`להשתיק לצמיתות ${reportIds.length} לקוחות?`)) return;
 
     await executeReminderAction(action, reportIds);
