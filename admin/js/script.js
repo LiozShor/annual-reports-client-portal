@@ -1543,7 +1543,7 @@ function renderAICard(item) {
         const approveDisabled = item.is_unrequested;
         actionsHtml = `
             <button class="btn btn-success btn-sm" ${approveDisabled
-                ? 'aria-disabled="true" data-tooltip="לא ניתן לאשר מסמך שלא נדרש — יש לשייך מחדש או לדחות"'
+                ? 'aria-disabled="true" title="לא ניתן לאשר מסמך שלא נדרש — יש לשייך מחדש או לדחות"'
                 : `onclick="approveAIClassification('${escapeAttr(item.id)}')"`}>
                 <i data-lucide="check" class="icon-sm"></i> אשר
             </button>
@@ -1659,7 +1659,7 @@ function renderAICard(item) {
         const fuzzyApproveDisabled = item.is_unrequested;
         actionsHtml = `
             <button class="btn btn-success btn-sm" ${fuzzyApproveDisabled
-                ? 'aria-disabled="true" data-tooltip="לא ניתן לאשר מסמך שלא נדרש — יש לשייך מחדש או לדחות"'
+                ? 'aria-disabled="true" title="לא ניתן לאשר מסמך שלא נדרש — יש לשייך מחדש או לדחות"'
                 : `onclick="approveAIClassification('${escapeAttr(item.id)}')"`}>
                 <i data-lucide="check" class="icon-sm"></i> אשר
             </button>
