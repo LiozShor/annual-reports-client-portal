@@ -2137,16 +2137,6 @@ async function loadReminders(silent = false) {
         reminderLoaded = true;
         updateReminderStats(data.stats || {});
         filterReminders();
-
-        // Update tab badge
-        const badge = document.getElementById('reminderTabBadge');
-        const dueCount = data.stats?.due_this_week || 0;
-        if (dueCount > 0) {
-            badge.textContent = dueCount;
-            badge.style.display = 'inline-flex';
-        } else {
-            badge.style.display = 'none';
-        }
     } catch (error) {
         if (!silent) hideLoading();
         console.error('Reminders load error:', error);
@@ -2166,23 +2156,7 @@ async function loadReminders(silent = false) {
 }
 
 async function loadReminderCount() {
-    const badge = document.getElementById('reminderTabBadge');
-    try {
-        const resp = await fetchWithTimeout(`${API_BASE}/admin-reminders`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ token: authToken, action: 'list', stats_only: true })
-        }, FETCH_TIMEOUTS.quick);
-        const data = await resp.json();
-        if (data.ok && data.stats && data.stats.due_this_week > 0) {
-            badge.textContent = data.stats.due_this_week;
-            badge.style.display = 'inline-flex';
-        } else {
-            badge.style.display = 'none';
-        }
-    } catch (e) {
-        badge.style.display = 'none';
-    }
+    // Badge removed — no-op, kept for compatibility
 }
 
 function updateReminderStats(stats) {
