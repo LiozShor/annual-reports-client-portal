@@ -1697,6 +1697,7 @@ function renderAICard(item) {
                     <i data-lucide="${fileIcon}" class="icon-sm"></i>
                     <span class="ai-file-name" ${senderTooltip ? `title="${escapeAttr(senderTooltip)}"` : ''}>${escapeHtml(item.attachment_name || 'ללא שם')}</span>
                     ${item.is_duplicate ? '<span class="ai-duplicate-badge" title="קובץ כפול — אותו קובץ כבר קיים במערכת">כפול</span>' : ''}
+                    ${item.is_unrequested ? '<span class="ai-unrequested-badge" title="מסמך שלא נדרש מהלקוח">לא נדרש</span>' : ''}
                     ${evidenceIcon}
                 </div>
                 ${viewFileBtn}
