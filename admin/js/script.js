@@ -2401,11 +2401,16 @@ async function executeReminderAction(action, reportIds, value) {
 
 function setManualReminder(reportId, clientName) {
     const today = new Date().toISOString().split('T')[0];
-    showConfirmDialog(
-        `להגדיר תזכורת ל-${clientName}?`,
-        () => executeReminderAction('change_date', [reportId], today),
-        'הגדר תזכורת'
-    );
+    const msgEl = document.getElementById('confirmDialogMessage');
+    msgEl.innerHTML = `להגדיר תזכורת ל-${clientName}?<br><label style="display:block;margin-top:12px;font-size:14px;color:var(--text-secondary)">תאריך תזכורת:</label><input type="date" id="reminderDateInput" value="${today}" style="margin-top:4px;padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:14px;width:100%;direction:ltr">`;
+    _confirmCallback = () => {
+        const date = document.getElementById('reminderDateInput').value || today;
+        executeReminderAction('change_date', [reportId], date);
+    };
+    const btn = document.getElementById('confirmDialogBtn');
+    btn.textContent = 'הגדר תזכורת';
+    btn.className = 'btn btn-primary';
+    document.getElementById('confirmDialog').classList.add('show');
 }
 
 function showReminderDatePicker(reportId, currentDate) {
