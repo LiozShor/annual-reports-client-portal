@@ -2277,6 +2277,41 @@ tr:hover .client-view-link {
     font-size: var(--text-sm);
 }
 
+/* Create new doc button in dropdown */
+.doc-combobox-create-btn {
+    padding: var(--sp-2) var(--sp-4);
+    font-size: var(--text-sm);
+    font-weight: 600;
+    color: var(--brand-600, #4F46E5);
+    cursor: pointer;
+    border-bottom: 1px solid var(--gray-200);
+    transition: background 100ms;
+}
+
+.doc-combobox-create-btn:hover {
+    background: var(--brand-50, #EEF2FF);
+}
+
+/* Back link shown in create mode */
+.doc-combobox-back-link {
+    display: block;
+    font-size: var(--text-xs);
+    color: var(--gray-500);
+    text-decoration: none;
+    margin-top: var(--sp-1);
+    direction: rtl;
+}
+
+.doc-combobox-back-link:hover {
+    color: var(--brand-500);
+}
+
+/* Input border change in create mode */
+.doc-combobox-input.create-mode {
+    border-color: var(--brand-400, #818CF8);
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+}
+
 /* Inline combobox in card actions */
 .ai-assign-section .doc-combobox-container {
     flex: 1;

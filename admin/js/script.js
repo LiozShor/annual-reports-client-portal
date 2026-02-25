@@ -1022,7 +1022,7 @@ function exportReviewToExcel() {
 
 // ==================== DOC SEARCH COMBOBOX ====================
 
-function createDocCombobox(container, docs, { currentMatchId = null, onSelect = null } = {}) {
+function createDocCombobox(container, docs, { currentMatchId = null, onSelect = null, allowCreate = false } = {}) {
     // Group docs by category, skip empty categories
     const groups = [];
     let currentCat = null;
@@ -1038,17 +1038,59 @@ function createDocCombobox(container, docs, { currentMatchId = null, onSelect = 
         <div class="doc-combobox">
             <input class="doc-combobox-input" placeholder="\ud83d\udd0d \u05d7\u05e4\u05e9 \u05de\u05e1\u05de\u05da..." autocomplete="off" />
             <div class="doc-combobox-dropdown"></div>
+            ${allowCreate ? '<a href="#" class="doc-combobox-back-link" style="display:none">\u2190 \u05d7\u05d6\u05e8\u05d4 \u05dc\u05e8\u05e9\u05d9\u05de\u05d4</a>' : ''}
         </div>
     `;
 
     const combobox = container.querySelector('.doc-combobox');
     const input = combobox.querySelector('.doc-combobox-input');
     const dropdown = combobox.querySelector('.doc-combobox-dropdown');
+    const backLink = combobox.querySelector('.doc-combobox-back-link');
     let selectedValue = null;
+    let inCreateMode = false;
+
+    function enterCreateMode() {
+        inCreateMode = true;
+        input.value = '';
+        input.placeholder = '\u05e9\u05dd \u05d4\u05de\u05e1\u05de\u05da \u05d4\u05d7\u05d3\u05e9...';
+        input.classList.add('create-mode');
+        input.classList.remove('has-value');
+        combobox.dataset.selectedValue = '__NEW__';
+        combobox.dataset.newDocName = '';
+        combobox.dataset.selectedDocId = '';
+        selectedValue = '__NEW__';
+        close();
+        if (backLink) backLink.style.display = '';
+        input.focus();
+        if (onSelect) onSelect('__NEW__', null);
+    }
+
+    function exitCreateMode() {
+        inCreateMode = false;
+        input.value = '';
+        input.placeholder = '\ud83d\udd0d \u05d7\u05e4\u05e9 \u05de\u05e1\u05de\u05da...';
+        input.classList.remove('create-mode', 'has-value');
+        combobox.dataset.selectedValue = '';
+        combobox.dataset.newDocName = '';
+        selectedValue = null;
+        if (backLink) backLink.style.display = 'none';
+        if (onSelect) onSelect(null, null);
+    }
+
+    if (backLink) {
+        backLink.addEventListener('click', (e) => {
+            e.preventDefault();
+            exitCreateMode();
+        });
+    }
 
     function renderOptions(filter = '') {
         let html = '';
         let hasResults = false;
+
+        if (allowCreate) {
+            html += `<div class="doc-combobox-create-btn" data-action="create">+ \u05d4\u05d5\u05e1\u05e3 \u05de\u05e1\u05de\u05da \u05d7\u05d3\u05e9</div>`;
+        }
 
         for (const group of groups) {
             const filtered = group.docs.filter(d =>
@@ -1066,13 +1108,24 @@ function createDocCombobox(container, docs, { currentMatchId = null, onSelect = 
             }
         }
 
-        if (!hasResults) {
+        if (!hasResults && !allowCreate) {
             html = `<div class="doc-combobox-empty">\u05dc\u05d0 \u05e0\u05de\u05e6\u05d0\u05d5 \u05ea\u05d5\u05e6\u05d0\u05d5\u05ea</div>`;
+        } else if (!hasResults && allowCreate) {
+            html += `<div class="doc-combobox-empty">\u05dc\u05d0 \u05e0\u05de\u05e6\u05d0\u05d5 \u05ea\u05d5\u05e6\u05d0\u05d5\u05ea \u2014 \u05e0\u05e1\u05d4 \u05dc\u05d4\u05d5\u05e1\u05d9\u05e3 \u05de\u05e1\u05de\u05da \u05d7\u05d3\u05e9</div>`;
         }
 
         dropdown.innerHTML = html;
 
-        // Bind clicks
+        // Bind create button click
+        const createBtn = dropdown.querySelector('.doc-combobox-create-btn');
+        if (createBtn) {
+            createBtn.addEventListener('mousedown', (e) => {
+                e.preventDefault();
+                enterCreateMode();
+            });
+        }
+
+        // Bind option clicks
         dropdown.querySelectorAll('.doc-combobox-option').forEach(opt => {
             opt.addEventListener('mousedown', (e) => {
                 e.preventDefault();
@@ -1081,6 +1134,7 @@ function createDocCombobox(container, docs, { currentMatchId = null, onSelect = 
                 input.classList.add('has-value');
                 combobox.dataset.selectedValue = selectedValue;
                 combobox.dataset.selectedDocId = opt.dataset.docId || '';
+                combobox.dataset.newDocName = '';
                 close();
                 if (onSelect) onSelect(selectedValue, opt.dataset.docId);
             });
@@ -1109,6 +1163,7 @@ function createDocCombobox(container, docs, { currentMatchId = null, onSelect = 
     }
 
     function open() {
+        if (inCreateMode) return;
         combobox.classList.add('open');
         positionDropdown();
         renderOptions(input.classList.contains('has-value') ? '' : input.value);
@@ -1120,6 +1175,13 @@ function createDocCombobox(container, docs, { currentMatchId = null, onSelect = 
 
     input.addEventListener('focus', open);
     input.addEventListener('input', () => {
+        if (inCreateMode) {
+            combobox.dataset.newDocName = input.value;
+            combobox.dataset.selectedValue = input.value.trim() ? '__NEW__' : '';
+            selectedValue = input.value.trim() ? '__NEW__' : null;
+            if (onSelect) onSelect(input.value.trim() ? '__NEW__' : null, null);
+            return;
+        }
         input.classList.remove('has-value');
         selectedValue = null;
         combobox.dataset.selectedValue = '';
@@ -1140,7 +1202,10 @@ function createDocCombobox(container, docs, { currentMatchId = null, onSelect = 
 
     return {
         getValue: () => selectedValue,
+        isCreateMode: () => inCreateMode,
+        getNewDocName: () => inCreateMode ? (combobox.dataset.newDocName || '') : '',
         setValue: (val) => {
+            if (inCreateMode) exitCreateMode();
             const doc = docs.find(d => d.template_id === val);
             if (doc) {
                 selectedValue = val;
@@ -1150,6 +1215,7 @@ function createDocCombobox(container, docs, { currentMatchId = null, onSelect = 
             }
         },
         clear: () => {
+            if (inCreateMode) exitCreateMode();
             selectedValue = null;
             input.value = '';
             input.classList.remove('has-value');
@@ -1489,6 +1555,7 @@ function renderAICards(items) {
         let docs = [];
         try { docs = JSON.parse(el.dataset.docs); } catch (e) { /* skip */ }
         createDocCombobox(el, docs, {
+            allowCreate: true,
             onSelect: (templateId) => {
                 const btn = el.closest('.ai-card-actions').querySelector('.btn-ai-assign-confirm');
                 if (btn) btn.disabled = !templateId;
@@ -1851,6 +1918,7 @@ function showAIReassignModal(recordId, missingDocs) {
     document.getElementById('aiReassignConfirmBtn').disabled = true;
     createDocCombobox(comboContainer, missingDocs, {
         currentMatchId,
+        allowCreate: true,
         onSelect: (templateId) => {
             document.getElementById('aiReassignConfirmBtn').disabled = !templateId;
         }
@@ -1869,27 +1937,36 @@ async function confirmAIReassign() {
     const combobox = document.querySelector('#aiReassignComboboxContainer .doc-combobox');
     const templateId = combobox ? combobox.dataset.selectedValue : '';
     const docRecordId = combobox ? combobox.dataset.selectedDocId : '';
+    const newDocName = combobox ? (combobox.dataset.newDocName || '') : '';
     if (!templateId || !aiCurrentReassignId) return;
 
     const recordId = aiCurrentReassignId;
     closeAIReassignModal();
-    await submitAIReassign(recordId, templateId, docRecordId);
+
+    if (templateId === '__NEW__' && newDocName.trim()) {
+        await submitAIReassign(recordId, 'general_doc', '', null, newDocName.trim());
+    } else {
+        await submitAIReassign(recordId, templateId, docRecordId);
+    }
 }
 
-async function submitAIReassign(recordId, templateId, docRecordId, loadingText) {
+async function submitAIReassign(recordId, templateId, docRecordId, loadingText, newDocName) {
     setCardLoading(recordId, loadingText || 'משייך מחדש...');
 
     try {
+        const body = {
+            token: authToken,
+            classification_id: recordId,
+            action: 'reassign',
+            reassign_template_id: templateId,
+            reassign_doc_record_id: docRecordId || null
+        };
+        if (newDocName) body.new_doc_name = newDocName;
+
         const response = await fetchWithTimeout(`${API_BASE}/review-classification`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                token: authToken,
-                classification_id: recordId,
-                action: 'reassign',
-                reassign_template_id: templateId,
-                reassign_doc_record_id: docRecordId || null
-            })
+            body: JSON.stringify(body)
         }, FETCH_TIMEOUTS.mutate);
 
         const data = await parseAIResponse(response);
@@ -1910,10 +1987,18 @@ async function assignAIUnmatched(recordId, btnEl) {
     const comboboxEl = actionsContainer.querySelector('.doc-combobox');
     const templateId = comboboxEl ? comboboxEl.dataset.selectedValue : '';
     const docRecordId = comboboxEl ? comboboxEl.dataset.selectedDocId : '';
+    const newDocName = comboboxEl ? (comboboxEl.dataset.newDocName || '') : '';
     if (!templateId) return;
-    showInlineConfirm(recordId, 'לשייך?', async () => {
-        await submitAIReassign(recordId, templateId, docRecordId, 'משייך...');
-    }, { confirmText: 'שייך' });
+
+    if (templateId === '__NEW__' && newDocName.trim()) {
+        showInlineConfirm(recordId, `ליצור מסמך "${newDocName.trim()}"?`, async () => {
+            await submitAIReassign(recordId, 'general_doc', '', 'יוצר ומשייך...', newDocName.trim());
+        }, { confirmText: 'צור ושייך' });
+    } else {
+        showInlineConfirm(recordId, 'לשייך?', async () => {
+            await submitAIReassign(recordId, templateId, docRecordId, 'משייך...');
+        }, { confirmText: 'שייך' });
+    }
 }
 
 function animateAndRemoveAI(recordId) {
