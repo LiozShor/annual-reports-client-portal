@@ -1540,8 +1540,11 @@ function renderAICard(item) {
             <span class="ai-confidence-badge ${confidenceClass}">${confidencePercent}%</span>
             <span class="ai-template-match">${escapeHtml(docDisplayName)}</span>
         `;
+        const approveDisabled = item.is_unrequested;
         actionsHtml = `
-            <button class="btn btn-success btn-sm" onclick="approveAIClassification('${escapeAttr(item.id)}')">
+            <button class="btn btn-success btn-sm" ${approveDisabled
+                ? 'aria-disabled="true" title="לא ניתן לאשר מסמך שלא נדרש — יש לשייך מחדש או לדחות"'
+                : `onclick="approveAIClassification('${escapeAttr(item.id)}')"`}>
                 <i data-lucide="check" class="icon-sm"></i> אשר
             </button>
             <button class="btn btn-danger btn-sm" onclick="rejectAIClassification('${escapeAttr(item.id)}')">
@@ -1653,8 +1656,11 @@ function renderAICard(item) {
             <span class="ai-template-match">${escapeHtml(docDisplayName)}</span>
             ${fuzzyHintHtml}
         `;
+        const fuzzyApproveDisabled = item.is_unrequested;
         actionsHtml = `
-            <button class="btn btn-success btn-sm" onclick="approveAIClassification('${escapeAttr(item.id)}')">
+            <button class="btn btn-success btn-sm" ${fuzzyApproveDisabled
+                ? 'aria-disabled="true" title="לא ניתן לאשר מסמך שלא נדרש — יש לשייך מחדש או לדחות"'
+                : `onclick="approveAIClassification('${escapeAttr(item.id)}')"`}>
                 <i data-lucide="check" class="icon-sm"></i> אשר
             </button>
             <button class="btn btn-danger btn-sm" onclick="rejectAIClassification('${escapeAttr(item.id)}')">
@@ -1691,7 +1697,7 @@ function renderAICard(item) {
     }
 
     return `
-        <div class="ai-review-card ${cardClass}" data-id="${escapeAttr(item.id)}">
+        <div class="ai-review-card ${cardClass}" data-id="${escapeAttr(item.id)}" ${item.is_unrequested ? 'data-unrequested="true"' : ''}>
             <div class="ai-card-top">
                 <div class="ai-file-info">
                     <i data-lucide="${fileIcon}" class="icon-sm"></i>
