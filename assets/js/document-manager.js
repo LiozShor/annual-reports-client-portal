@@ -292,8 +292,10 @@ function displayDocuments() {
                         ${doc.file_url && (effectiveStatus === 'Received' || effectiveStatus === 'Requires_Fix')
                             ? `<a href="${escapeHtml(doc.file_url)}" target="_blank" rel="noopener noreferrer"
                                     class="file-action-btn" title="צפה בקובץ" aria-label="צפה בקובץ"><i data-lucide="external-link" class="icon-sm"></i></a>
-                               <a href="${escapeHtml(doc.file_url)}${doc.file_url.includes('?') ? '&' : '?'}download=1" target="_blank" rel="noopener noreferrer"
-                                    class="file-action-btn" title="הורד קובץ" aria-label="הורד קובץ"><i data-lucide="download" class="icon-sm"></i></a>`
+                               ${doc.download_url
+                                    ? `<a href="${escapeHtml(doc.download_url)}" download rel="noopener noreferrer"
+                                            class="file-action-btn" title="הורד קובץ" aria-label="הורד קובץ"><i data-lucide="download" class="icon-sm"></i></a>`
+                                    : ''}`
                             : ''}
                     </div>
                     <div class="note-editor" id="note-${doc.id}" style="display:none;">
