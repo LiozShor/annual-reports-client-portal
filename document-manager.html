@@ -212,23 +212,24 @@
                         <textarea id="notes" placeholder="לדוגמה: נא לבקש את המסמכים ב-PDF בלבד..."></textarea>
                     </div>
 
-                    <div class="email-toggle">
-                        <label class="switch">
-                            <input type="checkbox" id="emailToggle" checked onchange="sendEmailOnSave = this.checked">
-                            <span class="switch-slider"></span>
-                        </label>
-                        <label for="emailToggle" class="text-sm">שלח אימייל התראה למשרד לאחר השמירה</label>
-                    </div>
-
-                    <div class="actions-row">
-                        <button class="btn btn-primary btn-lg" onclick="openConfirmation()">
-                            <i data-lucide="save" class="icon-sm"></i> שמור שינויים
-                        </button>
-                        <button class="btn btn-ghost" onclick="resetForm()">
-                            <i data-lucide="refresh-cw" class="icon-sm"></i> אפס טופס
-                        </button>
-                    </div>
                     </div><!-- /.collapsible-content -->
+                </div>
+
+                <div class="email-toggle">
+                    <label class="switch">
+                        <input type="checkbox" id="emailToggle" checked onchange="sendEmailOnSave = this.checked">
+                        <span class="switch-slider"></span>
+                    </label>
+                    <label for="emailToggle" class="text-sm">שלח אימייל התראה למשרד לאחר השמירה</label>
+                </div>
+
+                <div class="actions-row">
+                    <button class="btn btn-primary btn-lg" onclick="openConfirmation()">
+                        <i data-lucide="save" class="icon-sm"></i> שמור שינויים
+                    </button>
+                    <button class="btn btn-ghost" onclick="resetForm()">
+                        <i data-lucide="refresh-cw" class="icon-sm"></i> אפס טופס
+                    </button>
                 </div>
             </div>
 
