@@ -296,39 +296,34 @@ body {
     color: var(--gray-400);
 }
 
-/* Delete toggle button (trash icon) */
+/* Delete toggle button (trash icon) — mirrors .note-btn sizing */
 .delete-toggle {
-    width: 26px;
-    height: 26px;
-    margin-inline-end: var(--sp-2);
+    background: none;
+    border: 1px solid transparent;
     cursor: pointer;
-    flex-shrink: 0;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    border: 1.5px solid transparent;
+    padding: var(--sp-1) var(--sp-2);
     border-radius: var(--radius-md);
-    background: transparent;
-    color: var(--gray-400);
     transition: all var(--transition-fast);
-    padding: 0;
+    display: flex;
+    align-items: center;
+    color: var(--gray-400);
+    flex-shrink: 0;
 }
 
 .delete-toggle:hover {
-    border-color: var(--danger-300);
     background: var(--danger-50);
     color: var(--danger-500);
 }
 
 .delete-toggle.active {
-    border-color: var(--danger-500);
-    background: var(--danger-500);
-    color: white;
+    background: var(--danger-100);
+    border-color: var(--danger-200);
+    color: var(--danger-600);
 }
 
 .delete-toggle.active:hover {
-    background: var(--danger-600);
-    border-color: var(--danger-600);
+    background: var(--danger-200);
+    color: var(--danger-700);
 }
 
 /* Restore checkbox (waived items) */

@@ -271,11 +271,7 @@ function displayDocuments() {
                                 id="restore-${doc.id}"
                                 ${isRestoreMarked ? 'checked' : ''}
                                 aria-label="שחזר מסמך">`
-                            : `<button type="button" class="delete-toggle ${markedForRemoval.has(doc.id) ? 'active' : ''}"
-                                onclick="toggleRemoval('${doc.id}')"
-                                id="delete-btn-${doc.id}"
-                                aria-label="סמן להסרה"
-                                title="הסר מסמך"><i data-lucide="trash-2" class="icon-sm"></i></button>`
+                            : ''
                         }
                         <span class="document-icon"><i data-lucide="file-text" class="icon-sm"></i></span>
                         <div class="document-name">${doc.name}</div>
@@ -289,6 +285,14 @@ function displayDocuments() {
                         <button class="note-btn ${hasNote ? 'has-note' : ''} ${noteChanges.has(doc.id) ? 'note-modified' : ''}"
                                 onclick="toggleNote('${doc.id}')"
                                 title="הערת משרד"><i data-lucide="${hasNote ? 'file-pen' : 'pen-line'}" class="icon-sm"></i></button>
+                        ${!isWaived
+                            ? `<button type="button" class="delete-toggle ${markedForRemoval.has(doc.id) ? 'active' : ''}"
+                                onclick="toggleRemoval('${doc.id}')"
+                                id="delete-btn-${doc.id}"
+                                aria-label="סמן להסרה"
+                                title="הסר מסמך"><i data-lucide="trash-2" class="icon-sm"></i></button>`
+                            : ''
+                        }
                         ${doc.file_url && (effectiveStatus === 'Received' || effectiveStatus === 'Requires_Fix')
                             ? `<a href="${escapeHtml(doc.file_url)}" target="_blank" rel="noopener noreferrer"
                                     class="file-action-btn" title="צפה בקובץ" aria-label="צפה בקובץ"><i data-lucide="external-link" class="icon-sm"></i></a>
