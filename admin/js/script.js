@@ -276,6 +276,9 @@ function renderClientsTable(clients) {
                     ${client.stage === '1-Send_Questionnaire' ?
                 `<button class="action-btn send" onclick="sendSingle('${client.report_id}')" title="שלח שאלון"><i data-lucide="send" class="icon-sm"></i></button>` :
                 ''}
+                    ${(client.stage === '2-Waiting_For_Answers' || client.stage === '3-Collecting_Docs') ?
+                `<button class="action-btn reminder-set-btn" onclick="setManualReminder('${escapeAttr(client.report_id)}', '${escapeHtml(client.name)}')" title="הגדר תזכורת"><i data-lucide="bell-plus" class="icon-sm"></i></button>` :
+                ''}
                 </td>
             </tr>
         `;
@@ -2394,6 +2397,12 @@ async function executeReminderAction(action, reportIds, value) {
         hideLoading();
         showModal('error', 'שגיאה', error.message);
     }
+}
+
+async function setManualReminder(reportId, clientName) {
+    const today = new Date().toISOString().split('T')[0];
+    if (!confirm(`להגדיר תזכורת ל-${clientName}?\nתאריך: ${today}`)) return;
+    await executeReminderAction('change_date', [reportId], today);
 }
 
 function showReminderDatePicker(reportId, currentDate) {

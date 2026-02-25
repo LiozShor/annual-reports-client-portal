@@ -2145,6 +2145,15 @@ tr:hover .client-view-link {
     background: var(--info-100);
 }
 
+.action-btn.reminder-set-btn {
+    background: var(--primary-50);
+    color: var(--primary-600);
+}
+
+.action-btn.reminder-set-btn:hover {
+    background: var(--primary-100);
+}
+
 /* ==================== RESPONSIVE ==================== */
 @media (max-width: 768px) {
     .admin-navbar {
