@@ -298,24 +298,24 @@ body {
 
 /* Delete toggle button (trash icon) */
 .delete-toggle {
-    width: 32px;
-    height: 32px;
+    width: 26px;
+    height: 26px;
     margin-inline-end: var(--sp-2);
     cursor: pointer;
     flex-shrink: 0;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    border: 1.5px solid var(--gray-300);
+    border: 1.5px solid transparent;
     border-radius: var(--radius-md);
-    background: white;
+    background: transparent;
     color: var(--gray-400);
     transition: all var(--transition-fast);
     padding: 0;
 }
 
 .delete-toggle:hover {
-    border-color: var(--danger-400);
+    border-color: var(--danger-300);
     background: var(--danger-50);
     color: var(--danger-500);
 }
@@ -324,7 +324,6 @@ body {
     border-color: var(--danger-500);
     background: var(--danger-500);
     color: white;
-    box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.15);
 }
 
 .delete-toggle.active:hover {
