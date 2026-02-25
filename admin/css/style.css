@@ -1970,6 +1970,181 @@ tr:hover .client-view-link {
 .ai-toast.ai-toast-success { background: var(--success-700); }
 .ai-toast.ai-toast-danger  { background: var(--danger-700); }
 
+/* ==================== REMINDERS TAB ==================== */
+
+/* Tab Badge */
+.reminder-tab-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 20px;
+    height: 20px;
+    padding: 0 6px;
+    border-radius: var(--radius-full);
+    background: var(--brand-500);
+    color: white;
+    font-size: 11px;
+    font-weight: 700;
+    margin-inline-start: var(--sp-2);
+}
+
+/* Stats Bar */
+.reminder-stats-bar {
+    display: flex;
+    gap: var(--sp-3);
+    margin-bottom: var(--sp-5);
+    flex-wrap: wrap;
+}
+
+.reminder-stat-item {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
+    padding: var(--sp-3) var(--sp-4);
+    background: white;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--gray-200);
+    box-shadow: var(--shadow-xs);
+    min-width: 130px;
+}
+
+.reminder-stat-item .reminder-stat-value {
+    font-size: var(--text-xl);
+    font-weight: 700;
+    color: var(--gray-800);
+}
+
+.reminder-stat-item .reminder-stat-label {
+    font-size: var(--text-xs);
+    color: var(--gray-500);
+    font-weight: 500;
+}
+
+.reminder-stat-item.reminder-stat-scheduled { border-inline-start: 3px solid var(--brand-500); }
+.reminder-stat-item.reminder-stat-scheduled .icon-sm { color: var(--brand-500); }
+.reminder-stat-item.reminder-stat-due { border-inline-start: 3px solid var(--warning-500); }
+.reminder-stat-item.reminder-stat-due .icon-sm { color: var(--warning-500); }
+.reminder-stat-item.reminder-stat-suppressed { border-inline-start: 3px solid var(--gray-400); }
+.reminder-stat-item.reminder-stat-suppressed .icon-sm { color: var(--gray-400); }
+.reminder-stat-item.reminder-stat-exhausted { border-inline-start: 3px solid var(--danger-500); }
+.reminder-stat-item.reminder-stat-exhausted .icon-sm { color: var(--danger-500); }
+
+/* Filter Bar */
+.reminder-filter-bar {
+    display: flex;
+    gap: var(--sp-4);
+    margin-bottom: var(--sp-4);
+    flex-wrap: wrap;
+    align-items: center;
+    background: white;
+    padding: var(--sp-4) var(--sp-5);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--gray-200);
+    box-shadow: var(--shadow-xs);
+}
+
+/* Bulk Actions */
+.reminder-bulk-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-3);
+    padding: var(--sp-3) var(--sp-5);
+    background: var(--brand-50);
+    border: 1px solid var(--brand-200);
+    border-radius: var(--radius-lg);
+    margin-bottom: var(--sp-4);
+}
+
+.reminder-bulk-count {
+    font-size: var(--text-sm);
+    font-weight: 600;
+    color: var(--brand-700);
+    margin-inline-end: var(--sp-2);
+}
+
+/* Type Badge */
+.reminder-type-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    font-size: var(--text-xs);
+    font-weight: 700;
+}
+
+.reminder-type-A {
+    background: var(--warning-100);
+    color: var(--warning-700);
+}
+
+.reminder-type-B {
+    background: var(--info-100);
+    color: var(--info-700);
+}
+
+/* Status Badge */
+.reminder-status {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px var(--sp-3);
+    border-radius: var(--radius-full);
+    font-size: var(--text-xs);
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.reminder-status-active {
+    background: var(--success-100);
+    color: var(--success-700);
+}
+
+.reminder-status-suppressed {
+    background: var(--gray-100);
+    color: var(--gray-600);
+}
+
+.reminder-status-exhausted {
+    background: var(--danger-100);
+    color: var(--danger-700);
+}
+
+/* Date Styling */
+.reminder-date-due {
+    font-weight: 700;
+    color: var(--danger-600);
+}
+
+.reminder-date-soon {
+    font-weight: 600;
+    color: var(--warning-600);
+}
+
+/* Row Actions */
+.reminder-row-actions {
+    display: flex;
+    gap: var(--sp-1);
+}
+
+.action-btn.reminder-suppress-btn {
+    background: var(--warning-50);
+    color: var(--warning-700);
+}
+
+.action-btn.reminder-suppress-btn:hover {
+    background: var(--warning-100);
+}
+
+.action-btn.reminder-date-btn {
+    background: var(--info-50);
+    color: var(--info-700);
+}
+
+.action-btn.reminder-date-btn:hover {
+    background: var(--info-100);
+}
+
 /* ==================== RESPONSIVE ==================== */
 @media (max-width: 768px) {
     .admin-navbar {
@@ -2038,6 +2213,32 @@ tr:hover .client-view-link {
         flex-direction: column;
         display: flex;
         gap: var(--sp-3);
+    }
+
+    /* Reminders responsive */
+    .reminder-stats-bar {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: var(--sp-2);
+    }
+
+    .reminder-stat-item {
+        min-width: unset;
+    }
+
+    .reminder-filter-bar {
+        flex-direction: column;
+        align-items: stretch;
+        gap: var(--sp-3);
+    }
+
+    .reminder-bulk-actions {
+        flex-wrap: wrap;
+        gap: var(--sp-2);
+    }
+
+    .reminder-row-actions {
+        flex-direction: column;
     }
 
     /* AI Review responsive */

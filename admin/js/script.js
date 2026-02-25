@@ -130,6 +130,8 @@ function switchTab(tabName, evt) {
         loadPendingClients(true);
     } else if (tabName === 'ai-review') {
         loadAIClassifications(aiReviewLoaded);
+    } else if (tabName === 'reminders') {
+        loadReminders(reminderLoaded);
     }
 }
 
@@ -188,6 +190,7 @@ async function loadDashboard(silent = false) {
 
         // Load AI review badge count (async, non-blocking)
         loadAIReviewCount();
+        loadReminderCount();
     } catch (error) {
         if (!silent) hideLoading();
         console.error('Dashboard error:', error);
@@ -2102,6 +2105,318 @@ function showAIToast(message, type) {
     setTimeout(() => {
         toast.classList.remove('show');
     }, 3000);
+}
+
+// ==================== REMINDERS TAB ====================
+
+let remindersData = [];
+let reminderLoaded = false;
+
+async function loadReminders(silent = false) {
+    if (!silent) showLoading('טוען תזכורות...');
+
+    try {
+        const response = await fetchWithTimeout(`${API_BASE}/admin-reminders`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ token: authToken, action: 'list' })
+        }, FETCH_TIMEOUTS.load);
+        const data = await response.json();
+
+        if (!silent) hideLoading();
+
+        if (!data.ok) {
+            if (data.error === 'unauthorized') { logout(); return; }
+            throw new Error(data.error || 'שגיאה בטעינת הנתונים');
+        }
+
+        remindersData = data.items || [];
+        reminderLoaded = true;
+        updateReminderStats(data.stats || {});
+        filterReminders();
+
+        // Update tab badge
+        const badge = document.getElementById('reminderTabBadge');
+        const dueCount = data.stats?.due_this_week || 0;
+        if (dueCount > 0) {
+            badge.textContent = dueCount;
+            badge.style.display = 'inline-flex';
+        } else {
+            badge.style.display = 'none';
+        }
+    } catch (error) {
+        if (!silent) hideLoading();
+        console.error('Reminders load error:', error);
+        if (!silent) {
+            document.getElementById('reminderTableContainer').innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-state-icon"><i data-lucide="alert-triangle" class="icon-2xl"></i></div>
+                    <p style="color: var(--danger-500);">לא ניתן לטעון את התזכורות. נסה שוב.</p>
+                    <button class="btn btn-secondary mt-4" onclick="loadReminders()">
+                        <i data-lucide="refresh-cw" class="icon-sm"></i> נסה שוב
+                    </button>
+                </div>
+            `;
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+        }
+    }
+}
+
+async function loadReminderCount() {
+    const badge = document.getElementById('reminderTabBadge');
+    try {
+        const resp = await fetchWithTimeout(`${API_BASE}/admin-reminders`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ token: authToken, action: 'list', stats_only: true })
+        }, FETCH_TIMEOUTS.quick);
+        const data = await resp.json();
+        if (data.ok && data.stats && data.stats.due_this_week > 0) {
+            badge.textContent = data.stats.due_this_week;
+            badge.style.display = 'inline-flex';
+        } else {
+            badge.style.display = 'none';
+        }
+    } catch (e) {
+        badge.style.display = 'none';
+    }
+}
+
+function updateReminderStats(stats) {
+    document.getElementById('reminder-stat-scheduled').textContent = stats.scheduled || 0;
+    document.getElementById('reminder-stat-due').textContent = stats.due_this_week || 0;
+    document.getElementById('reminder-stat-suppressed').textContent = stats.suppressed || 0;
+    document.getElementById('reminder-stat-exhausted').textContent = stats.exhausted || 0;
+}
+
+function isExhausted(r) {
+    const max = r.reminder_max != null ? r.reminder_max : 3;
+    return r.reminder_count >= max && !r.reminder_suppress;
+}
+
+function getReminderStatus(r) {
+    if (r.reminder_suppress === 'forever') return { label: 'מושתק לצמיתות', class: 'reminder-status-suppressed', key: 'suppressed' };
+    if (r.reminder_suppress === 'this_month') return { label: 'מושתק החודש', class: 'reminder-status-suppressed', key: 'suppressed' };
+    if (isExhausted(r)) return { label: 'מוצה', class: 'reminder-status-exhausted', key: 'exhausted' };
+    return { label: 'פעיל', class: 'reminder-status-active', key: 'active' };
+}
+
+function filterReminders() {
+    const search = (document.getElementById('reminderSearchInput').value || '').trim().toLowerCase();
+    const typeFilter = document.getElementById('reminderTypeFilter').value;
+    const statusFilter = document.getElementById('reminderStatusFilter').value;
+
+    let filtered = remindersData;
+
+    if (search) {
+        filtered = filtered.filter(r => (r.name || '').toLowerCase().includes(search));
+    }
+
+    if (typeFilter) {
+        filtered = filtered.filter(r => r.reminder_type === typeFilter);
+    }
+
+    if (statusFilter) {
+        filtered = filtered.filter(r => getReminderStatus(r).key === statusFilter);
+    }
+
+    // Sort by next_date ascending (nulls last)
+    filtered.sort((a, b) => {
+        const da = a.reminder_next_date || '9999';
+        const db = b.reminder_next_date || '9999';
+        return da.localeCompare(db);
+    });
+
+    renderRemindersTable(filtered);
+}
+
+function renderRemindersTable(items) {
+    const container = document.getElementById('reminderTableContainer');
+
+    if (!items || items.length === 0) {
+        container.innerHTML = `
+            <div class="empty-state">
+                <div class="empty-state-icon"><i data-lucide="bell" class="icon-2xl"></i></div>
+                <p>${remindersData.length === 0 ? 'אין תזכורות מתוזמנות' : 'אין תוצאות לסינון הנוכחי'}</p>
+            </div>
+        `;
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+        return;
+    }
+
+    const today = new Date().toISOString().split('T')[0];
+    const weekFromNow = new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0];
+
+    let html = `
+        <table>
+            <thead>
+                <tr>
+                    <th><input type="checkbox" id="reminderSelectAll" onchange="toggleReminderSelectAll()"></th>
+                    <th>שם</th>
+                    <th>סוג</th>
+                    <th>שלב</th>
+                    <th>מסמכים</th>
+                    <th>תאריך הבא</th>
+                    <th>נשלחו/מקס</th>
+                    <th>סטטוס</th>
+                    <th>פעולות</th>
+                </tr>
+            </thead>
+            <tbody>
+    `;
+
+    for (const r of items) {
+        const stage = STAGES[r.stage] || { label: r.stage, icon: 'help-circle', class: '' };
+        const status = getReminderStatus(r);
+        const max = r.reminder_max != null ? r.reminder_max : 3;
+        const nextDate = r.reminder_next_date ? formatDateHe(r.reminder_next_date) : '-';
+        const isDue = r.reminder_next_date && r.reminder_next_date <= today;
+        const isDueSoon = r.reminder_next_date && r.reminder_next_date <= weekFromNow && !isDue;
+        const dateClass = isDue ? 'reminder-date-due' : isDueSoon ? 'reminder-date-soon' : '';
+        const docsReceived = r.docs_received || 0;
+        const docsTotal = r.docs_total || 0;
+        const progressPercent = docsTotal > 0 ? Math.round((docsReceived / docsTotal) * 100) : 0;
+
+        html += `
+            <tr>
+                <td><input type="checkbox" class="reminder-checkbox" value="${escapeAttr(r.report_id)}" onchange="updateReminderSelectedCount()"></td>
+                <td>
+                    <strong class="client-link" onclick="viewClientDocs('${escapeAttr(r.report_id)}', '${escapeHtml(r.name)}', '${escapeHtml(r.email || '')}', '${r.year}')">
+                        ${escapeHtml(r.name)}
+                    </strong>
+                </td>
+                <td><span class="reminder-type-badge reminder-type-${r.reminder_type || 'A'}">${r.reminder_type || 'A'}</span></td>
+                <td><span class="stage-badge ${stage.class}"><i data-lucide="${stage.icon}" class="icon-sm"></i> ${stage.label}</span></td>
+                <td>
+                    ${r.reminder_type === 'B' ? `
+                        <div class="docs-progress-cell">
+                            <div class="progress-bar"><div class="progress-fill" style="width: ${progressPercent}%"></div></div>
+                            <span class="docs-count">${docsReceived}/${docsTotal}</span>
+                        </div>
+                    ` : '-'}
+                </td>
+                <td><span class="reminder-date ${dateClass}">${nextDate}</span></td>
+                <td>${r.reminder_count}/${max}</td>
+                <td><span class="reminder-status ${status.class}">${status.label}</span></td>
+                <td>
+                    <div class="reminder-row-actions">
+                        ${!r.reminder_suppress ? `
+                            <button class="action-btn send" onclick="reminderAction('send_now', '${escapeAttr(r.report_id)}')" title="שלח עכשיו">
+                                <i data-lucide="send" class="icon-sm"></i>
+                            </button>
+                            <button class="action-btn reminder-suppress-btn" onclick="reminderAction('suppress_this_month', '${escapeAttr(r.report_id)}')" title="השתק החודש">
+                                <i data-lucide="bell-minus" class="icon-sm"></i>
+                            </button>
+                        ` : `
+                            <button class="action-btn send" onclick="reminderAction('unsuppress', '${escapeAttr(r.report_id)}')" title="הפעל מחדש">
+                                <i data-lucide="bell" class="icon-sm"></i>
+                            </button>
+                        `}
+                        <button class="action-btn reminder-date-btn" onclick="showReminderDatePicker('${escapeAttr(r.report_id)}', '${r.reminder_next_date || ''}')" title="שנה תאריך">
+                            <i data-lucide="calendar" class="icon-sm"></i>
+                        </button>
+                    </div>
+                </td>
+            </tr>
+        `;
+    }
+
+    html += '</tbody></table>';
+    container.innerHTML = html;
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function formatDateHe(dateStr) {
+    if (!dateStr) return '-';
+    try {
+        const d = new Date(dateStr + 'T00:00:00');
+        return d.toLocaleDateString('he-IL', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    } catch (e) {
+        return dateStr;
+    }
+}
+
+function toggleReminderSelectAll() {
+    const checked = document.getElementById('reminderSelectAll').checked;
+    document.querySelectorAll('.reminder-checkbox').forEach(cb => cb.checked = checked);
+    updateReminderSelectedCount();
+}
+
+function updateReminderSelectedCount() {
+    const count = document.querySelectorAll('.reminder-checkbox:checked').length;
+    document.getElementById('reminderSelectedCount').textContent = count;
+    document.getElementById('reminderBulkActions').style.display = count > 0 ? 'flex' : 'none';
+}
+
+async function reminderAction(action, reportId) {
+    await executeReminderAction(action, [reportId]);
+}
+
+async function reminderBulkAction(action) {
+    const reportIds = Array.from(document.querySelectorAll('.reminder-checkbox:checked')).map(cb => cb.value);
+    if (reportIds.length === 0) return;
+
+    if (action === 'send_now' && !confirm(`לשלוח תזכורת ל-${reportIds.length} לקוחות?`)) return;
+    if (action === 'suppress_forever' && !confirm(`להשתיק לצמיתות ${reportIds.length} לקוחות?`)) return;
+
+    await executeReminderAction(action, reportIds);
+}
+
+async function executeReminderAction(action, reportIds, value) {
+    showLoading('מעדכן...');
+
+    try {
+        const body = { token: authToken, action, report_ids: reportIds };
+        if (value !== undefined) body.value = value;
+
+        const response = await fetchWithTimeout(`${API_BASE}/admin-reminders`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body)
+        }, FETCH_TIMEOUTS.mutate);
+
+        const data = await response.json();
+        hideLoading();
+
+        if (!data.ok) throw new Error(data.error || 'שגיאה לא ידועה');
+
+        const actionLabels = {
+            send_now: 'תזכורת נשלחה',
+            suppress_this_month: 'הושתק החודש',
+            suppress_forever: 'הושתק לצמיתות',
+            unsuppress: 'הופעל מחדש',
+            change_date: 'תאריך עודכן',
+            set_max: 'מקסימום עודכן'
+        };
+        showAIToast(actionLabels[action] || 'עודכן בהצלחה', 'success');
+        loadReminders(true);
+    } catch (error) {
+        hideLoading();
+        showModal('error', 'שגיאה', error.message);
+    }
+}
+
+function showReminderDatePicker(reportId, currentDate) {
+    const input = document.createElement('input');
+    input.type = 'date';
+    input.value = currentDate || '';
+    input.style.position = 'fixed';
+    input.style.opacity = '0';
+    input.style.pointerEvents = 'none';
+    document.body.appendChild(input);
+
+    input.addEventListener('change', async () => {
+        if (input.value) {
+            await executeReminderAction('change_date', [reportId], input.value);
+        }
+        input.remove();
+    });
+
+    input.addEventListener('blur', () => {
+        setTimeout(() => input.remove(), 200);
+    });
+
+    input.showPicker();
 }
 
 // ==================== UTILITIES ====================
