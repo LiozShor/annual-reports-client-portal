@@ -2390,6 +2390,15 @@ function updateReminderSelectedCount() {
 function reminderAction(action, reportId) {
     if (action === 'send_now') {
         const r = remindersData.find(x => x.report_id === reportId);
+        if (r && isExhausted(r)) {
+            const effectiveMax = r.reminder_max != null ? r.reminder_max : reminderDefaultMax;
+            showConfirmDialog(
+                `הלקוח כבר קיבל ${r.reminder_count} תזכורות (מתוך ${effectiveMax} מותרות). לשלוח בכל זאת?`,
+                () => executeReminderAction(action, [reportId], null, true),
+                'שלח בכל זאת'
+            );
+            return;
+        }
         if (r && r.last_reminder_sent_at) {
             const hoursSince = (Date.now() - new Date(r.last_reminder_sent_at).getTime()) / 3600000;
             if (hoursSince < 24) {
@@ -2447,7 +2456,7 @@ function clearRowLoading(reportId) {
     if (overlay) overlay.remove();
 }
 
-async function executeReminderAction(action, reportIds, value) {
+async function executeReminderAction(action, reportIds, value, forceOverride) {
     const isBulk = reportIds.length > 1;
     const actionLoadingLabels = {
         send_now: 'שולח...',
@@ -2468,6 +2477,7 @@ async function executeReminderAction(action, reportIds, value) {
         const body = { token: authToken, action, report_ids: reportIds };
         if (value !== undefined) body.value = value;
         if (action === 'send_now' && reminderDefaultMax != null) body.default_max = reminderDefaultMax;
+        if (forceOverride) body.force_override = true;
 
         const response = await fetchWithTimeout(`${API_BASE}/admin-reminders`, {
             method: 'POST',
