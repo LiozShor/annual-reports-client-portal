@@ -2957,7 +2957,7 @@ async function previewYearRollover() {
                 target_year: parseInt(targetYear),
                 mode: 'preview'
             })
-        }, FETCH_TIMEOUTS.load);
+        }, FETCH_TIMEOUTS.slow);
 
         const data = await response.json();
         hideLoading();
