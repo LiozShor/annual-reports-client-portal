@@ -2911,16 +2911,17 @@ function closeConfirmDialog(confirmed) {
 
 function populateYearDropdowns() {
     const currentYear = new Date().getFullYear();
+    const taxYear = currentYear - 1; // CPA tax year: working on last year's reports
     const years = [];
     for (let y = currentYear + 1; y >= currentYear - 3; y--) years.push(y);
 
-    // Dropdowns that select a single year (default = currentYear)
+    // Dropdowns that select a single year (default = taxYear)
     const yearSelects = ['manualYear', 'importYear', 'sendYearFilter'];
     for (const id of yearSelects) {
         const el = document.getElementById(id);
         if (!el) continue;
         el.innerHTML = years.map(y =>
-            `<option value="${y}"${y === currentYear ? ' selected' : ''}>${y}</option>`
+            `<option value="${y}"${y === taxYear ? ' selected' : ''}>${y}</option>`
         ).join('');
     }
 
@@ -2934,22 +2935,22 @@ function populateYearDropdowns() {
             const opt = document.createElement('option');
             opt.value = y;
             opt.textContent = y;
-            if (y === currentYear) opt.selected = true;
+            if (y === taxYear) opt.selected = true;
             yearFilter.appendChild(opt);
         }
     }
 
-    // Rollover dropdowns — source defaults to currentYear, target to currentYear+1
+    // Rollover dropdowns — source defaults to taxYear, target to currentYear
     const srcEl = document.getElementById('rolloverSourceYear');
     const tgtEl = document.getElementById('rolloverTargetYear');
     if (srcEl) {
         srcEl.innerHTML = years.map(y =>
-            `<option value="${y}"${y === currentYear ? ' selected' : ''}>${y}</option>`
+            `<option value="${y}"${y === taxYear ? ' selected' : ''}>${y}</option>`
         ).join('');
     }
     if (tgtEl) {
         tgtEl.innerHTML = years.map(y =>
-            `<option value="${y}"${y === currentYear + 1 ? ' selected' : ''}>${y}</option>`
+            `<option value="${y}"${y === currentYear ? ' selected' : ''}>${y}</option>`
         ).join('');
     }
 }
