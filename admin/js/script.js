@@ -2115,6 +2115,7 @@ function showAIToast(message, type) {
 let remindersData = [];
 let reminderLoaded = false;
 let reminderDefaultMax = null; // null = unlimited
+let reminderSendDay = null; // null = not configured
 
 async function loadReminders(silent = false) {
     if (!silent) showLoading('טוען תזכורות...');
@@ -2137,7 +2138,7 @@ async function loadReminders(silent = false) {
         remindersData = data.items || [];
         reminderLoaded = true;
         reminderDefaultMax = data.default_max !== undefined ? data.default_max : null;
-        updateDefaultMaxDisplay();
+        reminderSendDay = data.send_day !== undefined ? data.send_day : null;
         updateReminderStats(data.stats || {});
         filterReminders();
     } catch (error) {
@@ -2517,24 +2518,6 @@ function setManualReminder(reportId, clientName) {
     document.getElementById('confirmDialog').classList.add('show');
 }
 
-function applyGlobalReminderDate() {
-    const dateInput = document.getElementById('reminderGlobalDate');
-    const date = dateInput.value;
-    if (!date) {
-        showModal('error', 'שגיאה', 'יש לבחור תאריך');
-        return;
-    }
-    const allIds = remindersData.filter(r => !r.reminder_suppress).map(r => r.report_id);
-    if (!allIds.length) {
-        showModal('error', 'שגיאה', 'אין לקוחות פעילים לעדכון');
-        return;
-    }
-    showConfirmDialog(
-        `לעדכן תאריך תזכורת הבא ל-${formatDateHe(date)} עבור ${allIds.length} לקוחות?`,
-        () => executeReminderAction('change_date', allIds, date),
-        'עדכן הכל'
-    );
-}
 
 function showReminderDatePicker(reportId, currentDate) {
     const input = document.createElement('input');
@@ -2559,67 +2542,60 @@ function showReminderDatePicker(reportId, currentDate) {
     input.showPicker();
 }
 
-// ==================== REMINDER CONFIG & INLINE EDIT ====================
+// ==================== REMINDER SETTINGS MODAL ====================
 
-function updateDefaultMaxDisplay() {
-    const el = document.getElementById('reminderDefaultMaxDisplay');
-    if (!el) return;
-    el.textContent = reminderDefaultMax != null ? reminderDefaultMax : 'ללא הגבלה';
+function openReminderSettingsModal() {
+    document.getElementById('settingsDefaultMaxInput').value =
+        reminderDefaultMax != null ? reminderDefaultMax : '';
+    document.getElementById('settingsSendDayInput').value =
+        reminderSendDay != null ? reminderSendDay : '';
+    document.getElementById('reminderSettingsModal').classList.add('show');
+    document.getElementById('settingsDefaultMaxInput').focus();
+    if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
-function editDefaultMax() {
-    document.getElementById('reminderEditDefaultBtn').style.display = 'none';
-    document.getElementById('reminderDefaultMaxDisplay').style.display = 'none';
-    const editor = document.getElementById('reminderDefaultMaxEditor');
-    editor.style.display = 'flex';
-    const input = document.getElementById('reminderDefaultMaxInput');
-    input.value = reminderDefaultMax != null ? reminderDefaultMax : '';
-    input.focus();
-    input.select();
+function closeReminderSettingsModal() {
+    document.getElementById('reminderSettingsModal').classList.remove('show');
 }
 
-function cancelEditDefaultMax() {
-    document.getElementById('reminderDefaultMaxEditor').style.display = 'none';
-    document.getElementById('reminderEditDefaultBtn').style.display = '';
-    document.getElementById('reminderDefaultMaxDisplay').style.display = '';
-}
+async function saveReminderSettings() {
+    const maxVal = document.getElementById('settingsDefaultMaxInput').value.trim();
+    const dayVal = document.getElementById('settingsSendDayInput').value.trim();
 
-function saveDefaultMax() {
-    const input = document.getElementById('reminderDefaultMaxInput');
-    const newValue = input.value.trim(); // '' = unlimited, number = limit
-    showConfirmDialog(
-        newValue === ''
-            ? 'לשנות ברירת מחדל לללא הגבלה?'
-            : `לשנות ברירת מחדל ל-${newValue} תזכורות?`,
-        () => doSaveDefaultMax(newValue),
-        'שמור'
-    );
-}
+    if (dayVal !== '' && (parseInt(dayVal) < 1 || parseInt(dayVal) > 28)) {
+        showModal('error', 'שגיאה', 'יום בחודש חייב להיות בין 1 ל-28');
+        return;
+    }
 
-async function doSaveDefaultMax(newValue) {
-    cancelEditDefaultMax();
+    closeReminderSettingsModal();
     showLoading('שומר הגדרות...');
     try {
-        const response = await fetchWithTimeout(`${API_BASE}/admin-reminders`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                token: authToken,
-                action: 'update_config',
-                config_key: 'reminder_default_max',
-                config_value: newValue
-            })
-        }, FETCH_TIMEOUTS.mutate);
-        const data = await response.json();
+        const [r1, r2] = await Promise.all([
+            fetchWithTimeout(`${API_BASE}/admin-reminders`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ token: authToken, action: 'update_config',
+                    config_key: 'reminder_default_max', config_value: maxVal })
+            }, FETCH_TIMEOUTS.mutate),
+            fetchWithTimeout(`${API_BASE}/admin-reminders`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ token: authToken, action: 'update_config',
+                    config_key: 'reminder_send_day', config_value: dayVal })
+            }, FETCH_TIMEOUTS.mutate)
+        ]);
+        const [d1, d2] = await Promise.all([r1.json(), r2.json()]);
         hideLoading();
-        if (!data.ok) throw new Error(data.error || 'שגיאה');
-        showAIToast('ברירת מחדל עודכנה', 'success');
+        if (!d1.ok || !d2.ok) throw new Error('שגיאה בשמירת הגדרות');
+        showAIToast('הגדרות תזכורות עודכנו', 'success');
         loadReminders(true);
     } catch (error) {
         hideLoading();
         showModal('error', 'שגיאה', error.message);
     }
 }
+
+// ==================== REMINDER INLINE EDIT ====================
 
 function editClientMax(reportId, cell) {
     if (cell.querySelector('.reminder-max-editor')) return;

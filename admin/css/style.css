@@ -2043,18 +2043,8 @@ tr:hover .client-view-link {
     box-shadow: var(--shadow-xs);
 }
 
-.reminder-global-date {
-    margin-right: auto;
-    display: flex;
-    align-items: center;
-    gap: var(--sp-2);
-}
-
-.reminder-global-date input[type="date"] {
-    padding: 6px 10px;
-    border: 1px solid var(--border);
-    border-radius: var(--radius-md);
-    font-size: var(--text-sm);
+.reminder-settings-btn {
+    margin-inline-start: auto;
 }
 
 /* Section Headers (Type A / Type B) */
@@ -2289,51 +2279,24 @@ tr.reminder-loading td:last-child {
     background: var(--primary-100);
 }
 
-/* Reminder Settings Bar */
-.reminder-settings-bar {
-    display: flex;
-    align-items: center;
-    gap: var(--sp-3);
-    padding: var(--sp-3) var(--sp-4);
-    background: var(--surface-secondary);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-lg);
-    margin-bottom: var(--sp-3);
+/* Reminder Settings Modal Form Helpers */
+.form-label {
+    display: block;
     font-size: 14px;
-    direction: rtl;
+    font-weight: 600;
+    color: var(--gray-700);
+    margin-bottom: var(--sp-1);
 }
 
-.reminder-settings-bar .settings-label {
-    color: var(--text-secondary);
-    font-weight: 500;
-    display: flex;
-    align-items: center;
-    gap: var(--sp-2);
-    white-space: nowrap;
+.form-help {
+    display: block;
+    font-size: var(--text-xs);
+    color: var(--gray-500);
+    margin-top: var(--sp-1);
 }
 
-.reminder-settings-bar .settings-value {
-    font-weight: 700;
-    color: var(--text-primary);
-}
-
-.reminder-settings-bar .settings-edit-group {
-    display: flex;
-    align-items: center;
-    gap: var(--sp-2);
-}
-
-.reminder-settings-bar select {
-    padding: 4px 8px;
-    border: 1px solid var(--border);
-    border-radius: var(--radius-md);
-    font-size: 13px;
-    background: var(--surface-primary);
-}
-
-.reminder-settings-bar .btn-sm {
-    padding: 4px 12px;
-    font-size: 13px;
+.form-field + .form-field {
+    margin-top: var(--sp-4);
 }
 
 /* Reminder Max Cell — Clickable Inline Edit */

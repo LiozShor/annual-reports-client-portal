@@ -370,21 +370,6 @@
                     </div>
                 </div>
 
-                <!-- Settings Bar -->
-                <div class="reminder-settings-bar" id="reminderSettingsBar">
-                    <span class="settings-label">
-                        <i data-lucide="settings" class="icon-sm"></i>
-                        מגבלת תזכורות ברירת מחדל:
-                    </span>
-                    <span class="settings-value" id="reminderDefaultMaxDisplay">ללא הגבלה</span>
-                    <button class="btn btn-sm btn-secondary" id="reminderEditDefaultBtn" onclick="editDefaultMax()">שנה</button>
-                    <div class="settings-edit-group" id="reminderDefaultMaxEditor" style="display:none;">
-                        <input type="number" id="reminderDefaultMaxInput" min="1" max="999" placeholder="ריק = ללא הגבלה" class="reminder-max-input" style="width:140px;">
-                        <button class="btn btn-sm btn-primary" onclick="saveDefaultMax()">שמור</button>
-                        <button class="btn btn-sm btn-secondary" onclick="cancelEditDefaultMax()">ביטול</button>
-                    </div>
-                </div>
-
                 <!-- Filter Bar -->
                 <div class="reminder-filter-bar">
                     <div class="filter-group">
@@ -400,11 +385,9 @@
                             <option value="exhausted">מוצה</option>
                         </select>
                     </div>
-                    <div class="filter-group reminder-global-date">
-                        <label><i data-lucide="calendar-clock" class="icon-sm"></i> תאריך אצווה הבא:</label>
-                        <input type="date" id="reminderGlobalDate" style="direction:ltr">
-                        <button class="btn btn-sm btn-primary" onclick="applyGlobalReminderDate()">עדכן הכל</button>
-                    </div>
+                    <button class="btn btn-sm btn-secondary reminder-settings-btn" onclick="openReminderSettingsModal()">
+                        <i data-lucide="settings" class="icon-sm"></i> הגדרות
+                    </button>
                 </div>
 
                 <!-- Bulk Actions -->
@@ -562,6 +545,36 @@
             <div class="ai-modal-panel-footer">
                 <button class="btn btn-primary" id="confirmDialogBtn" onclick="closeConfirmDialog(true)">אישור</button>
                 <button class="btn btn-secondary" onclick="closeConfirmDialog(false)">ביטול</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Reminder Settings Modal -->
+    <div id="reminderSettingsModal" class="ai-modal-overlay">
+        <div class="ai-modal-panel" style="max-width: 420px;">
+            <div class="ai-modal-panel-header">
+                <i data-lucide="settings" class="icon"></i>
+                הגדרות תזכורות
+            </div>
+            <div class="ai-modal-panel-body">
+                <div class="form-field">
+                    <label class="form-label">מגבלת תזכורות ברירת מחדל:</label>
+                    <input type="number" id="settingsDefaultMaxInput" min="1" max="999"
+                           placeholder="ריק = ללא הגבלה" class="reminder-max-input">
+                    <span class="form-help">מספר מקסימלי של תזכורות ללקוח. ריק = ללא הגבלה.</span>
+                </div>
+                <div class="form-field">
+                    <label class="form-label">יום שליחה בחודש:</label>
+                    <input type="number" id="settingsSendDayInput" min="1" max="28"
+                           placeholder="לדוגמה: 1 או 15">
+                    <span class="form-help">באיזה יום בחודש לשלוח תזכורות (1-28).</span>
+                </div>
+            </div>
+            <div class="ai-modal-panel-footer">
+                <button class="btn btn-secondary" onclick="closeReminderSettingsModal()">ביטול</button>
+                <button class="btn btn-primary" onclick="saveReminderSettings()">
+                    <i data-lucide="check" class="icon-sm"></i> שמור הגדרות
+                </button>
             </div>
         </div>
     </div>
