@@ -2811,6 +2811,174 @@ tr.reminder-loading td:last-child {
     padding: var(--sp-3) var(--sp-4);
 }
 
+/* ==================== REJECTION NOTES PANEL ==================== */
+
+.ai-reject-notes-panel {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-2);
+    width: 100%;
+    padding: var(--sp-2) 0;
+}
+
+.ai-reject-reason-select {
+    width: 100%;
+    padding: var(--sp-2) var(--sp-3);
+    border: 1px solid var(--gray-300);
+    border-radius: var(--radius-md);
+    font-size: var(--text-sm);
+    font-family: var(--font-he);
+    direction: rtl;
+    background: white;
+    color: var(--gray-700);
+    cursor: pointer;
+}
+
+.ai-reject-reason-select:focus {
+    outline: none;
+    border-color: var(--danger-400);
+    box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.15);
+}
+
+.ai-reject-notes-text {
+    width: 100%;
+    padding: var(--sp-2) var(--sp-3);
+    border: 1px solid var(--gray-300);
+    border-radius: var(--radius-md);
+    font-size: var(--text-sm);
+    font-family: var(--font-he);
+    direction: rtl;
+    resize: vertical;
+    min-height: 48px;
+    color: var(--gray-700);
+}
+
+.ai-reject-notes-text:focus {
+    outline: none;
+    border-color: var(--danger-400);
+    box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.15);
+}
+
+.ai-reject-notes-actions {
+    display: flex;
+    gap: var(--sp-2);
+    justify-content: flex-start;
+}
+
+/* ==================== BATCH COMPLETE MODAL ==================== */
+
+.batch-complete-modal .ai-modal-panel {
+    max-width: 480px;
+}
+
+.batch-summary-stats {
+    display: flex;
+    gap: var(--sp-4);
+    justify-content: center;
+    margin-bottom: var(--sp-4);
+}
+
+.batch-summary-stat {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: var(--sp-3) var(--sp-5);
+    border-radius: var(--radius-lg);
+    min-width: 80px;
+}
+
+.batch-summary-stat.batch-approved {
+    background: var(--success-50, #f0fdf4);
+}
+
+.batch-summary-stat.batch-rejected {
+    background: var(--warning-50, #fffbeb);
+}
+
+.batch-stat-number {
+    font-size: var(--text-2xl);
+    font-weight: 700;
+    line-height: 1.2;
+}
+
+.batch-approved .batch-stat-number {
+    color: var(--success-600, #059669);
+}
+
+.batch-rejected .batch-stat-number {
+    color: var(--warning-600, #d97706);
+}
+
+.batch-stat-label {
+    font-size: var(--text-xs);
+    color: var(--gray-500);
+    margin-top: var(--sp-1);
+}
+
+.batch-items-list {
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.batch-section {
+    margin-bottom: var(--sp-3);
+}
+
+.batch-section-title {
+    font-size: var(--text-sm);
+    font-weight: 600;
+    color: var(--gray-600);
+    margin-bottom: var(--sp-2);
+    padding-bottom: var(--sp-1);
+    border-bottom: 1px solid var(--gray-200);
+}
+
+.batch-item {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: var(--sp-2);
+    padding: var(--sp-1) var(--sp-2);
+    font-size: var(--text-sm);
+    border-radius: var(--radius-sm);
+}
+
+.batch-item-rejected {
+    background: var(--danger-50, #fef2f2);
+}
+
+.batch-item-approved {
+    background: var(--success-50, #f0fdf4);
+}
+
+.batch-item-name {
+    color: var(--gray-700);
+}
+
+.batch-item-reason {
+    font-size: var(--text-xs);
+    color: var(--danger-600, #dc2626);
+    background: var(--danger-100, #fee2e2);
+    padding: 1px var(--sp-2);
+    border-radius: var(--radius-full);
+}
+
+.batch-item-notes {
+    width: 100%;
+    font-size: var(--text-xs);
+    color: var(--gray-500);
+    font-style: normal;
+}
+
+/* Spinning loader for batch send button */
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+.spinning {
+    animation: spin 1s linear infinite;
+}
+
 /* Mobile responsive */
 @media (max-width: 768px) {
     .ai-assign-section .doc-combobox-container {
@@ -2821,5 +2989,14 @@ tr.reminder-loading td:last-child {
 
     .doc-combobox-dropdown {
         width: calc(100vw - 40px);
+    }
+
+    .batch-complete-modal .ai-modal-panel {
+        max-width: 95%;
+    }
+
+    .batch-summary-stats {
+        flex-direction: column;
+        align-items: center;
     }
 }

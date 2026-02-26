@@ -1260,6 +1260,18 @@ let aiClassificationsData = [];
 let aiCurrentReassignId = null;
 let aiReviewLoaded = false;
 
+// Batch review tracker — keyed by client name
+let batchReviewTracker = {};
+
+const REJECTION_REASONS = {
+    image_quality: 'איכות תמונה ירודה',
+    wrong_document: 'מסמך לא נכון',
+    incomplete: 'מסמך חלקי / חתוך',
+    wrong_year: 'שנה לא נכונה',
+    wrong_person: 'לא שייך ללקוח',
+    other: 'אחר'
+};
+
 async function loadAIClassifications(silent = false) {
     if (!silent) showLoading('טוען סיווגים...');
 
@@ -1889,6 +1901,7 @@ async function approveAIClassification(recordId) {
 
             if (!data.ok) throw new Error(formatAIResponseError(data));
 
+            trackReviewAction(recordId, 'approve', data);
             animateAndRemoveAI(recordId);
             showAIToast(formatAISuccessToast(data), 'success');
         } catch (error) {
@@ -1899,32 +1912,80 @@ async function approveAIClassification(recordId) {
 }
 
 async function rejectAIClassification(recordId) {
-    showInlineConfirm(recordId, 'לדחות את הסיווג?', async () => {
-        setCardLoading(recordId, 'דוחה סיווג...');
+    showRejectNotesPanel(recordId);
+}
 
-        try {
-            const response = await fetchWithTimeout(`${API_BASE}/review-classification`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    token: authToken,
-                    classification_id: recordId,
-                    action: 'reject'
-                })
-            }, FETCH_TIMEOUTS.mutate);
+function showRejectNotesPanel(recordId) {
+    const card = document.querySelector(`.ai-review-card[data-id="${recordId}"]`);
+    if (!card) return;
+    const actionsDiv = card.querySelector('.ai-card-actions');
+    if (!actionsDiv) return;
 
-            const data = await parseAIResponse(response);
-            clearCardLoading(recordId);
+    cancelInlineConfirm(recordId);
+    actionsDiv.dataset.originalHtml = actionsDiv.innerHTML;
 
-            if (!data.ok) throw new Error(formatAIResponseError(data));
+    actionsDiv.innerHTML = `
+        <div class="ai-reject-notes-panel">
+            <select class="ai-reject-reason-select">
+                <option value="">בחר סיבה...</option>
+                ${Object.entries(REJECTION_REASONS).map(([k, v]) =>
+                    `<option value="${k}">${escapeHtml(v)}</option>`
+                ).join('')}
+            </select>
+            <textarea class="ai-reject-notes-text" placeholder="הערות נוספות (אופציונלי)" rows="2"></textarea>
+            <div class="ai-reject-notes-actions">
+                <button class="btn btn-danger btn-sm ai-reject-confirm-btn" disabled>דחה</button>
+                <button class="btn btn-ghost btn-sm ai-reject-cancel-btn">ביטול</button>
+            </div>
+        </div>
+    `;
 
-            animateAndRemoveAI(recordId);
-            showAIToast(formatAISuccessToast(data), 'danger');
-        } catch (error) {
-            clearCardLoading(recordId);
-            showModal('error', 'שגיאה', error.message);
-        }
-    }, { confirmText: 'דחה', danger: true });
+    const select = actionsDiv.querySelector('.ai-reject-reason-select');
+    const confirmBtn = actionsDiv.querySelector('.ai-reject-confirm-btn');
+    const cancelBtn = actionsDiv.querySelector('.ai-reject-cancel-btn');
+
+    select.addEventListener('change', () => { confirmBtn.disabled = !select.value; });
+    cancelBtn.addEventListener('click', () => cancelInlineConfirm(recordId));
+
+    function escapeHandler(e) { if (e.key === 'Escape') cancelInlineConfirm(recordId); }
+    document.addEventListener('keydown', escapeHandler);
+    card._inlineConfirmCleanup = () => document.removeEventListener('keydown', escapeHandler);
+
+    confirmBtn.addEventListener('click', async () => {
+        if (card._inlineConfirmCleanup) { card._inlineConfirmCleanup(); card._inlineConfirmCleanup = null; }
+        const rejectionReason = select.value;
+        const notes = actionsDiv.querySelector('.ai-reject-notes-text').value.trim();
+        await executeReject(recordId, rejectionReason, notes);
+    });
+}
+
+async function executeReject(recordId, rejectionReason, notes) {
+    setCardLoading(recordId, 'דוחה סיווג...');
+
+    try {
+        const response = await fetchWithTimeout(`${API_BASE}/review-classification`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                token: authToken,
+                classification_id: recordId,
+                action: 'reject',
+                notes: JSON.stringify({ reason: rejectionReason, text: notes })
+            })
+        }, FETCH_TIMEOUTS.mutate);
+
+        const data = await parseAIResponse(response);
+        clearCardLoading(recordId);
+
+        if (!data.ok) throw new Error(formatAIResponseError(data));
+
+        trackReviewAction(recordId, 'reject', data, rejectionReason, notes);
+        animateAndRemoveAI(recordId);
+        showAIToast(formatAISuccessToast(data), 'danger');
+    } catch (error) {
+        clearCardLoading(recordId);
+        showModal('error', 'שגיאה', error.message);
+    }
 }
 
 function showAIReassignModal(recordId, missingDocs) {
@@ -2004,6 +2065,7 @@ async function submitAIReassign(recordId, templateId, docRecordId, loadingText, 
 
         if (!data.ok) throw new Error(formatAIResponseError(data));
 
+        trackReviewAction(recordId, 'reassign', data);
         animateAndRemoveAI(recordId);
         showAIToast(formatAISuccessToast(data), 'success');
     } catch (error) {
@@ -2044,7 +2106,12 @@ function animateAndRemoveAI(recordId) {
             document.querySelectorAll('.ai-accordion').forEach(accordion => {
                 const cards = accordion.querySelectorAll('.ai-review-card');
                 if (cards.length === 0) {
+                    const clientName = accordion.dataset.client;
                     accordion.remove();
+                    // Trigger batch-complete modal if tracker has entries
+                    if (clientName && batchReviewTracker[clientName] && batchReviewTracker[clientName].items.length > 0) {
+                        setTimeout(() => showBatchCompleteModal(clientName, batchReviewTracker[clientName]), 100);
+                    }
                 }
             });
 
@@ -2132,6 +2199,144 @@ function showAIToast(message, type) {
     setTimeout(() => {
         toast.classList.remove('show');
     }, 3000);
+}
+
+// ==================== BATCH REVIEW TRACKER ====================
+
+function trackReviewAction(recordId, action, responseData, rejectionReason, notes) {
+    // Capture item data before it's removed from aiClassificationsData
+    const item = aiClassificationsData.find(i => i.id === recordId);
+    const clientName = item?.client_name || responseData?.client_name || 'unknown';
+
+    if (!batchReviewTracker[clientName]) {
+        batchReviewTracker[clientName] = { reportRecordId: null, items: [] };
+    }
+
+    if (responseData?.report_record_id) {
+        batchReviewTracker[clientName].reportRecordId = responseData.report_record_id;
+    }
+
+    batchReviewTracker[clientName].items.push({
+        recordId,
+        action,
+        docName: responseData?.doc_title || item?.matched_doc_name || item?.attachment_name || '',
+        rejectionReason: rejectionReason || null,
+        notes: notes || null
+    });
+}
+
+function showBatchCompleteModal(clientName, trackerData) {
+    const items = trackerData.items;
+    const approved = items.filter(i => i.action === 'approve' || i.action === 'reassign');
+    const rejected = items.filter(i => i.action === 'reject');
+
+    let summaryHtml = '';
+    if (approved.length > 0) {
+        summaryHtml += `<div class="batch-summary-stat batch-approved">
+            <span class="batch-stat-number">${approved.length}</span>
+            <span class="batch-stat-label">אושרו</span>
+        </div>`;
+    }
+    if (rejected.length > 0) {
+        summaryHtml += `<div class="batch-summary-stat batch-rejected">
+            <span class="batch-stat-number">${rejected.length}</span>
+            <span class="batch-stat-label">דורשים תיקון</span>
+        </div>`;
+    }
+
+    let itemsHtml = '';
+    if (rejected.length > 0) {
+        itemsHtml += '<div class="batch-section"><div class="batch-section-title">⚠ דורשים תיקון</div>';
+        for (const item of rejected) {
+            const reasonLabel = REJECTION_REASONS[item.rejectionReason] || '';
+            itemsHtml += `<div class="batch-item batch-item-rejected">
+                <span class="batch-item-name">${escapeHtml(item.docName)}</span>
+                ${reasonLabel ? `<span class="batch-item-reason">${escapeHtml(reasonLabel)}</span>` : ''}
+                ${item.notes ? `<span class="batch-item-notes">${escapeHtml(item.notes)}</span>` : ''}
+            </div>`;
+        }
+        itemsHtml += '</div>';
+    }
+    if (approved.length > 0) {
+        itemsHtml += '<div class="batch-section"><div class="batch-section-title">✓ אושרו</div>';
+        for (const item of approved) {
+            itemsHtml += `<div class="batch-item batch-item-approved">
+                <span class="batch-item-name">${escapeHtml(item.docName)}</span>
+            </div>`;
+        }
+        itemsHtml += '</div>';
+    }
+
+    const existing = document.getElementById('batchCompleteModal');
+    if (existing) existing.remove();
+
+    const modalHtml = `
+        <div class="ai-modal-overlay batch-complete-modal show" id="batchCompleteModal">
+            <div class="ai-modal-panel">
+                <div class="ai-modal-panel-header">
+                    <i data-lucide="check-circle" class="icon-lg" style="color: var(--success-500);"></i>
+                    <span>סיום סקירה — ${escapeHtml(clientName)}</span>
+                </div>
+                <div class="ai-modal-panel-body">
+                    <div class="batch-summary-stats">${summaryHtml}</div>
+                    <div class="batch-items-list">${itemsHtml}</div>
+                </div>
+                <div class="ai-modal-panel-footer">
+                    <button class="btn btn-ghost" onclick="closeBatchCompleteModal()">דלג</button>
+                    <button class="btn btn-primary" id="batchSendBtn" onclick="sendBatchStatus('${escapeAttr(clientName)}')">
+                        <i data-lucide="send" class="icon-sm"></i> שלח עדכון ללקוח
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function closeBatchCompleteModal() {
+    const modal = document.getElementById('batchCompleteModal');
+    if (modal) modal.remove();
+}
+
+async function sendBatchStatus(clientName) {
+    const trackerData = batchReviewTracker[clientName];
+    if (!trackerData) return;
+
+    const btn = document.getElementById('batchSendBtn');
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<i data-lucide="loader" class="icon-sm spinning"></i> שולח...';
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+    }
+
+    try {
+        const response = await fetchWithTimeout(`${API_BASE}/send-batch-status`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                token: authToken,
+                report_key: trackerData.reportRecordId,
+                client_name: clientName,
+                items: trackerData.items
+            })
+        }, FETCH_TIMEOUTS.mutate);
+
+        const data = await response.json();
+        if (!data.ok) throw new Error(data.error || 'שגיאה בשליחת העדכון');
+
+        closeBatchCompleteModal();
+        showAIToast(`עדכון נשלח ל${clientName}`, 'success');
+        delete batchReviewTracker[clientName];
+    } catch (error) {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = '<i data-lucide="send" class="icon-sm"></i> שלח עדכון ללקוח';
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+        }
+        showModal('error', 'שגיאה', error.message);
+    }
 }
 
 // ==================== REMINDERS TAB ====================
