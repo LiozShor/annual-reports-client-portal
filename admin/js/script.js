@@ -3040,11 +3040,13 @@ function clearRolloverPreview() {
 
 // ==================== INIT ====================
 
+// Populate year dropdowns immediately (script is at bottom of body, DOM is ready)
+populateYearDropdowns();
+
 // Initialize Lucide icons and offline detection when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
     if (typeof lucide !== 'undefined') lucide.createIcons();
     initOfflineDetection();
-    populateYearDropdowns();
 });
 
 // Initialize
