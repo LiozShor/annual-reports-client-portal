@@ -211,10 +211,12 @@ function renderClientsTable(clients) {
     const container = document.getElementById('clientsTableContainer');
 
     if (!clients || clients.length === 0) {
+        const noApiData = !clientsData || clientsData.length === 0;
         container.innerHTML = `
             <div class="empty-state">
                 <div class="empty-state-icon"><i data-lucide="folder-open" class="icon-2xl"></i></div>
                 <p>לא נמצאו לקוחות</p>
+                ${noApiData ? `<button class="btn btn-primary" onclick="loadDashboard()" style="margin-top:12px">טען לקוחות</button>` : ''}
             </div>
         `;
         if (typeof lucide !== 'undefined') lucide.createIcons();
