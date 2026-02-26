@@ -188,6 +188,11 @@ async function loadDashboard(silent = false) {
 
         if (typeof lucide !== 'undefined') lucide.createIcons();
 
+        // Update year dropdowns with available years from API
+        if (data.available_years && data.available_years.length > 0) {
+            updateYearDropdowns(data.available_years);
+        }
+
         // Load AI review badge count (async, non-blocking)
         loadAIReviewCount();
         loadReminderCount();
@@ -2932,6 +2937,53 @@ function populateYearDropdowns() {
     const tgtEl = document.getElementById('rolloverTargetYear');
     if (srcEl) srcEl.innerHTML = `<option value="${taxYear}" selected>${taxYear}</option>`;
     if (tgtEl) tgtEl.innerHTML = `<option value="${currentYear}" selected>${currentYear}</option>`;
+}
+
+/**
+ * Update year dropdowns with actual available years from the API.
+ * Called after loadDashboard() returns available_years.
+ */
+function updateYearDropdowns(years) {
+    if (!years || years.length === 0) return;
+
+    const currentYear = new Date().getFullYear();
+    const taxYear = currentYear - 1;
+    const sortedYears = [...years].sort((a, b) => b - a); // newest first
+
+    // Dashboard year filter — "All" + each available year
+    const yearFilter = document.getElementById('yearFilter');
+    if (yearFilter) {
+        const currentVal = yearFilter.value;
+        yearFilter.innerHTML = '<option value="">הכל</option>' +
+            sortedYears.map(y => `<option value="${y}"${y == currentVal ? ' selected' : ''}>${y}</option>`).join('');
+    }
+
+    // Other dropdowns — show all available years, default to tax year
+    const yearSelects = ['manualYear', 'importYear', 'sendYearFilter'];
+    for (const id of yearSelects) {
+        const el = document.getElementById(id);
+        if (!el) continue;
+        const currentVal = el.value;
+        el.innerHTML = sortedYears.map(y =>
+            `<option value="${y}"${y == currentVal ? ' selected' : ''}>${y}</option>`
+        ).join('');
+    }
+
+    // Rollover: source options = available years, target = years + next year
+    const srcEl = document.getElementById('rolloverSourceYear');
+    const tgtEl = document.getElementById('rolloverTargetYear');
+    if (srcEl) {
+        srcEl.innerHTML = sortedYears.map(y =>
+            `<option value="${y}"${y == taxYear ? ' selected' : ''}>${y}</option>`
+        ).join('');
+    }
+    if (tgtEl) {
+        const targetYears = sortedYears.includes(currentYear) ? sortedYears : [currentYear, ...sortedYears];
+        targetYears.sort((a, b) => b - a);
+        tgtEl.innerHTML = targetYears.map(y =>
+            `<option value="${y}"${y == currentYear ? ' selected' : ''}>${y}</option>`
+        ).join('');
+    }
 }
 
 // ==================== YEAR ROLLOVER ====================
