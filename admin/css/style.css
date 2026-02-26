@@ -2299,6 +2299,23 @@ tr.reminder-loading td:last-child {
     margin-top: var(--sp-4);
 }
 
+.form-field input {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid var(--gray-300);
+    border-radius: var(--radius-md);
+    font-size: 14px;
+    font-family: inherit;
+    transition: border-color 0.15s;
+    box-sizing: border-box;
+}
+
+.form-field input:focus {
+    outline: none;
+    border-color: var(--primary-500);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
 /* Reminder Max Cell — Clickable Inline Edit */
 .reminder-max-cell {
     cursor: pointer;
