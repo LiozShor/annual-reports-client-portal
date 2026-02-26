@@ -2912,47 +2912,26 @@ function closeConfirmDialog(confirmed) {
 function populateYearDropdowns() {
     const currentYear = new Date().getFullYear();
     const taxYear = currentYear - 1; // CPA tax year: working on last year's reports
-    const years = [];
-    for (let y = currentYear + 1; y >= currentYear - 3; y--) years.push(y);
 
-    // Dropdowns that select a single year (default = taxYear)
+    // All standard dropdowns — single tax year
     const yearSelects = ['manualYear', 'importYear', 'sendYearFilter'];
     for (const id of yearSelects) {
         const el = document.getElementById(id);
         if (!el) continue;
-        el.innerHTML = years.map(y =>
-            `<option value="${y}"${y === taxYear ? ' selected' : ''}>${y}</option>`
-        ).join('');
+        el.innerHTML = `<option value="${taxYear}" selected>${taxYear}</option>`;
     }
 
-    // Dashboard year filter — has an "All" option
+    // Dashboard year filter — "All" + tax year
     const yearFilter = document.getElementById('yearFilter');
     if (yearFilter) {
-        const existing = yearFilter.querySelector('option[value=""]');
-        yearFilter.innerHTML = '';
-        if (existing) yearFilter.appendChild(existing);
-        for (const y of years) {
-            const opt = document.createElement('option');
-            opt.value = y;
-            opt.textContent = y;
-            if (y === taxYear) opt.selected = true;
-            yearFilter.appendChild(opt);
-        }
+        yearFilter.innerHTML = `<option value="">הכל</option><option value="${taxYear}" selected>${taxYear}</option>`;
     }
 
-    // Rollover dropdowns — source defaults to taxYear, target to currentYear
+    // Rollover: source = tax year, target = next year
     const srcEl = document.getElementById('rolloverSourceYear');
     const tgtEl = document.getElementById('rolloverTargetYear');
-    if (srcEl) {
-        srcEl.innerHTML = years.map(y =>
-            `<option value="${y}"${y === taxYear ? ' selected' : ''}>${y}</option>`
-        ).join('');
-    }
-    if (tgtEl) {
-        tgtEl.innerHTML = years.map(y =>
-            `<option value="${y}"${y === currentYear ? ' selected' : ''}>${y}</option>`
-        ).join('');
-    }
+    if (srcEl) srcEl.innerHTML = `<option value="${taxYear}" selected>${taxYear}</option>`;
+    if (tgtEl) tgtEl.innerHTML = `<option value="${currentYear}" selected>${currentYear}</option>`;
 }
 
 // ==================== YEAR ROLLOVER ====================
