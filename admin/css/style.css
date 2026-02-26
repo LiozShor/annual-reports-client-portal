@@ -2336,61 +2336,72 @@ tr.reminder-loading td:last-child {
     font-size: 13px;
 }
 
-/* Reminder Count Cell — Clickable Inline Edit */
-.reminder-count-cell {
+/* Reminder Max Cell — Clickable Inline Edit */
+.reminder-max-cell {
     cursor: pointer;
-    padding: 4px 8px;
-    border-radius: var(--radius-md);
-    transition: background 0.15s;
+    padding: 4px 10px;
+    border-radius: var(--radius-full);
+    transition: all 0.15s;
     display: inline-flex;
     align-items: center;
     gap: 4px;
     white-space: nowrap;
+    font-size: 13px;
 }
 
-.reminder-count-cell:hover {
+.reminder-max-cell:hover {
+    filter: brightness(0.95);
+}
+
+.reminder-max-default {
+    color: var(--text-secondary);
     background: var(--neutral-100);
+    font-weight: 500;
 }
 
-.reminder-count-default {
-    color: var(--text-tertiary);
-    font-weight: 400;
-}
-
-.reminder-count-custom {
-    color: var(--primary-600);
+.reminder-max-custom {
+    color: var(--primary-700);
+    background: var(--primary-50);
     font-weight: 700;
+    border: 1px solid var(--primary-200);
+}
+
+.reminder-max-unlimited {
+    color: var(--success-700);
+    background: var(--success-50);
+    font-weight: 500;
+    border: 1px solid var(--success-200);
+    font-size: 12px;
 }
 
 .reminder-reset-btn {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 20px;
-    height: 20px;
+    width: 18px;
+    height: 18px;
     border: none;
-    background: var(--primary-50);
+    background: var(--primary-100);
     color: var(--primary-600);
-    border-radius: var(--radius-sm);
+    border-radius: var(--radius-full);
     cursor: pointer;
-    font-size: 14px;
+    font-size: 12px;
     line-height: 1;
     padding: 0;
     transition: background 0.15s;
 }
 
 .reminder-reset-btn:hover {
-    background: var(--primary-100);
+    background: var(--primary-200);
 }
 
-.reminder-count-editor {
+.reminder-max-editor {
     display: inline-flex;
     align-items: center;
-    gap: 4px;
 }
 
-.reminder-count-editor select {
-    padding: 2px 6px;
+.reminder-max-editor select {
+    padding: 3px 8px;
     border: 1px solid var(--primary-300);
     border-radius: var(--radius-md);
     font-size: 13px;

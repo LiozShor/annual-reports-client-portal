@@ -2278,7 +2278,8 @@ function buildReminderTable(items, showDocs) {
                     ${showDocs ? '<th>מסמכים</th>' : ''}
                     <th>נשלח לאחרונה</th>
                     <th>תאריך הבא</th>
-                    <th>נשלחו/מקס</th>
+                    <th>נשלחו</th>
+                    <th>מקסימום</th>
                     <th>סטטוס</th>
                     <th>פעולות</th>
                 </tr>
@@ -2290,9 +2291,6 @@ function buildReminderTable(items, showDocs) {
         const status = getReminderStatus(r);
         const hasCustomMax = r.reminder_max != null;
         const effectiveMax = hasCustomMax ? r.reminder_max : reminderDefaultMax;
-        const maxDisplay = effectiveMax != null ? effectiveMax : '∞';
-        const countClass = hasCustomMax ? 'reminder-count-custom' : 'reminder-count-default';
-        const resetBtn = hasCustomMax ? ` <button class="reminder-reset-btn" onclick="event.stopPropagation(); resetClientMax('${escapeAttr(r.report_id)}')" title="איפוס לברירת מחדל">↺</button>` : '';
         const nextDate = r.reminder_next_date ? formatDateHe(r.reminder_next_date) : '-';
         const isDue = r.reminder_next_date && r.reminder_next_date <= today;
         const isDueSoon = r.reminder_next_date && r.reminder_next_date <= weekFromNow && !isDue;
@@ -2300,6 +2298,16 @@ function buildReminderTable(items, showDocs) {
         const docsReceived = r.docs_received || 0;
         const docsTotal = r.docs_total || 0;
         const progressPercent = docsTotal > 0 ? Math.round((docsReceived / docsTotal) * 100) : 0;
+
+        // Max column content
+        let maxCellHtml;
+        if (hasCustomMax) {
+            maxCellHtml = `<span class="reminder-max-cell reminder-max-custom" id="max-cell-${escapeAttr(r.report_id)}" onclick="editClientMax('${escapeAttr(r.report_id)}', this)">${effectiveMax} <button class="reminder-reset-btn" onclick="event.stopPropagation(); resetClientMax('${escapeAttr(r.report_id)}')" title="איפוס לברירת מחדל">↺</button></span>`;
+        } else if (effectiveMax != null) {
+            maxCellHtml = `<span class="reminder-max-cell reminder-max-default" id="max-cell-${escapeAttr(r.report_id)}" onclick="editClientMax('${escapeAttr(r.report_id)}', this)">${effectiveMax}</span>`;
+        } else {
+            maxCellHtml = `<span class="reminder-max-cell reminder-max-unlimited" id="max-cell-${escapeAttr(r.report_id)}" onclick="editClientMax('${escapeAttr(r.report_id)}', this)">ללא הגבלה</span>`;
+        }
 
         html += `
             <tr data-report-id="${escapeAttr(r.report_id)}">
@@ -2321,7 +2329,8 @@ function buildReminderTable(items, showDocs) {
                 ` : ''}
                 <td>${r.last_reminder_sent_at ? formatDateHe(r.last_reminder_sent_at.split('T')[0]) : '-'}</td>
                 <td><span class="reminder-date ${dateClass}">${nextDate}</span></td>
-                <td><span class="reminder-count-cell ${countClass}" id="max-cell-${escapeAttr(r.report_id)}" onclick="editClientMax('${escapeAttr(r.report_id)}', this)">${r.reminder_count}/${maxDisplay}${resetBtn}</span></td>
+                <td>${r.reminder_count || 0}</td>
+                <td>${maxCellHtml}</td>
                 <td><span class="reminder-status ${status.class}">${status.label}</span></td>
                 <td>
                     <div class="reminder-row-actions">
@@ -2613,40 +2622,46 @@ async function doSaveDefaultMax(newValue) {
 
 function editClientMax(reportId, cell) {
     // If already editing, skip
-    if (cell.querySelector('.reminder-count-editor')) return;
+    if (cell.querySelector('.reminder-max-editor')) return;
     const r = remindersData.find(x => x.report_id === reportId);
     if (!r) return;
     const currentMax = r.reminder_max;
-    const currentCount = r.reminder_count || 0;
-    const effectiveMax = currentMax != null ? currentMax : reminderDefaultMax;
-    const maxDisplay = effectiveMax != null ? effectiveMax : '∞';
 
     const defaultLabel = reminderDefaultMax != null ? `ברירת מחדל (${reminderDefaultMax})` : 'ללא הגבלה (ברירת מחדל)';
 
-    cell.innerHTML = `<span class="reminder-count-editor">
-        <span>${currentCount}/</span>
+    cell.innerHTML = `<span class="reminder-max-editor">
         <select onchange="handleMaxSelectChange('${escapeAttr(reportId)}', this)">
             <option value="" ${currentMax == null ? 'selected' : ''}>${defaultLabel}</option>
             <option value="3" ${currentMax === 3 ? 'selected' : ''}>3</option>
             <option value="5" ${currentMax === 5 ? 'selected' : ''}>5</option>
             <option value="10" ${currentMax === 10 ? 'selected' : ''}>10</option>
-            <option value="unlimited" ${currentMax == null ? '' : ''}>∞ ללא הגבלה</option>
+            <option value="unlimited">∞ ללא הגבלה</option>
         </select>
     </span>`;
     const select = cell.querySelector('select');
     select.focus();
     select.addEventListener('blur', () => {
         setTimeout(() => {
-            // Restore original if still in edit mode
-            if (cell.querySelector('.reminder-count-editor')) {
-                const hasCustom = r.reminder_max != null;
-                const cls = hasCustom ? 'reminder-count-custom' : 'reminder-count-default';
-                const resetHtml = hasCustom ? ` <button class="reminder-reset-btn" onclick="event.stopPropagation(); resetClientMax('${escapeAttr(reportId)}')" title="איפוס לברירת מחדל">↺</button>` : '';
-                cell.className = `reminder-count-cell ${cls}`;
-                cell.innerHTML = `${currentCount}/${maxDisplay}${resetHtml}`;
+            if (cell.querySelector('.reminder-max-editor')) {
+                restoreMaxCell(cell, r, reportId);
             }
         }, 200);
     });
+}
+
+function restoreMaxCell(cell, r, reportId) {
+    const hasCustom = r.reminder_max != null;
+    const effectiveMax = hasCustom ? r.reminder_max : reminderDefaultMax;
+    if (hasCustom) {
+        cell.className = 'reminder-max-cell reminder-max-custom';
+        cell.innerHTML = `${effectiveMax} <button class="reminder-reset-btn" onclick="event.stopPropagation(); resetClientMax('${escapeAttr(reportId)}')" title="איפוס לברירת מחדל">↺</button>`;
+    } else if (effectiveMax != null) {
+        cell.className = 'reminder-max-cell reminder-max-default';
+        cell.innerHTML = `${effectiveMax}`;
+    } else {
+        cell.className = 'reminder-max-cell reminder-max-unlimited';
+        cell.innerHTML = 'ללא הגבלה';
+    }
 }
 
 function handleMaxSelectChange(reportId, select) {
