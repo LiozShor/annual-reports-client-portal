@@ -9,7 +9,8 @@ const FETCH_TIMEOUTS = {
     quick: 6000,     // Quick lookups (check-submission, verify)
     load: 10000,     // Data loads (documents, dashboard)
     mutate: 15000,   // Write operations (save, send, approve)
-    slow: 20000      // Heavy operations (bulk import, AI classification)
+    slow: 20000,     // Heavy operations (bulk import, AI classification)
+    rollover: 120000 // Year rollover (processes all clients, may take 1-2 min)
 };
 
 // --- Fetch With Timeout ---

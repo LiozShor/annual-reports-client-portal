@@ -133,7 +133,6 @@
                                 <label><i data-lucide="calendar" class="icon-sm"></i> שנה:</label>
                                 <select id="yearFilter" onchange="filterClients()">
                                     <option value="">הכל</option>
-                                    <option value="2025" selected>2025</option>
                                 </select>
                             </div>
                         </div>
@@ -175,7 +174,6 @@
                                 <div class="form-field">
                                     <label class="form-label">שנת דוח:</label>
                                     <select id="manualYear">
-                                        <option value="2025" selected>2025</option>
                                     </select>
                                 </div>
                                 <button class="btn btn-success w-full" onclick="addManualClient()">
@@ -249,7 +247,6 @@
                                     <div class="option-row">
                                         <label><i data-lucide="calendar" class="icon-sm"></i> שנת דוח:</label>
                                         <select id="importYear">
-                                            <option value="2025" selected>2025</option>
                                         </select>
                                     </div>
                                 </div>
@@ -281,6 +278,65 @@
                         </div> <!-- End Import Section -->
                     </div>
                 </div>
+
+                <!-- Year Rollover Card -->
+                <div class="card mt-4">
+                    <div class="card-header">
+                        <h2><i data-lucide="calendar-range" class="icon"></i> העברת שנה</h2>
+                    </div>
+                    <div class="card-body">
+                        <p class="mb-3">יצירת דוחות שנתיים חדשים עבור לקוחות קיימים — מעבר משנה לשנה.</p>
+                        <div class="manual-form">
+                            <div class="form-field">
+                                <label class="form-label">משנה:</label>
+                                <select id="rolloverSourceYear"></select>
+                            </div>
+                            <div class="form-field">
+                                <label class="form-label">לשנה:</label>
+                                <select id="rolloverTargetYear"></select>
+                            </div>
+                            <button class="btn btn-secondary w-full" onclick="previewYearRollover()">
+                                <i data-lucide="eye" class="icon-sm"></i> תצוגה מקדימה
+                            </button>
+                        </div>
+
+                        <div id="rolloverPreview" class="preview-section">
+                            <div class="preview-header">
+                                <h2><i data-lucide="eye" class="icon"></i> תצוגה מקדימה — העברת שנה</h2>
+                            </div>
+                            <div class="preview-stats">
+                                <div class="preview-stat">
+                                    <strong id="rollover-eligible">0</strong>
+                                    <span> לקוחות להעברה</span>
+                                </div>
+                                <div class="preview-stat warning">
+                                    <strong id="rollover-existing">0</strong>
+                                    <span> כבר קיימים (יידלגו)</span>
+                                </div>
+                            </div>
+                            <div class="table-wrapper mt-4">
+                                <table class="table">
+                                    <thead>
+                                        <tr>
+                                            <th>#</th>
+                                            <th>שם</th>
+                                            <th>אימייל</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="rolloverPreviewBody"></tbody>
+                                </table>
+                            </div>
+                            <div class="preview-actions">
+                                <button class="btn btn-success" id="rolloverExecuteBtn" onclick="executeYearRollover()">
+                                    <i data-lucide="play" class="icon-sm"></i> בצע העברה (<span id="rolloverCount">0</span>)
+                                </button>
+                                <button class="btn btn-secondary" onclick="clearRolloverPreview()">
+                                    <i data-lucide="x" class="icon-sm"></i> בטל
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <!-- Send Questionnaires Tab -->
@@ -294,7 +350,6 @@
                             <div class="filter-group">
                                 <label><i data-lucide="calendar" class="icon-sm"></i> שנה:</label>
                                 <select id="sendYearFilter">
-                                    <option value="2025" selected>2025</option>
                                 </select>
                             </div>
                             <button class="btn btn-primary" onclick="loadPendingClients()">

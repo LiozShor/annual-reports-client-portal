@@ -670,7 +670,7 @@ async function performServerImport(clients, year, successMessage) {
 
         showModal('success', 'הפעולה הושלמה!',
             successMessage || `הנתונים נשמרו בהצלחה.`,
-            { created: data.created, skipped: data.skipped }
+            { created: data.created, skipped: data.skipped, failed: data.failed }
         );
 
         return true;
@@ -735,9 +735,21 @@ async function addManualClient() {
         showModal('warning', 'אימייל לא תקין', 'כתובת האימייל אינה תקינה');
         return;
     }
-    // Optional: warning if already exists in dashboard list
+    // Warning if already exists in dashboard list
     if (existingEmails.has(email)) {
-        if (!confirm('כתובת המייל הזו כבר קיימת ברשימת הלקוחות. האם להוסיף בכל זאת?')) return;
+        showConfirmDialog('כתובת המייל הזו כבר קיימת ברשימת הלקוחות. האם להוסיף בכל זאת?', async () => {
+            const success = await performServerImport(
+                [{ name, email }],
+                year,
+                'הלקוח נוסף בהצלחה למערכת.'
+            );
+            if (success) {
+                document.getElementById('manualName').value = '';
+                document.getElementById('manualEmail').value = '';
+                loadDashboard();
+            }
+        }, 'הוסף בכל זאת');
+        return;
     }
 
     const success = await performServerImport(
@@ -844,8 +856,9 @@ async function sendToSelected() {
 
 async function sendToAll() {
     const reportIds = pendingClients.map(c => c.report_id);
-    if (!confirm(`האם לשלוח שאלון ל-${reportIds.length} לקוחות?`)) return;
-    await sendQuestionnaires(reportIds);
+    showConfirmDialog(`האם לשלוח שאלון ל-${reportIds.length} לקוחות?`, async () => {
+        await sendQuestionnaires(reportIds);
+    }, 'שלח לכולם');
 }
 
 async function sendSingle(reportId) {
@@ -971,35 +984,35 @@ let _markCompleteLocked = false;
 
 async function markComplete(reportId, name) {
     if (_markCompleteLocked) return;
-    if (!confirm(`לסמן את "${name}" כהושלם?`)) return;
-    _markCompleteLocked = true;
+    showConfirmDialog(`לסמן את "${name}" כהושלם?`, async () => {
+        _markCompleteLocked = true;
+        showLoading('מעדכן...');
 
-    showLoading('מעדכן...');
+        try {
+            const response = await fetchWithTimeout(`${API_BASE}/admin-mark-complete`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    token: authToken,
+                    report_id: reportId
+                })
+            }, FETCH_TIMEOUTS.mutate);
 
-    try {
-        const response = await fetchWithTimeout(`${API_BASE}/admin-mark-complete`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                token: authToken,
-                report_id: reportId
-            })
-        }, FETCH_TIMEOUTS.mutate);
+            const data = await response.json();
+            hideLoading();
 
-        const data = await response.json();
-        hideLoading();
+            if (!data.ok) throw new Error(data.error);
 
-        if (!data.ok) throw new Error(data.error);
+            showModal('success', 'הושלם!', `"${name}" סומן כהושלם בהצלחה.`);
+            loadDashboard();
 
-        showModal('success', 'הושלם!', `"${name}" סומן כהושלם בהצלחה.`);
-        loadDashboard();
-
-    } catch (error) {
-        hideLoading();
-        showModal('error', 'שגיאה', getErrorMessage(error, 'he'));
-    } finally {
-        _markCompleteLocked = false;
-    }
+        } catch (error) {
+            hideLoading();
+            showModal('error', 'שגיאה', getErrorMessage(error, 'he'));
+        } finally {
+            _markCompleteLocked = false;
+        }
+    }, 'סמן כהושלם');
 }
 
 function exportReviewToExcel() {
@@ -2774,6 +2787,9 @@ function showModal(type, title, body, stats = null) {
         if (stats.sent !== undefined) {
             statsHtml += `<div class="modal-stat"><div class="modal-stat-number">${stats.sent}</div><div class="modal-stat-label">נשלחו</div></div>`;
         }
+        if (stats.failed !== undefined && stats.failed > 0) {
+            statsHtml += `<div class="modal-stat"><div class="modal-stat-number" style="color: var(--danger-500)">${stats.failed}</div><div class="modal-stat-label">נכשלו</div></div>`;
+        }
         document.getElementById('modalStats').innerHTML = statsHtml;
     } else {
         document.getElementById('modalStats').innerHTML = '';
@@ -2891,12 +2907,164 @@ function closeConfirmDialog(confirmed) {
     if (confirmed && cb) cb();
 }
 
+// ==================== YEAR DROPDOWNS ====================
+
+function populateYearDropdowns() {
+    const currentYear = new Date().getFullYear();
+    const years = [];
+    for (let y = currentYear + 1; y >= currentYear - 3; y--) years.push(y);
+
+    // Dropdowns that select a single year (default = currentYear)
+    const yearSelects = ['manualYear', 'importYear', 'sendYearFilter'];
+    for (const id of yearSelects) {
+        const el = document.getElementById(id);
+        if (!el) continue;
+        el.innerHTML = years.map(y =>
+            `<option value="${y}"${y === currentYear ? ' selected' : ''}>${y}</option>`
+        ).join('');
+    }
+
+    // Dashboard year filter — has an "All" option
+    const yearFilter = document.getElementById('yearFilter');
+    if (yearFilter) {
+        const existing = yearFilter.querySelector('option[value=""]');
+        yearFilter.innerHTML = '';
+        if (existing) yearFilter.appendChild(existing);
+        for (const y of years) {
+            const opt = document.createElement('option');
+            opt.value = y;
+            opt.textContent = y;
+            if (y === currentYear) opt.selected = true;
+            yearFilter.appendChild(opt);
+        }
+    }
+
+    // Rollover dropdowns — source defaults to currentYear, target to currentYear+1
+    const srcEl = document.getElementById('rolloverSourceYear');
+    const tgtEl = document.getElementById('rolloverTargetYear');
+    if (srcEl) {
+        srcEl.innerHTML = years.map(y =>
+            `<option value="${y}"${y === currentYear ? ' selected' : ''}>${y}</option>`
+        ).join('');
+    }
+    if (tgtEl) {
+        tgtEl.innerHTML = years.map(y =>
+            `<option value="${y}"${y === currentYear + 1 ? ' selected' : ''}>${y}</option>`
+        ).join('');
+    }
+}
+
+// ==================== YEAR ROLLOVER ====================
+
+async function previewYearRollover() {
+    const sourceYear = document.getElementById('rolloverSourceYear').value;
+    const targetYear = document.getElementById('rolloverTargetYear').value;
+
+    if (sourceYear === targetYear) {
+        showModal('warning', 'שגיאה', 'שנת המקור ושנת היעד חייבות להיות שונות');
+        return;
+    }
+
+    showLoading('בודק לקוחות להעברה...');
+
+    try {
+        const response = await fetchWithTimeout(`${API_BASE}/admin-year-rollover`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                token: authToken,
+                source_year: parseInt(sourceYear),
+                target_year: parseInt(targetYear),
+                mode: 'preview'
+            })
+        }, FETCH_TIMEOUTS.load);
+
+        const data = await response.json();
+        hideLoading();
+
+        if (!data.ok) throw new Error(data.error || 'Preview failed');
+
+        // Update preview stats
+        document.getElementById('rollover-eligible').textContent = data.eligible;
+        document.getElementById('rollover-existing').textContent = data.already_exist;
+        document.getElementById('rolloverCount').textContent = data.eligible;
+        document.getElementById('rolloverExecuteBtn').disabled = data.eligible === 0;
+
+        // Render preview table
+        const tbody = document.getElementById('rolloverPreviewBody');
+        tbody.innerHTML = (data.clients || []).map((c, i) => `
+            <tr>
+                <td>${i + 1}</td>
+                <td>${escapeHtml(c.name)}</td>
+                <td>${escapeHtml(c.email)}</td>
+            </tr>
+        `).join('');
+
+        document.getElementById('rolloverPreview').classList.add('visible');
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+
+    } catch (error) {
+        hideLoading();
+        showModal('error', 'שגיאה', 'שגיאה בטעינת תצוגה מקדימה: ' + error.message);
+    }
+}
+
+async function executeYearRollover() {
+    const sourceYear = document.getElementById('rolloverSourceYear').value;
+    const targetYear = document.getElementById('rolloverTargetYear').value;
+    const count = document.getElementById('rolloverCount').textContent;
+
+    showConfirmDialog(
+        `להעביר ${count} לקוחות משנת ${sourceYear} לשנת ${targetYear}?`,
+        async () => {
+            showLoading(`מעביר ${count} לקוחות...`);
+
+            try {
+                const response = await fetchWithTimeout(`${API_BASE}/admin-year-rollover`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        token: authToken,
+                        source_year: parseInt(sourceYear),
+                        target_year: parseInt(targetYear),
+                        mode: 'execute'
+                    })
+                }, FETCH_TIMEOUTS.rollover);
+
+                const data = await response.json();
+                hideLoading();
+
+                if (!data.ok) throw new Error(data.error || 'Rollover failed');
+
+                showModal('success', 'העברה הושלמה!',
+                    `הלקוחות הועברו בהצלחה לשנת ${targetYear}.`,
+                    { created: data.created, failed: data.failed }
+                );
+
+                clearRolloverPreview();
+                loadDashboard();
+
+            } catch (error) {
+                hideLoading();
+                showModal('error', 'שגיאה', 'שגיאה בהעברת שנה: ' + error.message);
+            }
+        },
+        'בצע העברה'
+    );
+}
+
+function clearRolloverPreview() {
+    document.getElementById('rolloverPreview').classList.remove('visible');
+    document.getElementById('rolloverPreviewBody').innerHTML = '';
+}
+
 // ==================== INIT ====================
 
 // Initialize Lucide icons and offline detection when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
     if (typeof lucide !== 'undefined') lucide.createIcons();
     initOfflineDetection();
+    populateYearDropdowns();
 });
 
 // Initialize
