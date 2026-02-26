@@ -2398,9 +2398,11 @@ tr.reminder-loading td:last-child {
 .reminder-max-editor {
     display: inline-flex;
     align-items: center;
+    gap: 4px;
 }
 
-.reminder-max-editor select {
+.reminder-max-input {
+    width: 64px;
     padding: 3px 8px;
     border: 1px solid var(--primary-300);
     border-radius: var(--radius-md);
@@ -2408,6 +2410,35 @@ tr.reminder-loading td:last-child {
     background: var(--surface-primary);
     outline: none;
     box-shadow: 0 0 0 2px var(--primary-100);
+    text-align: center;
+    direction: ltr;
+    -moz-appearance: textfield;
+}
+
+.reminder-max-input::-webkit-inner-spin-button,
+.reminder-max-input::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.reminder-max-save,
+.reminder-max-cancel {
+    padding: 2px 6px !important;
+    font-size: 13px !important;
+    min-width: 0 !important;
+    line-height: 1;
+}
+
+.btn-ghost {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--text-secondary);
+    border-radius: var(--radius-md);
+    cursor: pointer;
+}
+
+.btn-ghost:hover {
+    background: var(--neutral-100);
 }
 
 /* ==================== RESPONSIVE ==================== */

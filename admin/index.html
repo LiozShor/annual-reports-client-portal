@@ -379,12 +379,7 @@
                     <span class="settings-value" id="reminderDefaultMaxDisplay">ללא הגבלה</span>
                     <button class="btn btn-sm btn-secondary" id="reminderEditDefaultBtn" onclick="editDefaultMax()">שנה</button>
                     <div class="settings-edit-group" id="reminderDefaultMaxEditor" style="display:none;">
-                        <select id="reminderDefaultMaxSelect">
-                            <option value="">ללא הגבלה</option>
-                            <option value="3">3</option>
-                            <option value="5">5</option>
-                            <option value="10">10</option>
-                        </select>
+                        <input type="number" id="reminderDefaultMaxInput" min="1" max="999" placeholder="ריק = ללא הגבלה" class="reminder-max-input" style="width:140px;">
                         <button class="btn btn-sm btn-primary" onclick="saveDefaultMax()">שמור</button>
                         <button class="btn btn-sm btn-secondary" onclick="cancelEditDefaultMax()">ביטול</button>
                     </div>

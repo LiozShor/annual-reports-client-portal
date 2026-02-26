@@ -2572,9 +2572,10 @@ function editDefaultMax() {
     document.getElementById('reminderDefaultMaxDisplay').style.display = 'none';
     const editor = document.getElementById('reminderDefaultMaxEditor');
     editor.style.display = 'flex';
-    const select = document.getElementById('reminderDefaultMaxSelect');
-    select.value = reminderDefaultMax != null ? String(reminderDefaultMax) : '';
-    select.focus();
+    const input = document.getElementById('reminderDefaultMaxInput');
+    input.value = reminderDefaultMax != null ? reminderDefaultMax : '';
+    input.focus();
+    input.select();
 }
 
 function cancelEditDefaultMax() {
@@ -2584,8 +2585,8 @@ function cancelEditDefaultMax() {
 }
 
 function saveDefaultMax() {
-    const select = document.getElementById('reminderDefaultMaxSelect');
-    const newValue = select.value; // '' = unlimited, number = limit
+    const input = document.getElementById('reminderDefaultMaxInput');
+    const newValue = input.value.trim(); // '' = unlimited, number = limit
     showConfirmDialog(
         newValue === ''
             ? 'לשנות ברירת מחדל לללא הגבלה?'
@@ -2621,31 +2622,36 @@ async function doSaveDefaultMax(newValue) {
 }
 
 function editClientMax(reportId, cell) {
-    // If already editing, skip
     if (cell.querySelector('.reminder-max-editor')) return;
     const r = remindersData.find(x => x.report_id === reportId);
     if (!r) return;
     const currentMax = r.reminder_max;
 
-    const defaultLabel = reminderDefaultMax != null ? `ברירת מחדל (${reminderDefaultMax})` : 'ללא הגבלה (ברירת מחדל)';
-
     cell.innerHTML = `<span class="reminder-max-editor">
-        <select onchange="handleMaxSelectChange('${escapeAttr(reportId)}', this)">
-            <option value="" ${currentMax == null ? 'selected' : ''}>${defaultLabel}</option>
-            <option value="3" ${currentMax === 3 ? 'selected' : ''}>3</option>
-            <option value="5" ${currentMax === 5 ? 'selected' : ''}>5</option>
-            <option value="10" ${currentMax === 10 ? 'selected' : ''}>10</option>
-            <option value="unlimited">∞ ללא הגבלה</option>
-        </select>
+        <input type="number" min="1" max="999" placeholder="ללא הגבלה" value="${currentMax != null ? currentMax : ''}" class="reminder-max-input">
+        <button class="btn btn-sm btn-primary reminder-max-save" title="שמור">✓</button>
+        <button class="btn btn-sm btn-ghost reminder-max-cancel" title="ביטול">✕</button>
     </span>`;
-    const select = cell.querySelector('select');
-    select.focus();
-    select.addEventListener('blur', () => {
-        setTimeout(() => {
-            if (cell.querySelector('.reminder-max-editor')) {
-                restoreMaxCell(cell, r, reportId);
-            }
-        }, 200);
+    const input = cell.querySelector('.reminder-max-input');
+    input.focus();
+    input.select();
+
+    const save = () => {
+        const val = input.value.trim();
+        if (val === '') {
+            resetClientMax(reportId);
+        } else {
+            const num = parseInt(val);
+            if (num > 0) saveClientMax(reportId, num);
+            else restoreMaxCell(cell, r, reportId);
+        }
+    };
+
+    cell.querySelector('.reminder-max-save').addEventListener('click', (e) => { e.stopPropagation(); save(); });
+    cell.querySelector('.reminder-max-cancel').addEventListener('click', (e) => { e.stopPropagation(); restoreMaxCell(cell, r, reportId); });
+    input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') { e.preventDefault(); save(); }
+        if (e.key === 'Escape') { e.preventDefault(); restoreMaxCell(cell, r, reportId); }
     });
 }
 
@@ -2661,23 +2667,6 @@ function restoreMaxCell(cell, r, reportId) {
     } else {
         cell.className = 'reminder-max-cell reminder-max-unlimited';
         cell.innerHTML = 'ללא הגבלה';
-    }
-}
-
-function handleMaxSelectChange(reportId, select) {
-    const val = select.value;
-    if (val === '') {
-        // Reset to default
-        resetClientMax(reportId);
-    } else if (val === 'unlimited') {
-        // Set very high number? No — we use null for unlimited, but per-client "unlimited" is different from "default"
-        // For per-client unlimited override we need a special value. Use a very large number.
-        // Actually, since null means "use default", and default may not be unlimited,
-        // we need a way to say "this client is unlimited regardless of default".
-        // For now, set to a very high number (9999) to mean effectively unlimited.
-        saveClientMax(reportId, 9999);
-    } else {
-        saveClientMax(reportId, parseInt(val));
     }
 }
 
