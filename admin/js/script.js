@@ -2114,6 +2114,7 @@ function showAIToast(message, type) {
 
 let remindersData = [];
 let reminderLoaded = false;
+let reminderDefaultMax = null; // null = unlimited
 
 async function loadReminders(silent = false) {
     if (!silent) showLoading('טוען תזכורות...');
@@ -2135,6 +2136,8 @@ async function loadReminders(silent = false) {
 
         remindersData = data.items || [];
         reminderLoaded = true;
+        reminderDefaultMax = data.default_max !== undefined ? data.default_max : null;
+        updateDefaultMaxDisplay();
         updateReminderStats(data.stats || {});
         filterReminders();
     } catch (error) {
@@ -2167,8 +2170,9 @@ function updateReminderStats(stats) {
 }
 
 function isExhausted(r) {
-    const max = r.reminder_max != null ? r.reminder_max : 3;
-    return r.reminder_count >= max && !r.reminder_suppress;
+    const effectiveMax = r.reminder_max != null ? r.reminder_max : reminderDefaultMax;
+    if (effectiveMax == null) return false; // unlimited
+    return r.reminder_count >= effectiveMax && !r.reminder_suppress;
 }
 
 function getReminderStatus(r) {
@@ -2284,7 +2288,11 @@ function buildReminderTable(items, showDocs) {
 
     for (const r of items) {
         const status = getReminderStatus(r);
-        const max = r.reminder_max != null ? r.reminder_max : 3;
+        const hasCustomMax = r.reminder_max != null;
+        const effectiveMax = hasCustomMax ? r.reminder_max : reminderDefaultMax;
+        const maxDisplay = effectiveMax != null ? effectiveMax : '∞';
+        const countClass = hasCustomMax ? 'reminder-count-custom' : 'reminder-count-default';
+        const resetBtn = hasCustomMax ? ` <button class="reminder-reset-btn" onclick="event.stopPropagation(); resetClientMax('${escapeAttr(r.report_id)}')" title="איפוס לברירת מחדל">↺</button>` : '';
         const nextDate = r.reminder_next_date ? formatDateHe(r.reminder_next_date) : '-';
         const isDue = r.reminder_next_date && r.reminder_next_date <= today;
         const isDueSoon = r.reminder_next_date && r.reminder_next_date <= weekFromNow && !isDue;
@@ -2313,7 +2321,7 @@ function buildReminderTable(items, showDocs) {
                 ` : ''}
                 <td>${r.last_reminder_sent_at ? formatDateHe(r.last_reminder_sent_at.split('T')[0]) : '-'}</td>
                 <td><span class="reminder-date ${dateClass}">${nextDate}</span></td>
-                <td>${r.reminder_count}/${max}</td>
+                <td><span class="reminder-count-cell ${countClass}" id="max-cell-${escapeAttr(r.report_id)}" onclick="editClientMax('${escapeAttr(r.report_id)}', this)">${r.reminder_count}/${maxDisplay}${resetBtn}</span></td>
                 <td><span class="reminder-status ${status.class}">${status.label}</span></td>
                 <td>
                     <div class="reminder-row-actions">
@@ -2449,6 +2457,7 @@ async function executeReminderAction(action, reportIds, value) {
     try {
         const body = { token: authToken, action, report_ids: reportIds };
         if (value !== undefined) body.value = value;
+        if (action === 'send_now' && reminderDefaultMax != null) body.default_max = reminderDefaultMax;
 
         const response = await fetchWithTimeout(`${API_BASE}/admin-reminders`, {
             method: 'POST',
@@ -2539,6 +2548,130 @@ function showReminderDatePicker(reportId, currentDate) {
     });
 
     input.showPicker();
+}
+
+// ==================== REMINDER CONFIG & INLINE EDIT ====================
+
+function updateDefaultMaxDisplay() {
+    const el = document.getElementById('reminderDefaultMaxDisplay');
+    if (!el) return;
+    el.textContent = reminderDefaultMax != null ? reminderDefaultMax : 'ללא הגבלה';
+}
+
+function editDefaultMax() {
+    document.getElementById('reminderEditDefaultBtn').style.display = 'none';
+    document.getElementById('reminderDefaultMaxDisplay').style.display = 'none';
+    const editor = document.getElementById('reminderDefaultMaxEditor');
+    editor.style.display = 'flex';
+    const select = document.getElementById('reminderDefaultMaxSelect');
+    select.value = reminderDefaultMax != null ? String(reminderDefaultMax) : '';
+    select.focus();
+}
+
+function cancelEditDefaultMax() {
+    document.getElementById('reminderDefaultMaxEditor').style.display = 'none';
+    document.getElementById('reminderEditDefaultBtn').style.display = '';
+    document.getElementById('reminderDefaultMaxDisplay').style.display = '';
+}
+
+function saveDefaultMax() {
+    const select = document.getElementById('reminderDefaultMaxSelect');
+    const newValue = select.value; // '' = unlimited, number = limit
+    showConfirmDialog(
+        newValue === ''
+            ? 'לשנות ברירת מחדל לללא הגבלה?'
+            : `לשנות ברירת מחדל ל-${newValue} תזכורות?`,
+        () => doSaveDefaultMax(newValue),
+        'שמור'
+    );
+}
+
+async function doSaveDefaultMax(newValue) {
+    cancelEditDefaultMax();
+    showLoading('שומר הגדרות...');
+    try {
+        const response = await fetchWithTimeout(`${API_BASE}/admin-reminders`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                token: authToken,
+                action: 'update_config',
+                config_key: 'reminder_default_max',
+                config_value: newValue
+            })
+        }, FETCH_TIMEOUTS.mutate);
+        const data = await response.json();
+        hideLoading();
+        if (!data.ok) throw new Error(data.error || 'שגיאה');
+        showAIToast('ברירת מחדל עודכנה', 'success');
+        loadReminders(true);
+    } catch (error) {
+        hideLoading();
+        showModal('error', 'שגיאה', error.message);
+    }
+}
+
+function editClientMax(reportId, cell) {
+    // If already editing, skip
+    if (cell.querySelector('.reminder-count-editor')) return;
+    const r = remindersData.find(x => x.report_id === reportId);
+    if (!r) return;
+    const currentMax = r.reminder_max;
+    const currentCount = r.reminder_count || 0;
+    const effectiveMax = currentMax != null ? currentMax : reminderDefaultMax;
+    const maxDisplay = effectiveMax != null ? effectiveMax : '∞';
+
+    const defaultLabel = reminderDefaultMax != null ? `ברירת מחדל (${reminderDefaultMax})` : 'ללא הגבלה (ברירת מחדל)';
+
+    cell.innerHTML = `<span class="reminder-count-editor">
+        <span>${currentCount}/</span>
+        <select onchange="handleMaxSelectChange('${escapeAttr(reportId)}', this)">
+            <option value="" ${currentMax == null ? 'selected' : ''}>${defaultLabel}</option>
+            <option value="3" ${currentMax === 3 ? 'selected' : ''}>3</option>
+            <option value="5" ${currentMax === 5 ? 'selected' : ''}>5</option>
+            <option value="10" ${currentMax === 10 ? 'selected' : ''}>10</option>
+            <option value="unlimited" ${currentMax == null ? '' : ''}>∞ ללא הגבלה</option>
+        </select>
+    </span>`;
+    const select = cell.querySelector('select');
+    select.focus();
+    select.addEventListener('blur', () => {
+        setTimeout(() => {
+            // Restore original if still in edit mode
+            if (cell.querySelector('.reminder-count-editor')) {
+                const hasCustom = r.reminder_max != null;
+                const cls = hasCustom ? 'reminder-count-custom' : 'reminder-count-default';
+                const resetHtml = hasCustom ? ` <button class="reminder-reset-btn" onclick="event.stopPropagation(); resetClientMax('${escapeAttr(reportId)}')" title="איפוס לברירת מחדל">↺</button>` : '';
+                cell.className = `reminder-count-cell ${cls}`;
+                cell.innerHTML = `${currentCount}/${maxDisplay}${resetHtml}`;
+            }
+        }, 200);
+    });
+}
+
+function handleMaxSelectChange(reportId, select) {
+    const val = select.value;
+    if (val === '') {
+        // Reset to default
+        resetClientMax(reportId);
+    } else if (val === 'unlimited') {
+        // Set very high number? No — we use null for unlimited, but per-client "unlimited" is different from "default"
+        // For per-client unlimited override we need a special value. Use a very large number.
+        // Actually, since null means "use default", and default may not be unlimited,
+        // we need a way to say "this client is unlimited regardless of default".
+        // For now, set to a very high number (9999) to mean effectively unlimited.
+        saveClientMax(reportId, 9999);
+    } else {
+        saveClientMax(reportId, parseInt(val));
+    }
+}
+
+function saveClientMax(reportId, maxValue) {
+    executeReminderAction('set_max', [reportId], maxValue);
+}
+
+function resetClientMax(reportId) {
+    executeReminderAction('set_max', [reportId], null);
 }
 
 // ==================== UTILITIES ====================

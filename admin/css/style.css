@@ -2289,6 +2289,116 @@ tr.reminder-loading td:last-child {
     background: var(--primary-100);
 }
 
+/* Reminder Settings Bar */
+.reminder-settings-bar {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-3);
+    padding: var(--sp-3) var(--sp-4);
+    background: var(--surface-secondary);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    margin-bottom: var(--sp-3);
+    font-size: 14px;
+    direction: rtl;
+}
+
+.reminder-settings-bar .settings-label {
+    color: var(--text-secondary);
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
+    white-space: nowrap;
+}
+
+.reminder-settings-bar .settings-value {
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.reminder-settings-bar .settings-edit-group {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
+}
+
+.reminder-settings-bar select {
+    padding: 4px 8px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    font-size: 13px;
+    background: var(--surface-primary);
+}
+
+.reminder-settings-bar .btn-sm {
+    padding: 4px 12px;
+    font-size: 13px;
+}
+
+/* Reminder Count Cell — Clickable Inline Edit */
+.reminder-count-cell {
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: var(--radius-md);
+    transition: background 0.15s;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    white-space: nowrap;
+}
+
+.reminder-count-cell:hover {
+    background: var(--neutral-100);
+}
+
+.reminder-count-default {
+    color: var(--text-tertiary);
+    font-weight: 400;
+}
+
+.reminder-count-custom {
+    color: var(--primary-600);
+    font-weight: 700;
+}
+
+.reminder-reset-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    border: none;
+    background: var(--primary-50);
+    color: var(--primary-600);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    font-size: 14px;
+    line-height: 1;
+    padding: 0;
+    transition: background 0.15s;
+}
+
+.reminder-reset-btn:hover {
+    background: var(--primary-100);
+}
+
+.reminder-count-editor {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.reminder-count-editor select {
+    padding: 2px 6px;
+    border: 1px solid var(--primary-300);
+    border-radius: var(--radius-md);
+    font-size: 13px;
+    background: var(--surface-primary);
+    outline: none;
+    box-shadow: 0 0 0 2px var(--primary-100);
+}
+
 /* ==================== RESPONSIVE ==================== */
 @media (max-width: 768px) {
     .admin-navbar {

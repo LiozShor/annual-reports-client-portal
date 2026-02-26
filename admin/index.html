@@ -370,6 +370,26 @@
                     </div>
                 </div>
 
+                <!-- Settings Bar -->
+                <div class="reminder-settings-bar" id="reminderSettingsBar">
+                    <span class="settings-label">
+                        <i data-lucide="settings" class="icon-sm"></i>
+                        מגבלת תזכורות ברירת מחדל:
+                    </span>
+                    <span class="settings-value" id="reminderDefaultMaxDisplay">ללא הגבלה</span>
+                    <button class="btn btn-sm btn-secondary" id="reminderEditDefaultBtn" onclick="editDefaultMax()">שנה</button>
+                    <div class="settings-edit-group" id="reminderDefaultMaxEditor" style="display:none;">
+                        <select id="reminderDefaultMaxSelect">
+                            <option value="">ללא הגבלה</option>
+                            <option value="3">3</option>
+                            <option value="5">5</option>
+                            <option value="10">10</option>
+                        </select>
+                        <button class="btn btn-sm btn-primary" onclick="saveDefaultMax()">שמור</button>
+                        <button class="btn btn-sm btn-secondary" onclick="cancelEditDefaultMax()">ביטול</button>
+                    </div>
+                </div>
+
                 <!-- Filter Bar -->
                 <div class="reminder-filter-bar">
                     <div class="filter-group">
