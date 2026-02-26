@@ -2567,7 +2567,29 @@ async function saveReminderSettings() {
         return;
     }
 
+    // Warn if new default max would exhaust active clients
+    if (maxVal !== '') {
+        const newMax = parseInt(maxVal);
+        const affected = remindersData.filter(r =>
+            r.reminder_max == null && !r.reminder_suppress &&
+            (r.reminder_count || 0) >= newMax
+        );
+        if (affected.length > 0) {
+            closeReminderSettingsModal();
+            showConfirmDialog(
+                `${affected.length} לקוחות כבר שלחו ${newMax} תזכורות או יותר ויסומנו כ"מוצה". להמשיך?`,
+                () => doSaveReminderSettings(maxVal, dayVal),
+                'המשך ושמור'
+            );
+            return;
+        }
+    }
+
     closeReminderSettingsModal();
+    doSaveReminderSettings(maxVal, dayVal);
+}
+
+async function doSaveReminderSettings(maxVal, dayVal) {
     showLoading('שומר הגדרות...');
     try {
         const [r1, r2] = await Promise.all([
