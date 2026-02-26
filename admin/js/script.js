@@ -190,7 +190,11 @@ async function loadDashboard(silent = false) {
 
         // Update year dropdowns with available years from API
         if (data.available_years && data.available_years.length > 0) {
-            updateYearDropdowns(data.available_years);
+            const yearChanged = updateYearDropdowns(data.available_years);
+            if (yearChanged) {
+                loadDashboard(true); // reload with the newest year
+                return;
+            }
         }
 
         // Load AI review badge count (async, non-blocking)
@@ -2942,48 +2946,57 @@ function populateYearDropdowns() {
 /**
  * Update year dropdowns with actual available years from the API.
  * Called after loadDashboard() returns available_years.
+ * Returns true if the dashboard year filter changed (caller should reload).
  */
+let _yearsInitialized = false;
 function updateYearDropdowns(years) {
-    if (!years || years.length === 0) return;
+    if (!years || years.length === 0) return false;
 
     const currentYear = new Date().getFullYear();
-    const taxYear = currentYear - 1;
     const sortedYears = [...years].sort((a, b) => b - a); // newest first
+    const newestYear = sortedYears[0];
+    let yearFilterChanged = false;
 
-    // Dashboard year filter — "All" + each available year
+    // Dashboard year filter — "All" + each available year, default to newest
     const yearFilter = document.getElementById('yearFilter');
     if (yearFilter) {
-        const currentVal = yearFilter.value;
+        const prevVal = yearFilter.value;
+        const defaultYear = _yearsInitialized ? prevVal : String(newestYear);
         yearFilter.innerHTML = '<option value="">הכל</option>' +
-            sortedYears.map(y => `<option value="${y}"${y == currentVal ? ' selected' : ''}>${y}</option>`).join('');
+            sortedYears.map(y => `<option value="${y}"${String(y) === defaultYear ? ' selected' : ''}>${y}</option>`).join('');
+        yearFilterChanged = !_yearsInitialized && prevVal !== String(newestYear);
     }
 
-    // Other dropdowns — show all available years, default to tax year
+    // Other dropdowns — show all available years, default to newest
     const yearSelects = ['manualYear', 'importYear', 'sendYearFilter'];
     for (const id of yearSelects) {
         const el = document.getElementById(id);
         if (!el) continue;
-        const currentVal = el.value;
+        const defaultVal = _yearsInitialized ? el.value : String(newestYear);
         el.innerHTML = sortedYears.map(y =>
-            `<option value="${y}"${y == currentVal ? ' selected' : ''}>${y}</option>`
+            `<option value="${y}"${String(y) === defaultVal ? ' selected' : ''}>${y}</option>`
         ).join('');
     }
 
-    // Rollover: source options = available years, target = years + next year
+    // Rollover: source = newest available, target = next year after newest
     const srcEl = document.getElementById('rolloverSourceYear');
     const tgtEl = document.getElementById('rolloverTargetYear');
     if (srcEl) {
         srcEl.innerHTML = sortedYears.map(y =>
-            `<option value="${y}"${y == taxYear ? ' selected' : ''}>${y}</option>`
+            `<option value="${y}"${y === newestYear ? ' selected' : ''}>${y}</option>`
         ).join('');
     }
     if (tgtEl) {
-        const targetYears = sortedYears.includes(currentYear) ? sortedYears : [currentYear, ...sortedYears];
+        const nextYear = newestYear + 1;
+        const targetYears = sortedYears.includes(nextYear) ? sortedYears : [nextYear, ...sortedYears];
         targetYears.sort((a, b) => b - a);
         tgtEl.innerHTML = targetYears.map(y =>
-            `<option value="${y}"${y == currentYear ? ' selected' : ''}>${y}</option>`
+            `<option value="${y}"${y === nextYear ? ' selected' : ''}>${y}</option>`
         ).join('');
     }
+
+    _yearsInitialized = true;
+    return yearFilterChanged;
 }
 
 // ==================== YEAR ROLLOVER ====================
