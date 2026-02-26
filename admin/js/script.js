@@ -2521,6 +2521,12 @@ async function executeReminderAction(action, reportIds, value, forceOverride) {
 
         if (!data.ok) throw new Error(data.error || 'שגיאה לא ידועה');
 
+        if (data.warning) {
+            showModal('warning', 'מסמכים ממתינים לסיווג', data.warning);
+            loadReminders(true);
+            return;
+        }
+
         const actionLabels = {
             send_now: 'תזכורת נשלחה',
             suppress_this_month: 'הושתק החודש',
