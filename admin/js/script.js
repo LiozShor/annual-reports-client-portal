@@ -142,7 +142,7 @@ async function loadDashboard(silent = false) {
 
     try {
         const year = document.getElementById('yearFilter')?.value || '2025';
-        const response = await fetchWithTimeout(`${API_BASE}/admin-dashboard?token=${authToken}&year=${year}`, {}, FETCH_TIMEOUTS.load);
+        const response = await fetchWithTimeout(`${API_BASE}/admin-dashboard?token=${authToken}&year=${year}&_t=${Date.now()}`, {}, FETCH_TIMEOUTS.load);
         const data = await response.json();
 
         if (!silent) hideLoading();
