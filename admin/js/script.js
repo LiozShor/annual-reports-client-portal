@@ -2294,7 +2294,7 @@ function buildReminderTable(items, showDocs) {
         const progressPercent = docsTotal > 0 ? Math.round((docsReceived / docsTotal) * 100) : 0;
 
         html += `
-            <tr>
+            <tr data-report-id="${escapeAttr(r.report_id)}">
                 <td><input type="checkbox" class="reminder-checkbox" value="${escapeAttr(r.report_id)}" onchange="updateReminderSelectedCount()"></td>
                 <td>
                     <strong class="client-link" onclick="viewClientDocs('${escapeAttr(r.report_id)}', '${escapeHtml(r.name)}', '${escapeHtml(r.email || '')}', '${r.year}')">
@@ -2410,8 +2410,41 @@ function reminderBulkAction(action) {
     executeReminderAction(action, reportIds);
 }
 
+function setRowLoading(reportId, text) {
+    const row = document.querySelector(`tr[data-report-id="${reportId}"]`);
+    if (!row) return;
+    row.classList.add('reminder-loading');
+    const overlay = document.createElement('div');
+    overlay.className = 'reminder-row-loading-overlay';
+    overlay.innerHTML = `<div class="spinner"></div><span>${text || 'מעבד...'}</span>`;
+    row.style.position = 'relative';
+    row.appendChild(overlay);
+}
+
+function clearRowLoading(reportId) {
+    const row = document.querySelector(`tr[data-report-id="${reportId}"]`);
+    if (!row) return;
+    row.classList.remove('reminder-loading');
+    const overlay = row.querySelector('.reminder-row-loading-overlay');
+    if (overlay) overlay.remove();
+}
+
 async function executeReminderAction(action, reportIds, value) {
-    showLoading('מעדכן...');
+    const isBulk = reportIds.length > 1;
+    const actionLoadingLabels = {
+        send_now: 'שולח...',
+        suppress_this_month: 'משתיק...',
+        suppress_forever: 'משתיק...',
+        unsuppress: 'מפעיל...',
+        change_date: 'מעדכן...',
+        set_max: 'מעדכן...'
+    };
+
+    if (isBulk) {
+        showLoading('מעדכן...');
+    } else {
+        setRowLoading(reportIds[0], actionLoadingLabels[action] || 'מעבד...');
+    }
 
     try {
         const body = { token: authToken, action, report_ids: reportIds };
@@ -2429,7 +2462,9 @@ async function executeReminderAction(action, reportIds, value) {
         } catch (e) {
             throw new Error('השרת לא החזיר תשובה תקינה. נסה שוב.');
         }
-        hideLoading();
+
+        if (isBulk) hideLoading();
+        else clearRowLoading(reportIds[0]);
 
         if (!data.ok) throw new Error(data.error || 'שגיאה לא ידועה');
 
@@ -2444,7 +2479,8 @@ async function executeReminderAction(action, reportIds, value) {
         showAIToast(actionLabels[action] || 'עודכן בהצלחה', 'success');
         loadReminders(true);
     } catch (error) {
-        hideLoading();
+        if (isBulk) hideLoading();
+        else clearRowLoading(reportIds[0]);
         showModal('error', 'שגיאה', error.message);
     }
 }

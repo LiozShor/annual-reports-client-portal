@@ -2220,6 +2220,42 @@ tr:hover .client-view-link {
     color: var(--warning-600);
 }
 
+/* Row Loading (card-level loading for table rows) */
+tr.reminder-loading {
+    position: relative;
+    pointer-events: none;
+}
+
+tr.reminder-loading td {
+    opacity: 0.3;
+}
+
+tr.reminder-loading td:last-child {
+    opacity: 1;
+}
+
+.reminder-row-loading-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(255, 255, 255, 0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--sp-2);
+    z-index: 2;
+}
+
+.reminder-row-loading-overlay .spinner {
+    width: 18px;
+    height: 18px;
+    border-width: 2px;
+}
+
+.reminder-row-loading-overlay span {
+    font-size: var(--text-sm);
+    color: var(--gray-600);
+}
+
 /* Row Actions */
 .reminder-row-actions {
     display: flex;
