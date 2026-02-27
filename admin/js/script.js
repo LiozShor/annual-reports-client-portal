@@ -1640,7 +1640,7 @@ function renderAICard(item) {
     if (state === 'full') {
         // State A: Full match — green border, raw confidence, doc name
         const templateLabel = AI_DOC_NAMES[item.matched_template_id] || item.matched_template_name || '';
-        const docName = item.matched_doc_name || '';
+        const docName = (item.matched_doc_name || '').replace(/<\/?b>/g, '');
         // Always show template type; append doc name if it adds info beyond the template label
         const docDisplayName = templateLabel && docName && !docName.includes(templateLabel)
             ? `${templateLabel} – ${docName}`
@@ -1747,14 +1747,14 @@ function renderAICard(item) {
     } else if (state === 'fuzzy') {
         // State C: Fuzzy match — green border, doc name, hint line
         const templateLabel = AI_DOC_NAMES[item.matched_template_id] || item.matched_template_name || '';
-        const docName = item.matched_doc_name || '';
+        const docName = (item.matched_doc_name || '').replace(/<\/?b>/g, '');
         const docDisplayName = templateLabel && docName && !docName.includes(templateLabel)
             ? `${templateLabel} – ${docName}`
             : (docName || templateLabel);
         const aiIssuer = item.issuer_name || '';
         // Extract doc issuer from matched_doc_name (after – separator)
-        const docIssuer = (item.matched_doc_name || '').split('–').slice(1).join('–').trim()
-                       || (item.matched_doc_name || '').split('-').slice(1).join('-').trim()
+        const docIssuer = (item.matched_doc_name || '').replace(/<\/?b>/g, '').split('–').slice(1).join('–').trim()
+                       || (item.matched_doc_name || '').replace(/<\/?b>/g, '').split('-').slice(1).join('-').trim()
                        || '';
         const fuzzyHintHtml = aiIssuer && docIssuer
             ? `<div class="ai-fuzzy-hint">💡 ${escapeHtml(aiIssuer)} ≈ ${escapeHtml(docIssuer)}</div>`
@@ -2250,7 +2250,7 @@ function showBatchCompleteModal(clientName, trackerData) {
         for (const item of rejected) {
             const reasonLabel = REJECTION_REASONS[item.rejectionReason] || '';
             itemsHtml += `<div class="batch-item batch-item-rejected">
-                <span class="batch-item-name">${escapeHtml(item.docName)}</span>
+                <span class="batch-item-name">${escapeHtml(item.docName.replace(/<\/?b>/g, ''))}</span>
                 ${reasonLabel ? `<span class="batch-item-reason">${escapeHtml(reasonLabel)}</span>` : ''}
                 ${item.notes ? `<span class="batch-item-notes">${escapeHtml(item.notes)}</span>` : ''}
             </div>`;
@@ -2261,7 +2261,7 @@ function showBatchCompleteModal(clientName, trackerData) {
         itemsHtml += '<div class="batch-section"><div class="batch-section-title">✓ אושרו</div>';
         for (const item of approved) {
             itemsHtml += `<div class="batch-item batch-item-approved">
-                <span class="batch-item-name">${escapeHtml(item.docName)}</span>
+                <span class="batch-item-name">${escapeHtml(item.docName.replace(/<\/?b>/g, ''))}</span>
             </div>`;
         }
         itemsHtml += '</div>';
