@@ -16,13 +16,13 @@ function formatDocumentName(doc, spouseName = null) {
 }
 
 function renderDocLi(name, status) {
-  if (status === 'Received') {
-    return `<li style="color:#9ca3af;text-decoration:line-through;">&#x2713; ${name}</li>`;
-  }
   if (status === 'Waived') {
-    return `<li style="color:#d1d5db;text-decoration:line-through;opacity:0.5;">— ${name}</li>`;
+    return '';
   }
-  return `<li>• ${name}</li>`;
+  if (status === 'Received') {
+    return `<li style="color:#9ca3af;text-decoration:line-through;"><span style="color:#059669;">&#x2611;</span> ${name}</li>`;
+  }
+  return `<li>&#x2610; ${name}</li>`;
 }
 
 function groupDocumentsByCategory(documents) {
