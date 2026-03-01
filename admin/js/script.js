@@ -2330,11 +2330,7 @@ async function sendBatchStatus(clientName) {
         showAIToast(`עדכון נשלח ל${clientName}`, 'success');
         delete batchReviewTracker[clientName];
     } catch (error) {
-        if (btn) {
-            btn.disabled = false;
-            btn.innerHTML = '<i data-lucide="send" class="icon-sm"></i> שלח עדכון ללקוח';
-            if (typeof lucide !== 'undefined') lucide.createIcons();
-        }
+        closeBatchCompleteModal();
         showModal('error', 'שגיאה', error.message);
     }
 }
