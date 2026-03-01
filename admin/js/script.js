@@ -2220,6 +2220,7 @@ function trackReviewAction(recordId, action, responseData, rejectionReason, note
         recordId,
         action,
         docName: responseData?.doc_title || item?.matched_doc_name || item?.attachment_name || '',
+        originalFileName: item?.attachment_name || '',
         rejectionReason: rejectionReason || null,
         notes: notes || null
     });
