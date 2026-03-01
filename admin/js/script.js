@@ -1841,7 +1841,12 @@ async function parseAIResponse(response) {
     const text = await response.text();
     if (!text) throw new Error('השרת לא החזיר תשובה — ייתכן שגיאה פנימית. נסה שוב.');
     try {
-        return JSON.parse(text);
+        const data = JSON.parse(text);
+        // DL-070: Surface 409 conflict as a typed response
+        if (response.status === 409 && data.conflict) {
+            data._conflict = true;
+        }
+        return data;
     } catch {
         throw new Error('תשובה לא תקינה מהשרת. נסה שוב או בדוק את הלוגים.');
     }
@@ -2041,7 +2046,7 @@ async function confirmAIReassign() {
     }
 }
 
-async function submitAIReassign(recordId, templateId, docRecordId, loadingText, newDocName) {
+async function submitAIReassign(recordId, templateId, docRecordId, loadingText, newDocName, forceOverwrite) {
     setCardLoading(recordId, loadingText || 'משייך מחדש...');
 
     try {
@@ -2053,6 +2058,7 @@ async function submitAIReassign(recordId, templateId, docRecordId, loadingText, 
             reassign_doc_record_id: docRecordId || null
         };
         if (newDocName) body.new_doc_name = newDocName;
+        if (forceOverwrite) body.force_overwrite = true;
 
         const response = await fetchWithTimeout(`${API_BASE}/review-classification`, {
             method: 'POST',
@@ -2062,6 +2068,18 @@ async function submitAIReassign(recordId, templateId, docRecordId, loadingText, 
 
         const data = await parseAIResponse(response);
         clearCardLoading(recordId);
+
+        // DL-070: Handle target doc conflict
+        if (data._conflict) {
+            const title = (data.conflict_doc_title || '').replace(/<[^>]+>/g, '');
+            showConfirmDialog(
+                `המסמך "${title}" כבר אושר ומכיל קובץ קיים.\nלהחליף את הקובץ הקיים?`,
+                () => submitAIReassign(recordId, templateId, docRecordId, 'מחליף מסמך...', newDocName, true),
+                'החלף מסמך',
+                true
+            );
+            return;
+        }
 
         if (!data.ok) throw new Error(formatAIResponseError(data));
 
