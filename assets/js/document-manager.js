@@ -288,20 +288,6 @@ function displayDocuments() {
                         <button type="button" class="name-edit-btn${isWaived ? ' action-hidden' : ''}"
                             ${!isWaived ? `onclick="startNameEdit('${doc.id}')"` : ''}
                             title="שנה שם מסמך"><i data-lucide="pencil" class="icon-xs"></i></button>
-                        ${isWaived
-                            ? `<span class="badge ${status.class}">${status.text}</span>`
-                            : `<span class="badge ${status.class} clickable"
-                                    onclick="openStatusDropdown(event, '${doc.id}', '${effectiveStatus}')"
-                                    id="badge-${doc.id}"
-                                    title="לחץ לשינוי סטטוס">${status.text} &#x25BE;</span>`
-                        }
-                        <button class="note-btn ${hasNote ? 'has-note' : ''} ${noteChanges.has(doc.id) ? 'note-modified' : ''}"
-                                onclick="toggleNote('${doc.id}')"
-                                title="הערת משרד"><i data-lucide="${hasNote ? 'message-square-text' : 'message-square'}" class="icon-sm"></i></button>
-                        <button type="button" class="delete-toggle${isWaived ? ' action-hidden' : ''} ${!isWaived && markedForRemoval.has(doc.id) ? 'active' : ''}"
-                            ${!isWaived ? `onclick="toggleRemoval('${doc.id}')" id="delete-btn-${doc.id}"` : ''}
-                            aria-label="סמן להסרה"
-                            title="הסר מסמך"><i data-lucide="trash-2" class="icon-sm"></i></button>
                         <span class="file-links-slot">${doc.file_url && (effectiveStatus === 'Received' || effectiveStatus === 'Requires_Fix')
                             ? `<a href="${escapeHtml(doc.file_url)}" target="_blank" rel="noopener noreferrer"
                                     class="file-action-btn" title="צפה בקובץ" aria-label="צפה בקובץ"><i data-lucide="external-link" class="icon-sm"></i></a>
@@ -310,6 +296,20 @@ function displayDocuments() {
                             : `<span class="file-action-btn action-hidden"><i data-lucide="external-link" class="icon-sm"></i></span>
                                <span class="file-action-btn action-hidden"><i data-lucide="download" class="icon-sm"></i></span>`
                         }</span>
+                        <button type="button" class="delete-toggle${isWaived ? ' action-hidden' : ''} ${!isWaived && markedForRemoval.has(doc.id) ? 'active' : ''}"
+                            ${!isWaived ? `onclick="toggleRemoval('${doc.id}')" id="delete-btn-${doc.id}"` : ''}
+                            aria-label="סמן להסרה"
+                            title="הסר מסמך"><i data-lucide="trash-2" class="icon-sm"></i></button>
+                        <button class="note-btn ${hasNote ? 'has-note' : ''} ${noteChanges.has(doc.id) ? 'note-modified' : ''}"
+                                onclick="toggleNote('${doc.id}')"
+                                title="הערת משרד"><i data-lucide="${hasNote ? 'message-square-text' : 'message-square'}" class="icon-sm"></i></button>
+                        ${isWaived
+                            ? `<span class="badge ${status.class}">${status.text}</span>`
+                            : `<span class="badge ${status.class} clickable"
+                                    onclick="openStatusDropdown(event, '${doc.id}', '${effectiveStatus}')"
+                                    id="badge-${doc.id}"
+                                    title="לחץ לשינוי סטטוס">${status.text} &#x25BE;</span>`
+                        }
                     </div>
                     <div class="note-editor" id="note-${doc.id}" style="display:none;">
                         <textarea class="note-textarea" id="notetext-${doc.id}"
