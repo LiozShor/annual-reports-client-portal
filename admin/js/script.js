@@ -1431,7 +1431,7 @@ function handleComparisonRadio(recordId, radioEl) {
 function quickAssignSelected(recordId) {
     const card = document.querySelector(`.ai-review-card[data-id="${recordId}"]`);
     if (!card) return;
-    const selectedRadio = card.querySelector('.ai-comparison-radio-list input[type="radio"]:checked');
+    const selectedRadio = card.querySelector('.ai-validation-options input[type="radio"]:checked');
     if (!selectedRadio) return;
     const templateId = selectedRadio.dataset.templateId;
     const docRecordId = selectedRadio.dataset.docRecordId || '';
@@ -1616,7 +1616,6 @@ function renderAICard(item) {
                            rawConfidence >= 0.50 ? 'ai-confidence-medium' : 'ai-confidence-low';
     const cardClass = 'match-' + state;
 
-    const fileIcon = getAIFileIcon(item.attachment_content_type || item.attachment_name || '');
     const receivedAt = item.received_at ? formatAIDate(item.received_at) : '';
     const senderEmail = item.sender_email || '';
     const senderTooltipParts = [senderEmail, receivedAt].filter(Boolean);
@@ -1638,18 +1637,15 @@ function renderAICard(item) {
     let actionsHtml = '';
 
     if (state === 'full') {
-        // State A: Full match — green border, raw confidence, doc name
+        // State A: Full match — green border, doc name + badge
         const templateLabel = AI_DOC_NAMES[item.matched_template_id] || item.matched_template_name || '';
         const docName = (item.matched_doc_name || '').replace(/<\/?b>/g, '');
-        // Always show template type; append doc name if it adds info beyond the template label
         const docDisplayName = templateLabel && docName && !docName.includes(templateLabel)
             ? `${templateLabel} – ${docName}`
             : (docName || templateLabel);
         classificationHtml = `
-            <span class="ai-card-label">רמת ביטחון של AI:</span>
-            <span class="ai-confidence-badge ${confidenceClass}">${confidencePercent}%</span>
-            <span class="ai-card-label">🤖 זיהוי:</span>
             <span class="ai-template-match">${escapeHtml(docDisplayName)}</span>
+            <span class="ai-confidence-badge ${confidenceClass}">${confidencePercent}%</span>
         `;
         const approveDisabled = item.is_unrequested;
         actionsHtml = `
@@ -1658,16 +1654,16 @@ function renderAICard(item) {
                 : `onclick="approveAIClassification('${escapeAttr(item.id)}')"`}>
                 <i data-lucide="check" class="icon-sm"></i> אשר
             </button>
-            <button class="btn btn-danger btn-sm" onclick="rejectAIClassification('${escapeAttr(item.id)}')">
-                <i data-lucide="x" class="icon-sm"></i> דחה
-            </button>
             <button class="btn btn-ghost btn-sm" onclick="showAIReassignModal('${escapeAttr(item.id)}')">
                 <i data-lucide="arrow-right-left" class="icon-sm"></i> שייך מחדש
+            </button>
+            <button class="btn btn-danger btn-sm" onclick="rejectAIClassification('${escapeAttr(item.id)}')">
+                <i data-lucide="x" class="icon-sm"></i> דחה
             </button>
         `;
 
     } else if (state === 'issuer-mismatch') {
-        // State B: Issuer mismatch — amber border, type confidence with prefix, comparison box
+        // State B: Issuer mismatch — amber border, type + badge, issuer info, validation area
         const templateName = AI_DOC_NAMES[item.matched_template_id] || item.matched_template_name || item.matched_template_id || '';
         const aiIssuer = item.issuer_name || 'לא ידוע';
 
@@ -1677,7 +1673,7 @@ function renderAICard(item) {
 
         let comparisonHtml;
         if (sameTypeDocs.length > 0) {
-            // Radio list of same-type required docs
+            // Card-style radio options
             const radiosHtml = sameTypeDocs.map(d => {
                 const docName = d.name || AI_DOC_NAMES[d.template_id] || d.template_id;
                 return `
@@ -1693,11 +1689,9 @@ function renderAICard(item) {
             }).join('');
 
             comparisonHtml = `
-                <div class="ai-issuer-comparison">
-                    <div class="ai-comparison-header">📥 התקבל מ: <span class="ai-issuer-value">${escapeHtml(aiIssuer)}</span></div>
-                    <div class="ai-comparison-divider"></div>
-                    <div class="ai-comparison-header">📋 נדרשים (${sameTypeDocs.length}):</div>
-                    <div class="ai-comparison-radio-list">
+                <div class="ai-validation-area">
+                    <div class="ai-validation-title">האם זה אחד מהבאים?</div>
+                    <div class="ai-validation-options">
                         ${radiosHtml}
                     </div>
                 </div>
@@ -1706,10 +1700,10 @@ function renderAICard(item) {
             actionsHtml = `
                 <button class="btn btn-primary btn-sm btn-ai-comparison-assign" disabled
                     onclick="quickAssignSelected('${escapeAttr(item.id)}')">
-                    <i data-lucide="check" class="icon-sm"></i> שייך
+                    <i data-lucide="check" class="icon-sm"></i> אישור ושיוך
                 </button>
                 <button class="btn btn-ghost btn-sm" onclick="showAIReassignModal('${escapeAttr(item.id)}')">
-                    <i data-lucide="arrow-right-left" class="icon-sm"></i> שייך מחדש
+                    <i data-lucide="arrow-right-left" class="icon-sm"></i> לא מצאתי ברשימה
                 </button>
                 <button class="btn btn-danger btn-sm" onclick="rejectAIClassification('${escapeAttr(item.id)}')">
                     <i data-lucide="x" class="icon-sm"></i> דחה
@@ -1718,10 +1712,8 @@ function renderAICard(item) {
         } else {
             // Edge case: no same-type docs in missing — fall back to full combobox
             comparisonHtml = `
-                <div class="ai-issuer-comparison">
-                    <div class="ai-comparison-header">📥 התקבל מ: <span class="ai-issuer-value">${escapeHtml(aiIssuer)}</span></div>
-                    <div class="ai-comparison-divider"></div>
-                    <div class="ai-comparison-header">⚠️ כל מסמכי ${escapeHtml(templateName)} כבר התקבלו</div>
+                <div class="ai-validation-area">
+                    <div class="ai-validation-title">⚠️ כל מסמכי ${escapeHtml(templateName)} כבר התקבלו</div>
                 </div>
             `;
             actionsHtml = `
@@ -1740,15 +1732,17 @@ function renderAICard(item) {
         }
 
         classificationHtml = `
-            <span class="ai-confidence-prefix">סוג מסמך:</span>
-            <span class="ai-card-label">רמת ביטחון של AI:</span>
+            <span class="ai-classification-type">
+                <span class="ai-confidence-prefix">סוג מסמך:</span>
+                <span class="ai-template-match">${escapeHtml(templateName)}</span>
+            </span>
             <span class="ai-confidence-badge ${confidenceClass}">${confidencePercent}%</span>
-            <span class="ai-template-match">${escapeHtml(templateName)}</span>
+            <div class="ai-issuer-received">📥 התקבל מ: <span class="ai-issuer-value">${escapeHtml(aiIssuer)}</span></div>
             ${comparisonHtml}
         `;
 
     } else if (state === 'fuzzy') {
-        // State C: Fuzzy match — green border, doc name, hint line
+        // State C: Fuzzy match — green border, doc name + badge, hint line
         const templateLabel = AI_DOC_NAMES[item.matched_template_id] || item.matched_template_name || '';
         const docName = (item.matched_doc_name || '').replace(/<\/?b>/g, '');
         const docDisplayName = templateLabel && docName && !docName.includes(templateLabel)
@@ -1764,10 +1758,8 @@ function renderAICard(item) {
             : '';
 
         classificationHtml = `
-            <span class="ai-card-label">רמת ביטחון של AI:</span>
-            <span class="ai-confidence-badge ${confidenceClass}">${confidencePercent}%</span>
-            <span class="ai-card-label">🤖 זיהוי:</span>
             <span class="ai-template-match">${escapeHtml(docDisplayName)}</span>
+            <span class="ai-confidence-badge ${confidenceClass}">${confidencePercent}%</span>
             ${fuzzyHintHtml}
         `;
         const fuzzyApproveDisabled = item.is_unrequested;
@@ -1777,11 +1769,11 @@ function renderAICard(item) {
                 : `onclick="approveAIClassification('${escapeAttr(item.id)}')"`}>
                 <i data-lucide="check" class="icon-sm"></i> אשר
             </button>
-            <button class="btn btn-danger btn-sm" onclick="rejectAIClassification('${escapeAttr(item.id)}')">
-                <i data-lucide="x" class="icon-sm"></i> דחה
-            </button>
             <button class="btn btn-ghost btn-sm" onclick="showAIReassignModal('${escapeAttr(item.id)}')">
                 <i data-lucide="arrow-right-left" class="icon-sm"></i> שייך מחדש
+            </button>
+            <button class="btn btn-danger btn-sm" onclick="rejectAIClassification('${escapeAttr(item.id)}')">
+                <i data-lucide="x" class="icon-sm"></i> דחה
             </button>
         `;
 
@@ -1791,8 +1783,8 @@ function renderAICard(item) {
             ? `<div class="ai-reason-inline">${escapeHtml(item.ai_reason)}</div>`
             : '';
         classificationHtml = `
-            <span class="ai-confidence-badge ai-confidence-low">--</span>
             <span class="ai-template-unmatched">לא זוהה</span>
+            <span class="ai-confidence-badge ai-confidence-low">--</span>
             ${reasonHtml}
         `;
         actionsHtml = `
@@ -1814,8 +1806,7 @@ function renderAICard(item) {
         <div class="ai-review-card ${cardClass}" data-id="${escapeAttr(item.id)}" ${item.is_unrequested ? 'data-unrequested="true"' : ''}>
             <div class="ai-card-top">
                 <div class="ai-file-info">
-                    <span class="ai-card-label">📎 קובץ מקור:</span>
-                    <i data-lucide="${fileIcon}" class="icon-sm"></i>
+                    <span class="ai-file-source-label">📎 קובץ מקור:</span>
                     <span class="ai-file-name" ${senderTooltip ? `title="${escapeAttr(senderTooltip)}"` : ''}>${escapeHtml(item.attachment_name || 'ללא שם')}</span>
                     ${item.is_duplicate ? '<span class="ai-duplicate-badge" title="קובץ כפול — אותו קובץ כבר קיים במערכת">כפול</span>' : ''}
                     ${item.is_unrequested ? '<span class="ai-unrequested-badge" title="מסמך שלא נדרש מהלקוח">לא נדרש</span>' : ''}
@@ -1824,6 +1815,7 @@ function renderAICard(item) {
                 ${viewFileBtn}
             </div>
             <div class="ai-card-body">
+                <div class="ai-verdict-title">✨ ממצאי זיהוי AI</div>
                 <div class="ai-classification-result">
                     <div class="ai-classification-label">
                         ${classificationHtml}
@@ -2254,33 +2246,36 @@ function updateClientDocState(clientName, docRecordId) {
         const cardItem = aiClassificationsData.find(i => i.id === cardId);
         if (!cardItem || getCardState(cardItem) !== 'issuer-mismatch') return;
 
-        const radioList = card.querySelector('.ai-comparison-radio-list');
-        if (!radioList) return;
+        const validationArea = card.querySelector('.ai-validation-area');
+        if (!validationArea) return;
 
         const relatedIds = RELATED_TEMPLATES[cardItem.matched_template_id] || [cardItem.matched_template_id];
         const sameTypeDocs = (cardItem.missing_docs || []).filter(d => relatedIds.includes(d.template_id));
 
         if (sameTypeDocs.length > 0) {
-            radioList.innerHTML = sameTypeDocs.map(d => {
-                const docName = d.name || AI_DOC_NAMES[d.template_id] || d.template_id;
-                return `
-                    <label class="ai-comparison-radio">
-                        <input type="radio" name="compare_${escapeAttr(cardId)}"
-                            data-template-id="${escapeAttr(d.template_id)}"
-                            data-doc-record-id="${escapeAttr(d.doc_record_id || '')}"
-                            data-doc-name="${escapeAttr(docName)}"
-                            onchange="handleComparisonRadio('${escapeAttr(cardId)}', this)">
-                        ${escapeHtml(docName)}
-                    </label>
-                `;
-            }).join('');
+            validationArea.innerHTML = `
+                <div class="ai-validation-title">האם זה אחד מהבאים?</div>
+                <div class="ai-validation-options">
+                    ${sameTypeDocs.map(d => {
+                        const docName = d.name || AI_DOC_NAMES[d.template_id] || d.template_id;
+                        return `
+                            <label class="ai-comparison-radio">
+                                <input type="radio" name="compare_${escapeAttr(cardId)}"
+                                    data-template-id="${escapeAttr(d.template_id)}"
+                                    data-doc-record-id="${escapeAttr(d.doc_record_id || '')}"
+                                    data-doc-name="${escapeAttr(docName)}"
+                                    onchange="handleComparisonRadio('${escapeAttr(cardId)}', this)">
+                                ${escapeHtml(docName)}
+                            </label>
+                        `;
+                    }).join('')}
+                </div>
+            `;
         } else {
             // All same-type docs received — show message
             const templateName = AI_DOC_NAMES[cardItem.matched_template_id] || cardItem.matched_template_name || '';
-            radioList.closest('.ai-issuer-comparison').innerHTML = `
-                <div class="ai-comparison-header">📥 התקבל מ: <span class="ai-issuer-value">${escapeHtml(cardItem.issuer_name || 'לא ידוע')}</span></div>
-                <div class="ai-comparison-divider"></div>
-                <div class="ai-comparison-header">⚠️ כל מסמכי ${escapeHtml(templateName)} כבר התקבלו</div>
+            validationArea.innerHTML = `
+                <div class="ai-validation-title">⚠️ כל מסמכי ${escapeHtml(templateName)} כבר התקבלו</div>
             `;
         }
     });

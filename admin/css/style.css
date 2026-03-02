@@ -1417,15 +1417,17 @@ tr:hover .client-view-link {
     flex: 1;
 }
 
-.ai-file-info .icon-sm {
-    color: var(--gray-400);
+.ai-file-source-label {
+    font-size: var(--text-xs);
+    color: var(--gray-500);
+    font-weight: 500;
     flex-shrink: 0;
 }
 
 .ai-file-name {
     font-weight: 600;
     color: var(--gray-800);
-    font-size: var(--text-sm);
+    font-size: var(--text-xs);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -1461,22 +1463,25 @@ tr:hover .client-view-link {
     padding: var(--sp-4) var(--sp-5);
 }
 
+.ai-verdict-title {
+    font-size: var(--text-xs);
+    font-weight: 600;
+    color: var(--gray-500);
+    margin-bottom: var(--sp-2);
+    letter-spacing: 0.02em;
+}
+
 .ai-classification-result {
     margin-bottom: var(--sp-3);
 }
 
 .ai-classification-label {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
+    justify-content: space-between;
     gap: var(--sp-2);
     margin-bottom: var(--sp-2);
-    flex-wrap: wrap;
-}
-
-.ai-card-label {
-    font-size: 0.75rem;
-    color: var(--text-muted);
-    margin-left: 0.25rem;
 }
 
 .ai-confidence-badge {
@@ -1572,62 +1577,70 @@ tr:hover .client-view-link {
     margin-inline-end: var(--sp-1);
 }
 
-/* Issuer Comparison Box */
-.ai-issuer-comparison {
-    background: var(--gray-50);
-    border: 1px solid var(--gray-200);
-    border-radius: var(--radius-md);
-    padding: var(--sp-3) var(--sp-4);
-    margin-top: var(--sp-2);
-}
-
-.ai-issuer-comparison .ai-comparison-header {
+/* Issuer received line (verdict area) */
+.ai-issuer-received {
+    width: 100%;
     font-size: var(--text-xs);
     color: var(--gray-500);
-    font-weight: 600;
-    margin-bottom: var(--sp-1);
+    font-weight: 500;
     display: flex;
     align-items: center;
     gap: var(--sp-1);
 }
 
-.ai-issuer-comparison .ai-issuer-value {
+.ai-issuer-received .ai-issuer-value {
     font-weight: 700;
     color: var(--gray-800);
 }
 
-.ai-comparison-divider {
-    height: 1px;
-    background: var(--gray-200);
-    margin: var(--sp-2) 0;
+/* Classification type inline group */
+.ai-classification-type {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--sp-1);
 }
 
-/* Radio list for same-type docs */
-.ai-comparison-radio-list {
+/* Validation area — card-style radio options */
+.ai-validation-area {
+    width: 100%;
+    margin-top: var(--sp-3);
+}
+
+.ai-validation-title {
+    font-size: var(--text-xs);
+    font-weight: 600;
+    color: var(--gray-500);
+    margin-bottom: var(--sp-2);
+}
+
+.ai-validation-options {
     display: flex;
     flex-direction: column;
-    gap: var(--sp-1);
+    gap: var(--sp-2);
 }
 
 .ai-comparison-radio {
     display: flex;
     align-items: center;
-    gap: var(--sp-2);
-    padding: var(--sp-2) var(--sp-3);
-    border-radius: var(--radius-sm);
+    gap: var(--sp-3);
+    padding: var(--sp-3) var(--sp-4);
+    border: 1.5px solid var(--gray-200);
+    border-radius: var(--radius-md);
     cursor: pointer;
-    transition: background var(--transition-fast);
+    transition: border-color 0.15s, background 0.15s;
     font-size: var(--text-sm);
     color: var(--gray-700);
 }
 
 .ai-comparison-radio:hover {
+    border-color: var(--brand-300);
     background: var(--brand-50);
 }
 
-.ai-comparison-radio.selected {
+.ai-comparison-radio.selected,
+.ai-comparison-radio:has(input:checked) {
+    border-color: var(--brand-500);
     background: var(--brand-50);
-    outline: 2px solid var(--brand-500);
 }
 
 .ai-comparison-radio input[type="radio"] {
@@ -2574,12 +2587,8 @@ tr.reminder-loading td:last-child {
         display: none;
     }
 
-    .ai-issuer-comparison {
-        padding: var(--sp-2) var(--sp-3);
-    }
-
     .ai-comparison-radio {
-        padding: var(--sp-2);
+        padding: var(--sp-2) var(--sp-3);
         font-size: var(--text-xs);
     }
 
