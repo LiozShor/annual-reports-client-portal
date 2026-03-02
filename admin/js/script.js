@@ -3147,44 +3147,29 @@ async function saveReminderSettings() {
 async function doSaveReminderSettings(maxVal, dayVal) {
     showLoading('שומר הגדרות...');
     try {
-        const [r1, r2] = await Promise.all([
-            fetchWithTimeout(`${API_BASE}/admin-reminders`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ token: authToken, action: 'update_config',
-                    config_key: 'reminder_default_max', config_value: maxVal })
-            }, FETCH_TIMEOUTS.mutate),
-            fetchWithTimeout(`${API_BASE}/admin-reminders`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ token: authToken, action: 'update_config',
-                    config_key: 'reminder_send_day', config_value: dayVal })
-            }, FETCH_TIMEOUTS.rollover)
-        ]);
-        const [d1, d2] = await Promise.all([r1.json(), r2.json()]);
+        const response = await fetchWithTimeout(`${API_BASE}/admin-reminders`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                token: authToken,
+                action: 'update_configs',
+                configs: { reminder_default_max: maxVal, reminder_send_day: dayVal }
+            })
+        }, FETCH_TIMEOUTS.rollover);
+        const data = await response.json();
         hideLoading();
-        if (!d1.ok || !d2.ok) throw new Error('שגיאה בשמירת הגדרות');
-        const datesUpdated = d2.dates_updated || 0;
+        if (!data.ok) throw new Error('שגיאה בשמירת הגדרות');
+        const datesUpdated = data.dates_updated || 0;
         const toastMsg = datesUpdated > 0
             ? `הגדרות תזכורות עודכנו (${datesUpdated} תאריכים עודכנו)`
             : 'הגדרות תזכורות עודכנו';
         showAIToast(toastMsg, 'success');
-        // Instant in-place update: recompute dates client-side
-        if (datesUpdated > 0 && remindersData.length > 0) {
-            const day = parseInt(dayVal);
-            const now = new Date();
-            const thisMonth = new Date(now.getFullYear(), now.getMonth(), day);
-            const target = thisMonth > now ? thisMonth : new Date(now.getFullYear(), now.getMonth() + 1, day);
-            const targetStr = target.toISOString().split('T')[0];
-            const todayStr = new Date().toISOString().split('T')[0];
-            remindersData.forEach(r => {
-                if (r.reminder_next_date && r.reminder_next_date > todayStr) {
-                    r.reminder_next_date = targetStr;
-                }
-            });
-            filterReminders();
-        }
-        loadReminders(true);
+        // Update global state from response (no separate refresh needed)
+        remindersData = data.items || [];
+        reminderDefaultMax = data.default_max !== undefined ? data.default_max : null;
+        reminderSendDay = data.send_day !== undefined ? data.send_day : null;
+        updateReminderStats(data.stats || {});
+        filterReminders();
     } catch (error) {
         hideLoading();
         showModal('error', 'שגיאה', error.message);
