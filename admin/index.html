@@ -403,22 +403,22 @@
             <div id="tab-reminders" class="tab-content">
                 <!-- Stats Bar -->
                 <div class="reminder-stats-bar">
-                    <div class="reminder-stat-item reminder-stat-scheduled">
+                    <div class="reminder-stat-item reminder-stat-scheduled" onclick="toggleCardFilter('scheduled')" role="button" tabindex="0" aria-pressed="false">
                         <i data-lucide="calendar-clock" class="icon-sm"></i>
                         <span class="reminder-stat-value" id="reminder-stat-scheduled">0</span>
                         <span class="reminder-stat-label">מתוזמנים</span>
                     </div>
-                    <div class="reminder-stat-item reminder-stat-due">
+                    <div class="reminder-stat-item reminder-stat-due" onclick="toggleCardFilter('due_this_week')" role="button" tabindex="0" aria-pressed="false">
                         <i data-lucide="clock" class="icon-sm"></i>
                         <span class="reminder-stat-value" id="reminder-stat-due">0</span>
                         <span class="reminder-stat-label">השבוע</span>
                     </div>
-                    <div class="reminder-stat-item reminder-stat-suppressed">
+                    <div class="reminder-stat-item reminder-stat-suppressed" onclick="toggleCardFilter('suppressed')" role="button" tabindex="0" aria-pressed="false">
                         <i data-lucide="bell-off" class="icon-sm"></i>
                         <span class="reminder-stat-value" id="reminder-stat-suppressed">0</span>
                         <span class="reminder-stat-label">מושתקים</span>
                     </div>
-                    <div class="reminder-stat-item reminder-stat-exhausted">
+                    <div class="reminder-stat-item reminder-stat-exhausted" onclick="toggleCardFilter('exhausted')" role="button" tabindex="0" aria-pressed="false">
                         <i data-lucide="ban" class="icon-sm"></i>
                         <span class="reminder-stat-value" id="reminder-stat-exhausted">0</span>
                         <span class="reminder-stat-label">מוצו</span>
@@ -430,15 +430,6 @@
                     <div class="filter-group">
                         <label><i data-lucide="search" class="icon-sm"></i></label>
                         <input type="text" id="reminderSearchInput" placeholder="חיפוש לפי שם..." oninput="filterReminders()">
-                    </div>
-                    <div class="filter-group">
-                        <label><i data-lucide="filter" class="icon-sm"></i> סטטוס:</label>
-                        <select id="reminderStatusFilter" onchange="filterReminders()">
-                            <option value="">הכל</option>
-                            <option value="active">פעיל</option>
-                            <option value="suppressed">מושתק</option>
-                            <option value="exhausted">מוצה</option>
-                        </select>
                     </div>
                     <button class="btn btn-sm btn-secondary reminder-settings-btn" onclick="openReminderSettingsModal()">
                         <i data-lucide="settings" class="icon-sm"></i> הגדרות
