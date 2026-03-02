@@ -1594,8 +1594,8 @@ function renderAICards(items) {
     // Initialize inline comboboxes (unmatched + mismatch fallback)
     container.querySelectorAll('.doc-combobox-container').forEach(el => {
         const recordId = el.dataset.recordId;
-        let docs = [];
-        try { docs = JSON.parse(el.dataset.docs); } catch (e) { /* skip */ }
+        const itemData = aiClassificationsData.find(i => i.id === recordId);
+        const docs = itemData ? (itemData.missing_docs || []) : [];
         createDocCombobox(el, docs, {
             allowCreate: true,
             onSelect: (templateId) => {
@@ -1646,7 +1646,9 @@ function renderAICard(item) {
             ? `${templateLabel} – ${docName}`
             : (docName || templateLabel);
         classificationHtml = `
+            <span class="ai-card-label">רמת ביטחון של AI:</span>
             <span class="ai-confidence-badge ${confidenceClass}">${confidencePercent}%</span>
+            <span class="ai-card-label">🤖 זיהוי:</span>
             <span class="ai-template-match">${escapeHtml(docDisplayName)}</span>
         `;
         const approveDisabled = item.is_unrequested;
@@ -1659,7 +1661,7 @@ function renderAICard(item) {
             <button class="btn btn-danger btn-sm" onclick="rejectAIClassification('${escapeAttr(item.id)}')">
                 <i data-lucide="x" class="icon-sm"></i> דחה
             </button>
-            <button class="btn btn-ghost btn-sm" onclick="showAIReassignModal('${escapeAttr(item.id)}', ${escapeAttr(JSON.stringify(missingDocs))})">
+            <button class="btn btn-ghost btn-sm" onclick="showAIReassignModal('${escapeAttr(item.id)}')">
                 <i data-lucide="arrow-right-left" class="icon-sm"></i> שייך מחדש
             </button>
         `;
@@ -1706,7 +1708,7 @@ function renderAICard(item) {
                     onclick="quickAssignSelected('${escapeAttr(item.id)}')">
                     <i data-lucide="check" class="icon-sm"></i> שייך
                 </button>
-                <button class="btn btn-ghost btn-sm" onclick="showAIReassignModal('${escapeAttr(item.id)}', ${escapeAttr(JSON.stringify(missingDocs))})">
+                <button class="btn btn-ghost btn-sm" onclick="showAIReassignModal('${escapeAttr(item.id)}')">
                     <i data-lucide="arrow-right-left" class="icon-sm"></i> שייך מחדש
                 </button>
                 <button class="btn btn-danger btn-sm" onclick="rejectAIClassification('${escapeAttr(item.id)}')">
@@ -1725,7 +1727,7 @@ function renderAICard(item) {
             actionsHtml = `
                 <div class="ai-assign-section">
                     <span class="ai-assign-label">שייך ל:</span>
-                    <div class="doc-combobox-container" data-record-id="${escapeAttr(item.id)}" data-docs='${escapeAttr(JSON.stringify(missingDocs))}'></div>
+                    <div class="doc-combobox-container" data-record-id="${escapeAttr(item.id)}"></div>
                     <button class="btn btn-primary btn-sm btn-ai-assign-confirm" disabled
                         onclick="assignAIUnmatched('${escapeAttr(item.id)}', this)">
                         <i data-lucide="check" class="icon-sm"></i> שייך
@@ -1739,6 +1741,7 @@ function renderAICard(item) {
 
         classificationHtml = `
             <span class="ai-confidence-prefix">סוג מסמך:</span>
+            <span class="ai-card-label">רמת ביטחון של AI:</span>
             <span class="ai-confidence-badge ${confidenceClass}">${confidencePercent}%</span>
             <span class="ai-template-match">${escapeHtml(templateName)}</span>
             ${comparisonHtml}
@@ -1761,7 +1764,9 @@ function renderAICard(item) {
             : '';
 
         classificationHtml = `
+            <span class="ai-card-label">רמת ביטחון של AI:</span>
             <span class="ai-confidence-badge ${confidenceClass}">${confidencePercent}%</span>
+            <span class="ai-card-label">🤖 זיהוי:</span>
             <span class="ai-template-match">${escapeHtml(docDisplayName)}</span>
             ${fuzzyHintHtml}
         `;
@@ -1775,7 +1780,7 @@ function renderAICard(item) {
             <button class="btn btn-danger btn-sm" onclick="rejectAIClassification('${escapeAttr(item.id)}')">
                 <i data-lucide="x" class="icon-sm"></i> דחה
             </button>
-            <button class="btn btn-ghost btn-sm" onclick="showAIReassignModal('${escapeAttr(item.id)}', ${escapeAttr(JSON.stringify(missingDocs))})">
+            <button class="btn btn-ghost btn-sm" onclick="showAIReassignModal('${escapeAttr(item.id)}')">
                 <i data-lucide="arrow-right-left" class="icon-sm"></i> שייך מחדש
             </button>
         `;
@@ -1793,7 +1798,7 @@ function renderAICard(item) {
         actionsHtml = `
             <div class="ai-assign-section">
                 <span class="ai-assign-label">שייך ל:</span>
-                <div class="doc-combobox-container" data-record-id="${escapeAttr(item.id)}" data-docs='${escapeAttr(JSON.stringify(missingDocs))}'></div>
+                <div class="doc-combobox-container" data-record-id="${escapeAttr(item.id)}"></div>
                 <button class="btn btn-primary btn-sm btn-ai-assign-confirm" disabled
                     onclick="assignAIUnmatched('${escapeAttr(item.id)}', this)">
                     <i data-lucide="check" class="icon-sm"></i> שייך
@@ -1809,6 +1814,7 @@ function renderAICard(item) {
         <div class="ai-review-card ${cardClass}" data-id="${escapeAttr(item.id)}" ${item.is_unrequested ? 'data-unrequested="true"' : ''}>
             <div class="ai-card-top">
                 <div class="ai-file-info">
+                    <span class="ai-card-label">📎 קובץ מקור:</span>
                     <i data-lucide="${fileIcon}" class="icon-sm"></i>
                     <span class="ai-file-name" ${senderTooltip ? `title="${escapeAttr(senderTooltip)}"` : ''}>${escapeHtml(item.attachment_name || 'ללא שם')}</span>
                     ${item.is_duplicate ? '<span class="ai-duplicate-badge" title="קובץ כפול — אותו קובץ כבר קיים במערכת">כפול</span>' : ''}
@@ -1907,6 +1913,10 @@ async function approveAIClassification(recordId) {
             if (!data.ok) throw new Error(formatAIResponseError(data));
 
             trackReviewAction(recordId, 'approve', data);
+            const approvedItem = aiClassificationsData.find(i => i.id === recordId);
+            if (approvedItem?.matched_doc_record_id) {
+                updateClientDocState(approvedItem.client_name, approvedItem.matched_doc_record_id);
+            }
             animateAndRemoveAI(recordId);
             showAIToast(formatAISuccessToast(data), 'success');
         } catch (error) {
@@ -1993,14 +2003,11 @@ async function executeReject(recordId, rejectionReason, notes) {
     }
 }
 
-function showAIReassignModal(recordId, missingDocs) {
-    if (typeof missingDocs === 'string') {
-        try { missingDocs = JSON.parse(missingDocs); } catch (e) { missingDocs = []; }
-    }
+function showAIReassignModal(recordId) {
+    const item = aiClassificationsData.find(i => i.id === recordId);
+    const missingDocs = item ? (item.missing_docs || []) : [];
 
     aiCurrentReassignId = recordId;
-
-    const item = aiClassificationsData.find(i => i.id === recordId);
     const fileInfoEl = document.getElementById('aiReassignFileInfo');
     if (item) {
         fileInfoEl.innerHTML = `<i data-lucide="file" class="icon-sm" style="display:inline;vertical-align:middle;"></i> ${escapeHtml(item.attachment_name || 'ללא שם')}`;
@@ -2084,6 +2091,10 @@ async function submitAIReassign(recordId, templateId, docRecordId, loadingText, 
         if (!data.ok) throw new Error(formatAIResponseError(data));
 
         trackReviewAction(recordId, 'reassign', data);
+        const reassignedItem = aiClassificationsData.find(i => i.id === recordId);
+        if (docRecordId) {
+            updateClientDocState(reassignedItem?.client_name, docRecordId);
+        }
         animateAndRemoveAI(recordId);
         showAIToast(formatAISuccessToast(data), 'success');
     } catch (error) {
@@ -2145,6 +2156,134 @@ function animateAndRemoveAI(recordId) {
     } else {
         recalcAIStats();
     }
+}
+
+function updateClientDocState(clientName, docRecordId) {
+    if (!clientName || !docRecordId) return;
+
+    // Mutate aiClassificationsData for all sibling items of this client
+    for (const item of aiClassificationsData) {
+        if (item.client_name !== clientName) continue;
+
+        // Remove from missing_docs
+        if (item.missing_docs) {
+            item.missing_docs = item.missing_docs.filter(d => d.doc_record_id !== docRecordId);
+        }
+
+        // Mark as Received in all_docs and bump count
+        if (item.all_docs) {
+            const doc = item.all_docs.find(d => d.doc_record_id === docRecordId);
+            if (doc && doc.status !== 'Received') {
+                doc.status = 'Received';
+                item.docs_received_count = (item.docs_received_count || 0) + 1;
+            }
+        }
+    }
+
+    // Re-render the doc overview tags inside this client's accordion
+    const accordion = document.querySelector(`.ai-accordion[data-client="${CSS.escape(clientName)}"]`);
+    if (!accordion) return;
+
+    const representative = aiClassificationsData.find(i => i.client_name === clientName);
+    if (!representative) return;
+
+    const allDocs = representative.all_docs || [];
+    const groupMissingDocs = representative.missing_docs || [];
+    const displayDocs = allDocs.length > 0 ? allDocs : groupMissingDocs;
+    const docsReceivedCount = representative.docs_received_count || 0;
+    const docsTotalCount = representative.docs_total_count || displayDocs.length;
+    const hasStatusVariation = allDocs.length > 0 && docsReceivedCount > 0;
+
+    const docsGroup = accordion.querySelector('.ai-missing-docs-group');
+    if (docsGroup && displayDocs.length > 0) {
+        // Rebuild category tags
+        const catGroups = [];
+        let currentCat = null;
+        for (const d of displayDocs) {
+            const cat = d.category || 'other';
+            if (cat !== currentCat) {
+                currentCat = cat;
+                catGroups.push({ category: cat, name: d.category_name || cat, emoji: d.category_emoji || '', docs: [] });
+            }
+            catGroups[catGroups.length - 1].docs.push(d);
+        }
+
+        let categoriesHtml = '';
+        for (const group of catGroups) {
+            const tagsHtml = group.docs.map(d => {
+                const id = d.template_id || d.name || '';
+                const label = d.name || AI_DOC_NAMES[id] || id;
+                const isReceived = d.status === 'Received';
+                const tagClass = isReceived ? 'ai-doc-tag-received' : 'ai-missing-doc-tag';
+                const prefix = isReceived ? '&#x2713; ' : '';
+                return `<span class="${tagClass}">${prefix}${escapeHtml(label)}</span>`;
+            }).join('');
+            categoriesHtml += `
+                <div class="ai-missing-category">${escapeHtml(group.emoji)} ${escapeHtml(group.name)}</div>
+                <div class="ai-missing-category-tags">${tagsHtml}</div>
+            `;
+        }
+
+        const toggleLabel = hasStatusVariation
+            ? `מסמכים נדרשים (${docsReceivedCount}/${docsTotalCount} התקבלו)`
+            : `מסמכים חסרים (${groupMissingDocs.length})`;
+
+        const wasOpen = docsGroup.classList.contains('open');
+        docsGroup.querySelector('.ai-missing-docs-toggle').innerHTML =
+            `<span class="toggle-arrow">${wasOpen ? '▾' : '▸'}</span> ${toggleLabel}`;
+        docsGroup.querySelector('.ai-missing-docs-body').innerHTML = categoriesHtml;
+    }
+
+    // Re-initialize inline comboboxes with updated missing_docs
+    accordion.querySelectorAll('.doc-combobox-container').forEach(el => {
+        const recId = el.dataset.recordId;
+        const itemData = aiClassificationsData.find(i => i.id === recId);
+        const docs = itemData ? (itemData.missing_docs || []) : [];
+        createDocCombobox(el, docs, {
+            allowCreate: true,
+            onSelect: (templateId) => {
+                const btn = el.closest('.ai-card-actions').querySelector('.btn-ai-assign-confirm');
+                if (btn) btn.disabled = !templateId;
+            }
+        });
+    });
+
+    // Rebuild issuer-mismatch radio lists with filtered data
+    accordion.querySelectorAll('.ai-review-card').forEach(card => {
+        const cardId = card.dataset.id;
+        const cardItem = aiClassificationsData.find(i => i.id === cardId);
+        if (!cardItem || getCardState(cardItem) !== 'issuer-mismatch') return;
+
+        const radioList = card.querySelector('.ai-comparison-radio-list');
+        if (!radioList) return;
+
+        const relatedIds = RELATED_TEMPLATES[cardItem.matched_template_id] || [cardItem.matched_template_id];
+        const sameTypeDocs = (cardItem.missing_docs || []).filter(d => relatedIds.includes(d.template_id));
+
+        if (sameTypeDocs.length > 0) {
+            radioList.innerHTML = sameTypeDocs.map(d => {
+                const docName = d.name || AI_DOC_NAMES[d.template_id] || d.template_id;
+                return `
+                    <label class="ai-comparison-radio">
+                        <input type="radio" name="compare_${escapeAttr(cardId)}"
+                            data-template-id="${escapeAttr(d.template_id)}"
+                            data-doc-record-id="${escapeAttr(d.doc_record_id || '')}"
+                            data-doc-name="${escapeAttr(docName)}"
+                            onchange="handleComparisonRadio('${escapeAttr(cardId)}', this)">
+                        ${escapeHtml(docName)}
+                    </label>
+                `;
+            }).join('');
+        } else {
+            // All same-type docs received — show message
+            const templateName = AI_DOC_NAMES[cardItem.matched_template_id] || cardItem.matched_template_name || '';
+            radioList.closest('.ai-issuer-comparison').innerHTML = `
+                <div class="ai-comparison-header">📥 התקבל מ: <span class="ai-issuer-value">${escapeHtml(cardItem.issuer_name || 'לא ידוע')}</span></div>
+                <div class="ai-comparison-divider"></div>
+                <div class="ai-comparison-header">⚠️ כל מסמכי ${escapeHtml(templateName)} כבר התקבלו</div>
+            `;
+        }
+    });
 }
 
 function recalcAIStats() {
