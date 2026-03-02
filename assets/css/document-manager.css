@@ -389,6 +389,18 @@ body {
     border-bottom: 1px solid var(--brand-100);
 }
 
+/* ==================== LAYOUT SLOTS (consistent badge position) ==================== */
+.action-hidden {
+    visibility: hidden !important;
+    pointer-events: none !important;
+}
+
+.file-links-slot {
+    display: inline-flex;
+    align-items: center;
+    flex-shrink: 0;
+}
+
 /* ==================== NAME EDIT ==================== */
 .icon-xs {
     width: 14px;
