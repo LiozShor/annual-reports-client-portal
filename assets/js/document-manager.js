@@ -298,7 +298,7 @@ function displayDocuments() {
                         }
                         <button class="note-btn ${hasNote ? 'has-note' : ''} ${noteChanges.has(doc.id) ? 'note-modified' : ''}"
                                 onclick="toggleNote('${doc.id}')"
-                                title="הערת משרד"><i data-lucide="${hasNote ? 'file-pen' : 'pen-line'}" class="icon-sm"></i></button>
+                                title="הערת משרד"><i data-lucide="${hasNote ? 'message-square-text' : 'message-square'}" class="icon-sm"></i></button>
                         ${!isWaived
                             ? `<button type="button" class="delete-toggle ${markedForRemoval.has(doc.id) ? 'active' : ''}"
                                 onclick="toggleRemoval('${doc.id}')"
@@ -482,7 +482,7 @@ function trackNoteChange(docId) {
     const btn = document.querySelector(`#doc-${docId} .note-btn`);
     if (btn) {
         const hasContent = newText.trim().length > 0;
-        const iconName = hasContent ? 'file-pen' : 'pen-line';
+        const iconName = hasContent ? 'message-square-text' : 'message-square';
         btn.innerHTML = `<i data-lucide="${iconName}" class="icon-sm"></i>`;
         btn.classList.toggle('has-note', hasContent);
         btn.classList.toggle('note-modified', noteChanges.has(docId));
