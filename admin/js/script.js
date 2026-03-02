@@ -922,7 +922,7 @@ async function sendQuestionnaires(reportIds) {
         );
 
         loadDashboard();
-        loadPendingClients();
+        loadPendingClients(true);
 
     } catch (error) {
         hideLoading();
