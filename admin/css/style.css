@@ -2129,6 +2129,14 @@ tr:hover .client-view-link {
     font-weight: 500;
 }
 
+.reminder-stat-item {
+    cursor: pointer;
+    transition: all 0.15s ease;
+    user-select: none;
+}
+.reminder-stat-item:hover { background: var(--gray-50); }
+.reminder-stat-item:focus-visible { outline: 2px solid var(--brand-500); outline-offset: 2px; }
+
 .reminder-stat-item.reminder-stat-scheduled { border-inline-start: 3px solid var(--brand-500); }
 .reminder-stat-item.reminder-stat-scheduled .icon-sm { color: var(--brand-500); }
 .reminder-stat-item.reminder-stat-due { border-inline-start: 3px solid var(--warning-500); }
@@ -2137,6 +2145,28 @@ tr:hover .client-view-link {
 .reminder-stat-item.reminder-stat-suppressed .icon-sm { color: var(--gray-400); }
 .reminder-stat-item.reminder-stat-exhausted { border-inline-start: 3px solid var(--danger-500); }
 .reminder-stat-item.reminder-stat-exhausted .icon-sm { color: var(--danger-500); }
+
+/* Active card filter states */
+.reminder-stat-item.reminder-stat-active.reminder-stat-scheduled {
+    background: color-mix(in srgb, var(--brand-500) 8%, white);
+    border: 2px solid var(--brand-500);
+    border-inline-start-width: 3px;
+}
+.reminder-stat-item.reminder-stat-active.reminder-stat-due {
+    background: color-mix(in srgb, var(--warning-500) 8%, white);
+    border: 2px solid var(--warning-500);
+    border-inline-start-width: 3px;
+}
+.reminder-stat-item.reminder-stat-active.reminder-stat-suppressed {
+    background: color-mix(in srgb, var(--gray-400) 10%, white);
+    border: 2px solid var(--gray-400);
+    border-inline-start-width: 3px;
+}
+.reminder-stat-item.reminder-stat-active.reminder-stat-exhausted {
+    background: color-mix(in srgb, var(--danger-500) 8%, white);
+    border: 2px solid var(--danger-500);
+    border-inline-start-width: 3px;
+}
 
 /* Filter Bar */
 .reminder-filter-bar {
@@ -2361,6 +2391,10 @@ tr.reminder-loading td:last-child {
     gap: var(--sp-1);
 }
 
+.reminder-suppress-dropdown {
+    position: relative;
+}
+
 .action-btn.reminder-suppress-btn {
     background: var(--warning-50);
     color: var(--warning-700);
@@ -2369,6 +2403,40 @@ tr.reminder-loading td:last-child {
 .action-btn.reminder-suppress-btn:hover {
     background: var(--warning-100);
 }
+
+.suppress-menu {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    z-index: 20;
+    background: white;
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-md);
+    min-width: 140px;
+    padding: var(--sp-1) 0;
+    margin-top: 2px;
+}
+
+.suppress-menu.open { display: block; }
+
+.suppress-menu button {
+    display: block;
+    width: 100%;
+    padding: var(--sp-2) var(--sp-3);
+    border: none;
+    background: none;
+    text-align: start;
+    cursor: pointer;
+    font-size: var(--text-sm);
+    color: var(--gray-700);
+    white-space: nowrap;
+}
+
+.suppress-menu button:hover { background: var(--gray-50); }
+.suppress-menu button.danger { color: var(--danger-600); }
+.suppress-menu button.danger:hover { background: var(--danger-50); }
 
 .action-btn.reminder-date-btn {
     background: var(--info-50);

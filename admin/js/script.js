@@ -2584,6 +2584,7 @@ let remindersData = [];
 let reminderLoaded = false;
 let reminderDefaultMax = null; // null = unlimited
 let reminderSendDay = null; // null = not configured
+let activeCardFilter = null;
 
 async function loadReminders(silent = false) {
     if (!silent) showLoading('טוען תזכורות...');
@@ -2651,9 +2652,37 @@ function getReminderStatus(r) {
     return { label: 'פעיל', class: 'reminder-status-active', key: 'active' };
 }
 
+function toggleCardFilter(key) {
+    // Toggle: same key clears, different key sets
+    activeCardFilter = activeCardFilter === key ? null : key;
+
+    // Update visual state on all cards
+    document.querySelectorAll('.reminder-stat-item').forEach(card => {
+        card.classList.remove('reminder-stat-active');
+        card.setAttribute('aria-pressed', 'false');
+    });
+    if (activeCardFilter) {
+        const cardMap = { scheduled: 'reminder-stat-scheduled', due_this_week: 'reminder-stat-due', suppressed: 'reminder-stat-suppressed', exhausted: 'reminder-stat-exhausted' };
+        const activeCard = document.querySelector(`.${cardMap[activeCardFilter]}`);
+        if (activeCard) {
+            activeCard.classList.add('reminder-stat-active');
+            activeCard.setAttribute('aria-pressed', 'true');
+        }
+    }
+
+    filterReminders();
+}
+
+// Keyboard support for stat cards (Enter/Space)
+document.addEventListener('keydown', (e) => {
+    if ((e.key === 'Enter' || e.key === ' ') && e.target.classList.contains('reminder-stat-item')) {
+        e.preventDefault();
+        e.target.click();
+    }
+});
+
 function filterReminders() {
     const search = (document.getElementById('reminderSearchInput').value || '').trim().toLowerCase();
-    const statusFilter = document.getElementById('reminderStatusFilter').value;
 
     let filtered = remindersData;
 
@@ -2661,8 +2690,17 @@ function filterReminders() {
         filtered = filtered.filter(r => (r.name || '').toLowerCase().includes(search));
     }
 
-    if (statusFilter) {
-        filtered = filtered.filter(r => getReminderStatus(r).key === statusFilter);
+    if (activeCardFilter) {
+        if (activeCardFilter === 'due_this_week') {
+            const weekFromNow = new Date();
+            weekFromNow.setDate(weekFromNow.getDate() + 7);
+            const weekStr = weekFromNow.toISOString().split('T')[0];
+            filtered = filtered.filter(r => getReminderStatus(r).key === 'active' && r.reminder_next_date && r.reminder_next_date <= weekStr);
+        } else if (activeCardFilter === 'scheduled') {
+            filtered = filtered.filter(r => getReminderStatus(r).key === 'active');
+        } else {
+            filtered = filtered.filter(r => getReminderStatus(r).key === activeCardFilter);
+        }
     }
 
     // Sort by next_date ascending (nulls last)
@@ -2807,9 +2845,15 @@ function buildReminderTable(items, showDocs) {
                             <button class="action-btn send" onclick="reminderAction('send_now', '${escapeAttr(r.report_id)}')" title="שלח עכשיו">
                                 <i data-lucide="send" class="icon-sm"></i>
                             </button>
-                            <button class="action-btn reminder-suppress-btn" onclick="reminderAction('suppress_this_month', '${escapeAttr(r.report_id)}')" title="השתק החודש">
-                                <i data-lucide="bell-minus" class="icon-sm"></i>
-                            </button>
+                            <div class="reminder-suppress-dropdown">
+                                <button class="action-btn reminder-suppress-btn" onclick="toggleSuppressMenu(this, event)" title="השתק">
+                                    <i data-lucide="bell-minus" class="icon-sm"></i>
+                                </button>
+                                <div class="suppress-menu">
+                                    <button onclick="confirmSuppress('suppress_this_month', '${escapeAttr(r.report_id)}', '${escapeAttr(r.name)}')">השתק החודש</button>
+                                    <button class="danger" onclick="confirmSuppress('suppress_forever', '${escapeAttr(r.report_id)}', '${escapeAttr(r.name)}')">השתק לצמיתות</button>
+                                </div>
+                            </div>
                         ` : `
                             <button class="action-btn send" onclick="reminderAction('unsuppress', '${escapeAttr(r.report_id)}')" title="הפעל מחדש">
                                 <i data-lucide="bell" class="icon-sm"></i>
@@ -2881,6 +2925,29 @@ function reminderAction(action, reportId) {
     }
     executeReminderAction(action, [reportId]);
 }
+
+function toggleSuppressMenu(btn, e) {
+    e.stopPropagation();
+    const menu = btn.nextElementSibling;
+    const wasOpen = menu.classList.contains('open');
+    // Close all open menus first
+    document.querySelectorAll('.suppress-menu.open').forEach(m => m.classList.remove('open'));
+    if (!wasOpen) menu.classList.add('open');
+}
+
+function confirmSuppress(action, reportId, name) {
+    document.querySelectorAll('.suppress-menu.open').forEach(m => m.classList.remove('open'));
+    const msg = action === 'suppress_forever'
+        ? `להשתיק לצמיתות את ${name}?`
+        : `להשתיק את ${name} החודש?`;
+    const isDanger = action === 'suppress_forever';
+    showConfirmDialog(msg, () => executeReminderAction(action, [reportId]), 'השתק', isDanger);
+}
+
+// Close suppress menus on outside click
+document.addEventListener('click', () => {
+    document.querySelectorAll('.suppress-menu.open').forEach(m => m.classList.remove('open'));
+});
 
 function reminderBulkAction(action) {
     const reportIds = Array.from(document.querySelectorAll('.reminder-checkbox:checked')).map(cb => cb.value);
