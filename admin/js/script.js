@@ -3098,6 +3098,21 @@ async function doSaveReminderSettings(maxVal, dayVal) {
             ? `הגדרות תזכורות עודכנו (${datesUpdated} תאריכים עודכנו)`
             : 'הגדרות תזכורות עודכנו';
         showAIToast(toastMsg, 'success');
+        // Instant in-place update: recompute dates client-side
+        if (datesUpdated > 0 && remindersData.length > 0) {
+            const day = parseInt(dayVal);
+            const now = new Date();
+            const thisMonth = new Date(now.getFullYear(), now.getMonth(), day);
+            const target = thisMonth > now ? thisMonth : new Date(now.getFullYear(), now.getMonth() + 1, day);
+            const targetStr = target.toISOString().split('T')[0];
+            const todayStr = new Date().toISOString().split('T')[0];
+            remindersData.forEach(r => {
+                if (r.reminder_next_date && r.reminder_next_date > todayStr) {
+                    r.reminder_next_date = targetStr;
+                }
+            });
+            filterReminders();
+        }
         loadReminders(true);
     } catch (error) {
         hideLoading();
