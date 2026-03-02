@@ -1993,6 +1993,92 @@ tr:hover .client-view-link {
 .ai-toast.ai-toast-success { background: var(--success-700); }
 .ai-toast.ai-toast-danger  { background: var(--danger-700); }
 
+/* ==================== AI REVIEW SPLIT VIEW ==================== */
+
+.ai-review-split {
+    display: grid;
+    grid-template-columns: 450px 1fr;
+    gap: var(--sp-5);
+    align-items: start;
+}
+
+.ai-review-master {
+    min-height: 0;
+}
+
+.ai-review-master .ai-review-card {
+    max-width: none;
+    margin-inline: 0;
+}
+
+.ai-review-detail {
+    position: sticky;
+    top: 80px;
+    height: calc(100vh - 100px);
+    background: white;
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.preview-header-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--sp-3) var(--sp-4);
+    border-bottom: 1px solid var(--gray-100);
+    background: var(--gray-50);
+    flex-shrink: 0;
+    gap: var(--sp-3);
+}
+
+.preview-file-name {
+    font-size: var(--text-sm);
+    font-weight: 500;
+    color: var(--gray-700);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
+}
+
+.preview-iframe {
+    flex: 1;
+    width: 100%;
+    border: none;
+    display: block;
+}
+
+.preview-placeholder,
+.preview-loading,
+.preview-error {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: var(--gray-400);
+    gap: var(--sp-3);
+    padding: var(--sp-5);
+    text-align: center;
+}
+
+.preview-error {
+    color: var(--danger-500);
+}
+
+.ai-review-card.preview-active {
+    border-color: var(--brand-500);
+    box-shadow: var(--shadow-md);
+}
+
+.ai-review-card .ai-card-top {
+    cursor: pointer;
+}
+
 /* ==================== REMINDERS TAB ==================== */
 
 /* Tab Badge */
@@ -2554,6 +2640,19 @@ tr.reminder-loading td:last-child {
     }
 
     /* AI Review responsive */
+    .ai-review-split {
+        grid-template-columns: 1fr;
+    }
+
+    .ai-review-detail {
+        display: none;
+    }
+
+    .ai-review-master .ai-review-card {
+        max-width: 600px;
+        margin-inline: auto;
+    }
+
     .ai-stats-bar {
         display: grid;
         grid-template-columns: 1fr 1fr;
