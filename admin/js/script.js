@@ -1259,6 +1259,7 @@ function createDocCombobox(container, docs, { currentMatchId = null, onSelect = 
 let aiClassificationsData = [];
 let aiCurrentReassignId = null;
 let aiReviewLoaded = false;
+let activePreviewItemId = null;
 
 // Batch review tracker — keyed by client name
 let batchReviewTracker = {};
@@ -1271,6 +1272,98 @@ const REJECTION_REASONS = {
     wrong_person: 'לא שייך ללקוח',
     other: 'אחר'
 };
+
+// ---- Document Preview ----
+
+async function getDocPreviewUrl(itemId) {
+    const response = await fetchWithTimeout(
+        `${API_BASE}/get-preview-url?token=${authToken}&itemId=${encodeURIComponent(itemId)}`,
+        {}, FETCH_TIMEOUTS.load
+    );
+    const data = await response.json();
+    if (!data.ok) throw new Error(data.error || 'Failed to get preview URL');
+    return data.previewUrl;
+}
+
+function resetPreviewPanel() {
+    activePreviewItemId = null;
+    document.querySelectorAll('.ai-review-card.preview-active').forEach(c => c.classList.remove('preview-active'));
+    const placeholder = document.getElementById('previewPlaceholder');
+    const loading = document.getElementById('previewLoading');
+    const error = document.getElementById('previewError');
+    const iframe = document.getElementById('previewIframe');
+    const header = document.getElementById('previewHeaderBar');
+    if (placeholder) placeholder.style.display = '';
+    if (loading) loading.style.display = 'none';
+    if (error) error.style.display = 'none';
+    if (iframe) { iframe.style.display = 'none'; iframe.src = 'about:blank'; }
+    if (header) header.style.display = 'none';
+}
+
+async function loadDocPreview(recordId) {
+    // Toggle off if same card clicked
+    if (activePreviewItemId === recordId) {
+        resetPreviewPanel();
+        return;
+    }
+
+    const item = aiClassificationsData.find(i => i.id === recordId);
+    if (!item) return;
+
+    const placeholder = document.getElementById('previewPlaceholder');
+    const loading = document.getElementById('previewLoading');
+    const error = document.getElementById('previewError');
+    const errorMsg = document.getElementById('previewErrorMsg');
+    const iframe = document.getElementById('previewIframe');
+    const header = document.getElementById('previewHeaderBar');
+    const fileName = document.getElementById('previewFileName');
+    const openTab = document.getElementById('previewOpenTab');
+
+    // Mark active card
+    document.querySelectorAll('.ai-review-card.preview-active').forEach(c => c.classList.remove('preview-active'));
+    const card = document.querySelector(`.ai-review-card[data-id="${recordId}"]`);
+    if (card) card.classList.add('preview-active');
+    activePreviewItemId = recordId;
+
+    // No onedrive_item_id — show error
+    if (!item.onedrive_item_id) {
+        placeholder.style.display = 'none';
+        loading.style.display = 'none';
+        iframe.style.display = 'none';
+        error.style.display = '';
+        errorMsg.textContent = 'אין מזהה קובץ — לא ניתן לטעון תצוגה מקדימה';
+        header.style.display = 'none';
+        return;
+    }
+
+    // Show loading
+    placeholder.style.display = 'none';
+    error.style.display = 'none';
+    iframe.style.display = 'none';
+    loading.style.display = '';
+
+    // Update header
+    fileName.textContent = item.attachment_name || 'מסמך';
+    openTab.href = item.file_url || '#';
+    openTab.style.display = item.file_url ? '' : 'none';
+    header.style.display = '';
+
+    try {
+        const previewUrl = await getDocPreviewUrl(item.onedrive_item_id);
+        // Verify still the active card (user might have clicked another)
+        if (activePreviewItemId !== recordId) return;
+        loading.style.display = 'none';
+        iframe.src = previewUrl;
+        iframe.style.display = '';
+    } catch (err) {
+        console.error('Preview load error:', err);
+        if (activePreviewItemId !== recordId) return;
+        loading.style.display = 'none';
+        iframe.style.display = 'none';
+        error.style.display = '';
+        errorMsg.textContent = err.message || 'שגיאה בטעינת תצוגה מקדימה';
+    }
+}
 
 async function loadAIClassifications(silent = false) {
     if (!silent) showLoading('טוען סיווגים...');
@@ -1291,6 +1384,7 @@ async function loadAIClassifications(silent = false) {
 
         aiClassificationsData = data.items || [];
         aiReviewLoaded = true;
+        resetPreviewPanel();
         updateAIStats(data.stats || {});
         applyAIFilters();
 
@@ -1624,7 +1718,7 @@ function renderAICard(item) {
     const missingDocs = item.missing_docs || [];
 
     const viewFileBtn = item.file_url
-        ? `<a href="${escapeAttr(item.file_url)}" target="_blank" class="btn btn-ghost btn-sm">
+        ? `<a href="${escapeAttr(item.file_url)}" target="_blank" class="btn btn-ghost btn-sm" onclick="event.stopPropagation()">
                <i data-lucide="external-link" class="icon-sm"></i> פתח בקובץ
            </a>`
         : '';
@@ -1804,7 +1898,7 @@ function renderAICard(item) {
 
     return `
         <div class="ai-review-card ${cardClass}" data-id="${escapeAttr(item.id)}" ${item.is_unrequested ? 'data-unrequested="true"' : ''}>
-            <div class="ai-card-top">
+            <div class="ai-card-top" onclick="loadDocPreview('${escapeAttr(item.id)}')">
                 <div class="ai-file-info">
                     <span class="ai-file-source-label">📎 קובץ מקור:</span>
                     <span class="ai-file-name" ${senderTooltip ? `title="${escapeAttr(senderTooltip)}"` : ''}>${escapeHtml(item.attachment_name || 'ללא שם')}</span>

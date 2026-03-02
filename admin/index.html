@@ -519,22 +519,49 @@
                     </div>
                 </div>
 
-                <!-- Accordion Container -->
-                <div id="aiCardsContainer">
-                    <div class="empty-state">
-                        <div class="empty-state-icon"><i data-lucide="scan-eye" class="icon-2xl"></i></div>
-                        <p>לחץ על הלשונית לטעינת סקירות AI</p>
-                    </div>
-                </div>
+                <!-- Split View: Cards (right/start in RTL) + Preview (left/end in RTL) -->
+                <div class="ai-review-split">
+                    <!-- Master: Card list -->
+                    <div class="ai-review-master">
+                        <div id="aiCardsContainer">
+                            <div class="empty-state">
+                                <div class="empty-state-icon"><i data-lucide="scan-eye" class="icon-2xl"></i></div>
+                                <p>לחץ על הלשונית לטעינת סקירות AI</p>
+                            </div>
+                        </div>
 
-                <!-- Empty State (when all reviewed) -->
-                <div id="aiEmptyState" class="ai-empty-done" style="display: none;">
-                    <div class="ai-empty-done-icon"><i data-lucide="circle-check-big" class="icon-2xl"></i></div>
-                    <h2>אין סיווגים ממתינים לבדיקה</h2>
-                    <p>כל המסמכים סווגו ואושרו בהצלחה</p>
-                    <button class="btn btn-secondary mt-4" onclick="loadAIClassifications()">
-                        <i data-lucide="refresh-cw" class="icon-sm"></i> בדוק שוב
-                    </button>
+                        <div id="aiEmptyState" class="ai-empty-done" style="display: none;">
+                            <div class="ai-empty-done-icon"><i data-lucide="circle-check-big" class="icon-2xl"></i></div>
+                            <h2>אין סיווגים ממתינים לבדיקה</h2>
+                            <p>כל המסמכים סווגו ואושרו בהצלחה</p>
+                            <button class="btn btn-secondary mt-4" onclick="loadAIClassifications()">
+                                <i data-lucide="refresh-cw" class="icon-sm"></i> בדוק שוב
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Detail: Preview panel (sticky) -->
+                    <div class="ai-review-detail" id="aiReviewDetail">
+                        <div class="preview-header-bar" id="previewHeaderBar" style="display: none;">
+                            <span class="preview-file-name" id="previewFileName"></span>
+                            <a href="#" target="_blank" id="previewOpenTab" class="btn btn-ghost btn-sm">
+                                <i data-lucide="external-link" class="icon-sm"></i> פתח בלשונית
+                            </a>
+                        </div>
+                        <div class="preview-placeholder" id="previewPlaceholder">
+                            <i data-lucide="file-search" class="icon-2xl"></i>
+                            <p>לחץ על כרטיס מסמך לתצוגה מקדימה</p>
+                        </div>
+                        <div class="preview-loading" id="previewLoading" style="display: none;">
+                            <div class="spinner spinner-lg"></div>
+                            <p>טוען תצוגה מקדימה...</p>
+                        </div>
+                        <div class="preview-error" id="previewError" style="display: none;">
+                            <i data-lucide="alert-triangle" class="icon-2xl"></i>
+                            <p id="previewErrorMsg">לא ניתן לטעון תצוגה מקדימה</p>
+                        </div>
+                        <iframe class="preview-iframe" id="previewIframe" style="display: none;" sandbox="allow-scripts allow-same-origin allow-forms allow-popups"></iframe>
+                    </div>
                 </div>
             </div>
         </div>
