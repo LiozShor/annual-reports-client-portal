@@ -522,7 +522,16 @@ document.addEventListener('keydown', (e) => {
 });
 
 function refreshData() {
-    loadDashboard();
+    const activeTab = document.querySelector('.tab-content.active')?.id?.replace('tab-', '');
+    if (activeTab === 'reminders') {
+        loadReminders();
+    } else if (activeTab === 'ai-review') {
+        loadAIClassifications();
+    } else if (activeTab === 'send') {
+        loadPendingClients();
+    } else {
+        loadDashboard();
+    }
 }
 
 // Load AI review pending count for tab badge
@@ -1543,6 +1552,12 @@ function renderAICards(items) {
     const container = document.getElementById('aiCardsContainer');
     const emptyState = document.getElementById('aiEmptyState');
 
+    // Preserve accordion open state across re-renders
+    const openAccordions = new Set();
+    container.querySelectorAll('.ai-accordion.open').forEach(el => {
+        openAccordions.add(el.dataset.client);
+    });
+
     if (!items || items.length === 0) {
         container.innerHTML = '';
 
@@ -1684,6 +1699,12 @@ function renderAICards(items) {
     }
 
     container.innerHTML = html;
+
+    // Restore accordion open state
+    openAccordions.forEach(clientName => {
+        const el = container.querySelector(`.ai-accordion[data-client="${CSS.escape(clientName)}"]`);
+        if (el) el.classList.add('open');
+    });
 
     // Initialize inline comboboxes (unmatched + mismatch fallback)
     container.querySelectorAll('.doc-combobox-container').forEach(el => {
