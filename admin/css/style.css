@@ -1342,6 +1342,7 @@ tr:hover .client-view-link {
     margin-bottom: var(--sp-3);
     transition: all var(--transition-base);
     overflow: hidden;
+    max-width: 600px;
 }
 
 .ai-review-card:hover {
@@ -1479,7 +1480,6 @@ tr:hover .client-view-link {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    justify-content: space-between;
     gap: var(--sp-2);
     margin-bottom: var(--sp-2);
 }
@@ -1513,6 +1513,9 @@ tr:hover .client-view-link {
     font-weight: 600;
     font-size: var(--text-sm);
     color: var(--gray-800);
+    min-width: 0;
+    overflow-wrap: break-word;
+    word-break: break-word;
 }
 
 .ai-template-unmatched {
@@ -1623,7 +1626,7 @@ tr:hover .client-view-link {
     display: flex;
     align-items: center;
     gap: var(--sp-3);
-    padding: var(--sp-3) var(--sp-4);
+    padding: var(--sp-4) var(--sp-4);
     border: 1.5px solid var(--gray-200);
     border-radius: var(--radius-md);
     cursor: pointer;
@@ -2426,6 +2429,19 @@ tr.reminder-loading td:last-child {
     font-size: 13px !important;
     min-width: 0 !important;
     line-height: 1;
+}
+
+.btn-link {
+    background: transparent;
+    border-color: transparent;
+    color: var(--gray-500);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    padding-inline: var(--sp-2);
+}
+.btn-link:hover:not(:disabled) {
+    color: var(--gray-700);
+    background: transparent;
 }
 
 .btn-ghost {

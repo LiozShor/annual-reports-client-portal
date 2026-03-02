@@ -1654,10 +1654,10 @@ function renderAICard(item) {
                 : `onclick="approveAIClassification('${escapeAttr(item.id)}')"`}>
                 <i data-lucide="check" class="icon-sm"></i> אשר
             </button>
-            <button class="btn btn-ghost btn-sm" onclick="showAIReassignModal('${escapeAttr(item.id)}')">
+            <button class="btn btn-link btn-sm" onclick="showAIReassignModal('${escapeAttr(item.id)}')">
                 <i data-lucide="arrow-right-left" class="icon-sm"></i> שייך מחדש
             </button>
-            <button class="btn btn-danger btn-sm" onclick="rejectAIClassification('${escapeAttr(item.id)}')">
+            <button class="btn btn-outline-danger btn-sm" onclick="rejectAIClassification('${escapeAttr(item.id)}')">
                 <i data-lucide="x" class="icon-sm"></i> דחה
             </button>
         `;
@@ -1698,14 +1698,14 @@ function renderAICard(item) {
             `;
 
             actionsHtml = `
-                <button class="btn btn-primary btn-sm btn-ai-comparison-assign" disabled
+                <button class="btn btn-success btn-sm btn-ai-comparison-assign" disabled
                     onclick="quickAssignSelected('${escapeAttr(item.id)}')">
                     <i data-lucide="check" class="icon-sm"></i> אישור ושיוך
                 </button>
-                <button class="btn btn-ghost btn-sm" onclick="showAIReassignModal('${escapeAttr(item.id)}')">
+                <button class="btn btn-link btn-sm" onclick="showAIReassignModal('${escapeAttr(item.id)}')">
                     <i data-lucide="arrow-right-left" class="icon-sm"></i> לא מצאתי ברשימה
                 </button>
-                <button class="btn btn-danger btn-sm" onclick="rejectAIClassification('${escapeAttr(item.id)}')">
+                <button class="btn btn-outline-danger btn-sm" onclick="rejectAIClassification('${escapeAttr(item.id)}')">
                     <i data-lucide="x" class="icon-sm"></i> דחה
                 </button>
             `;
@@ -1720,12 +1720,12 @@ function renderAICard(item) {
                 <div class="ai-assign-section">
                     <span class="ai-assign-label">שייך ל:</span>
                     <div class="doc-combobox-container" data-record-id="${escapeAttr(item.id)}"></div>
-                    <button class="btn btn-primary btn-sm btn-ai-assign-confirm" disabled
+                    <button class="btn btn-success btn-sm btn-ai-assign-confirm" disabled
                         onclick="assignAIUnmatched('${escapeAttr(item.id)}', this)">
                         <i data-lucide="check" class="icon-sm"></i> שייך
                     </button>
                 </div>
-                <button class="btn btn-danger btn-sm" onclick="rejectAIClassification('${escapeAttr(item.id)}')">
+                <button class="btn btn-outline-danger btn-sm" onclick="rejectAIClassification('${escapeAttr(item.id)}')">
                     <i data-lucide="x" class="icon-sm"></i> דחה
                 </button>
             `;
@@ -1769,10 +1769,10 @@ function renderAICard(item) {
                 : `onclick="approveAIClassification('${escapeAttr(item.id)}')"`}>
                 <i data-lucide="check" class="icon-sm"></i> אשר
             </button>
-            <button class="btn btn-ghost btn-sm" onclick="showAIReassignModal('${escapeAttr(item.id)}')">
+            <button class="btn btn-link btn-sm" onclick="showAIReassignModal('${escapeAttr(item.id)}')">
                 <i data-lucide="arrow-right-left" class="icon-sm"></i> שייך מחדש
             </button>
-            <button class="btn btn-danger btn-sm" onclick="rejectAIClassification('${escapeAttr(item.id)}')">
+            <button class="btn btn-outline-danger btn-sm" onclick="rejectAIClassification('${escapeAttr(item.id)}')">
                 <i data-lucide="x" class="icon-sm"></i> דחה
             </button>
         `;
@@ -1791,12 +1791,12 @@ function renderAICard(item) {
             <div class="ai-assign-section">
                 <span class="ai-assign-label">שייך ל:</span>
                 <div class="doc-combobox-container" data-record-id="${escapeAttr(item.id)}"></div>
-                <button class="btn btn-primary btn-sm btn-ai-assign-confirm" disabled
+                <button class="btn btn-success btn-sm btn-ai-assign-confirm" disabled
                     onclick="assignAIUnmatched('${escapeAttr(item.id)}', this)">
                     <i data-lucide="check" class="icon-sm"></i> שייך
                 </button>
             </div>
-            <button class="btn btn-danger btn-sm" onclick="rejectAIClassification('${escapeAttr(item.id)}')">
+            <button class="btn btn-outline-danger btn-sm" onclick="rejectAIClassification('${escapeAttr(item.id)}')">
                 <i data-lucide="x" class="icon-sm"></i> דחה
             </button>
         `;
