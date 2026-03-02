@@ -1717,11 +1717,7 @@ function renderAICard(item) {
 
     const missingDocs = item.missing_docs || [];
 
-    const viewFileBtn = item.file_url
-        ? `<a href="${escapeAttr(item.file_url)}" target="_blank" class="btn btn-ghost btn-sm" onclick="event.stopPropagation()">
-               <i data-lucide="external-link" class="icon-sm"></i> פתח בקובץ
-           </a>`
-        : '';
+    const viewFileBtn = ''; // "Open in tab" moved to preview panel header
 
     const evidenceIcon = item.ai_reason
         ? `<span class="ai-evidence-trigger" data-tooltip="${escapeAttr(item.ai_reason)}"><i data-lucide="bot" class="icon-sm"></i>?</span>`
