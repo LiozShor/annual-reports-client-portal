@@ -1993,6 +1993,39 @@ tr:hover .client-view-link {
 .ai-toast.ai-toast-success { background: var(--success-700); }
 .ai-toast.ai-toast-danger  { background: var(--danger-700); }
 
+.ai-toast-action {
+    margin-right: var(--sp-3);
+    padding: var(--sp-1) var(--sp-3);
+    border: 1px solid rgba(255,255,255,0.5);
+    border-radius: var(--radius-md);
+    background: transparent;
+    color: white;
+    font-size: var(--text-sm);
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background var(--transition-base), border-color var(--transition-base);
+}
+.ai-toast-action:hover {
+    background: rgba(255,255,255,0.15);
+    border-color: white;
+}
+
+.ai-toast-close {
+    margin-right: var(--sp-1);
+    padding: 0 var(--sp-2);
+    border: none;
+    background: transparent;
+    color: rgba(255,255,255,0.6);
+    font-size: var(--text-lg);
+    cursor: pointer;
+    line-height: 1;
+    transition: color var(--transition-base);
+}
+.ai-toast-close:hover {
+    color: white;
+}
+
 /* ==================== AI REVIEW SPLIT VIEW ==================== */
 
 .ai-review-split {
