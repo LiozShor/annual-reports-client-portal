@@ -308,10 +308,14 @@ body {
     padding: var(--sp-1) var(--sp-2);
     border-radius: var(--radius-md);
     transition: all var(--transition-fast);
-    display: flex;
+    display: none;
     align-items: center;
     color: var(--gray-400);
     flex-shrink: 0;
+}
+
+.document-item:hover .delete-toggle {
+    display: flex;
 }
 
 .delete-toggle:hover {
@@ -323,6 +327,7 @@ body {
     background: var(--danger-100);
     border-color: var(--danger-200);
     color: var(--danger-600);
+    display: flex;
 }
 
 .delete-toggle.active:hover {
@@ -396,17 +401,14 @@ body {
     padding: var(--sp-1);
     border-radius: var(--radius-md);
     transition: all var(--transition-fast);
-    display: flex;
+    display: none;
     align-items: center;
     color: var(--gray-300);
     flex-shrink: 0;
-    opacity: 0;
-    pointer-events: none;
 }
 
 .document-item:hover .name-edit-btn {
-    opacity: 1;
-    pointer-events: auto;
+    display: flex;
 }
 
 .name-edit-btn:hover {
@@ -530,17 +532,14 @@ body {
     padding: var(--sp-1) var(--sp-2);
     border-radius: var(--radius-md);
     transition: all var(--transition-fast);
-    display: flex;
+    display: none;
     align-items: center;
     color: var(--gray-400);
     flex-shrink: 0;
-    opacity: 0;
-    pointer-events: none;
 }
 
 .document-item:hover .note-btn {
-    opacity: 1;
-    pointer-events: auto;
+    display: flex;
 }
 
 .note-btn:hover {
@@ -551,14 +550,12 @@ body {
     background: var(--warning-50);
     border-color: var(--warning-100);
     color: var(--warning-700);
-    opacity: 1;
-    pointer-events: auto;
+    display: flex;
 }
 
 .note-btn.note-modified {
     animation: notePulse 1.5s infinite;
-    opacity: 1;
-    pointer-events: auto;
+    display: flex;
 }
 
 @keyframes notePulse {
