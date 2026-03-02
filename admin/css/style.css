@@ -189,6 +189,55 @@ body {
     gap: var(--sp-2);
 }
 
+/* Collapsible card (details/summary) */
+.card-collapsible {
+    overflow: visible;
+}
+
+.card-toggle {
+    cursor: pointer;
+    list-style: none;
+    user-select: none;
+}
+
+.card-toggle::-webkit-details-marker {
+    display: none;
+}
+
+.card-toggle h2 {
+    color: var(--gray-500);
+    font-size: var(--text-base);
+}
+
+.card-toggle-badge {
+    font-size: var(--text-xs);
+    font-weight: 500;
+    color: var(--gray-400);
+    margin-inline-start: var(--sp-2);
+}
+
+.card-toggle-chevron {
+    color: var(--gray-400);
+    transition: transform var(--transition-base);
+}
+
+.card-collapsible[open] > .card-toggle .card-toggle-chevron {
+    transform: rotate(180deg);
+}
+
+.card-collapsible[open] > .card-toggle h2 {
+    color: var(--gray-800);
+    font-size: var(--text-lg);
+}
+
+.card-collapsible[open] > .card-toggle {
+    border-bottom: 1px solid var(--gray-200);
+}
+
+.card-collapsible:not([open]) > .card-toggle {
+    border-bottom: none;
+}
+
 /* ==================== FILTERS ==================== */
 .filters {
     display: flex;

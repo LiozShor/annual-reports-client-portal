@@ -2490,22 +2490,15 @@ function showAIToast(message, type, action) {
     toast.classList.add('show');
     if (typeof lucide !== 'undefined') lucide.createIcons();
 
-    const timeout = action ? 8000 : 3000;
+    // Action toasts stay until manually dismissed; plain toasts auto-dismiss
+    toast.onmouseenter = null;
+    toast.onmouseleave = null;
 
-    // Pause-on-hover for action toasts
-    if (action) {
-        toast.onmouseenter = () => { if (toast._dismissTimer) clearTimeout(toast._dismissTimer); };
-        toast.onmouseleave = () => {
-            toast._dismissTimer = setTimeout(() => toast.classList.remove('show'), 8000);
-        };
-    } else {
-        toast.onmouseenter = null;
-        toast.onmouseleave = null;
+    if (!action) {
+        toast._dismissTimer = setTimeout(() => {
+            toast.classList.remove('show');
+        }, 3000);
     }
-
-    toast._dismissTimer = setTimeout(() => {
-        toast.classList.remove('show');
-    }, timeout);
 }
 
 // ==================== BATCH REVIEW TRACKER ====================
