@@ -2721,6 +2721,10 @@ function renderRemindersTable(typeA, typeB) {
     const container = document.getElementById('reminderTableContainer');
     const totalItems = typeA.length + typeB.length;
 
+    // Preserve accordion open state across re-renders
+    const openSections = new Set();
+    container.querySelectorAll('.reminder-section.open').forEach((el, i) => openSections.add(i));
+
     if (totalItems === 0) {
         container.innerHTML = `
             <div class="empty-state">
@@ -2735,7 +2739,7 @@ function renderRemindersTable(typeA, typeB) {
     let html = '';
 
     // --- Type A: Haven't filled questionnaire (stage 2) ---
-    html += `<div class="reminder-section">`;
+    html += `<div class="reminder-section${openSections.has(0) ? ' open' : ''}">`;
     html += `<div class="reminder-section-header reminder-section-a" onclick="toggleReminderSection(this)">
         <i data-lucide="chevron-left" class="icon-sm reminder-chevron"></i>
         <i data-lucide="clipboard-list" class="icon-sm"></i>
@@ -2752,7 +2756,7 @@ function renderRemindersTable(typeA, typeB) {
     html += `</div></div>`;
 
     // --- Type B: Filled but missing docs (stage 3) ---
-    html += `<div class="reminder-section">`;
+    html += `<div class="reminder-section${openSections.has(1) ? ' open' : ''}">`;
     html += `<div class="reminder-section-header reminder-section-b" onclick="toggleReminderSection(this)">
         <i data-lucide="chevron-left" class="icon-sm reminder-chevron"></i>
         <i data-lucide="folder-open" class="icon-sm"></i>
