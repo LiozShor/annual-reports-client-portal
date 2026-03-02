@@ -400,6 +400,13 @@ body {
     align-items: center;
     color: var(--gray-300);
     flex-shrink: 0;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.document-item:hover .name-edit-btn {
+    opacity: 1;
+    pointer-events: auto;
 }
 
 .name-edit-btn:hover {
@@ -527,6 +534,13 @@ body {
     align-items: center;
     color: var(--gray-400);
     flex-shrink: 0;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.document-item:hover .note-btn {
+    opacity: 1;
+    pointer-events: auto;
 }
 
 .note-btn:hover {
@@ -537,10 +551,14 @@ body {
     background: var(--warning-50);
     border-color: var(--warning-100);
     color: var(--warning-700);
+    opacity: 1;
+    pointer-events: auto;
 }
 
 .note-btn.note-modified {
     animation: notePulse 1.5s infinite;
+    opacity: 1;
+    pointer-events: auto;
 }
 
 @keyframes notePulse {
