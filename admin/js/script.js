@@ -667,7 +667,7 @@ function clearPreview() {
     document.getElementById('fileInput').value = '';
 }
 
-async function performServerImport(clients, year, successMessage) {
+async function performServerImport(clients, year, successMessage, options) {
     showLoading(clients.length > 1 ? `מייבא ${clients.length} לקוחות...` : 'מוסיף לקוח...');
 
     try {
@@ -688,17 +688,19 @@ async function performServerImport(clients, year, successMessage) {
             throw new Error(data.error || 'Import failed');
         }
 
-        showModal('success', 'הפעולה הושלמה!',
-            successMessage || `הנתונים נשמרו בהצלחה.`,
-            { created: data.created, skipped: data.skipped, failed: data.failed }
-        );
+        if (!options?.suppressModal) {
+            showModal('success', 'הפעולה הושלמה!',
+                successMessage || `הנתונים נשמרו בהצלחה.`,
+                { created: data.created, skipped: data.skipped, failed: data.failed }
+            );
+        }
 
-        return true;
+        return data;
 
     } catch (error) {
         hideLoading();
         showModal('error', 'שגיאה', 'שגיאה בשמירת הנתונים: ' + error.message);
-        return false;
+        return null;
     }
 }
 
@@ -758,29 +760,36 @@ async function addManualClient() {
     // Warning if already exists in dashboard list
     if (existingEmails.has(email)) {
         showConfirmDialog('כתובת המייל הזו כבר קיימת ברשימת הלקוחות. האם להוסיף בכל זאת?', async () => {
-            const success = await performServerImport(
-                [{ name, email }],
-                year,
-                'הלקוח נוסף בהצלחה למערכת.'
-            );
-            if (success) {
-                document.getElementById('manualName').value = '';
-                document.getElementById('manualEmail').value = '';
-                loadDashboard();
-            }
+            await _doManualAdd(name, email, year);
         }, 'הוסף בכל זאת');
         return;
     }
 
-    const success = await performServerImport(
+    await _doManualAdd(name, email, year);
+}
+
+async function _doManualAdd(name, email, year) {
+    const data = await performServerImport(
         [{ name, email }],
         year,
-        'הלקוח נוסף בהצלחה למערכת.'
+        null,
+        { suppressModal: true }
     );
 
-    if (success) {
+    if (data) {
         document.getElementById('manualName').value = '';
         document.getElementById('manualEmail').value = '';
+
+        const reportId = data.report_ids?.[0];
+        if (reportId) {
+            showAIToast('הלקוח נוסף בהצלחה', 'success', {
+                label: 'שלח שאלון',
+                onClick: () => sendQuestionnaires([reportId])
+            });
+        } else {
+            showAIToast('הלקוח נוסף בהצלחה', 'success');
+        }
+
         loadDashboard();
     }
 }
@@ -2442,10 +2451,15 @@ function escapeAttr(text) {
     return text.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/'/g, '&#39;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
-function showAIToast(message, type) {
+function showAIToast(message, type, action) {
     const toast = document.getElementById('aiToast');
     const toastText = document.getElementById('aiToastText');
     const toastIcon = document.getElementById('aiToastIcon');
+    const actionBtn = document.getElementById('aiToastAction');
+    const closeBtn = document.getElementById('aiToastClose');
+
+    // Clear any previous timer
+    if (toast._dismissTimer) clearTimeout(toast._dismissTimer);
 
     toastText.textContent = message;
     toast.className = 'ai-toast ai-toast-' + (type || 'success');
@@ -2456,12 +2470,42 @@ function showAIToast(message, type) {
         toastIcon.setAttribute('data-lucide', 'check-circle');
     }
 
+    // Action button
+    if (action) {
+        actionBtn.textContent = action.label;
+        actionBtn.style.display = '';
+        actionBtn.onclick = () => {
+            toast.classList.remove('show');
+            action.onClick();
+        };
+        closeBtn.style.display = '';
+        closeBtn.onclick = () => toast.classList.remove('show');
+    } else {
+        actionBtn.style.display = 'none';
+        actionBtn.onclick = null;
+        closeBtn.style.display = 'none';
+        closeBtn.onclick = null;
+    }
+
     toast.classList.add('show');
     if (typeof lucide !== 'undefined') lucide.createIcons();
 
-    setTimeout(() => {
+    const timeout = action ? 8000 : 3000;
+
+    // Pause-on-hover for action toasts
+    if (action) {
+        toast.onmouseenter = () => { if (toast._dismissTimer) clearTimeout(toast._dismissTimer); };
+        toast.onmouseleave = () => {
+            toast._dismissTimer = setTimeout(() => toast.classList.remove('show'), 8000);
+        };
+    } else {
+        toast.onmouseenter = null;
+        toast.onmouseleave = null;
+    }
+
+    toast._dismissTimer = setTimeout(() => {
         toast.classList.remove('show');
-    }, 3000);
+    }, timeout);
 }
 
 // ==================== BATCH REVIEW TRACKER ====================
