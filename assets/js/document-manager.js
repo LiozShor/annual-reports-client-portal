@@ -7,7 +7,7 @@
 const params = new URLSearchParams(window.location.search);
 const REPORT_ID = params.get('report_id');
 const CLIENT_NAME = params.get('client_name');
-const SPOUSE_NAME = params.get('spouse_name') || '';
+let SPOUSE_NAME = params.get('spouse_name') || '';
 const YEAR = params.get('year');
 const API_BASE = 'https://liozshor.app.n8n.cloud/webhook';
 
@@ -30,6 +30,7 @@ let apiCategories = [];     // Categories from Airtable (SSOT)
 let markedForRestore = new Set();   // doc IDs to un-waive
 let statusChanges = new Map();      // docId → newStatus
 let noteChanges = new Map();        // docId → noteText
+let nameChanges = new Map();        // docId → newName
 let sendEmailOnSave = true;
 let currentDropdownDocId = null;    // currently open status dropdown target
 let activeStatusFilter = '';        // currently active status filter (empty = show all)
@@ -134,6 +135,13 @@ async function loadDocuments() {
         );
         cleanupEscalation();
         const data = await response.json();
+
+        // Update spouse name from API response (authoritative source)
+        if (data.spouse_name) {
+            SPOUSE_NAME = data.spouse_name;
+            const spouseEl = document.getElementById('spouseName');
+            if (spouseEl) spouseEl.textContent = SPOUSE_NAME;
+        }
 
         // Handle case where report is found but stage is 1 (Not Started)
         if (data.stage && (data.stage.startsWith('1') || data.stage.startsWith('2'))) {
@@ -261,10 +269,12 @@ function displayDocuments() {
                 const hasNote = (doc.bookkeepers_notes && doc.bookkeepers_notes.trim()) || noteChanges.has(doc.id);
                 const isRestoreMarked = markedForRestore.has(doc.id);
                 const isStatusChanged = statusChanges.has(doc.id);
+                const isNameChanged = nameChanges.has(doc.id);
+                const displayName = nameChanges.get(doc.id) || doc.name;
 
                 html += `<div class="document-wrapper" id="wrapper-${doc.id}">`;
                 html += `
-                    <div class="document-item ${isWaived ? 'waived-item' : ''} ${!isWaived && effectiveStatus === 'Received' ? 'status-received' : ''} ${isRestoreMarked ? 'marked-for-restore' : ''} ${isStatusChanged ? 'status-changed' : ''} ${markedForRemoval.has(doc.id) ? 'marked-for-removal' : ''}" id="doc-${doc.id}">
+                    <div class="document-item ${isWaived ? 'waived-item' : ''} ${!isWaived && effectiveStatus === 'Received' ? 'status-received' : ''} ${isRestoreMarked ? 'marked-for-restore' : ''} ${isStatusChanged ? 'status-changed' : ''} ${isNameChanged ? 'name-changed' : ''} ${markedForRemoval.has(doc.id) ? 'marked-for-removal' : ''}" id="doc-${doc.id}">
                         ${isWaived
                             ? `<input type="checkbox" class="restore-checkbox"
                                 onchange="toggleRestore('${doc.id}')"
@@ -274,7 +284,11 @@ function displayDocuments() {
                             : ''
                         }
                         <span class="document-icon"><i data-lucide="file-text" class="icon-sm"></i></span>
-                        <div class="document-name">${doc.name}</div>
+                        <div class="document-name" id="docname-${doc.id}">${displayName}</div>
+                        ${!isWaived
+                            ? `<button type="button" class="name-edit-btn" onclick="startNameEdit('${doc.id}')" title="שנה שם מסמך"><i data-lucide="pencil" class="icon-xs"></i></button>`
+                            : ''
+                        }
                         ${isWaived
                             ? `<span class="badge ${status.class}">${status.text}</span>`
                             : `<span class="badge ${status.class} clickable"
@@ -474,6 +488,83 @@ function trackNoteChange(docId) {
         btn.classList.toggle('note-modified', noteChanges.has(docId));
         if (typeof lucide !== 'undefined') lucide.createIcons();
     }
+}
+
+// Inline document name editing
+function startNameEdit(docId) {
+    const nameEl = document.getElementById(`docname-${docId}`);
+    if (!nameEl) return;
+
+    const currentName = nameChanges.get(docId) || currentDocuments.find(d => d.id === docId)?.name || '';
+    nameEl.innerHTML = `
+        <div class="name-edit-row">
+            <input type="text" class="name-edit-input" id="nameinput-${docId}"
+                   value="${escapeHtml(currentName)}" dir="auto">
+            <div class="name-edit-actions">
+                <button type="button" class="name-edit-save" onclick="saveNameEdit('${docId}')" title="שמור">
+                    <i data-lucide="check" class="icon-xs"></i>
+                </button>
+                <button type="button" class="name-edit-cancel" onclick="cancelNameEdit('${docId}')" title="ביטול">
+                    <i data-lucide="x" class="icon-xs"></i>
+                </button>
+            </div>
+        </div>`;
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+
+    const input = document.getElementById(`nameinput-${docId}`);
+    if (input) {
+        input.focus();
+        input.select();
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') { e.preventDefault(); saveNameEdit(docId); }
+            if (e.key === 'Escape') { e.preventDefault(); cancelNameEdit(docId); }
+        });
+    }
+
+    // Hide pencil button while editing
+    const pencilBtn = document.querySelector(`#doc-${docId} .name-edit-btn`);
+    if (pencilBtn) pencilBtn.style.display = 'none';
+}
+
+function saveNameEdit(docId) {
+    const input = document.getElementById(`nameinput-${docId}`);
+    if (!input) return;
+
+    const newName = input.value.trim();
+    const doc = currentDocuments.find(d => d.id === docId);
+    if (!doc) return;
+
+    if (newName && newName !== doc.name) {
+        nameChanges.set(docId, newName);
+    } else {
+        nameChanges.delete(docId);
+    }
+
+    // Revert to text display
+    const nameEl = document.getElementById(`docname-${docId}`);
+    if (nameEl) nameEl.textContent = newName || doc.name;
+
+    // Show pencil button again
+    const pencilBtn = document.querySelector(`#doc-${docId} .name-edit-btn`);
+    if (pencilBtn) pencilBtn.style.display = '';
+
+    // Toggle name-changed class
+    const docEl = document.getElementById(`doc-${docId}`);
+    if (docEl) docEl.classList.toggle('name-changed', nameChanges.has(docId));
+
+    updateStats();
+}
+
+function cancelNameEdit(docId) {
+    const doc = currentDocuments.find(d => d.id === docId);
+    if (!doc) return;
+
+    const nameEl = document.getElementById(`docname-${docId}`);
+    if (nameEl) nameEl.textContent = nameChanges.get(docId) || doc.name;
+
+    // Show pencil button again
+    const pencilBtn = document.querySelector(`#doc-${docId} .name-edit-btn`);
+    if (pencilBtn) pencilBtn.style.display = '';
 }
 
 // Strip **bold** markdown markers for UI display
@@ -705,7 +796,7 @@ function updateStatusOverview() {
 
     // Show edit session bar only when there are pending changes
     const hasChanges = markedForRemoval.size > 0 || docsToAdd.size > 0 ||
-        markedForRestore.size > 0 || statusChanges.size > 0 || noteChanges.size > 0;
+        markedForRestore.size > 0 || statusChanges.size > 0 || noteChanges.size > 0 || nameChanges.size > 0;
     document.getElementById('editSessionBar').style.display = hasChanges ? 'block' : 'none';
 }
 
@@ -832,7 +923,8 @@ function openConfirmation() {
         notes ||
         markedForRestore.size > 0 ||
         statusChanges.size > 0 ||
-        noteChanges.size > 0;
+        noteChanges.size > 0 ||
+        nameChanges.size > 0;
 
     if (!hasChanges) {
         showAlert(TXT_NO_CHANGES, 'error');
@@ -895,6 +987,19 @@ function openConfirmation() {
             if (doc) {
                 const preview = noteText.length > 50 ? noteText.substring(0, 50) + '...' : noteText;
                 summary += `<li class="change-note">${stripHtml(doc.name)}: ${escapeHtml(preview || '(הערה נמחקה)')}</li>`;
+            }
+        });
+        summary += '</ul>';
+    }
+
+    // Name changes (orange)
+    if (nameChanges.size > 0) {
+        summary += `<h4 style="color:#EA580C;"><i data-lucide="pencil" class="icon-sm" style="display:inline;vertical-align:middle;"></i> שינוי שם מסמך (${nameChanges.size}):</h4>`;
+        summary += '<ul class="changes-list">';
+        nameChanges.forEach((newName, docId) => {
+            const doc = currentDocuments.find(d => d.id === docId);
+            if (doc) {
+                summary += `<li class="change-name">${stripHtml(doc.name)} → ${escapeHtml(newName)}</li>`;
             }
         });
         summary += '</ul>';
@@ -1012,6 +1117,14 @@ async function confirmSubmit() {
         extensions.note_updates = [];
         noteChanges.forEach((noteText, docId) => {
             extensions.note_updates.push({ id: docId, note: noteText });
+        });
+    }
+
+    // Name updates
+    if (nameChanges.size > 0) {
+        extensions.name_updates = [];
+        nameChanges.forEach((newName, docId) => {
+            extensions.name_updates.push({ id: docId, issuer_name: newName });
         });
     }
 

@@ -282,6 +282,10 @@ body {
     border-inline-start: 3px solid #7C3AED;
 }
 
+.document-item.name-changed {
+    border-inline-start: 3px solid #EA580C;
+}
+
 .document-item.status-received .document-name {
     text-decoration: line-through;
     color: var(--gray-400);
@@ -377,6 +381,91 @@ body {
     color: var(--brand-700);
     font-size: var(--text-sm);
     border-bottom: 1px solid var(--brand-100);
+}
+
+/* ==================== NAME EDIT ==================== */
+.icon-xs {
+    width: 14px;
+    height: 14px;
+}
+
+.name-edit-btn {
+    background: none;
+    border: 1px solid transparent;
+    cursor: pointer;
+    padding: var(--sp-1);
+    border-radius: var(--radius-md);
+    transition: all var(--transition-fast);
+    display: flex;
+    align-items: center;
+    color: var(--gray-300);
+    flex-shrink: 0;
+}
+
+.name-edit-btn:hover {
+    background: var(--gray-100);
+    color: var(--gray-600);
+}
+
+.name-edit-row {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
+    width: 100%;
+}
+
+.name-edit-input {
+    flex: 1;
+    font-size: var(--text-sm);
+    font-weight: 500;
+    font-family: inherit;
+    padding: var(--sp-1) var(--sp-2);
+    border: 1px solid var(--gray-300);
+    border-radius: var(--radius-md);
+    color: var(--gray-800);
+    min-width: 0;
+    transition: border-color var(--transition-fast);
+}
+
+.name-edit-input:focus {
+    outline: none;
+    border-color: var(--brand-500);
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+}
+
+.name-edit-actions {
+    display: flex;
+    gap: var(--sp-1);
+    flex-shrink: 0;
+}
+
+.name-edit-save,
+.name-edit-cancel {
+    background: none;
+    border: 1px solid transparent;
+    cursor: pointer;
+    padding: var(--sp-1);
+    border-radius: var(--radius-md);
+    display: flex;
+    align-items: center;
+    transition: all var(--transition-fast);
+}
+
+.name-edit-save {
+    color: var(--success-600);
+}
+
+.name-edit-save:hover {
+    background: var(--success-50);
+}
+
+.name-edit-cancel {
+    color: var(--gray-400);
+}
+
+.name-edit-cancel:hover {
+    background: var(--gray-100);
+    color: var(--gray-600);
 }
 
 /* ==================== STATUS BADGES ==================== */
@@ -753,6 +842,11 @@ body {
 
 .change-note {
     color: #0D9488;
+    font-weight: 600;
+}
+
+.change-name {
+    color: #EA580C;
     font-weight: 600;
 }
 
