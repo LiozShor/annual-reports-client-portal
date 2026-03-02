@@ -1343,6 +1343,7 @@ tr:hover .client-view-link {
     transition: all var(--transition-base);
     overflow: hidden;
     max-width: 600px;
+    margin-inline: auto;
 }
 
 .ai-review-card:hover {
