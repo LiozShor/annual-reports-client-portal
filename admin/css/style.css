@@ -1473,6 +1473,12 @@ tr:hover .client-view-link {
     flex-wrap: wrap;
 }
 
+.ai-card-label {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    margin-left: 0.25rem;
+}
+
 .ai-confidence-badge {
     display: inline-flex;
     align-items: center;
