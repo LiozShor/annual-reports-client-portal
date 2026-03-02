@@ -3088,12 +3088,16 @@ async function doSaveReminderSettings(maxVal, dayVal) {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ token: authToken, action: 'update_config',
                     config_key: 'reminder_send_day', config_value: dayVal })
-            }, FETCH_TIMEOUTS.mutate)
+            }, FETCH_TIMEOUTS.rollover)
         ]);
         const [d1, d2] = await Promise.all([r1.json(), r2.json()]);
         hideLoading();
         if (!d1.ok || !d2.ok) throw new Error('שגיאה בשמירת הגדרות');
-        showAIToast('הגדרות תזכורות עודכנו', 'success');
+        const datesUpdated = d2.dates_updated || 0;
+        const toastMsg = datesUpdated > 0
+            ? `הגדרות תזכורות עודכנו (${datesUpdated} תאריכים עודכנו)`
+            : 'הגדרות תזכורות עודכנו';
+        showAIToast(toastMsg, 'success');
         loadReminders(true);
     } catch (error) {
         hideLoading();
