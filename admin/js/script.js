@@ -581,9 +581,9 @@ async function fetchDocsForPopover(reportId, clientName) {
             FETCH_TIMEOUTS.quick
         );
         const data = await response.json();
+        console.log('[DocsPopover] response for', reportId, data);
         if (data.ok && data.documents) {
             docsCache.set(reportId, data.documents);
-            // Only render if popover still showing for this report
             const popover = document.getElementById('docsPopover');
             if (popover.style.display !== 'none' && popover.dataset.reportId === reportId) {
                 renderDocsPopover(popover, data.documents, clientName);
@@ -591,13 +591,15 @@ async function fetchDocsForPopover(reportId, clientName) {
         } else {
             const popover = document.getElementById('docsPopover');
             if (popover.dataset.reportId === reportId) {
-                popover.innerHTML = '<div class="docs-popover-loading">לא ניתן לטעון מסמכים</div>';
+                const errMsg = data.error || data.message || JSON.stringify(data);
+                popover.innerHTML = `<div class="docs-popover-loading">שגיאה: ${escapeHtml(errMsg)}</div>`;
             }
         }
-    } catch {
+    } catch (err) {
+        console.error('[DocsPopover] fetch error:', err);
         const popover = document.getElementById('docsPopover');
         if (popover.dataset.reportId === reportId) {
-            popover.innerHTML = '<div class="docs-popover-loading">שגיאה בטעינה</div>';
+            popover.innerHTML = `<div class="docs-popover-loading">שגיאה: ${escapeHtml(err.message)}</div>`;
         }
     }
 }
