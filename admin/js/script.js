@@ -1908,7 +1908,11 @@ function renderAICard(item) {
 
     const missingDocs = item.missing_docs || [];
 
-    const viewFileBtn = ''; // "Open in tab" moved to preview panel header
+    const viewFileBtn = `<button class="btn btn-ghost btn-sm ai-preview-btn"
+        onclick="event.stopPropagation(); loadDocPreview('${escapeAttr(item.id)}')"
+        title="תצוגה מקדימה">
+        <i data-lucide="eye" class="icon-sm"></i> תצוגה מקדימה
+    </button>`;
 
     const evidenceIcon = item.ai_reason
         ? `<span class="ai-evidence-trigger" data-tooltip="${escapeAttr(item.ai_reason)}"><i data-lucide="bot" class="icon-sm"></i>?</span>`
@@ -2023,25 +2027,15 @@ function renderAICard(item) {
         `;
 
     } else if (state === 'fuzzy') {
-        // State C: Fuzzy match — green border, doc name + badge, hint line
+        // State C: Fuzzy match — green border, doc name + badge
         const templateLabel = AI_DOC_NAMES[item.matched_template_id] || item.matched_template_name || '';
         const docName = (item.matched_doc_name || '').replace(/<\/?b>/g, '');
         const docDisplayName = templateLabel && docName && !docName.includes(templateLabel)
             ? `${templateLabel} – ${docName}`
             : (docName || templateLabel);
-        const aiIssuer = item.issuer_name || '';
-        // Extract doc issuer from matched_doc_name (after – separator)
-        const docIssuer = (item.matched_doc_name || '').replace(/<\/?b>/g, '').split('–').slice(1).join('–').trim()
-                       || (item.matched_doc_name || '').replace(/<\/?b>/g, '').split('-').slice(1).join('-').trim()
-                       || '';
-        const fuzzyHintHtml = aiIssuer && docIssuer
-            ? `<div class="ai-fuzzy-hint">💡 ${escapeHtml(aiIssuer)} ≈ ${escapeHtml(docIssuer)}</div>`
-            : '';
-
         classificationHtml = `
             <span class="ai-template-match">${escapeHtml(docDisplayName)}</span>
             <span class="ai-confidence-badge ${confidenceClass}">${confidencePercent}%</span>
-            ${fuzzyHintHtml}
         `;
         const fuzzyApproveDisabled = item.is_unrequested;
         actionsHtml = `

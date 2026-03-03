@@ -1730,16 +1730,6 @@ tr:hover .client-view-link {
     border-inline-start: 2px solid var(--gray-300);
 }
 
-/* Fuzzy match hint */
-.ai-fuzzy-hint {
-    font-size: var(--text-xs);
-    color: var(--gray-400);
-    margin-top: var(--sp-1);
-    display: flex;
-    align-items: center;
-    gap: var(--sp-1);
-}
-
 /* Accordion stat badges */
 .ai-accordion-stat-badge {
     display: inline-flex;
@@ -2173,8 +2163,10 @@ tr:hover .client-view-link {
     box-shadow: var(--shadow-md);
 }
 
-.ai-review-card .ai-card-top {
-    cursor: pointer;
+/* Preview button active state */
+.ai-review-card.preview-active .ai-preview-btn {
+    color: var(--brand-600);
+    background: var(--brand-50);
 }
 
 /* ==================== REMINDERS TAB ==================== */
