@@ -3844,6 +3844,41 @@ function clearRolloverPreview() {
 populateYearDropdowns();
 
 // Initialize Lucide icons and offline detection when DOM is ready
+// Floating evidence tooltip (escapes overflow:hidden parents)
+(function () {
+    let tip = null;
+    document.addEventListener('mouseenter', (e) => {
+        const trigger = e.target.closest('.ai-evidence-trigger');
+        if (!trigger) return;
+        const text = trigger.getAttribute('data-tooltip');
+        if (!text) return;
+        if (!tip) {
+            tip = document.createElement('div');
+            tip.className = 'ai-evidence-tooltip';
+            document.body.appendChild(tip);
+        }
+        tip.textContent = text;
+        const rect = trigger.getBoundingClientRect();
+        tip.style.top = (rect.bottom + 6) + 'px';
+        tip.style.right = (window.innerWidth - rect.right) + 'px';
+        tip.style.left = '';
+        // Ensure it doesn't overflow left edge
+        requestAnimationFrame(() => {
+            const tipRect = tip.getBoundingClientRect();
+            if (tipRect.left < 8) {
+                tip.style.right = '';
+                tip.style.left = '8px';
+            }
+        });
+        tip.classList.add('visible');
+    }, true);
+    document.addEventListener('mouseleave', (e) => {
+        const trigger = e.target.closest('.ai-evidence-trigger');
+        if (!trigger || !tip) return;
+        tip.classList.remove('visible');
+    }, true);
+})();
+
 document.addEventListener('DOMContentLoaded', () => {
     if (typeof lucide !== 'undefined') lucide.createIcons();
     initOfflineDetection();
