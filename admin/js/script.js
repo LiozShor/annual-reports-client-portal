@@ -202,7 +202,7 @@ async function loadDashboard(silent = false) {
         loadReminderCount();
     } catch (error) {
         if (!silent) hideLoading();
-        console.error('Dashboard error:', error);
+        console.error('Dashboard load failed');
         if (!silent) showModal('error', 'שגיאה', 'לא ניתן לטעון את הנתונים');
     }
 }
@@ -255,7 +255,7 @@ function renderClientsTable(clients) {
                     <div class="client-name-cell">
                         <strong
                             class="client-link"
-                            onclick="viewClientDocs('${client.report_id}', '${escapeHtml(client.name)}', '${escapeHtml(client.email || '')}', '${client.year}')"
+                            onclick="viewClientDocs('${escapeAttr(client.report_id)}', '${escapeAttr(client.name)}', '${escapeAttr(client.email || '')}', '${escapeAttr(client.year)}')"
                             title="${escapeHtml(client.email || '')}"
                         >
                             ${escapeHtml(client.name)}
@@ -288,7 +288,7 @@ function renderClientsTable(clients) {
                 `<button class="action-btn send" onclick="sendSingle('${client.report_id}')" title="שלח שאלון"><i data-lucide="send" class="icon-sm"></i></button>` :
                 ''}
                     ${(client.stage === '2-Waiting_For_Answers' || client.stage === '3-Collecting_Docs') ?
-                `<button class="action-btn reminder-set-btn" onclick="setManualReminder('${escapeAttr(client.report_id)}', '${escapeHtml(client.name)}')" title="הגדר תזכורת"><i data-lucide="bell-plus" class="icon-sm"></i></button>` :
+                `<button class="action-btn reminder-set-btn" onclick="setManualReminder('${escapeAttr(client.report_id)}', '${escapeAttr(client.name)}')" title="הגדר תזכורת"><i data-lucide="bell-plus" class="icon-sm"></i></button>` :
                 ''}
                 </td>
             </tr>
@@ -1142,7 +1142,7 @@ function renderReviewTable(queue) {
                 <td>
                     <strong
                         class="client-link"
-                        onclick="viewClientDocs('${client.report_id}', '${escapeHtml(client.name)}', '${escapeHtml(client.email || '')}', '${client.year}')"
+                        onclick="viewClientDocs('${escapeAttr(client.report_id)}', '${escapeAttr(client.name)}', '${escapeAttr(client.email || '')}', '${escapeAttr(client.year)}')"
                     >
                         ${escapeHtml(client.name)}
                     </strong>
@@ -1159,7 +1159,7 @@ function renderReviewTable(queue) {
                 <td><span class="waiting-badge ${waitingClass}">${waitingText}</span></td>
                 <td>
                     <button class="action-btn view" onclick="viewClient('${client.report_id}')" title="צפה בתיק"><i data-lucide="eye" class="icon-sm"></i></button>
-                    <button class="action-btn complete" onclick="markComplete('${client.report_id}', '${escapeHtml(client.name)}')" title="סמן כהושלם"><i data-lucide="circle-check" class="icon-sm"></i></button>
+                    <button class="action-btn complete" onclick="markComplete('${escapeAttr(client.report_id)}', '${escapeAttr(client.name)}')" title="סמן כהושלם"><i data-lucide="circle-check" class="icon-sm"></i></button>
                 </td>
             </tr>
         `;
@@ -1535,7 +1535,7 @@ async function loadDocPreview(recordId) {
         iframe.src = previewUrl;
         iframe.style.display = '';
     } catch (err) {
-        console.error('Preview load error:', err);
+        console.error('Preview load failed');
         if (activePreviewItemId !== recordId) return;
         loading.style.display = 'none';
         iframe.style.display = 'none';
@@ -1578,7 +1578,7 @@ async function loadAIClassifications(silent = false) {
         }
     } catch (error) {
         if (!silent) hideLoading();
-        console.error('AI Review load error:', error);
+        console.error('AI review load failed');
         if (!silent) {
             const container = document.getElementById('aiCardsContainer');
             container.innerHTML = `
@@ -2829,7 +2829,7 @@ async function loadReminders(silent = false) {
         filterReminders();
     } catch (error) {
         if (!silent) hideLoading();
-        console.error('Reminders load error:', error);
+        console.error('Reminders load failed');
         if (!silent) {
             document.getElementById('reminderTableContainer').innerHTML = `
                 <div class="empty-state">
@@ -3041,7 +3041,7 @@ function buildReminderTable(items, showDocs) {
             <tr data-report-id="${escapeAttr(r.report_id)}">
                 <td><input type="checkbox" class="reminder-checkbox" value="${escapeAttr(r.report_id)}" onchange="updateReminderSelectedCount()"></td>
                 <td>
-                    <strong class="client-link" onclick="viewClientDocs('${escapeAttr(r.report_id)}', '${escapeHtml(r.name)}', '${escapeHtml(r.email || '')}', '${r.year}')">
+                    <strong class="client-link" onclick="viewClientDocs('${escapeAttr(r.report_id)}', '${escapeAttr(r.name)}', '${escapeAttr(r.email || '')}', '${escapeAttr(r.year)}')">
                         ${escapeHtml(r.name)}
                     </strong>
                 </td>

@@ -24,6 +24,24 @@ function getCategoryIcon(emoji) {
     return CATEGORY_ICONS[emoji] || 'file-text';
 }
 
+/** Sanitize HTML: allow only <b> and <strong> tags, escape everything else */
+function sanitizeDocHtml(html) {
+    if (!html) return '';
+    const el = document.createElement('div');
+    el.textContent = html;
+    let safe = el.innerHTML;
+    safe = safe.replace(/&lt;b&gt;/gi, '<b>').replace(/&lt;\/b&gt;/gi, '</b>');
+    safe = safe.replace(/&lt;strong&gt;/gi, '<strong>').replace(/&lt;\/strong&gt;/gi, '</strong>');
+    return safe;
+}
+
+/** Escape all HTML for plain text content */
+function escapeHtml(text) {
+    const el = document.createElement('div');
+    el.textContent = text || '';
+    return el.innerHTML;
+}
+
 // Get URL params
 const params = new URLSearchParams(window.location.search);
 const reportId = params.get('report_id');
@@ -92,8 +110,8 @@ async function loadDocuments() {
         const displayNameEn = spouseName ? `${clientName} & ${spouseName}` : clientName;
 
         // Update subtitle
-        const subtitleHe = `${displayName} \u2022 שנת מס ${year}`;
-        const subtitleEn = `${displayNameEn} \u2022 Tax Year ${year}`;
+        const subtitleHe = `${escapeHtml(displayName)} \u2022 שנת מס ${escapeHtml(year)}`;
+        const subtitleEn = `${escapeHtml(displayNameEn)} \u2022 Tax Year ${escapeHtml(year)}`;
         document.getElementById('subtitle').innerHTML = `
             <span id="subtitle-he">${subtitleHe}</span>
             <span id="subtitle-en" class="hidden">${subtitleEn}</span>
@@ -117,7 +135,7 @@ async function loadDocuments() {
 
     } catch (error) {
         cancelEscalation();
-        console.error('Error:', error);
+        console.error('Document load failed');
 
         // Hide loading spinner on error
         document.getElementById('loading').style.display = 'none';
@@ -228,7 +246,7 @@ function renderDocuments() {
                 const rowClass = doc.status === 'Received' ? 'doc-row doc-received' : 'doc-row';
                 html += `<div class="${rowClass}">`;
                 html += `<i data-lucide="file" class="icon-sm doc-icon"></i>`;
-                html += `<span class="doc-name">${docName}</span>`;
+                html += `<span class="doc-name">${sanitizeDocHtml(docName)}</span>`;
 
                 html += `<span class="${badgeClass}">${badgeText}</span>`;
                 html += `</div>`;

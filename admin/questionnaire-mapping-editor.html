@@ -4,10 +4,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="referrer" content="no-referrer">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://unpkg.com https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline'; img-src 'self' https://flagcdn.com data:; connect-src 'self' https://liozshor.app.n8n.cloud; frame-src https://tally.so; font-src 'self'; object-src 'none'; base-uri 'self';">
     <title>מיפוי שאלון למסמכים - משרד רו"ח Client Name</title>
     <link rel="stylesheet" href="../assets/css/design-system.css">
     <link rel="stylesheet" href="css/style.css">
-    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+    <script src="https://unpkg.com/lucide@0.576.0/dist/umd/lucide.js" integrity="sha384-LtbHwh0Dk7CNRj/aAqgoRcw39+vnl76ZTZpFLynbvCTWPiic7gA3971bGQJaVRg9" crossorigin="anonymous"></script>
     <style>
         /* Mapping Editor specific styles */
         .mapping-card {
@@ -740,7 +742,7 @@
                 try {
                     data = JSON.parse(text);
                 } catch (e) {
-                    console.error('Invalid JSON response:', text);
+                    console.error('Invalid JSON response from server');
                     throw new Error('שרת לא החזיר תשובה תקינה');
                 }
 
@@ -844,7 +846,7 @@
 
             } catch (error) {
                 hideLoading();
-                console.error('Error loading data:', error);
+                console.error('Mapping data load failed');
                 showModal('error', 'שגיאה', 'לא ניתן לטעון את הנתונים');
             }
         }
@@ -1333,7 +1335,7 @@
                 try {
                     data = text ? JSON.parse(text) : {};
                 } catch (e) {
-                    console.error('Server response:', text);
+                    console.error('Unexpected server response');
                     throw new Error('תגובה לא תקינה מהשרת: ' + text.substring(0, 100));
                 }
 
@@ -1353,7 +1355,7 @@
 
             } catch (error) {
                 hideLoading();
-                console.error('Save error:', error);
+                console.error('Save operation failed');
                 showModal('error', 'שגיאה', 'לא ניתן לשמור: ' + error.message);
             }
         }
