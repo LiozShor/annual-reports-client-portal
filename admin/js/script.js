@@ -273,11 +273,11 @@ function renderClientsTable(clients) {
                     </span>
                 </td>
                 <td>
-                    <div class="docs-progress-cell">
+                    <div class="docs-progress-cell clickable-docs" onclick="toggleDocsPopover(event, '${escapeAttr(client.report_id)}', '${escapeAttr(client.name)}')" tabindex="0" role="button" title="לחץ לצפייה במסמכים">
+                        <span class="docs-count">${docsReceived}/${docsTotal}</span>
                         <div class="progress-bar">
                             <div class="progress-fill" style="width: ${progressPercent}%"></div>
                         </div>
-                        <span class="docs-count clickable-count" onclick="toggleDocsPopover(event, '${escapeAttr(client.report_id)}', '${escapeAttr(client.name)}')" tabindex="0" role="button" title="לחץ לצפייה במסמכים">${docsReceived}/${docsTotal}</span>
                     </div>
                 </td>
                 <td>
@@ -576,8 +576,9 @@ function closeDocsPopover() {
 async function fetchDocsForPopover(reportId, clientName) {
     try {
         const response = await fetchWithTimeout(
-            `${API_BASE}/get-client-documents?report_id=${reportId}&mode=office&token=${authToken}`,
-            {}, FETCH_TIMEOUTS.quick
+            `${API_BASE}/get-client-documents?report_id=${reportId}&mode=office`,
+            { headers: { 'Authorization': `Bearer ${authToken}` } },
+            FETCH_TIMEOUTS.quick
         );
         const data = await response.json();
         if (data.ok && data.documents) {
@@ -3041,9 +3042,9 @@ function buildReminderTable(items, showDocs) {
                 ${showDocs ? `
                 <td>
                     ${docsTotal > 0 ? `
-                        <div class="docs-progress-cell">
+                        <div class="docs-progress-cell clickable-docs" onclick="toggleDocsPopover(event, '${escapeAttr(r.report_id)}', '${escapeAttr(r.name)}')" tabindex="0" role="button" title="לחץ לצפייה במסמכים">
+                            <span class="docs-count">${docsReceived}/${docsTotal}</span>
                             <div class="progress-bar"><div class="progress-fill" style="width: ${progressPercent}%"></div></div>
-                            <span class="docs-count clickable-count" onclick="toggleDocsPopover(event, '${escapeAttr(r.report_id)}', '${escapeAttr(r.name)}')" tabindex="0" role="button" title="לחץ לצפייה במסמכים">${docsReceived}/${docsTotal}</span>
                         </div>
                     ` : '-'}
                 </td>
