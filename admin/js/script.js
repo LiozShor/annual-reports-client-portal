@@ -3847,10 +3847,12 @@ populateYearDropdowns();
 // Floating evidence tooltip (escapes overflow:hidden parents)
 (function () {
     let tip = null;
-    document.addEventListener('mouseenter', (e) => {
+    function getTrigger(e) {
         const el = e.target.nodeType === 1 ? e.target : e.target.parentElement;
-        if (!el) return;
-        const trigger = el.closest('.ai-evidence-trigger');
+        return el && el.closest('.ai-evidence-trigger');
+    }
+    document.addEventListener('mouseover', (e) => {
+        const trigger = getTrigger(e);
         if (!trigger) return;
         const text = trigger.getAttribute('data-tooltip');
         if (!text) return;
@@ -3864,7 +3866,6 @@ populateYearDropdowns();
         tip.style.top = (rect.bottom + 6) + 'px';
         tip.style.right = (window.innerWidth - rect.right) + 'px';
         tip.style.left = '';
-        // Ensure it doesn't overflow left edge
         requestAnimationFrame(() => {
             const tipRect = tip.getBoundingClientRect();
             if (tipRect.left < 8) {
@@ -3873,14 +3874,16 @@ populateYearDropdowns();
             }
         });
         tip.classList.add('visible');
-    }, true);
-    document.addEventListener('mouseleave', (e) => {
-        const el = e.target.nodeType === 1 ? e.target : e.target.parentElement;
-        if (!el) return;
-        const trigger = el.closest('.ai-evidence-trigger');
-        if (!trigger || !tip) return;
+    });
+    document.addEventListener('mouseout', (e) => {
+        if (!tip) return;
+        const trigger = getTrigger(e);
+        if (!trigger) return;
+        // Only hide if mouse actually left the trigger (not moving between children)
+        const related = e.relatedTarget;
+        if (related && trigger.contains(related)) return;
         tip.classList.remove('visible');
-    }, true);
+    });
 })();
 
 document.addEventListener('DOMContentLoaded', () => {
