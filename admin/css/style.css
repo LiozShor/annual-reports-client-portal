@@ -1415,9 +1415,6 @@ tr:hover .client-view-link {
     box-shadow: var(--shadow-md);
 }
 
-.ai-review-card:has(.ai-evidence-trigger:hover) {
-    overflow: visible;
-}
 
 .ai-review-card.removing {
     opacity: 0;
@@ -1616,12 +1613,10 @@ tr:hover .client-view-link {
     background: var(--primary-100);
 }
 
-.ai-evidence-trigger::after {
-    content: attr(data-tooltip);
-    position: absolute;
-    top: calc(100% + 6px);
-    right: 0;
-    z-index: 100;
+/* Floating tooltip (appended to body via JS) */
+.ai-evidence-tooltip {
+    position: fixed;
+    z-index: 9999;
     width: 300px;
     max-width: 90vw;
     padding: var(--sp-3);
@@ -1638,7 +1633,7 @@ tr:hover .client-view-link {
     transition: opacity 0.15s;
 }
 
-.ai-evidence-trigger:hover::after {
+.ai-evidence-tooltip.visible {
     opacity: 1;
 }
 
