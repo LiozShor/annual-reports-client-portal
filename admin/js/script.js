@@ -3848,7 +3848,9 @@ populateYearDropdowns();
 (function () {
     let tip = null;
     document.addEventListener('mouseenter', (e) => {
-        const trigger = e.target.closest('.ai-evidence-trigger');
+        const el = e.target.nodeType === 1 ? e.target : e.target.parentElement;
+        if (!el) return;
+        const trigger = el.closest('.ai-evidence-trigger');
         if (!trigger) return;
         const text = trigger.getAttribute('data-tooltip');
         if (!text) return;
@@ -3873,7 +3875,9 @@ populateYearDropdowns();
         tip.classList.add('visible');
     }, true);
     document.addEventListener('mouseleave', (e) => {
-        const trigger = e.target.closest('.ai-evidence-trigger');
+        const el = e.target.nodeType === 1 ? e.target : e.target.parentElement;
+        if (!el) return;
+        const trigger = el.closest('.ai-evidence-trigger');
         if (!trigger || !tip) return;
         tip.classList.remove('visible');
     }, true);
