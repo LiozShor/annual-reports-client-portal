@@ -1415,6 +1415,10 @@ tr:hover .client-view-link {
     box-shadow: var(--shadow-md);
 }
 
+.ai-review-card:has(.ai-evidence-trigger:hover) {
+    overflow: visible;
+}
+
 .ai-review-card.removing {
     opacity: 0;
     transform: translateX(40px);
