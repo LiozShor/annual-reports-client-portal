@@ -2394,6 +2394,10 @@ function animateAndRemoveAI(recordId) {
 
     const card = document.querySelector(`.ai-review-card[data-id="${recordId}"]`);
     if (card) {
+        // Lock current height so CSS can transition max-height to 0
+        card.style.maxHeight = card.offsetHeight + 'px';
+        // Force layout reflow before adding the class
+        card.offsetHeight; // eslint-disable-line no-unused-expressions
         card.classList.add('removing');
         setTimeout(() => {
             card.remove();
