@@ -277,11 +277,11 @@ function renderClientsTable(clients) {
                         <div class="progress-bar">
                             <div class="progress-fill" style="width: ${progressPercent}%"></div>
                         </div>
-                        <span class="docs-count">${docsReceived}/${docsTotal}</span>
+                        <span class="docs-count clickable-count" onclick="toggleDocsPopover(event, '${escapeAttr(client.report_id)}', '${escapeAttr(client.name)}')" tabindex="0" role="button" title="לחץ לצפייה במסמכים">${docsReceived}/${docsTotal}</span>
                     </div>
                 </td>
                 <td>
-                    <span class="missing-count ${missingCount > 0 ? 'has-missing' : 'all-done'}">${missingCount > 0 ? missingCount : '✓'}</span>
+                    <span class="missing-count clickable-count ${missingCount > 0 ? 'has-missing' : 'all-done'}" onclick="toggleDocsPopover(event, '${escapeAttr(client.report_id)}', '${escapeAttr(client.name)}')" tabindex="0" role="button" title="לחץ לצפייה במסמכים">${missingCount > 0 ? missingCount : '✓'}</span>
                 </td>
                 <td>
                     ${client.stage === '1-Send_Questionnaire' ?
@@ -516,10 +516,148 @@ function recalculateStats() {
     document.getElementById('stat-stage5').textContent = counts.stage5;
 }
 
-// Close stage dropdown on Escape
+// Close dropdowns/popovers on Escape; Enter on clickable counts triggers click
 document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') closeStageDropdown();
+    if (e.key === 'Escape') {
+        closeStageDropdown();
+        closeDocsPopover();
+    }
+    if (e.key === 'Enter' && e.target.classList.contains('clickable-count')) {
+        e.target.click();
+    }
 });
+
+// ==================== DOCS POPOVER ====================
+
+const docsCache = new Map();
+
+function toggleDocsPopover(event, reportId, clientName) {
+    event.stopPropagation();
+    const popover = document.getElementById('docsPopover');
+
+    // Toggle off if already showing for this report
+    if (popover.style.display !== 'none' && popover.dataset.reportId === reportId) {
+        closeDocsPopover();
+        return;
+    }
+
+    const rect = event.currentTarget.getBoundingClientRect();
+    popover.dataset.reportId = reportId;
+
+    // Position below the clicked element
+    popover.style.top = (rect.bottom + 6) + 'px';
+    popover.style.right = (window.innerWidth - rect.right) + 'px';
+    popover.style.left = 'auto';
+    popover.style.display = 'block';
+
+    // Show loading or cached content
+    if (docsCache.has(reportId)) {
+        renderDocsPopover(popover, docsCache.get(reportId), clientName);
+    } else {
+        popover.innerHTML = '<div class="docs-popover-loading">טוען מסמכים...</div>';
+        fetchDocsForPopover(reportId, clientName);
+    }
+
+    requestAnimationFrame(() => {
+        document.addEventListener('click', _closeDocsPopoverOnClick, { once: true });
+    });
+}
+
+function _closeDocsPopoverOnClick() {
+    closeDocsPopover();
+}
+
+function closeDocsPopover() {
+    const popover = document.getElementById('docsPopover');
+    if (popover) popover.style.display = 'none';
+    document.removeEventListener('click', _closeDocsPopoverOnClick);
+}
+
+async function fetchDocsForPopover(reportId, clientName) {
+    try {
+        const response = await fetchWithTimeout(
+            `${API_BASE}/get-client-documents?report_id=${reportId}&mode=office&token=${authToken}`,
+            {}, FETCH_TIMEOUTS.quick
+        );
+        const data = await response.json();
+        if (data.ok && data.documents) {
+            docsCache.set(reportId, data.documents);
+            // Only render if popover still showing for this report
+            const popover = document.getElementById('docsPopover');
+            if (popover.style.display !== 'none' && popover.dataset.reportId === reportId) {
+                renderDocsPopover(popover, data.documents, clientName);
+            }
+        } else {
+            const popover = document.getElementById('docsPopover');
+            if (popover.dataset.reportId === reportId) {
+                popover.innerHTML = '<div class="docs-popover-loading">לא ניתן לטעון מסמכים</div>';
+            }
+        }
+    } catch {
+        const popover = document.getElementById('docsPopover');
+        if (popover.dataset.reportId === reportId) {
+            popover.innerHTML = '<div class="docs-popover-loading">שגיאה בטעינה</div>';
+        }
+    }
+}
+
+function renderDocsPopover(popover, documents, clientName) {
+    const STATUS_CONFIG = {
+        'Received':        { icon: '✓', iconClass: 'received', label: 'התקבלו' },
+        'Required_Missing': { icon: '✗', iconClass: 'missing', label: 'חסרים' },
+        'Requires_Fix':    { icon: '⚠', iconClass: 'fix', label: 'לתיקון' },
+        'Waived':          { icon: '–', iconClass: 'waived', label: 'הוסרו' }
+    };
+
+    // Group by status
+    const groups = {};
+    for (const doc of documents) {
+        const status = doc.status || 'Required_Missing';
+        if (!groups[status]) groups[status] = [];
+        groups[status].push(doc);
+    }
+
+    let html = `<div class="docs-popover-title">${escapeHtml(clientName)} — ${documents.length} מסמכים</div>`;
+
+    // Show missing first, then fix, then received, then waived
+    const order = ['Required_Missing', 'Requires_Fix', 'Received', 'Waived'];
+    for (const status of order) {
+        const docs = groups[status];
+        if (!docs || docs.length === 0) continue;
+        const cfg = STATUS_CONFIG[status] || { icon: '?', iconClass: 'missing', label: status };
+
+        html += `<div class="docs-popover-group">`;
+        html += `<div class="docs-popover-group-label">${cfg.label} (${docs.length})</div>`;
+        for (const doc of docs) {
+            html += `<div class="docs-popover-item">
+                <span class="docs-popover-icon ${cfg.iconClass}">${cfg.icon}</span>
+                <span>${escapeHtml(doc.title || doc.name || 'מסמך')}</span>
+            </div>`;
+        }
+        html += `</div>`;
+    }
+
+    popover.innerHTML = html;
+}
+
+// ==================== COPY TO CLIPBOARD ====================
+
+function copyToClipboard(text, btn) {
+    navigator.clipboard.writeText(text).then(() => {
+        showAIToast('הועתק', 'success');
+        if (btn) {
+            const origHTML = btn.innerHTML;
+            btn.innerHTML = '<i data-lucide="check" class="icon-xs"></i>';
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+            setTimeout(() => {
+                btn.innerHTML = origHTML;
+                if (typeof lucide !== 'undefined') lucide.createIcons();
+            }, 1500);
+        }
+    }).catch(() => {
+        showAIToast('שגיאה בהעתקה', 'danger');
+    });
+}
 
 function refreshData() {
     const activeTab = document.querySelector('.tab-content.active')?.id?.replace('tab-', '');
@@ -850,8 +988,17 @@ function renderPendingClients() {
         html += `
             <tr>
                 <td><input type="checkbox" class="client-checkbox" value="${client.report_id}" onchange="updateSelectedCount()"></td>
-                <td>${escapeHtml(client.name)}</td>
-                <td>${escapeHtml(client.email)}</td>
+                <td>
+                    <strong class="client-link" onclick="viewClientDocs('${escapeAttr(client.report_id)}', '${escapeAttr(client.name)}', '${escapeAttr(client.email || '')}', '${escapeAttr(client.year || '')}')">
+                        ${escapeHtml(client.name)}
+                    </strong>
+                </td>
+                <td>
+                    <div class="email-cell">
+                        <a href="mailto:${escapeAttr(client.email)}" class="email-link">${escapeHtml(client.email)}</a>
+                        <button class="copy-email-btn" onclick="event.stopPropagation(); copyToClipboard('${escapeAttr(client.email)}', this)" title="העתק אימייל"><i data-lucide="copy" class="icon-xs"></i></button>
+                    </div>
+                </td>
             </tr>
         `;
     }
@@ -991,9 +1138,14 @@ function renderReviewTable(queue) {
                         ${escapeHtml(client.name)}
                     </strong>
                 </td>
-                <td>${escapeHtml(client.email)}</td>
+                <td>
+                    <div class="email-cell">
+                        <a href="mailto:${escapeAttr(client.email)}" class="email-link">${escapeHtml(client.email)}</a>
+                        <button class="copy-email-btn" onclick="event.stopPropagation(); copyToClipboard('${escapeAttr(client.email)}', this)" title="העתק אימייל"><i data-lucide="copy" class="icon-xs"></i></button>
+                    </div>
+                </td>
                 <td>${client.year}</td>
-                <td>${client.docs_received}/${client.docs_total}</td>
+                <td><span class="docs-count clickable-count" onclick="toggleDocsPopover(event, '${escapeAttr(client.report_id)}', '${escapeAttr(client.name)}')" tabindex="0" role="button" title="לחץ לצפייה במסמכים">${client.docs_received}/${client.docs_total}</span></td>
                 <td>${dateStr}</td>
                 <td><span class="waiting-badge ${waitingClass}">${waitingText}</span></td>
                 <td>
@@ -1927,7 +2079,7 @@ function renderAICard(item) {
             <div class="ai-card-top" onclick="loadDocPreview('${escapeAttr(item.id)}')">
                 <div class="ai-file-info">
                     <span class="ai-file-source-label">📎 קובץ מקור:</span>
-                    <span class="ai-file-name" ${senderTooltip ? `title="${escapeAttr(senderTooltip)}"` : ''}>${escapeHtml(item.attachment_name || 'ללא שם')}</span>
+                    <span class="ai-file-name clickable-preview" ${senderTooltip ? `title="${escapeAttr(senderTooltip)}"` : ''}>${escapeHtml(item.attachment_name || 'ללא שם')}</span>
                     ${item.is_duplicate ? '<span class="ai-duplicate-badge" title="קובץ כפול — אותו קובץ כבר קיים במערכת">כפול</span>' : ''}
                     ${item.is_unrequested ? '<span class="ai-unrequested-badge" title="מסמך שלא נדרש מהלקוח">לא נדרש</span>' : ''}
                     ${evidenceIcon}
@@ -2891,7 +3043,7 @@ function buildReminderTable(items, showDocs) {
                     ${docsTotal > 0 ? `
                         <div class="docs-progress-cell">
                             <div class="progress-bar"><div class="progress-fill" style="width: ${progressPercent}%"></div></div>
-                            <span class="docs-count">${docsReceived}/${docsTotal}</span>
+                            <span class="docs-count clickable-count" onclick="toggleDocsPopover(event, '${escapeAttr(r.report_id)}', '${escapeAttr(r.name)}')" tabindex="0" role="button" title="לחץ לצפייה במסמכים">${docsReceived}/${docsTotal}</span>
                         </div>
                     ` : '-'}
                 </td>
