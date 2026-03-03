@@ -26,6 +26,17 @@ let pendingTemplate = null; // Template awaiting detail input
 let apiTemplates = [];      // Templates from Airtable (SSOT)
 let apiCategories = [];     // Categories from Airtable (SSOT)
 
+/** Sanitize HTML: allow only <b> and <strong> tags, escape everything else */
+function sanitizeDocHtml(html) {
+    if (!html) return '';
+    const el = document.createElement('div');
+    el.textContent = html;
+    let safe = el.innerHTML;
+    safe = safe.replace(/&lt;b&gt;/gi, '<b>').replace(/&lt;\/b&gt;/gi, '</b>');
+    safe = safe.replace(/&lt;strong&gt;/gi, '<strong>').replace(/&lt;\/strong&gt;/gi, '</strong>');
+    return safe;
+}
+
 // Enhanced operations state
 let markedForRestore = new Set();   // doc IDs to un-waive
 let statusChanges = new Map();      // docId → newStatus
@@ -177,7 +188,7 @@ async function loadDocuments() {
         setTimeout(initIcons, 50);
     } catch (error) {
         cleanupEscalation();
-        console.error(error);
+        console.error('Document manager load failed');
         document.getElementById('loading').style.display = 'none';
         showAlert(getErrorMessage(error, 'he'), 'error');
     }
@@ -284,7 +295,7 @@ function displayDocuments() {
                             : ''
                         }
                         <span class="document-icon"><i data-lucide="file-text" class="icon-sm"></i></span>
-                        <div class="document-name" id="docname-${doc.id}">${displayName}</div>
+                        <div class="document-name" id="docname-${doc.id}">${sanitizeDocHtml(displayName)}</div>
                         <button type="button" class="name-edit-btn${isWaived ? ' action-hidden' : ''}"
                             ${!isWaived ? `onclick="startNameEdit('${doc.id}')"` : ''}
                             title="שנה שם מסמך"><i data-lucide="pencil" class="icon-xs"></i></button>
@@ -1187,7 +1198,7 @@ async function confirmSubmit() {
             throw new Error('Server error');
         }
     } catch (error) {
-        console.error(error);
+        console.error('Save operation failed');
         showAlert(getErrorMessage(error, 'he'), 'error');
     } finally {
         _submitLocked = false;
