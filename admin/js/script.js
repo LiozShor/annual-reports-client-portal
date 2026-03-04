@@ -255,7 +255,7 @@ function renderClientsTable(clients) {
                     <div class="client-name-cell">
                         <strong
                             class="client-link"
-                            onclick="viewClientDocs('${escapeAttr(client.report_id)}', '${escapeAttr(client.name)}', '${escapeAttr(client.email || '')}', '${escapeAttr(client.year)}')"
+                            onclick="viewClientDocs('${escapeAttr(client.report_id)}')"
                             title="${escapeHtml(client.email || '')}"
                         >
                             ${escapeHtml(client.name)}
@@ -1048,7 +1048,7 @@ function renderPendingClients() {
             <tr>
                 <td><input type="checkbox" class="client-checkbox" value="${client.report_id}" onchange="updateSelectedCount()"></td>
                 <td>
-                    <strong class="client-link" onclick="viewClientDocs('${escapeAttr(client.report_id)}', '${escapeAttr(client.name)}', '${escapeAttr(client.email || '')}', '${escapeAttr(client.year || '')}')">
+                    <strong class="client-link" onclick="viewClientDocs('${escapeAttr(client.report_id)}')">
                         ${escapeHtml(client.name)}
                     </strong>
                 </td>
@@ -1192,7 +1192,7 @@ function renderReviewTable(queue) {
                 <td>
                     <strong
                         class="client-link"
-                        onclick="viewClientDocs('${escapeAttr(client.report_id)}', '${escapeAttr(client.name)}', '${escapeAttr(client.email || '')}', '${escapeAttr(client.year)}')"
+                        onclick="viewClientDocs('${escapeAttr(client.report_id)}')"
                     >
                         ${escapeHtml(client.name)}
                     </strong>
@@ -3483,7 +3483,7 @@ function buildReminderTable(items, showDocs) {
             <tr data-report-id="${escapeAttr(r.report_id)}">
                 <td><input type="checkbox" class="reminder-checkbox" value="${escapeAttr(r.report_id)}" onchange="updateReminderSelectedCount()"></td>
                 <td>
-                    <strong class="client-link" onclick="viewClientDocs('${escapeAttr(r.report_id)}', '${escapeAttr(r.name)}', '${escapeAttr(r.email || '')}', '${escapeAttr(r.year)}')">
+                    <strong class="client-link" onclick="viewClientDocs('${escapeAttr(r.report_id)}')">
                         ${escapeHtml(r.name)}
                     </strong>
                 </td>
@@ -3904,21 +3904,9 @@ function viewClient(reportId) {
     window.open(`https://liozshor.github.io/annual-reports-client-portal/view-documents.html?report_id=${reportId}`, '_blank');
 }
 
-function viewClientDocs(reportId, name, email, year) {
-    // Navigate in same tab
-    const params = new URLSearchParams({
-        report_id: reportId || '',
-        client_name: name,
-        email: email,
-        year: year
-    });
-    // Pass spouse_name if available in clientsData (belt & suspenders — document-manager also reads from API)
-    const client = clientsData.find(c => c.report_id === reportId);
-    if (client && client.spouse_name) {
-        params.set('spouse_name', client.spouse_name);
-    }
-
-    window.location.href = `../document-manager.html?${params.toString()}`;
+function viewClientDocs(reportId) {
+    // SEC-004: Only pass report_id — document-manager fetches all data from API
+    window.location.href = `../document-manager.html?report_id=${encodeURIComponent(reportId)}`;
 }
 
 function exportToExcel() {

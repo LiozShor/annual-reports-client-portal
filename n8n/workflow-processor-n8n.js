@@ -816,7 +816,8 @@ function buildActionButtonsHTML(params, SECRET) {
 
   const baseUrl = 'https://liozshor.app.n8n.cloud/webhook';
   const approveUrl = `${baseUrl}/approve-and-send?report_id=${reportId}&token=${SECRET}`;
-  const editUrl = `https://liozshor.github.io/annual-reports-client-portal/document-manager.html?report_id=${reportId}&client_name=${encodeURIComponent(clientName)}&spouse_name=${encodeURIComponent(spouseName || '')}&year=${year}`;
+  // SEC-004: Only report_id in URL — document-manager fetches client data from API
+  const editUrl = `https://liozshor.github.io/annual-reports-client-portal/document-manager.html?report_id=${reportId}`;
 
   return `
 <div style="margin-top:30px;padding:20px;background:#e3f2fd;border-radius:8px;text-align:center;">

@@ -3,12 +3,12 @@
    SSOT: all data (docs, categories, templates) from API (Airtable)
    =========================================== */
 
-// Get URL parameters
+// SEC-004: Only read report_id from URL — client data fetched from API
 const params = new URLSearchParams(window.location.search);
 const REPORT_ID = params.get('report_id');
-const CLIENT_NAME = params.get('client_name');
-let SPOUSE_NAME = params.get('spouse_name') || '';
-const YEAR = params.get('year');
+let CLIENT_NAME = '';
+let SPOUSE_NAME = '';
+let YEAR = '';
 const API_BASE = 'https://liozshor.app.n8n.cloud/webhook';
 
 // Admin auth token — required for this office-only page
@@ -81,10 +81,10 @@ const STATUS_LABELS = {
     'Waived': 'ויתור'
 };
 
-// Initialize
-document.getElementById('clientName').textContent = CLIENT_NAME || '-';
-document.getElementById('spouseName').textContent = SPOUSE_NAME || '-';
-document.getElementById('year').textContent = YEAR || '-';
+// Initialize — header values populated after API load (SEC-004: no PII in URL)
+document.getElementById('clientName').textContent = '-';
+document.getElementById('spouseName').textContent = '-';
+document.getElementById('year').textContent = '-';
 
 // Initialize Lucide icons when DOM is ready
 function initIcons() {
@@ -147,11 +147,21 @@ async function loadDocuments() {
         cleanupEscalation();
         const data = await response.json();
 
-        // Update spouse name from API response (authoritative source)
+        // SEC-004: Populate all client data from API (not URL)
+        if (data.client_name) {
+            CLIENT_NAME = data.client_name;
+            const nameEl = document.getElementById('clientName');
+            if (nameEl) nameEl.textContent = CLIENT_NAME;
+        }
         if (data.spouse_name) {
             SPOUSE_NAME = data.spouse_name;
             const spouseEl = document.getElementById('spouseName');
             if (spouseEl) spouseEl.textContent = SPOUSE_NAME;
+        }
+        if (data.year) {
+            YEAR = data.year;
+            const yearEl = document.getElementById('year');
+            if (yearEl) yearEl.textContent = YEAR;
         }
 
         // Handle case where report is found but stage is 1 (Not Started)
