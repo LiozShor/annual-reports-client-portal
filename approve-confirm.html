@@ -134,8 +134,7 @@
             try {
                 const res = await fetch(CONFIRM_ENDPOINT, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ report_id: reportId, token })
+                    body: new URLSearchParams({ report_id: reportId, token })
                 });
 
                 if (!res.ok) throw new Error(`HTTP ${res.status}`);
