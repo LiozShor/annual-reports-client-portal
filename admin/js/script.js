@@ -3,13 +3,6 @@ const API_BASE = 'https://liozshor.app.n8n.cloud/webhook';
 const ADMIN_TOKEN_KEY = 'admin_token';
 const SESSION_FLAG_KEY = 'admin_session_active';
 
-// One-time migration: rename legacy localStorage key to 'admin_token'
-(function() {
-    const OLD = 'QKiwUBXVH@%#1gD7t@rB]<,dM.[NC5b_';
-    const v = localStorage.getItem(OLD);
-    if (v) { localStorage.setItem('admin_token', v); localStorage.removeItem(OLD); }
-})();
-
 // State
 let authToken = localStorage.getItem(ADMIN_TOKEN_KEY) || '';
 let clientsData = [];
@@ -283,7 +276,7 @@ function renderClientsTable(clients) {
                         >
                             ${escapeHtml(client.name)}
                         </strong>
-                        <a class="client-view-link" href="javascript:void(0)" onclick="event.stopPropagation(); viewClient('${client.report_id}')" title="צפייה כלקוח">
+                        <a class="client-view-link" href="javascript:void(0)" onclick="event.stopPropagation(); viewClient('${escapeAttr(client.report_id)}')" title="צפייה כלקוח">
                             <i data-lucide="external-link" class="icon-xs"></i>
                         </a>
                     </div>
@@ -308,7 +301,7 @@ function renderClientsTable(clients) {
                 </td>
                 <td>
                     ${client.stage === '1-Send_Questionnaire' ?
-                `<button class="action-btn send" onclick="sendSingle('${client.report_id}')" title="שלח שאלון"><i data-lucide="send" class="icon-sm"></i></button>` :
+                `<button class="action-btn send" onclick="sendSingle('${escapeAttr(client.report_id)}')" title="שלח שאלון"><i data-lucide="send" class="icon-sm"></i></button>` :
                 ''}
                     ${(client.stage === '2-Waiting_For_Answers' || client.stage === '3-Collecting_Docs') ?
                 `<button class="action-btn reminder-set-btn" onclick="setManualReminder('${escapeAttr(client.report_id)}', '${escapeAttr(client.name)}')" title="הגדר תזכורת"><i data-lucide="bell-plus" class="icon-sm"></i></button>` :
@@ -1238,7 +1231,7 @@ function renderReviewTable(queue) {
                 <td>${dateStr}</td>
                 <td><span class="waiting-badge ${waitingClass}">${waitingText}</span></td>
                 <td>
-                    <button class="action-btn view" onclick="viewClient('${client.report_id}')" title="צפה בתיק"><i data-lucide="eye" class="icon-sm"></i></button>
+                    <button class="action-btn view" onclick="viewClient('${escapeAttr(client.report_id)}')" title="צפה בתיק"><i data-lucide="eye" class="icon-sm"></i></button>
                     <button class="action-btn complete" onclick="markComplete('${escapeAttr(client.report_id)}', '${escapeAttr(client.name)}')" title="סמן כהושלם"><i data-lucide="circle-check" class="icon-sm"></i></button>
                 </td>
             </tr>
@@ -3754,7 +3747,7 @@ async function executeReminderAction(action, reportIds, value, forceOverride) {
 function setManualReminder(reportId, clientName) {
     const today = new Date().toISOString().split('T')[0];
     const msgEl = document.getElementById('confirmDialogMessage');
-    msgEl.innerHTML = `להגדיר תזכורת ל-${clientName}?<br><label style="display:block;margin-top:12px;font-size:14px;color:var(--text-secondary)">תאריך תזכורת:</label><input type="date" id="reminderDateInput" value="${today}" style="margin-top:4px;padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:14px;width:100%;direction:ltr">`;
+    msgEl.innerHTML = `להגדיר תזכורת ל-${escapeHtml(clientName)}?<br><label style="display:block;margin-top:12px;font-size:14px;color:var(--text-secondary)">תאריך תזכורת:</label><input type="date" id="reminderDateInput" value="${today}" style="margin-top:4px;padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:14px;width:100%;direction:ltr">`;
     _confirmCallback = () => {
         const date = document.getElementById('reminderDateInput').value || today;
         executeReminderAction('change_date', [reportId], date);
@@ -3907,12 +3900,13 @@ function editClientMax(reportId, cell) {
 function restoreMaxCell(cell, r, reportId) {
     const hasCustom = r.reminder_max != null;
     const effectiveMax = hasCustom ? r.reminder_max : reminderDefaultMax;
+    const safeMax = isFinite(effectiveMax) ? String(effectiveMax) : '—';
     if (hasCustom) {
         cell.className = 'reminder-max-cell reminder-max-custom';
-        cell.innerHTML = `${effectiveMax} <button class="reminder-reset-btn" onclick="event.stopPropagation(); resetClientMax('${escapeAttr(reportId)}')" title="איפוס לברירת מחדל">↺</button>`;
+        cell.innerHTML = `${safeMax} <button class="reminder-reset-btn" onclick="event.stopPropagation(); resetClientMax('${escapeAttr(reportId)}')" title="איפוס לברירת מחדל">↺</button>`;
     } else if (effectiveMax != null) {
         cell.className = 'reminder-max-cell reminder-max-default';
-        cell.innerHTML = `${effectiveMax}`;
+        cell.innerHTML = `${safeMax}`;
     } else {
         cell.className = 'reminder-max-cell reminder-max-unlimited';
         cell.innerHTML = 'ללא הגבלה';
@@ -4008,7 +4002,7 @@ function toggleArchiveMode() {
 
 function viewClient(reportId) {
     // Admin token is already in localStorage (same origin) — view-documents.html reads it directly
-    window.open(`https://liozshor.github.io/annual-reports-client-portal/view-documents.html?report_id=${reportId}`, '_blank');
+    window.open(`https://liozshor.github.io/annual-reports-client-portal/view-documents.html?report_id=${encodeURIComponent(reportId)}`, '_blank');
 }
 
 function viewClientDocs(reportId) {

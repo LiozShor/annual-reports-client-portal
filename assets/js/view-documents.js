@@ -127,7 +127,7 @@ async function loadDocuments() {
         const email = data.support_email || 'reports@moshe-atsits.co.il';
         document.getElementById('email-display').textContent = email;
         document.getElementById('email-display-en').textContent = email;
-        document.getElementById('email-button').href = `mailto:${email}?subject=מסמכים לדוח שנתי ${year} - ${displayName}`;
+        document.getElementById('email-button').href = `mailto:${email}?subject=${encodeURIComponent(`מסמכים לדוח שנתי ${year} - ${displayName}`)}`;
 
         // Set default language based on questionnaire language
         currentLang = sourceLanguage || 'he';
@@ -186,7 +186,7 @@ function renderFromData(data) {
     const email = data.support_email || 'reports@moshe-atsits.co.il';
     document.getElementById('email-display').textContent = email;
     document.getElementById('email-display-en').textContent = email;
-    document.getElementById('email-button').href = `mailto:${email}?subject=מסמכים לדוח שנתי ${escapeHtml(year)} - ${escapeHtml(displayName)}`;
+    document.getElementById('email-button').href = `mailto:${email}?subject=${encodeURIComponent(`מסמכים לדוח שנתי ${year} - ${displayName}`)}`;
 
     currentLang = sourceLanguage || 'he';
     switchLanguage(currentLang);
