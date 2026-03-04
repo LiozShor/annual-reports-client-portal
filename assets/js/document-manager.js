@@ -12,7 +12,7 @@ let YEAR = '';
 const API_BASE = 'https://liozshor.app.n8n.cloud/webhook';
 
 // Admin auth token — required for this office-only page
-const ADMIN_TOKEN = localStorage.getItem('QKiwUBXVH@%#1gD7t@rB]<,dM.[NC5b_') || '';
+const ADMIN_TOKEN = localStorage.getItem('admin_token') || '';
 if (!ADMIN_TOKEN) {
     window.location.replace('admin/index.html');
 }
@@ -1266,7 +1266,7 @@ async function confirmSendQuestionnaire() {
     if (_sendQuestionnaireLocked) return;
     if (!confirm("האם אתה בטוח שברצונך לשלוח את השאלון ללקוח זה?")) return;
 
-    const token = localStorage.getItem('QKiwUBXVH@%#1gD7t@rB]<,dM.[NC5b_');
+    const token = localStorage.getItem('admin_token');
     if (!token) {
         alert("שגיאת הרשאה: עליך להתחבר דרך פורטל הניהול.");
         return;

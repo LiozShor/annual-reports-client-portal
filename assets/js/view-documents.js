@@ -49,7 +49,7 @@ const reportId = params.get('report_id');
 // Auth tokens — never exposed in the page URL
 // Client flow: token stored in sessionStorage by landing.js (or URL param for old links)
 // Admin flow: admin session token already in localStorage from admin login
-const ADMIN_TOKEN_KEY = 'QKiwUBXVH@%#1gD7t@rB]<,dM.[NC5b_';
+const ADMIN_TOKEN_KEY = 'admin_token';
 const clientToken = sessionStorage.getItem('client_doc_token') || params.get('token') || '';
 const adminToken = localStorage.getItem(ADMIN_TOKEN_KEY) || '';
 
@@ -96,7 +96,11 @@ async function loadDocuments() {
         document.getElementById('loading').style.display = 'none';
 
         if (!data.ok) {
-            showError(data.error || 'Error loading documents / שגיאה בטעינת המסמכים');
+            if (data.error === 'TOKEN_EXPIRED') {
+                showLinkExpired();
+            } else {
+                showError(data.error || 'Error loading documents / שגיאה בטעינת המסמכים');
+            }
             return;
         }
 
@@ -322,5 +326,12 @@ function showError(message) {
     document.getElementById('loading').style.display = 'none';
     const errorDiv = document.getElementById('error');
     errorDiv.textContent = message;
+    errorDiv.style.display = 'block';
+}
+
+function showLinkExpired() {
+    document.getElementById('loading').style.display = 'none';
+    const errorDiv = document.getElementById('error');
+    errorDiv.innerHTML = '<strong>הקישור פג תוקף</strong> — פנה למשרד לקבלת קישור חדש.<br><span style="font-size:0.9em;opacity:0.8">Link expired — please contact the office for a new link.</span>';
     errorDiv.style.display = 'block';
 }

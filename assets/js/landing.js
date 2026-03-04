@@ -97,7 +97,11 @@ async function checkExistingSubmission() {
 
         const data = await response.json();
         if (data && data.ok === false) {
-            showError('Invalid link or report not found. Please contact the office.');
+            if (data.error === 'TOKEN_EXPIRED') {
+                showLinkExpired();
+            } else {
+                showError('Invalid link or report not found. Please contact the office.');
+            }
             return;
         }
 
@@ -309,6 +313,24 @@ function showError(msg) {
             </div>
             <h3>Error</h3>
             <p>${msg}</p>
+        </div>
+    `;
+    reinitIcons();
+}
+
+function showLinkExpired() {
+    const content = document.getElementById('content');
+    content.innerHTML = `
+        <div class="error-state bilingual" role="alert" aria-live="assertive">
+            <div class="error-icon-wrapper" style="margin: 0 auto var(--sp-4)">
+                ${lucideIcon('clock', 'icon-lg')}
+            </div>
+            <h3>הקישור פג תוקף</h3>
+            <p>הקישור שלך פג תוקפו. אנא פנה למשרד כדי לקבל קישור חדש.</p>
+            <div class="en" style="margin-top: var(--sp-4); border-top: 1px solid var(--neutral-200); padding-top: var(--sp-4)">
+                <h3>Link Expired</h3>
+                <p>Your link has expired. Please contact the office to receive a new link.</p>
+            </div>
         </div>
     `;
     reinitIcons();
