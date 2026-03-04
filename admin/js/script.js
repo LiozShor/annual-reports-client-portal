@@ -383,6 +383,63 @@ function sortClients(clients) {
     });
 }
 
+// ==================== FLOATING ELEMENT POSITIONING ====================
+
+/**
+ * Position a fixed floating element relative to a trigger, with flip/shift/size-constrain.
+ * @param {Element} triggerEl - The element that triggers the floating element
+ * @param {Element} floatingEl - The floating element to position (must be position:fixed)
+ * @param {Object} [opts] - Options
+ * @param {number} [opts.gap=6] - Gap between trigger and floating element
+ * @param {number} [opts.padding=8] - Viewport edge padding
+ */
+function positionFloating(triggerEl, floatingEl, opts = {}) {
+    const gap = opts.gap ?? 6;
+    const pad = opts.padding ?? 8;
+    const rect = triggerEl.getBoundingClientRect();
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+
+    // Temporarily show to measure
+    const prevDisplay = floatingEl.style.display;
+    floatingEl.style.visibility = 'hidden';
+    floatingEl.style.display = 'block';
+    const floatRect = floatingEl.getBoundingClientRect();
+    const floatW = floatRect.width;
+    const floatH = floatRect.height;
+    floatingEl.style.visibility = '';
+    floatingEl.style.display = prevDisplay;
+
+    // Flip: pick side with more room
+    const spaceBelow = vh - rect.bottom - gap;
+    const spaceAbove = rect.top - gap;
+    const placeAbove = spaceBelow < floatH && spaceAbove > spaceBelow;
+    const side = placeAbove ? 'top' : 'bottom';
+
+    if (side === 'bottom') {
+        floatingEl.style.top = (rect.bottom + gap) + 'px';
+        floatingEl.style.bottom = '';
+    } else {
+        floatingEl.style.top = '';
+        floatingEl.style.bottom = (vh - rect.top + gap) + 'px';
+    }
+
+    // Shift: align right edge to trigger, clamp horizontally
+    let rightPos = vw - rect.right;
+    const minRight = pad;
+    const maxRight = vw - floatW - pad;
+    rightPos = Math.max(minRight, Math.min(rightPos, maxRight));
+    floatingEl.style.right = rightPos + 'px';
+    floatingEl.style.left = 'auto';
+
+    // Size-constrain: dynamic max-height
+    const availableSpace = (side === 'bottom' ? spaceBelow : spaceAbove) - pad;
+    floatingEl.style.maxHeight = Math.max(availableSpace, 120) + 'px';
+
+    // Direction attribute for CSS animations
+    floatingEl.setAttribute('data-side', side);
+}
+
 // ==================== STAGE DROPDOWN ====================
 
 function openStageDropdown(event, reportId, currentStage) {
@@ -405,10 +462,7 @@ function openStageDropdown(event, reportId, currentStage) {
 
     dropdown.innerHTML = html;
 
-    // Position below badge (RTL-aware)
-    dropdown.style.top = (rect.bottom + 6) + 'px';
-    dropdown.style.right = (window.innerWidth - rect.right) + 'px';
-    dropdown.style.left = 'auto';
+    positionFloating(event.currentTarget, dropdown);
     dropdown.style.display = 'block';
 
     if (typeof lucide !== 'undefined') lucide.createIcons();
@@ -541,13 +595,9 @@ function toggleDocsPopover(event, reportId, clientName) {
         return;
     }
 
-    const rect = event.currentTarget.getBoundingClientRect();
     popover.dataset.reportId = reportId;
 
-    // Position below the clicked element
-    popover.style.top = (rect.bottom + 6) + 'px';
-    popover.style.right = (window.innerWidth - rect.right) + 'px';
-    popover.style.left = 'auto';
+    positionFloating(event.currentTarget, popover);
     popover.style.display = 'block';
 
     // Show loading or cached content
@@ -3539,7 +3589,10 @@ function toggleSuppressMenu(btn, e) {
     const wasOpen = menu.classList.contains('open');
     // Close all open menus first
     document.querySelectorAll('.suppress-menu.open').forEach(m => m.classList.remove('open'));
-    if (!wasOpen) menu.classList.add('open');
+    if (!wasOpen) {
+        positionFloating(btn, menu);
+        menu.classList.add('open');
+    }
 }
 
 function confirmSuppress(action, reportId, name) {
@@ -4252,17 +4305,7 @@ populateYearDropdowns();
             document.body.appendChild(tip);
         }
         tip.textContent = text;
-        const rect = trigger.getBoundingClientRect();
-        tip.style.top = (rect.bottom + 6) + 'px';
-        tip.style.right = (window.innerWidth - rect.right) + 'px';
-        tip.style.left = '';
-        requestAnimationFrame(() => {
-            const tipRect = tip.getBoundingClientRect();
-            if (tipRect.left < 8) {
-                tip.style.right = '';
-                tip.style.left = '8px';
-            }
-        });
+        positionFloating(trigger, tip);
         tip.classList.add('visible');
     });
     document.addEventListener('mouseout', (e) => {
