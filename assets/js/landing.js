@@ -312,7 +312,7 @@ function showError(msg) {
                 ${lucideIcon('alert-triangle', 'icon-lg')}
             </div>
             <h3>Error</h3>
-            <p>${msg}</p>
+            <p>${_escapeHtmlErr(msg)}</p>
         </div>
     `;
     reinitIcons();
