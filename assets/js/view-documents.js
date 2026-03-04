@@ -66,6 +66,8 @@ initOfflineDetection();
 
 if (!reportId) {
     showError('Missing report ID / חסר מזהה דוח');
+} else if (!clientToken && !adminToken) {
+    showLinkExpired();
 } else {
     loadDocuments();
 }

@@ -251,8 +251,12 @@ async function resetAndContinue() {
     const cancelEscalation = startLoadingEscalation(content.querySelector('.loading'));
 
     try {
-        const url = `${RESET_ENDPOINT}?report_id=${encodeURIComponent(reportId)}&token=${encodeURIComponent(token)}`;
-        const res = await fetchWithTimeout(url, { cache: 'no-store' }, FETCH_TIMEOUTS.mutate);
+        const res = await fetchWithTimeout(RESET_ENDPOINT, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ report_id: reportId, token }),
+            cache: 'no-store'
+        }, FETCH_TIMEOUTS.mutate);
         cancelEscalation();
 
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
