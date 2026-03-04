@@ -511,6 +511,14 @@
                             <option value="unmatched">לא זוהו</option>
                         </select>
                     </div>
+                    <div class="filter-group">
+                        <label><i data-lucide="list-checks" class="icon-sm"></i> סטטוס:</label>
+                        <select id="aiReviewStatusFilter" onchange="applyAIFilters()">
+                            <option value="">הכל</option>
+                            <option value="pending">ממתין לסקירה</option>
+                            <option value="reviewed">נסקר (ממתין לשליחה)</option>
+                        </select>
+                    </div>
                 </div>
 
                 <!-- Split View: Cards (right/start in RTL) + Preview (left/end in RTL) -->
