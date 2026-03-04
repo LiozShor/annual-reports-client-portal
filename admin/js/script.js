@@ -2279,8 +2279,8 @@ function renderReviewedCard(item, reviewStatus) {
         ? `${templateLabel} – ${docName.replace(/<\/?b>/g, '')}`
         : (docName.replace(/<\/?b>/g, '') || templateLabel || 'לא ידוע');
 
-    // Change Decision button — not for reassigned (complex reversal)
-    const canChangeDecision = reviewStatus !== 'reassigned';
+    // Change Decision button — all reviewed cards can be re-reviewed (reassign safe via onedrive_item_id)
+    const canChangeDecision = true;
     const actionsHtml = canChangeDecision
         ? `<button class="ai-change-decision-btn" onclick="startReReview('${escapeAttr(item.id)}')">
                <i data-lucide="rotate-ccw" class="icon-sm"></i> שנה החלטה
