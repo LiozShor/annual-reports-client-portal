@@ -84,7 +84,7 @@ async function checkExistingSubmission() {
     const cancelEscalation = startLoadingEscalation(loadingEl);
 
     try {
-        const url = `${CHECK_ENDPOINT}?report_id=${encodeURIComponent(reportId)}`;
+        const url = `${CHECK_ENDPOINT}?report_id=${encodeURIComponent(reportId)}&token=${encodeURIComponent(token)}`;
         const response = await fetchWithTimeout(url, { cache: 'no-store' }, FETCH_TIMEOUTS.quick);
         cancelEscalation();
 
