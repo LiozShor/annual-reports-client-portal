@@ -44,6 +44,8 @@
         const reportId = params.get('report_id');
         const token = params.get('token');
         const result = params.get('result');
+        const warning = params.get('warning');
+        const sentAt = params.get('sent_at');
 
         // Strip params from URL bar
         if (window.location.search) {
@@ -93,14 +95,32 @@
             autoCloseCountdown();
         }
 
-        function showAlreadyApproved() {
+        function showAlreadySentWarning(sentAtDate) {
+            var dateStr = '';
+            if (sentAtDate) {
+                try {
+                    var d = new Date(sentAtDate);
+                    dateStr = d.toLocaleDateString('he-IL', { year: 'numeric', month: 'long', day: 'numeric' });
+                } catch (e) {
+                    dateStr = sentAtDate;
+                }
+            }
+            var dateText = dateStr ? ' בתאריך <strong>' + dateStr + '</strong>' : '';
             document.getElementById('content').innerHTML = `
                 <div class="alert-box">
                     <div class="alert-icon-wrapper" style="background:var(--warning-50);color:var(--warning-500)">
-                        ${lucideIcon('info', 'icon-lg')}
+                        ${lucideIcon('alert-triangle', 'icon-lg')}
                     </div>
-                    <div class="alert-title" style="color:var(--warning-700)">הדוח כבר אושר ונשלח</div>
-                    <p class="alert-text">הדוח כבר אושר בעבר ונשלח ללקוח. ניתן לסגור חלון זה.</p>
+                    <div class="alert-title" style="color:var(--warning-700)">המסמכים כבר נשלחו ללקוח</div>
+                    <p class="alert-text">רשימת המסמכים כבר נשלחה ללקוח${dateText}. לחיצה על הכפתור תשלח את הרשימה שוב.</p>
+                </div>
+
+                <div class="actions">
+                    <button class="btn btn-primary btn-lg" id="confirmBtn" onclick="doConfirm()">
+                        <span class="flex items-center justify-center gap-2">
+                            ${lucideIcon('refresh-cw', 'icon-sm')} שלח שוב
+                        </span>
+                    </button>
                 </div>
             `;
             reinitIcons();
@@ -165,12 +185,12 @@
         // Route based on state
         if (result === 'success') {
             showSuccess();
-        } else if (result === 'already_approved') {
-            showAlreadyApproved();
         } else if (result === 'error') {
             showError();
         } else if (!reportId || !token) {
             showMissingParams();
+        } else if (warning === 'already_sent') {
+            showAlreadySentWarning(sentAt);
         } else {
             showConfirmState();
         }
