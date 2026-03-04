@@ -4005,7 +4005,7 @@ function toggleArchiveMode() {
     } else {
         banner.classList.remove('visible');
         headerLabel.textContent = '';
-        menuLabel.textContent = 'לקוחות מושבתים';
+        menuLabel.textContent = 'לקוחות עבר';
         statsGrid.style.display = '';
     }
 
