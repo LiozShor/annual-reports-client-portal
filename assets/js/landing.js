@@ -3,13 +3,18 @@
    =========================================== */
 
 // --- Config & Params ---
+// SEC-004: Only read opaque identifiers from URL — PII fetched from API
 const params = new URLSearchParams(window.location.search);
 const reportId = params.get('report_id');
-const clientId = params.get('client_id');
-const year = params.get('year');
 const token = params.get('token');
-const fullName = params.get('full_name');
-const email = params.get('email');
+
+// PII populated from API in checkExistingSubmission(), not from URL
+let clientId = '', year = '', fullName = '', email = '';
+
+// Strip all query params from URL immediately (defense in depth)
+if (window.location.search) {
+    history.replaceState(null, '', window.location.pathname);
+}
 
 const FORM_HE = '1AkYKb';
 const FORM_EN = '1AkopM';
@@ -95,6 +100,12 @@ async function checkExistingSubmission() {
             showError('Invalid link or report not found. Please contact the office.');
             return;
         }
+
+        // SEC-004: Populate client data from API (not URL)
+        clientId = data.client_id || '';
+        year = data.year || '';
+        fullName = data.client_name || '';
+        email = data.client_email || '';
 
         const stage = data.stage || '1-Send_Questionnaire';
         const docCount = Number(data.document_count || 0);
@@ -309,7 +320,7 @@ function init() {
     // Initialize offline detection
     initOfflineDetection();
 
-    if (!reportId || !clientId || !year || !token) {
+    if (!reportId || !token) {
         showError(t('err_missing_params'));
     } else {
         checkExistingSubmission();
