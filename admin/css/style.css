@@ -3264,6 +3264,126 @@ tr.reminder-loading td:last-child {
     animation: spin 1s linear infinite;
 }
 
+/* ==================== DL-086: REVIEWED CARD STATES ==================== */
+
+/* Reviewed card backgrounds */
+.ai-review-card.reviewed-approved {
+    background: #f0f7ff;
+    border-color: var(--info-300, #93c5fd) !important;
+    opacity: 0.92;
+}
+
+.ai-review-card.reviewed-rejected {
+    background: #fffbeb;
+    border-color: var(--warning-300, #fcd34d) !important;
+    opacity: 0.92;
+}
+
+.ai-review-card.reviewed-reassigned {
+    background: #f0f7ff;
+    border-color: var(--info-300, #93c5fd) !important;
+    opacity: 0.92;
+}
+
+/* Review status lozenge */
+.ai-review-lozenge {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--sp-1);
+    font-size: var(--text-xs);
+    font-weight: 600;
+    padding: 2px var(--sp-2);
+    border-radius: var(--radius-full);
+    line-height: 1.4;
+}
+
+.ai-review-lozenge.lozenge-approved,
+.ai-review-lozenge.lozenge-reassigned {
+    background: var(--info-100, #dbeafe);
+    color: var(--info-700, #1d4ed8);
+}
+
+.ai-review-lozenge.lozenge-rejected {
+    background: var(--warning-100, #fef3c7);
+    color: var(--warning-700, #b45309);
+}
+
+/* Rejection details under lozenge */
+.ai-reviewed-rejection-info {
+    font-size: var(--text-xs);
+    color: var(--gray-500);
+    margin-top: var(--sp-1);
+    padding: var(--sp-1) var(--sp-2);
+    background: var(--warning-50, #fffbeb);
+    border-radius: var(--radius-sm);
+}
+
+/* Change decision ghost button */
+.ai-change-decision-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--sp-1);
+    padding: var(--sp-1) var(--sp-3);
+    font-size: var(--text-xs);
+    font-weight: 500;
+    color: var(--gray-500);
+    background: transparent;
+    border: 1px dashed var(--gray-300);
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: all 150ms ease;
+    font-family: var(--font-he);
+}
+
+.ai-change-decision-btn:hover {
+    color: var(--gray-700);
+    border-color: var(--gray-400);
+    background: var(--gray-50);
+}
+
+/* ==================== DL-086: BATCH ACTION BAR ==================== */
+
+.batch-action-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--sp-3);
+    padding: var(--sp-3) var(--sp-4);
+    margin-bottom: var(--sp-3);
+    background: var(--success-50, #f0fdf4);
+    border: 1px solid var(--success-200, #bbf7d0);
+    border-radius: var(--radius-lg);
+    direction: rtl;
+}
+
+.batch-action-bar-text {
+    font-size: var(--text-sm);
+    font-weight: 600;
+    color: var(--success-800, #166534);
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
+}
+
+.batch-action-bar-buttons {
+    display: flex;
+    gap: var(--sp-2);
+    flex-shrink: 0;
+}
+
+/* ==================== DL-086: READY-TO-SEND BADGE ==================== */
+
+.ai-accordion-stat-badge.badge-ready-send {
+    background: var(--info-100, #dbeafe);
+    color: var(--info-700, #1d4ed8);
+    animation: readySendPulse 2s ease-in-out infinite;
+}
+
+@keyframes readySendPulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
+}
+
 /* ==================== DOCS POPOVER ==================== */
 .docs-popover {
     position: fixed;

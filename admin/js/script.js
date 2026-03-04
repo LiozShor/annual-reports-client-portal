@@ -1564,14 +1564,18 @@ async function loadAIClassifications(silent = false) {
         aiClassificationsData = data.items || [];
         aiReviewLoaded = true;
         resetPreviewPanel();
+
+        // DL-086: Reconstruct batchReviewTracker from reviewed-unsent items
+        reconstructBatchTracker();
+
         updateAIStats(data.stats || {});
         applyAIFilters();
 
-        // Update tab badge
+        // Update tab badge — show only pending (needing admin action)
         const badge = document.getElementById('aiReviewTabBadge');
-        const total = data.stats?.total_pending || 0;
-        if (total > 0) {
-            badge.textContent = total;
+        const pendingCount = data.stats?.pending_review || data.stats?.total_pending || 0;
+        if (pendingCount > 0) {
+            badge.textContent = pendingCount;
             badge.style.display = 'inline-flex';
         } else {
             badge.style.display = 'none';
@@ -1596,25 +1600,41 @@ async function loadAIClassifications(silent = false) {
 }
 
 function updateAIStats(stats) {
-    document.getElementById('ai-stat-pending').textContent = stats.total_pending || 0;
+    // DL-086: pending_review = items needing admin action, reviewed_unsent = reviewed but not emailed
+    const pendingReview = stats.pending_review || stats.total_pending || 0;
+    const reviewedUnsent = stats.reviewed_unsent || 0;
+
+    document.getElementById('ai-stat-pending').textContent = pendingReview;
     document.getElementById('ai-stat-matched').textContent = stats.matched || 0;
     document.getElementById('ai-stat-unmatched').textContent = stats.unmatched || 0;
 
-    // Repurpose 4th stat: "ביטחון גבוה" → "מנפיק שונה"
+    // Repurpose 4th stat: show "reviewed unsent" when available, else issuer mismatch
     const mismatchCount = aiClassificationsData.filter(i =>
-        i.matched_template_id && i.issuer_match_quality === 'mismatch'
+        i.matched_template_id && i.issuer_match_quality === 'mismatch' && (i.review_status || 'pending') === 'pending'
     ).length;
-    document.getElementById('ai-stat-high-confidence').textContent = mismatchCount;
+    const highConfEl = document.getElementById('ai-stat-high-confidence');
+    const highConfItem = highConfEl.closest('.ai-stat-item');
 
-    // Update 4th stat label and styling
-    const highConfItem = document.getElementById('ai-stat-high-confidence').closest('.ai-stat-item');
-    if (highConfItem) {
-        const label = highConfItem.querySelector('.ai-stat-label');
-        if (label) label.textContent = 'מנפיק שונה';
-        highConfItem.classList.remove('ai-stat-high-conf');
-        highConfItem.classList.add('ai-stat-mismatch');
-        const icon = highConfItem.querySelector('.icon-sm');
-        if (icon) icon.setAttribute('data-lucide', 'alert-triangle');
+    if (reviewedUnsent > 0) {
+        highConfEl.textContent = reviewedUnsent;
+        if (highConfItem) {
+            const label = highConfItem.querySelector('.ai-stat-label');
+            if (label) label.textContent = 'נסקרו (ממתין)';
+            highConfItem.classList.remove('ai-stat-high-conf', 'ai-stat-mismatch');
+            highConfItem.classList.add('ai-stat-reviewed-unsent');
+            const icon = highConfItem.querySelector('.icon-sm');
+            if (icon) icon.setAttribute('data-lucide', 'mail-check');
+        }
+    } else {
+        highConfEl.textContent = mismatchCount;
+        if (highConfItem) {
+            const label = highConfItem.querySelector('.ai-stat-label');
+            if (label) label.textContent = 'מנפיק שונה';
+            highConfItem.classList.remove('ai-stat-high-conf');
+            highConfItem.classList.add('ai-stat-mismatch');
+            const icon = highConfItem.querySelector('.icon-sm');
+            if (icon) icon.setAttribute('data-lucide', 'alert-triangle');
+        }
     }
 }
 
@@ -1622,6 +1642,7 @@ function applyAIFilters() {
     const searchText = (document.getElementById('aiSearchInput').value || '').trim().toLowerCase();
     const confidenceFilter = document.getElementById('aiConfidenceFilter').value;
     const typeFilter = document.getElementById('aiTypeFilter').value;
+    const reviewStatusFilter = document.getElementById('aiReviewStatusFilter')?.value || '';
 
     let filtered = aiClassificationsData;
 
@@ -1645,6 +1666,16 @@ function applyAIFilters() {
         filtered = filtered.filter(item => {
             if (typeFilter === 'matched') return !!item.matched_template_id;
             if (typeFilter === 'unmatched') return !item.matched_template_id;
+            return true;
+        });
+    }
+
+    // DL-086: Review status filter
+    if (reviewStatusFilter) {
+        filtered = filtered.filter(item => {
+            const rs = item.review_status || 'pending';
+            if (reviewStatusFilter === 'pending') return rs === 'pending';
+            if (reviewStatusFilter === 'reviewed') return rs !== 'pending';
             return true;
         });
     }
@@ -1766,18 +1797,35 @@ function renderAICards(items) {
         let identifiedCount = 0; // full + fuzzy
         let mismatchCount = 0;   // issuer-mismatch
         let unmatchedCount = 0;  // unmatched
+        // DL-086: Count pending vs reviewed
+        let pendingCount = 0;
+        let reviewedCount = 0;
+        let approvedCount = 0;
+        let rejectedCount = 0;
         for (const i of clientItems) {
-            const s = getCardState(i);
-            if (s === 'full' || s === 'fuzzy') identifiedCount++;
-            else if (s === 'issuer-mismatch') mismatchCount++;
-            else unmatchedCount++;
+            const rs = i.review_status || 'pending';
+            if (rs === 'pending') {
+                pendingCount++;
+                const s = getCardState(i);
+                if (s === 'full' || s === 'fuzzy') identifiedCount++;
+                else if (s === 'issuer-mismatch') mismatchCount++;
+                else unmatchedCount++;
+            } else {
+                reviewedCount++;
+                if (rs === 'rejected') rejectedCount++;
+                else approvedCount++;
+            }
         }
+
+        const allReviewed = pendingCount === 0 && reviewedCount > 0;
 
         // Build accordion stat badges (only show if count > 0)
         let badgesHtml = '';
-        if (identifiedCount > 0) badgesHtml += `<span class="ai-accordion-stat-badge badge-matched">✅ ${identifiedCount} זוהו</span>`;
-        if (mismatchCount > 0) badgesHtml += `<span class="ai-accordion-stat-badge badge-mismatch">⚠️ ${mismatchCount} מנפיק שונה</span>`;
-        if (unmatchedCount > 0) badgesHtml += `<span class="ai-accordion-stat-badge badge-unmatched">❌ ${unmatchedCount} לא זוהו</span>`;
+        if (identifiedCount > 0) badgesHtml += `<span class="ai-accordion-stat-badge badge-matched">${identifiedCount} זוהו</span>`;
+        if (mismatchCount > 0) badgesHtml += `<span class="ai-accordion-stat-badge badge-mismatch">${mismatchCount} מנפיק שונה</span>`;
+        if (unmatchedCount > 0) badgesHtml += `<span class="ai-accordion-stat-badge badge-unmatched">${unmatchedCount} לא זוהו</span>`;
+        // DL-086: Ready-to-send badge when all items reviewed
+        if (allReviewed) badgesHtml += `<span class="ai-accordion-stat-badge badge-ready-send">מוכן לשליחה</span>`;
 
         html += `
             <div class="ai-accordion" data-client="${escapeHtml(clientName)}">
@@ -1793,6 +1841,25 @@ function renderAICards(items) {
                 </div>
                 <div class="ai-accordion-body">
         `;
+
+        // DL-086: Batch action bar when all items are reviewed
+        if (allReviewed) {
+            html += `
+                    <div class="batch-action-bar" data-client="${escapeAttr(clientName)}">
+                        <div class="batch-action-bar-text">
+                            הסקירה הושלמה — ${approvedCount} אושרו${rejectedCount > 0 ? ` · ${rejectedCount} דורשים תיקון` : ''}
+                        </div>
+                        <div class="batch-action-bar-buttons">
+                            <button class="btn btn-primary btn-sm" onclick="sendBatchStatus('${escapeAttr(clientName)}')">
+                                <i data-lucide="send" class="icon-sm"></i> שלח עדכון ללקוח
+                            </button>
+                            <button class="btn btn-ghost btn-sm" onclick="dismissBatch('${escapeAttr(clientName)}')">
+                                ללא עדכון
+                            </button>
+                        </div>
+                    </div>
+            `;
+        }
 
         // Document status overview — grouped by category, collapsible
         const allDocs = (clientItems[0].all_docs || []);
@@ -1894,6 +1961,14 @@ function renderAICards(items) {
 }
 
 function renderAICard(item) {
+    // DL-086: Check if this item is reviewed (not pending)
+    const reviewStatus = item.review_status || 'pending';
+    const isReviewed = reviewStatus !== 'pending';
+
+    if (isReviewed) {
+        return renderReviewedCard(item, reviewStatus);
+    }
+
     const state = getCardState(item);
     const rawConfidence = item.ai_confidence || 0;
     const confidencePercent = Math.round(rawConfidence * 100);
@@ -2104,6 +2179,160 @@ function renderAICard(item) {
     `;
 }
 
+// DL-086: Render a card in reviewed (non-pending) state
+function renderReviewedCard(item, reviewStatus) {
+    const senderEmail = item.sender_email || '';
+    const receivedAt = item.received_at ? formatAIDate(item.received_at) : '';
+    const senderTooltipParts = [senderEmail, receivedAt].filter(Boolean);
+    const senderTooltip = senderTooltipParts.join(' | ');
+
+    const viewFileBtn = `<button class="btn btn-ghost btn-sm ai-preview-btn"
+        onclick="event.stopPropagation(); loadDocPreview('${escapeAttr(item.id)}')"
+        title="תצוגה מקדימה">
+        <i data-lucide="eye" class="icon-sm"></i> תצוגה מקדימה
+    </button>`;
+
+    // Status lozenge
+    let lozengeClass, lozengeText;
+    if (reviewStatus === 'approved') {
+        lozengeClass = 'lozenge-approved';
+        lozengeText = '\u2713 אושר';
+    } else if (reviewStatus === 'rejected') {
+        lozengeClass = 'lozenge-rejected';
+        lozengeText = '\u26A0 דורש תיקון';
+    } else {
+        lozengeClass = 'lozenge-reassigned';
+        lozengeText = '\u2713 שויך מחדש';
+    }
+
+    // Card class for background tint
+    const reviewedClass = reviewStatus === 'rejected' ? 'reviewed-rejected' : 'reviewed-approved';
+
+    // Rejection details
+    let rejectionHtml = '';
+    if (reviewStatus === 'rejected' && item.notes) {
+        try {
+            const notesData = typeof item.notes === 'string' ? JSON.parse(item.notes) : item.notes;
+            const reasonLabel = REJECTION_REASONS[notesData.reason] || notesData.reason || '';
+            const notesText = notesData.text || '';
+            rejectionHtml = `<div class="ai-reviewed-rejection-info">`;
+            if (reasonLabel) rejectionHtml += `<strong>${escapeHtml(reasonLabel)}</strong>`;
+            if (notesText) rejectionHtml += `${reasonLabel ? ' — ' : ''}${escapeHtml(notesText)}`;
+            rejectionHtml += `</div>`;
+        } catch { /* ignore parse errors */ }
+    }
+
+    // Classification info
+    const docName = item.matched_doc_name || item.attachment_name || '';
+    const templateLabel = AI_DOC_NAMES[item.matched_template_id] || item.matched_template_name || '';
+    const displayName = (templateLabel && docName && !docName.includes(templateLabel))
+        ? `${templateLabel} – ${docName.replace(/<\/?b>/g, '')}`
+        : (docName.replace(/<\/?b>/g, '') || templateLabel || 'לא ידוע');
+
+    // Change Decision button — not for reassigned (complex reversal)
+    const canChangeDecision = reviewStatus !== 'reassigned';
+    const actionsHtml = canChangeDecision
+        ? `<button class="ai-change-decision-btn" onclick="startReReview('${escapeAttr(item.id)}')">
+               <i data-lucide="rotate-ccw" class="icon-sm"></i> שנה החלטה
+           </button>`
+        : '';
+
+    return `
+        <div class="ai-review-card ${reviewedClass}" data-id="${escapeAttr(item.id)}" data-review-status="${escapeAttr(reviewStatus)}">
+            <div class="ai-card-top" onclick="loadDocPreview('${escapeAttr(item.id)}')">
+                <div class="ai-file-info">
+                    <span class="ai-review-lozenge ${lozengeClass}">${lozengeText}</span>
+                    <span class="ai-file-name clickable-preview" ${senderTooltip ? `title="${escapeAttr(senderTooltip)}"` : ''}>${escapeHtml(item.attachment_name || 'ללא שם')}</span>
+                </div>
+                ${viewFileBtn}
+            </div>
+            <div class="ai-card-body">
+                <div class="ai-classification-result">
+                    <div class="ai-classification-label">
+                        <span class="ai-template-match">${escapeHtml(displayName)}</span>
+                    </div>
+                </div>
+                ${rejectionHtml}
+            </div>
+            <div class="ai-card-actions">
+                ${actionsHtml}
+            </div>
+        </div>
+    `;
+}
+
+// DL-086: Re-review — restore action buttons on a reviewed card
+function startReReview(recordId) {
+    const item = aiClassificationsData.find(i => i.id === recordId);
+    if (!item) return;
+
+    const card = document.querySelector(`.ai-review-card[data-id="${recordId}"]`);
+    if (!card) return;
+
+    // Restore original action buttons based on card state
+    const state = getCardState(item);
+    let actionsHtml = '';
+
+    if (state === 'full' || state === 'fuzzy') {
+        const approveDisabled = item.is_unrequested;
+        actionsHtml = `
+            <button class="btn btn-success btn-sm" ${approveDisabled
+                ? 'aria-disabled="true" title="לא ניתן לאשר מסמך שלא נדרש — יש לשייך מחדש או לדחות"'
+                : `onclick="approveAIClassification('${escapeAttr(recordId)}')"`}>
+                <i data-lucide="check" class="icon-sm"></i> אשר
+            </button>
+            <button class="btn btn-link btn-sm" onclick="showAIReassignModal('${escapeAttr(recordId)}')">
+                <i data-lucide="arrow-right-left" class="icon-sm"></i> שייך מחדש
+            </button>
+            <button class="btn btn-outline-danger btn-sm" onclick="rejectAIClassification('${escapeAttr(recordId)}')">
+                <i data-lucide="x" class="icon-sm"></i> דחה
+            </button>
+            <button class="btn btn-ghost btn-sm" onclick="cancelReReview('${escapeAttr(recordId)}')">
+                ביטול
+            </button>
+        `;
+    } else {
+        // unmatched or issuer-mismatch — show reject + reassign
+        actionsHtml = `
+            <button class="btn btn-link btn-sm" onclick="showAIReassignModal('${escapeAttr(recordId)}')">
+                <i data-lucide="arrow-right-left" class="icon-sm"></i> שייך מחדש
+            </button>
+            <button class="btn btn-outline-danger btn-sm" onclick="rejectAIClassification('${escapeAttr(recordId)}')">
+                <i data-lucide="x" class="icon-sm"></i> דחה
+            </button>
+            <button class="btn btn-ghost btn-sm" onclick="cancelReReview('${escapeAttr(recordId)}')">
+                ביטול
+            </button>
+        `;
+    }
+
+    // Remove reviewed styling
+    card.classList.remove('reviewed-approved', 'reviewed-rejected', 'reviewed-reassigned');
+    card.style.opacity = '';
+
+    // Replace actions
+    const actionsDiv = card.querySelector('.ai-card-actions');
+    if (actionsDiv) actionsDiv.innerHTML = actionsHtml;
+
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+// DL-086: Cancel re-review — re-render the card in reviewed state
+function cancelReReview(recordId) {
+    const item = aiClassificationsData.find(i => i.id === recordId);
+    if (!item) return;
+
+    const card = document.querySelector(`.ai-review-card[data-id="${recordId}"]`);
+    if (!card) return;
+
+    // Replace the card entirely with the reviewed version
+    const tmpDiv = document.createElement('div');
+    tmpDiv.innerHTML = renderReviewedCard(item, item.review_status || 'pending');
+    const newCard = tmpDiv.firstElementChild;
+    card.replaceWith(newCard);
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
 function toggleAIAccordion(header) {
     const accordion = header.closest('.ai-accordion');
     accordion.classList.toggle('open');
@@ -2184,7 +2413,8 @@ async function approveAIClassification(recordId) {
             if (approvedItem?.matched_doc_record_id) {
                 updateClientDocState(approvedItem.client_name, approvedItem.matched_doc_record_id);
             }
-            animateAndRemoveAI(recordId);
+            // DL-086: Transition to reviewed state instead of removing
+            transitionCardToReviewed(recordId, 'approved', data);
             showAIToast(formatAISuccessToast(data), 'success');
         } catch (error) {
             clearCardLoading(recordId);
@@ -2262,7 +2492,11 @@ async function executeReject(recordId, rejectionReason, notes) {
         if (!data.ok) throw new Error(formatAIResponseError(data));
 
         trackReviewAction(recordId, 'reject', data, rejectionReason, notes);
-        animateAndRemoveAI(recordId);
+        // DL-086: Store notes on the item for reviewed card display
+        const rejItem = aiClassificationsData.find(i => i.id === recordId);
+        if (rejItem) rejItem.notes = JSON.stringify({ reason: rejectionReason, text: notes });
+        // DL-086: Transition to reviewed state instead of removing
+        transitionCardToReviewed(recordId, 'rejected', data);
         showAIToast(formatAISuccessToast(data), 'danger');
     } catch (error) {
         clearCardLoading(recordId);
@@ -2362,7 +2596,8 @@ async function submitAIReassign(recordId, templateId, docRecordId, loadingText, 
         if (docRecordId) {
             updateClientDocState(reassignedItem?.client_name, docRecordId);
         }
-        animateAndRemoveAI(recordId);
+        // DL-086: Transition to reviewed state instead of removing
+        transitionCardToReviewed(recordId, 'reassigned', data);
         showAIToast(formatAISuccessToast(data), 'success');
     } catch (error) {
         clearCardLoading(recordId);
@@ -2387,6 +2622,70 @@ async function assignAIUnmatched(recordId, btnEl) {
             await submitAIReassign(recordId, templateId, docRecordId, 'משייך...');
         }, { confirmText: 'שייך' });
     }
+}
+
+// DL-086: Transition card to reviewed state instead of removing
+function transitionCardToReviewed(recordId, newReviewStatus, responseData) {
+    // Update the item in aiClassificationsData
+    const item = aiClassificationsData.find(i => i.id === recordId);
+    if (item) {
+        item.review_status = newReviewStatus;
+        item.reviewed_at = new Date().toISOString();
+    }
+
+    // Re-render the card in-place
+    const card = document.querySelector(`.ai-review-card[data-id="${recordId}"]`);
+    if (card) {
+        const tmpDiv = document.createElement('div');
+        tmpDiv.innerHTML = renderReviewedCard(item || { id: recordId, review_status: newReviewStatus }, newReviewStatus);
+        const newCard = tmpDiv.firstElementChild;
+        card.replaceWith(newCard);
+    }
+
+    // Check if all items for this client are now reviewed → show batch action bar
+    const clientName = item?.client_name;
+    if (clientName) {
+        const clientItems = aiClassificationsData.filter(i => i.client_name === clientName);
+        const allReviewed = clientItems.every(i => (i.review_status || 'pending') !== 'pending');
+
+        if (allReviewed) {
+            const accordion = document.querySelector(`.ai-accordion[data-client="${CSS.escape(clientName)}"]`);
+            if (accordion) {
+                // Add batch action bar if not already present
+                const existingBar = accordion.querySelector('.batch-action-bar');
+                if (!existingBar) {
+                    const approvedCount = clientItems.filter(i => i.review_status !== 'rejected').length;
+                    const rejectedCount = clientItems.filter(i => i.review_status === 'rejected').length;
+                    const barHtml = `
+                        <div class="batch-action-bar" data-client="${escapeAttr(clientName)}">
+                            <div class="batch-action-bar-text">
+                                הסקירה הושלמה — ${approvedCount} אושרו${rejectedCount > 0 ? ` · ${rejectedCount} דורשים תיקון` : ''}
+                            </div>
+                            <div class="batch-action-bar-buttons">
+                                <button class="btn btn-primary btn-sm" onclick="sendBatchStatus('${escapeAttr(clientName)}')">
+                                    <i data-lucide="send" class="icon-sm"></i> שלח עדכון ללקוח
+                                </button>
+                                <button class="btn btn-ghost btn-sm" onclick="dismissBatch('${escapeAttr(clientName)}')">
+                                    ללא עדכון
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                    const body = accordion.querySelector('.ai-accordion-body');
+                    if (body) body.insertAdjacentHTML('afterbegin', barHtml);
+                }
+
+                // Add ready-to-send badge to accordion header
+                const statsDiv = accordion.querySelector('.ai-accordion-stats');
+                if (statsDiv && !statsDiv.querySelector('.badge-ready-send')) {
+                    statsDiv.insertAdjacentHTML('beforeend', '<span class="ai-accordion-stat-badge badge-ready-send">מוכן לשליחה</span>');
+                }
+            }
+        }
+    }
+
+    recalcAIStats();
+    if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
 function animateAndRemoveAI(recordId) {
@@ -2561,22 +2860,45 @@ function updateClientDocState(clientName, docRecordId) {
 }
 
 function recalcAIStats() {
-    const total = aiClassificationsData.length;
-    const matched = aiClassificationsData.filter(i => !!i.matched_template_id).length;
-    const unmatched = total - matched;
-    const mismatchCount = aiClassificationsData.filter(i =>
+    // DL-086: Split into pending (needing review) and reviewed-unsent
+    const pendingItems = aiClassificationsData.filter(i => (i.review_status || 'pending') === 'pending');
+    const reviewedItems = aiClassificationsData.filter(i => (i.review_status || 'pending') !== 'pending');
+
+    const pendingCount = pendingItems.length;
+    const reviewedUnsent = reviewedItems.length;
+    const matched = pendingItems.filter(i => !!i.matched_template_id).length;
+    const unmatched = pendingCount - matched;
+    const mismatchCount = pendingItems.filter(i =>
         i.matched_template_id && i.issuer_match_quality === 'mismatch'
     ).length;
 
-    document.getElementById('ai-stat-pending').textContent = total;
+    document.getElementById('ai-stat-pending').textContent = pendingCount;
     document.getElementById('ai-stat-matched').textContent = matched;
     document.getElementById('ai-stat-unmatched').textContent = unmatched;
-    document.getElementById('ai-stat-high-confidence').textContent = mismatchCount;
 
-    // Update tab badge
+    const highConfEl = document.getElementById('ai-stat-high-confidence');
+    const highConfItem = highConfEl.closest('.ai-stat-item');
+    if (reviewedUnsent > 0) {
+        highConfEl.textContent = reviewedUnsent;
+        if (highConfItem) {
+            const label = highConfItem.querySelector('.ai-stat-label');
+            if (label) label.textContent = 'נסקרו (ממתין)';
+        }
+    } else {
+        highConfEl.textContent = mismatchCount;
+        if (highConfItem) {
+            const label = highConfItem.querySelector('.ai-stat-label');
+            if (label) label.textContent = 'מנפיק שונה';
+        }
+    }
+
+    // Update tab badge — show only pending count
     const badge = document.getElementById('aiReviewTabBadge');
-    if (total > 0) {
-        badge.textContent = total;
+    if (pendingCount > 0) {
+        badge.textContent = pendingCount;
+        badge.style.display = 'inline-flex';
+    } else if (reviewedUnsent > 0) {
+        badge.textContent = reviewedUnsent;
         badge.style.display = 'inline-flex';
     } else {
         badge.style.display = 'none';
@@ -2663,7 +2985,6 @@ function showAIToast(message, type, action) {
 // ==================== BATCH REVIEW TRACKER ====================
 
 function trackReviewAction(recordId, action, responseData, rejectionReason, notes) {
-    // Capture item data before it's removed from aiClassificationsData
     const item = aiClassificationsData.find(i => i.id === recordId);
     const clientName = item?.client_name || responseData?.client_name || 'unknown';
 
@@ -2675,101 +2996,78 @@ function trackReviewAction(recordId, action, responseData, rejectionReason, note
         batchReviewTracker[clientName].reportRecordId = responseData.report_record_id;
     }
 
-    batchReviewTracker[clientName].items.push({
+    // DL-086: Replace existing entry for this record (re-review case)
+    const existingIdx = batchReviewTracker[clientName].items.findIndex(i => i.recordId === recordId);
+    const entry = {
         recordId,
         action,
         docName: responseData?.doc_title || item?.matched_doc_name || item?.attachment_name || '',
         originalFileName: item?.attachment_name || '',
         rejectionReason: rejectionReason || null,
         notes: notes || null
-    });
+    };
+    if (existingIdx >= 0) {
+        batchReviewTracker[clientName].items[existingIdx] = entry;
+    } else {
+        batchReviewTracker[clientName].items.push(entry);
+    }
 }
 
-function showBatchCompleteModal(clientName, trackerData) {
-    const items = trackerData.items;
-    const approved = items.filter(i => i.action === 'approve' || i.action === 'reassign');
-    const rejected = items.filter(i => i.action === 'reject');
+// DL-086: Reconstruct batch tracker from API data on load (for reviewed-unsent items)
+function reconstructBatchTracker() {
+    batchReviewTracker = {};
+    for (const item of aiClassificationsData) {
+        const rs = item.review_status || 'pending';
+        if (rs === 'pending') continue;
 
-    let summaryHtml = '';
-    if (approved.length > 0) {
-        summaryHtml += `<div class="batch-summary-stat batch-approved">
-            <span class="batch-stat-number">${approved.length}</span>
-            <span class="batch-stat-label">אושרו</span>
-        </div>`;
-    }
-    if (rejected.length > 0) {
-        summaryHtml += `<div class="batch-summary-stat batch-rejected">
-            <span class="batch-stat-number">${rejected.length}</span>
-            <span class="batch-stat-label">דורשים תיקון</span>
-        </div>`;
-    }
-
-    let itemsHtml = '';
-    if (rejected.length > 0) {
-        itemsHtml += '<div class="batch-section"><div class="batch-section-title">⚠ דורשים תיקון</div>';
-        for (const item of rejected) {
-            const reasonLabel = REJECTION_REASONS[item.rejectionReason] || '';
-            itemsHtml += `<div class="batch-item batch-item-rejected">
-                <span class="batch-item-name">${escapeHtml(item.docName.replace(/<\/?b>/g, ''))}</span>
-                ${reasonLabel ? `<span class="batch-item-reason">${escapeHtml(reasonLabel)}</span>` : ''}
-                ${item.notes ? `<span class="batch-item-notes">${escapeHtml(item.notes)}</span>` : ''}
-            </div>`;
+        const clientName = item.client_name || 'unknown';
+        if (!batchReviewTracker[clientName]) {
+            batchReviewTracker[clientName] = { reportRecordId: item.report_record_id || null, items: [] };
         }
-        itemsHtml += '</div>';
-    }
-    if (approved.length > 0) {
-        itemsHtml += '<div class="batch-section"><div class="batch-section-title">✓ אושרו</div>';
-        for (const item of approved) {
-            itemsHtml += `<div class="batch-item batch-item-approved">
-                <span class="batch-item-name">${escapeHtml(item.docName.replace(/<\/?b>/g, ''))}</span>
-            </div>`;
+        if (item.report_record_id) {
+            batchReviewTracker[clientName].reportRecordId = item.report_record_id;
         }
-        itemsHtml += '</div>';
+
+        let rejectionReason = null;
+        let notesText = null;
+        if (rs === 'rejected' && item.notes) {
+            try {
+                const parsed = typeof item.notes === 'string' ? JSON.parse(item.notes) : item.notes;
+                rejectionReason = parsed.reason || null;
+                notesText = parsed.text || null;
+            } catch { /* ignore */ }
+        }
+
+        const actionMap = { approved: 'approve', rejected: 'reject', reassigned: 'reassign' };
+        batchReviewTracker[clientName].items.push({
+            recordId: item.id,
+            action: actionMap[rs] || rs,
+            docName: item.matched_doc_name || item.attachment_name || '',
+            originalFileName: item.attachment_name || '',
+            rejectionReason,
+            notes: notesText
+        });
     }
-
-    const existing = document.getElementById('batchCompleteModal');
-    if (existing) existing.remove();
-
-    const modalHtml = `
-        <div class="ai-modal-overlay batch-complete-modal show" id="batchCompleteModal">
-            <div class="ai-modal-panel">
-                <div class="ai-modal-panel-header">
-                    <i data-lucide="check-circle" class="icon-lg" style="color: var(--success-500);"></i>
-                    <span>סיום סקירה — ${escapeHtml(clientName)}</span>
-                </div>
-                <div class="ai-modal-panel-body">
-                    <div class="batch-summary-stats">${summaryHtml}</div>
-                    <div class="batch-items-list">${itemsHtml}</div>
-                </div>
-                <div class="ai-modal-panel-footer">
-                    <button class="btn btn-ghost" onclick="closeBatchCompleteModal()">דלג</button>
-                    <button class="btn btn-primary" id="batchSendBtn" onclick="sendBatchStatus('${escapeAttr(clientName)}')">
-                        <i data-lucide="send" class="icon-sm"></i> שלח עדכון ללקוח
-                    </button>
-                </div>
-            </div>
-        </div>
-    `;
-
-    document.body.insertAdjacentHTML('beforeend', modalHtml);
-    if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
-function closeBatchCompleteModal() {
-    const modal = document.getElementById('batchCompleteModal');
-    if (modal) modal.remove();
-}
-
+// DL-086: Updated sendBatchStatus — builds payload from aiClassificationsData
 async function sendBatchStatus(clientName) {
     const trackerData = batchReviewTracker[clientName];
     if (!trackerData) return;
 
-    const btn = document.getElementById('batchSendBtn');
+    // Find the send button in the batch action bar
+    const accordion = document.querySelector(`.ai-accordion[data-client="${CSS.escape(clientName)}"]`);
+    const bar = accordion?.querySelector('.batch-action-bar');
+    const btn = bar?.querySelector('.btn-primary');
     if (btn) {
         btn.disabled = true;
         btn.innerHTML = '<i data-lucide="loader" class="icon-sm spinning"></i> שולח...';
         if (typeof lucide !== 'undefined') lucide.createIcons();
     }
+
+    // Collect classification_ids from the reviewed items
+    const clientItems = aiClassificationsData.filter(i => i.client_name === clientName && (i.review_status || 'pending') !== 'pending');
+    const classificationIds = clientItems.map(i => i.id);
 
     try {
         const response = await fetchWithTimeout(`${API_BASE}/send-batch-status`, {
@@ -2777,8 +3075,10 @@ async function sendBatchStatus(clientName) {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 token: authToken,
+                action: 'send',
                 report_key: trackerData.reportRecordId,
                 client_name: clientName,
+                classification_ids: classificationIds,
                 items: trackerData.items
             })
         }, FETCH_TIMEOUTS.mutate);
@@ -2786,12 +3086,98 @@ async function sendBatchStatus(clientName) {
         const data = await response.json();
         if (!data.ok) throw new Error(data.error || 'שגיאה בשליחת העדכון');
 
-        closeBatchCompleteModal();
+        // Remove sent items from data and DOM
+        removeReviewedCards(clientName);
         showAIToast(`עדכון נשלח ל${clientName}`, 'success');
         delete batchReviewTracker[clientName];
     } catch (error) {
-        closeBatchCompleteModal();
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = '<i data-lucide="send" class="icon-sm"></i> שלח עדכון ללקוח';
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+        }
         showModal('error', 'שגיאה', error.message);
+    }
+}
+
+// DL-086: Dismiss batch — clear without sending email
+function dismissBatch(clientName) {
+    showConfirmDialog('לדלג על שליחת עדכון ללקוח?', async () => {
+        const trackerData = batchReviewTracker[clientName];
+        const clientItems = aiClassificationsData.filter(i => i.client_name === clientName && (i.review_status || 'pending') !== 'pending');
+        const classificationIds = clientItems.map(i => i.id);
+
+        try {
+            const response = await fetchWithTimeout(`${API_BASE}/send-batch-status`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    token: authToken,
+                    action: 'dismiss',
+                    report_key: trackerData?.reportRecordId || null,
+                    client_name: clientName,
+                    classification_ids: classificationIds,
+                    items: []
+                })
+            }, FETCH_TIMEOUTS.mutate);
+
+            const data = await response.json();
+            if (!data.ok) throw new Error(data.error || 'שגיאה');
+
+            removeReviewedCards(clientName);
+            showAIToast('הסקירה הושלמה (ללא עדכון ללקוח)', 'success');
+            delete batchReviewTracker[clientName];
+        } catch (error) {
+            showModal('error', 'שגיאה', error.message);
+        }
+    }, 'אישור', false);
+}
+
+// DL-086: Remove reviewed cards for a client after send/dismiss
+function removeReviewedCards(clientName) {
+    // Remove reviewed items from data
+    aiClassificationsData = aiClassificationsData.filter(i =>
+        !(i.client_name === clientName && (i.review_status || 'pending') !== 'pending')
+    );
+
+    // Animate removal
+    const accordion = document.querySelector(`.ai-accordion[data-client="${CSS.escape(clientName)}"]`);
+    if (accordion) {
+        const reviewedCards = accordion.querySelectorAll('.ai-review-card[data-review-status]');
+        reviewedCards.forEach(card => {
+            card.style.maxHeight = card.offsetHeight + 'px';
+            card.offsetHeight; // eslint-disable-line no-unused-expressions
+            card.classList.add('removing');
+        });
+
+        // Remove batch action bar
+        const bar = accordion.querySelector('.batch-action-bar');
+        if (bar) bar.remove();
+
+        // Remove ready-to-send badge
+        const readyBadge = accordion.querySelector('.badge-ready-send');
+        if (readyBadge) readyBadge.remove();
+
+        setTimeout(() => {
+            reviewedCards.forEach(card => card.remove());
+
+            // If no cards left, remove accordion
+            const remainingCards = accordion.querySelectorAll('.ai-review-card');
+            if (remainingCards.length === 0) {
+                accordion.remove();
+            }
+
+            // Check if everything is empty
+            if (aiClassificationsData.length === 0) {
+                document.getElementById('aiCardsContainer').style.display = 'none';
+                document.getElementById('aiEmptyState').style.display = 'block';
+                if (typeof lucide !== 'undefined') lucide.createIcons();
+            }
+
+            recalcAIStats();
+        }, 350);
+    } else {
+        recalcAIStats();
     }
 }
 
