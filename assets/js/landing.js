@@ -308,6 +308,10 @@ function goToForm(lang) {
     window.location.href = `https://tally.so/r/${formId}?${qs}`;
 }
 
+function _escapeHtmlErr(s) {
+    const d = document.createElement('div'); d.textContent = String(s); return d.innerHTML;
+}
+
 function showError(msg) {
     const content = document.getElementById('content');
     content.innerHTML = `
@@ -316,7 +320,7 @@ function showError(msg) {
                 ${lucideIcon('alert-triangle', 'icon-lg')}
             </div>
             <h3>Error</h3>
-            <p>${msg}</p>
+            <p>${_escapeHtmlErr(msg)}</p>
         </div>
     `;
     reinitIcons();

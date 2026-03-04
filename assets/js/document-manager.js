@@ -317,9 +317,9 @@ function displayDocuments() {
                                 onclick="toggleNote('${doc.id}')"
                                 title="הערת משרד"><i data-lucide="${hasNote ? 'message-square-text' : 'message-square'}" class="icon-sm"></i></button>
                         <span class="file-links-slot">${doc.file_url && (effectiveStatus === 'Received' || effectiveStatus === 'Requires_Fix')
-                            ? `<a href="${escapeHtml(doc.file_url)}" target="_blank" rel="noopener noreferrer"
+                            ? `<a href="${escapeHtml(sanitizeUrl(doc.file_url))}" target="_blank" rel="noopener noreferrer"
                                     class="file-action-btn" title="צפה בקובץ" aria-label="צפה בקובץ"><i data-lucide="external-link" class="icon-sm"></i></a>
-                               <a href="${doc.download_url ? escapeHtml(doc.download_url) : '#'}" ${doc.download_url ? 'download' : ''} rel="noopener noreferrer"
+                               <a href="${doc.download_url ? escapeHtml(sanitizeUrl(doc.download_url)) : '#'}" ${doc.download_url ? 'download' : ''} rel="noopener noreferrer"
                                     class="file-action-btn${doc.download_url ? '' : ' action-hidden'}" title="הורד קובץ" aria-label="הורד קובץ"><i data-lucide="download" class="icon-sm"></i></a>`
                             : `<span class="file-action-btn action-hidden"><i data-lucide="external-link" class="icon-sm"></i></span>
                                <span class="file-action-btn action-hidden"><i data-lucide="download" class="icon-sm"></i></span>`
@@ -1309,6 +1309,16 @@ function escapeHtml(text) {
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
+}
+
+// Validate URL scheme — only allow http(s) to prevent javascript: / data: injection
+function sanitizeUrl(url) {
+    if (!url) return '';
+    try {
+        const parsed = new URL(url);
+        if (parsed.protocol === 'https:' || parsed.protocol === 'http:') return url;
+    } catch (e) { /* invalid URL */ }
+    return '';
 }
 
 // Close detail input and status dropdown when clicking outside
