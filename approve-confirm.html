@@ -85,11 +85,12 @@
                     <div class="ready-icon-wrapper">
                         ${lucideIcon('circle-check', 'icon-lg')}
                     </div>
-                    <div class="alert-title" style="color:var(--success-700)">הדוח אושר ונשלח!</div>
-                    <p class="alert-text">הדוח אושר בהצלחה ונשלח ללקוח. ניתן לסגור חלון זה.</p>
+                    <div class="alert-title" style="color:var(--success-700)">רשימת המסמכים נשלחה בהצלחה!</div>
+                    <p class="alert-text">החלון ייסגר אוטומטית בעוד <span id="countdown">5</span> שניות...</p>
                 </div>
             `;
             reinitIcons();
+            autoCloseCountdown();
         }
 
         function showAlreadyApproved() {
@@ -146,6 +147,19 @@
             document.getElementById('form_report_id').value = reportId;
             document.getElementById('form_token').value = token;
             document.getElementById('confirmForm').submit();
+        }
+
+        function autoCloseCountdown() {
+            var seconds = 5;
+            var timer = setInterval(function() {
+                seconds--;
+                var el = document.getElementById('countdown');
+                if (el) el.textContent = seconds;
+                if (seconds <= 0) {
+                    clearInterval(timer);
+                    window.close();
+                }
+            }, 1000);
         }
 
         // Route based on state
