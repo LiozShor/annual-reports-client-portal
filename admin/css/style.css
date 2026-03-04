@@ -853,6 +853,7 @@ tr.duplicate {
 }
 
 .modal-content {
+    position: relative;
     background: white;
     padding: var(--sp-8);
     border-radius: var(--radius-xl);
@@ -861,6 +862,26 @@ tr.duplicate {
     text-align: center;
     box-shadow: var(--shadow-lg);
     animation: modalSlideUp 200ms ease-out;
+}
+
+.modal-close-btn {
+    position: absolute;
+    top: var(--sp-3);
+    right: var(--sp-3);
+    background: none;
+    border: none;
+    font-size: var(--text-2xl);
+    color: var(--gray-400);
+    cursor: pointer;
+    line-height: 1;
+    padding: var(--sp-1) var(--sp-2);
+    border-radius: var(--radius-md);
+    transition: color 150ms, background 150ms;
+}
+
+.modal-close-btn:hover {
+    color: var(--gray-600);
+    background: var(--gray-100);
 }
 
 @keyframes modalSlideUp {
@@ -2543,6 +2564,55 @@ tr.reminder-loading td:last-child {
 
 .action-btn.reminder-set-btn:hover {
     background: var(--primary-100);
+}
+
+.action-btn.deactivate {
+    background: var(--danger-50);
+    color: var(--danger-700);
+}
+
+.action-btn.deactivate:hover {
+    background: var(--danger-100);
+}
+
+.action-btn.reactivate {
+    background: var(--success-50);
+    color: var(--success-700);
+}
+
+.action-btn.reactivate:hover {
+    background: var(--success-100);
+}
+
+/* Archive Toggle Button */
+.archive-toggle-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--sp-1);
+    padding: var(--sp-1) var(--sp-3);
+    border: 1px solid var(--neutral-200);
+    border-radius: var(--radius-md);
+    background: var(--neutral-50);
+    color: var(--neutral-600);
+    font-size: var(--text-sm);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    white-space: nowrap;
+}
+
+.archive-toggle-btn:hover {
+    border-color: var(--neutral-300);
+    background: var(--neutral-100);
+}
+
+.archive-toggle-btn.active {
+    background: var(--warning-50);
+    border-color: var(--warning-300);
+    color: var(--warning-700);
+}
+
+.archive-toggle-btn.active:hover {
+    background: var(--warning-100);
 }
 
 /* Reminder Settings Modal Form Helpers */

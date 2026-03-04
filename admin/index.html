@@ -137,6 +137,10 @@
                                     <option value="">הכל</option>
                                 </select>
                             </div>
+                            <button class="archive-toggle-btn" id="archiveToggleBtn" onclick="toggleArchiveMode()">
+                                <i data-lucide="archive" class="icon-sm"></i>
+                                <span id="archiveToggleLabel">ארכיון</span>
+                            </button>
                         </div>
 
                         <div id="clientsTableContainer">
@@ -578,8 +582,9 @@
     </div>
 
     <!-- Result Modal -->
-    <div id="resultModal" class="modal">
+    <div id="resultModal" class="modal" onclick="if(event.target===this)closeModal()">
         <div class="modal-content">
+            <button class="modal-close-btn" onclick="closeModal()" aria-label="Close">&times;</button>
             <div class="modal-icon" id="modalIcon"><i data-lucide="circle-check" class="icon-2xl"></i></div>
             <h2 class="modal-title" id="modalTitle">הושלם בהצלחה!</h2>
             <div class="modal-body" id="modalBody"></div>
