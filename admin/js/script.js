@@ -16,6 +16,7 @@ let clientsData = [];
 let importData = [];
 let existingEmails = new Set();
 let reviewQueueData = [];
+let showArchivedMode = false;
 
 // ==================== SSOT CONSTANTS ====================
 
@@ -182,16 +183,11 @@ async function loadDashboard(silent = false) {
             throw new Error(data.error);
         }
 
-        // Update stats
-        document.getElementById('stat-total').textContent = data.stats.total || 0;
-        document.getElementById('stat-stage1').textContent = data.stats.stage1 || 0;
-        document.getElementById('stat-stage2').textContent = data.stats.stage2 || 0;
-        document.getElementById('stat-stage3').textContent = data.stats.stage3 || 0;
-        document.getElementById('stat-stage4').textContent = data.stats.stage4 || 0;
-        document.getElementById('stat-stage5').textContent = data.stats.stage5 || 0;
-
         // Store clients data
         clientsData = data.clients || [];
+
+        // Update stats (recalculate client-side to exclude deactivated)
+        recalculateStats();
         existingEmails = new Set(clientsData.map(c => c.email?.toLowerCase()));
 
         // Store review queue data
@@ -317,6 +313,9 @@ function renderClientsTable(clients) {
                     ${(client.stage === '2-Waiting_For_Answers' || client.stage === '3-Collecting_Docs') ?
                 `<button class="action-btn reminder-set-btn" onclick="setManualReminder('${escapeAttr(client.report_id)}', '${escapeAttr(client.name)}')" title="הגדר תזכורת"><i data-lucide="bell-plus" class="icon-sm"></i></button>` :
                 ''}
+                    ${client.is_active === false ?
+                `<button class="action-btn reactivate" onclick="reactivateClient('${escapeAttr(client.report_id)}')" title="הפעל מחדש"><i data-lucide="archive-restore" class="icon-sm"></i></button>` :
+                `<button class="action-btn deactivate" onclick="deactivateClient('${escapeAttr(client.report_id)}', '${escapeAttr(client.name)}')" title="העבר לארכיון"><i data-lucide="archive" class="icon-sm"></i></button>`}
                 </td>
             </tr>
         `;
@@ -333,6 +332,9 @@ function filterClients() {
     const year = document.getElementById('yearFilter').value;
 
     let filtered = clientsData;
+
+    // Filter by active status based on archive mode
+    filtered = filtered.filter(c => showArchivedMode ? c.is_active === false : c.is_active !== false);
 
     if (search) {
         filtered = filtered.filter(c =>
@@ -584,6 +586,7 @@ function recalculateStats() {
     const counts = { total: 0, stage1: 0, stage2: 0, stage3: 0, stage4: 0, stage5: 0 };
 
     for (const client of clientsData) {
+        if (client.is_active === false) continue; // Skip deactivated clients in stats
         counts.total++;
         const num = STAGES[client.stage]?.num;
         if (num) counts['stage' + num]++;
@@ -3922,6 +3925,83 @@ function saveClientMax(reportId, maxValue) {
 
 function resetClientMax(reportId) {
     executeReminderAction('set_max', [reportId], null);
+}
+
+// ==================== DEACTIVATE / ARCHIVE ====================
+
+function deactivateClient(reportId, clientName) {
+    showConfirmDialog(
+        `האם להעביר את "${clientName}" לארכיון? הלקוח לא יופיע ברשימה ולא יקבל תזכורות.`,
+        () => executeToggleActive(reportId, false),
+        'העבר לארכיון',
+        true
+    );
+}
+
+function reactivateClient(reportId) {
+    executeToggleActive(reportId, true);
+}
+
+async function executeToggleActive(reportId, active) {
+    const client = clientsData.find(c => c.report_id === reportId);
+    if (!client) return;
+
+    const previousActive = client.is_active;
+    const clientName = client.name;
+
+    // Optimistic update
+    client.is_active = active;
+    recalculateStats();
+    filterClients();
+
+    try {
+        const response = await fetchWithTimeout(`${API_BASE}/admin-toggle-active`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ token: authToken, report_id: reportId, active })
+        }, FETCH_TIMEOUTS.mutate);
+
+        const data = await response.json();
+
+        if (!data.ok) {
+            throw new Error(data.error || 'שגיאה לא ידועה');
+        }
+
+        if (!active) {
+            showAIToast(`"${clientName}" הועבר לארכיון`, 'success', {
+                label: 'בטל',
+                onClick: () => executeToggleActive(reportId, true)
+            });
+        } else {
+            showAIToast(`"${clientName}" הופעל מחדש`, 'success');
+        }
+    } catch (error) {
+        // Revert optimistic update
+        client.is_active = previousActive;
+        recalculateStats();
+        filterClients();
+        showAIToast('שגיאה בעדכון: ' + error.message, 'danger');
+    }
+}
+
+function toggleArchiveMode() {
+    showArchivedMode = !showArchivedMode;
+    const btn = document.getElementById('archiveToggleBtn');
+    const label = document.getElementById('archiveToggleLabel');
+    const statsGrid = document.getElementById('statsGrid');
+
+    if (showArchivedMode) {
+        btn.classList.add('active');
+        label.textContent = 'חזרה לרשימה';
+        statsGrid.style.display = 'none';
+    } else {
+        btn.classList.remove('active');
+        label.textContent = 'ארכיון';
+        statsGrid.style.display = '';
+    }
+
+    filterClients();
+    if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
 // ==================== UTILITIES ====================
