@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="he">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="referrer" content="no-referrer">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://unpkg.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data:; connect-src 'self' https://liozshor.app.n8n.cloud https://unpkg.com; font-src 'self' https://fonts.gstatic.com; object-src 'none'; base-uri 'self';">
+    <title>אישור שליחת דוח שנתי</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📋</text></svg>">
+    <link rel="stylesheet" href="assets/css/design-system.css">
+    <link rel="stylesheet" href="assets/css/common.css">
+    <link rel="stylesheet" href="assets/css/landing.css">
+    <script src="https://unpkg.com/lucide@0.576.0/dist/umd/lucide.min.js" integrity="sha384-b05ba3pt6xaC7F4r130arhf8cF18GH/gKu9JDz/NMf+BhLlBVwIWUdAZSpf1IWRZ" crossorigin="anonymous" defer></script>
+</head>
+
+<body>
+    <div class="landing-wrapper">
+        <div class="container">
+            <header class="header">
+                <div class="header-logo">
+                    <a href="./">
+                        <img src="assets/images/logo.png" alt="משרד רו״ח Client Name" class="site-logo site-logo-lg" width="1010" height="306">
+                    </a>
+                </div>
+                <h1>אישור שליחת דוח</h1>
+                <p class="header-subtitle">Annual Report Approval</p>
+            </header>
+
+            <div class="content" id="content">
+                <!-- Populated by JS -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const CONFIRM_ENDPOINT = 'https://liozshor.app.n8n.cloud/webhook/approve-and-send-confirm';
+
+        const params = new URLSearchParams(window.location.search);
+        const reportId = params.get('report_id');
+        const token = params.get('token');
+
+        // Strip params from URL bar
+        if (window.location.search) {
+            history.replaceState(null, '', window.location.pathname);
+        }
+
+        function lucideIcon(name, cls) {
+            return `<i data-lucide="${name}" class="${cls || ''}"></i>`;
+        }
+
+        function reinitIcons() {
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+        }
+
+        function showConfirmState() {
+            document.getElementById('content').innerHTML = `
+                <div class="alert-box bilingual">
+                    <div class="ready-icon-wrapper">
+                        ${lucideIcon('send', 'icon-lg')}
+                    </div>
+                    <div class="alert-title">אישור שליחת דוח שנתי</div>
+                    <p class="alert-text">לחיצה על הכפתור תאשר את הדוח ותשלח אותו ללקוח.</p>
+                    <div class="en text-sm" style="opacity:0.7;margin-top:var(--sp-2)">
+                        Click the button to approve and send the annual report to the client.
+                    </div>
+                </div>
+
+                <div class="actions">
+                    <button class="btn btn-primary btn-lg" id="confirmBtn" onclick="doConfirm()">
+                        <div class="bilingual">
+                            <span class="flex items-center justify-center gap-2">
+                                ${lucideIcon('check', 'icon-sm')} אשר ושלח
+                            </span>
+                            <span class="en text-sm" style="opacity:0.8">Approve &amp; Send</span>
+                        </div>
+                    </button>
+                </div>
+            `;
+            reinitIcons();
+        }
+
+        function showSuccess() {
+            document.getElementById('content').innerHTML = `
+                <div class="alert-box bilingual">
+                    <div class="ready-icon-wrapper">
+                        ${lucideIcon('circle-check', 'icon-lg')}
+                    </div>
+                    <div class="alert-title" style="color:var(--success-700)">הדוח אושר ונשלח!</div>
+                    <p class="alert-text">הדוח אושר בהצלחה ונשלח ללקוח. ניתן לסגור חלון זה.</p>
+                    <div class="en text-sm" style="opacity:0.7;margin-top:var(--sp-2)">
+                        The report was approved and sent successfully. You may close this window.
+                    </div>
+                </div>
+            `;
+            reinitIcons();
+        }
+
+        function showAlreadyApproved() {
+            document.getElementById('content').innerHTML = `
+                <div class="alert-box bilingual">
+                    <div class="alert-icon-wrapper" style="background:var(--warning-50);color:var(--warning-500)">
+                        ${lucideIcon('info', 'icon-lg')}
+                    </div>
+                    <div class="alert-title" style="color:var(--warning-700)">הדוח כבר אושר ונשלח</div>
+                    <p class="alert-text">הדוח כבר אושר בעבר ונשלח ללקוח. ניתן לסגור חלון זה.</p>
+                    <div class="en text-sm" style="opacity:0.7;margin-top:var(--sp-2)">
+                        This report was already approved and sent. You may close this window.
+                    </div>
+                </div>
+            `;
+            reinitIcons();
+        }
+
+        function showError(msg) {
+            document.getElementById('content').innerHTML = `
+                <div class="alert-box bilingual" role="alert">
+                    <div class="alert-icon-wrapper" style="background:var(--danger-50);color:var(--danger-500)">
+                        ${lucideIcon('alert-triangle', 'icon-lg')}
+                    </div>
+                    <div class="alert-title" style="color:var(--danger-700)">שגיאה</div>
+                    <p class="alert-text">${msg}</p>
+                    <div class="en text-sm" style="opacity:0.7;margin-top:var(--sp-2)">Error / Please try again or contact the office.</div>
+                </div>
+
+                <div class="actions">
+                    <button class="btn btn-primary btn-lg" onclick="showConfirmState()">
+                        <span class="flex items-center justify-center gap-2">
+                            ${lucideIcon('refresh-cw', 'icon-sm')} נסה שנית
+                        </span>
+                    </button>
+                </div>
+            `;
+            reinitIcons();
+        }
+
+        function showNetworkError() {
+            showError('שגיאת רשת. בדוק חיבור לאינטרנט ונסה שנית.');
+        }
+
+        async function doConfirm() {
+            const btn = document.getElementById('confirmBtn');
+            if (btn) btn.disabled = true;
+
+            document.getElementById('content').innerHTML = `
+                <div class="loading">
+                    <div class="spinner"></div>
+                    <p>שולח...</p>
+                </div>
+            `;
+
+            try {
+                const res = await fetch(CONFIRM_ENDPOINT, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ report_id: reportId, token })
+                });
+
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+                const data = await res.json();
+
+                if (data.ok) {
+                    showSuccess();
+                } else if (data.error === 'ALREADY_APPROVED') {
+                    showAlreadyApproved();
+                } else {
+                    showError('שגיאה: ' + (data.error || 'אנא נסה שנית'));
+                }
+            } catch (err) {
+                showNetworkError();
+            }
+        }
+
+        // Init
+        if (!reportId || !token) {
+            document.getElementById('content').innerHTML = `
+                <div class="alert-box bilingual" role="alert">
+                    <div class="alert-icon-wrapper" style="background:var(--danger-50);color:var(--danger-500)">
+                        <i data-lucide="link-2-off" class="icon-lg"></i>
+                    </div>
+                    <div class="alert-title" style="color:var(--danger-700)">קישור לא תקין</div>
+                    <p class="alert-text">הקישור חסר פרמטרים. אנא השתמש בקישור שנשלח אליך באימייל.</p>
+                    <div class="en text-sm" style="opacity:0.7;margin-top:var(--sp-2)">Invalid link. Please use the link sent to you by email.</div>
+                </div>
+            `;
+        } else {
+            showConfirmState();
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+        });
+    </script>
+</body>
+
+</html>
