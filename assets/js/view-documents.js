@@ -174,8 +174,8 @@ function renderFromData(data) {
     const displayName = spouseName ? `${clientName} ו${spouseName}` : clientName;
     const displayNameEn = spouseName ? `${clientName} & ${spouseName}` : clientName;
 
-    const subtitleHe = `${displayName} \u2022 שנת מס ${year}`;
-    const subtitleEn = `${displayNameEn} \u2022 Tax Year ${year}`;
+    const subtitleHe = `${escapeHtml(displayName)} \u2022 שנת מס ${escapeHtml(year)}`;
+    const subtitleEn = `${escapeHtml(displayNameEn)} \u2022 Tax Year ${escapeHtml(year)}`;
     document.getElementById('subtitle').innerHTML = `
         <span id="subtitle-he">${subtitleHe}</span>
         <span id="subtitle-en" class="hidden">${subtitleEn}</span>
@@ -184,7 +184,7 @@ function renderFromData(data) {
     const email = data.support_email || 'reports@moshe-atsits.co.il';
     document.getElementById('email-display').textContent = email;
     document.getElementById('email-display-en').textContent = email;
-    document.getElementById('email-button').href = `mailto:${email}?subject=מסמכים לדוח שנתי ${year} - ${displayName}`;
+    document.getElementById('email-button').href = `mailto:${email}?subject=מסמכים לדוח שנתי ${escapeHtml(year)} - ${escapeHtml(displayName)}`;
 
     currentLang = sourceLanguage || 'he';
     switchLanguage(currentLang);
