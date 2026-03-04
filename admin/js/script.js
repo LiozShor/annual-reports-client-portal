@@ -3900,7 +3900,7 @@ function editClientMax(reportId, cell) {
 function restoreMaxCell(cell, r, reportId) {
     const hasCustom = r.reminder_max != null;
     const effectiveMax = hasCustom ? r.reminder_max : reminderDefaultMax;
-    const safeMax = Number.isFinite(Number(effectiveMax)) ? String(effectiveMax) : '';
+    const safeMax = isFinite(effectiveMax) ? String(effectiveMax) : '—';
     if (hasCustom) {
         cell.className = 'reminder-max-cell reminder-max-custom';
         cell.innerHTML = `${safeMax} <button class="reminder-reset-btn" onclick="event.stopPropagation(); resetClientMax('${escapeAttr(reportId)}')" title="איפוס לברירת מחדל">↺</button>`;
