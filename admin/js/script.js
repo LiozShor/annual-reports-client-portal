@@ -2643,6 +2643,12 @@ async function submitAIReassign(recordId, templateId, docRecordId, loadingText, 
 
         trackReviewAction(recordId, 'reassign', data);
         const reassignedItem = aiClassificationsData.find(i => i.id === recordId);
+        // Update local item with reassigned doc info from API response
+        if (reassignedItem && data.doc_title) {
+            reassignedItem.matched_doc_name = data.doc_title;
+            reassignedItem.matched_template_id = templateId;
+            reassignedItem.matched_template_name = AI_DOC_NAMES[templateId] || '';
+        }
         if (docRecordId) {
             updateClientDocState(reassignedItem?.client_name, docRecordId);
         }
