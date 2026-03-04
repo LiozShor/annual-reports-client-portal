@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="referrer" content="no-referrer">
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://unpkg.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data:; connect-src 'self' https://liozshor.app.n8n.cloud https://unpkg.com; font-src 'self' https://fonts.gstatic.com; object-src 'none'; base-uri 'self';">
-    <title>אישור שליחת דוח שנתי</title>
+    <title>אישור שליחת המסמכים הנדרשים לדוח השנתי</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📋</text></svg>">
     <link rel="stylesheet" href="assets/css/design-system.css">
     <link rel="stylesheet" href="assets/css/common.css">
@@ -23,8 +23,7 @@
                         <img src="assets/images/logo.png" alt="משרד רו״ח משה עציץ" class="site-logo site-logo-lg" width="1010" height="306">
                     </a>
                 </div>
-                <h1>אישור שליחת דוח</h1>
-                <p class="header-subtitle">Annual Report Approval</p>
+                <h1>אישור שליחת המסמכים הנדרשים לדוח השנתי</h1>
             </header>
 
             <div class="content" id="content">
@@ -55,25 +54,19 @@
 
         function showConfirmState() {
             document.getElementById('content').innerHTML = `
-                <div class="alert-box bilingual">
+                <div class="alert-box">
                     <div class="ready-icon-wrapper">
                         ${lucideIcon('send', 'icon-lg')}
                     </div>
                     <div class="alert-title">אישור שליחת דוח שנתי</div>
                     <p class="alert-text">לחיצה על הכפתור תאשר את הדוח ותשלח אותו ללקוח.</p>
-                    <div class="en text-sm" style="opacity:0.7;margin-top:var(--sp-2)">
-                        Click the button to approve and send the annual report to the client.
-                    </div>
                 </div>
 
                 <div class="actions">
                     <button class="btn btn-primary btn-lg" id="confirmBtn" onclick="doConfirm()">
-                        <div class="bilingual">
-                            <span class="flex items-center justify-center gap-2">
-                                ${lucideIcon('check', 'icon-sm')} אשר ושלח
-                            </span>
-                            <span class="en text-sm" style="opacity:0.8">Approve &amp; Send</span>
-                        </div>
+                        <span class="flex items-center justify-center gap-2">
+                            ${lucideIcon('check', 'icon-sm')} אשר ושלח
+                        </span>
                     </button>
                 </div>
             `;
@@ -82,15 +75,12 @@
 
         function showSuccess() {
             document.getElementById('content').innerHTML = `
-                <div class="alert-box bilingual">
+                <div class="alert-box">
                     <div class="ready-icon-wrapper">
                         ${lucideIcon('circle-check', 'icon-lg')}
                     </div>
                     <div class="alert-title" style="color:var(--success-700)">הדוח אושר ונשלח!</div>
                     <p class="alert-text">הדוח אושר בהצלחה ונשלח ללקוח. ניתן לסגור חלון זה.</p>
-                    <div class="en text-sm" style="opacity:0.7;margin-top:var(--sp-2)">
-                        The report was approved and sent successfully. You may close this window.
-                    </div>
                 </div>
             `;
             reinitIcons();
@@ -98,15 +88,12 @@
 
         function showAlreadyApproved() {
             document.getElementById('content').innerHTML = `
-                <div class="alert-box bilingual">
+                <div class="alert-box">
                     <div class="alert-icon-wrapper" style="background:var(--warning-50);color:var(--warning-500)">
                         ${lucideIcon('info', 'icon-lg')}
                     </div>
                     <div class="alert-title" style="color:var(--warning-700)">הדוח כבר אושר ונשלח</div>
                     <p class="alert-text">הדוח כבר אושר בעבר ונשלח ללקוח. ניתן לסגור חלון זה.</p>
-                    <div class="en text-sm" style="opacity:0.7;margin-top:var(--sp-2)">
-                        This report was already approved and sent. You may close this window.
-                    </div>
                 </div>
             `;
             reinitIcons();
@@ -114,13 +101,12 @@
 
         function showError(msg) {
             document.getElementById('content').innerHTML = `
-                <div class="alert-box bilingual" role="alert">
+                <div class="alert-box" role="alert">
                     <div class="alert-icon-wrapper" style="background:var(--danger-50);color:var(--danger-500)">
                         ${lucideIcon('alert-triangle', 'icon-lg')}
                     </div>
                     <div class="alert-title" style="color:var(--danger-700)">שגיאה</div>
                     <p class="alert-text">${msg}</p>
-                    <div class="en text-sm" style="opacity:0.7;margin-top:var(--sp-2)">Error / Please try again or contact the office.</div>
                 </div>
 
                 <div class="actions">
@@ -132,10 +118,6 @@
                 </div>
             `;
             reinitIcons();
-        }
-
-        function showNetworkError() {
-            showError('שגיאת רשת. בדוק חיבור לאינטרנט ונסה שנית.');
         }
 
         async function doConfirm() {
@@ -168,20 +150,19 @@
                     showError('שגיאה: ' + (data.error || 'אנא נסה שנית'));
                 }
             } catch (err) {
-                showNetworkError();
+                showError('שגיאת רשת. בדוק חיבור לאינטרנט ונסה שנית.');
             }
         }
 
         // Init
         if (!reportId || !token) {
             document.getElementById('content').innerHTML = `
-                <div class="alert-box bilingual" role="alert">
+                <div class="alert-box" role="alert">
                     <div class="alert-icon-wrapper" style="background:var(--danger-50);color:var(--danger-500)">
                         <i data-lucide="link-2-off" class="icon-lg"></i>
                     </div>
                     <div class="alert-title" style="color:var(--danger-700)">קישור לא תקין</div>
                     <p class="alert-text">הקישור חסר פרמטרים. אנא השתמש בקישור שנשלח אליך באימייל.</p>
-                    <div class="en text-sm" style="opacity:0.7;margin-top:var(--sp-2)">Invalid link. Please use the link sent to you by email.</div>
                 </div>
             `;
         } else {
