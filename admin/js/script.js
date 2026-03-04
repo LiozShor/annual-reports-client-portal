@@ -248,6 +248,7 @@ function renderClientsTable(clients) {
         <table>
             <thead>
                 <tr>
+                    <th style="width:32px"><input type="checkbox" class="dashboard-select-all" onchange="toggleClientSelectAll(this)"></th>
                     <th><button class="th-sort-btn" onclick="toggleSort('name')" aria-sort="${sortAttr('name')}">שם <span class="sort-arrows"><span class="sort-asc">▲</span><span class="sort-desc">▼</span></span></button></th>
                     <th><button class="th-sort-btn" onclick="toggleSort('stage')" aria-sort="${sortAttr('stage')}">שלב <span class="sort-arrows"><span class="sort-asc">▲</span><span class="sort-desc">▼</span></span></button></th>
                     <th><button class="th-sort-btn" onclick="toggleSort('docs')" aria-sort="${sortAttr('docs')}">מסמכים <span class="sort-arrows"><span class="sort-asc">▲</span><span class="sort-desc">▼</span></span></button></th>
@@ -264,32 +265,36 @@ function renderClientsTable(clients) {
         const docsTotal = client.docs_total || 0;
         const progressPercent = docsTotal > 0 ? Math.round((docsReceived / docsTotal) * 100) : 0;
         const missingCount = docsTotal - docsReceived;
+        const rid = escapeAttr(client.report_id);
+        const cName = escapeAttr(client.name);
+        const isActive = client.is_active !== false;
 
         html += `
-            <tr>
+            <tr data-report-id="${rid}" data-client-name="${cName}" data-stage="${escapeAttr(client.stage)}" data-is-active="${isActive}">
+                <td><input type="checkbox" class="dashboard-client-checkbox" value="${rid}" onchange="updateClientSelectedCount()"></td>
                 <td>
                     <div class="client-name-cell">
                         <strong
                             class="client-link"
-                            onclick="viewClientDocs('${escapeAttr(client.report_id)}')"
+                            onclick="viewClientDocs('${rid}')"
                             title="${escapeHtml(client.email || '')}"
                         >
                             ${escapeHtml(client.name)}
                         </strong>
-                        <a class="client-view-link" href="javascript:void(0)" onclick="event.stopPropagation(); viewClient('${escapeAttr(client.report_id)}')" title="צפייה כלקוח">
+                        <a class="client-view-link" href="javascript:void(0)" onclick="event.stopPropagation(); viewClient('${rid}')" title="צפייה כלקוח">
                             <i data-lucide="external-link" class="icon-xs"></i>
                         </a>
                     </div>
                 </td>
                 <td>
-                    <span id="stage-badge-${escapeAttr(client.report_id)}" class="stage-badge ${stage.class} clickable"
-                        onclick="openStageDropdown(event, '${escapeAttr(client.report_id)}', '${escapeAttr(client.stage)}')"
+                    <span id="stage-badge-${rid}" class="stage-badge ${stage.class} clickable"
+                        onclick="openStageDropdown(event, '${rid}', '${escapeAttr(client.stage)}')"
                         title="לחץ לשינוי שלב">
                         <i data-lucide="${stage.icon}" class="icon-sm"></i> ${stage.label} <span class="stage-caret">&#x25BE;</span>
                     </span>
                 </td>
                 <td>
-                    <div class="docs-progress-cell clickable-docs" onclick="toggleDocsPopover(event, '${escapeAttr(client.report_id)}', '${escapeAttr(client.name)}')" tabindex="0" role="button" title="לחץ לצפייה במסמכים">
+                    <div class="docs-progress-cell clickable-docs" onclick="toggleDocsPopover(event, '${rid}', '${cName}')" tabindex="0" role="button" title="לחץ לצפייה במסמכים">
                         <span class="docs-count">${docsReceived}/${docsTotal}</span>
                         <div class="progress-bar">
                             <div class="progress-fill" style="width: ${progressPercent}%"></div>
@@ -297,18 +302,23 @@ function renderClientsTable(clients) {
                     </div>
                 </td>
                 <td>
-                    <span class="missing-count clickable-count ${missingCount > 0 ? 'has-missing' : 'all-done'}" onclick="toggleDocsPopover(event, '${escapeAttr(client.report_id)}', '${escapeAttr(client.name)}')" tabindex="0" role="button" title="לחץ לצפייה במסמכים">${missingCount > 0 ? missingCount : '✓'}</span>
+                    <span class="missing-count clickable-count ${missingCount > 0 ? 'has-missing' : 'all-done'}" onclick="toggleDocsPopover(event, '${rid}', '${cName}')" tabindex="0" role="button" title="לחץ לצפייה במסמכים">${missingCount > 0 ? missingCount : '✓'}</span>
                 </td>
                 <td>
                     ${client.stage === '1-Send_Questionnaire' ?
-                `<button class="action-btn send" onclick="sendSingle('${escapeAttr(client.report_id)}')" title="שלח שאלון"><i data-lucide="send" class="icon-sm"></i></button>` :
+                `<button class="action-btn send" onclick="sendSingle('${rid}')" title="שלח שאלון"><i data-lucide="send" class="icon-sm"></i></button>` :
                 ''}
                     ${(client.stage === '2-Waiting_For_Answers' || client.stage === '3-Collecting_Docs') ?
-                `<button class="action-btn reminder-set-btn" onclick="setManualReminder('${escapeAttr(client.report_id)}', '${escapeAttr(client.name)}')" title="הגדר תזכורת"><i data-lucide="bell-plus" class="icon-sm"></i></button>` :
+                `<button class="action-btn reminder-set-btn" onclick="setManualReminder('${rid}', '${cName}')" title="הגדר תזכורת"><i data-lucide="bell-plus" class="icon-sm"></i></button>` :
                 ''}
-                    ${client.is_active === false ?
-                `<button class="action-btn reactivate" onclick="reactivateClient('${escapeAttr(client.report_id)}')" title="הפעל מחדש"><i data-lucide="archive-restore" class="icon-sm"></i></button>` :
-                `<button class="action-btn deactivate" onclick="deactivateClient('${escapeAttr(client.report_id)}', '${escapeAttr(client.name)}')" title="העבר לארכיון"><i data-lucide="archive" class="icon-sm"></i></button>`}
+                    <div class="row-overflow-dropdown">
+                        <button class="action-btn overflow" onclick="toggleRowMenu(this, event)" title="פעולות נוספות">⋮</button>
+                        <div class="row-menu">
+                            ${isActive ?
+                `<button class="danger" onclick="deactivateClient('${rid}', '${cName}'); closeAllRowMenus();"><i data-lucide="archive"></i> העבר לארכיון</button>` :
+                `<button onclick="reactivateClient('${rid}'); closeAllRowMenus();"><i data-lucide="archive-restore"></i> הפעל מחדש</button>`}
+                        </div>
+                    </div>
                 </td>
             </tr>
         `;
@@ -320,6 +330,7 @@ function renderClientsTable(clients) {
 }
 
 function filterClients() {
+    resetClientBulkSelection();
     const search = document.getElementById('searchInput').value.toLowerCase();
     const stage = document.getElementById('stageFilter').value;
     const year = document.getElementById('yearFilter').value;
@@ -598,6 +609,7 @@ document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
         closeStageDropdown();
         closeDocsPopover();
+        closeAllRowMenus();
     }
     if (e.key === 'Enter' && e.target.classList.contains('clickable-count')) {
         e.target.click();
@@ -3980,22 +3992,199 @@ async function executeToggleActive(reportId, active) {
 
 function toggleArchiveMode() {
     showArchivedMode = !showArchivedMode;
-    const btn = document.getElementById('archiveToggleBtn');
-    const label = document.getElementById('archiveToggleLabel');
+    const banner = document.getElementById('archiveBanner');
+    const headerLabel = document.getElementById('headerArchiveLabel');
+    const menuLabel = document.getElementById('headerArchiveMenuLabel');
     const statsGrid = document.getElementById('statsGrid');
 
     if (showArchivedMode) {
-        btn.classList.add('active');
-        label.textContent = 'חזרה לרשימה';
+        banner.classList.add('visible');
+        headerLabel.textContent = '— ארכיון';
+        menuLabel.textContent = 'חזרה לרשימה';
         statsGrid.style.display = 'none';
     } else {
-        btn.classList.remove('active');
-        label.textContent = 'ארכיון';
+        banner.classList.remove('visible');
+        headerLabel.textContent = '';
+        menuLabel.textContent = 'לקוחות מושבתים';
         statsGrid.style.display = '';
     }
 
+    resetClientBulkSelection();
     filterClients();
     if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+// ==================== ROW MENU / CONTEXT MENU ====================
+
+function closeAllRowMenus() {
+    document.querySelectorAll('.row-menu.open').forEach(m => m.classList.remove('open'));
+}
+
+function toggleRowMenu(btn, e) {
+    e.stopPropagation();
+    const menu = btn.nextElementSibling;
+    const wasOpen = menu.classList.contains('open');
+    closeAllRowMenus();
+    if (!wasOpen) {
+        positionFloating(btn, menu);
+        menu.classList.add('open');
+    }
+}
+
+function toggleHeaderMore(btn, e) {
+    e.stopPropagation();
+    const menu = document.getElementById('headerMoreMenu');
+    const wasOpen = menu.classList.contains('open');
+    closeAllRowMenus();
+    if (!wasOpen) {
+        positionFloating(btn, menu);
+        menu.classList.add('open');
+    }
+}
+
+function openClientContextMenu(e) {
+    const tr = e.target.closest('tr');
+    if (!tr || !tr.dataset.reportId) return;
+    e.preventDefault();
+    closeAllRowMenus();
+
+    const rid = tr.dataset.reportId;
+    const cName = tr.dataset.clientName;
+    const stage = tr.dataset.stage;
+    const isActive = tr.dataset.isActive === 'true';
+
+    const menu = document.getElementById('clientContextMenu');
+    let items = '';
+
+    if (isActive) {
+        if (stage === '1-Send_Questionnaire') {
+            items += `<button onclick="sendSingle('${rid}'); closeAllRowMenus();"><i data-lucide="send"></i> שלח שאלון</button>`;
+        }
+        if (stage === '2-Waiting_For_Answers' || stage === '3-Collecting_Docs') {
+            items += `<button onclick="setManualReminder('${rid}', '${cName}'); closeAllRowMenus();"><i data-lucide="bell-plus"></i> הגדר תזכורת</button>`;
+        }
+        items += `<button onclick="viewClient('${rid}'); closeAllRowMenus();"><i data-lucide="external-link"></i> צפייה כלקוח</button>`;
+        items += `<hr>`;
+        items += `<button class="danger" onclick="deactivateClient('${rid}', '${cName}'); closeAllRowMenus();"><i data-lucide="archive"></i> העבר לארכיון</button>`;
+    } else {
+        items += `<button onclick="viewClient('${rid}'); closeAllRowMenus();"><i data-lucide="external-link"></i> צפייה כלקוח</button>`;
+        items += `<hr>`;
+        items += `<button onclick="reactivateClient('${rid}'); closeAllRowMenus();"><i data-lucide="archive-restore"></i> הפעל מחדש</button>`;
+    }
+
+    menu.innerHTML = items;
+
+    // Position at cursor, clamped to viewport
+    menu.style.display = 'block';
+    menu.style.visibility = 'hidden';
+    const mRect = menu.getBoundingClientRect();
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    let top = e.clientY;
+    let left = e.clientX;
+    if (top + mRect.height > vh - 8) top = vh - mRect.height - 8;
+    if (left + mRect.width > vw - 8) left = vw - mRect.width - 8;
+    if (top < 8) top = 8;
+    if (left < 8) left = 8;
+    menu.style.top = top + 'px';
+    menu.style.right = 'auto';
+    menu.style.left = left + 'px';
+    menu.style.bottom = '';
+    menu.style.maxHeight = '';
+    menu.style.visibility = '';
+    menu.classList.add('open');
+
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+// ==================== BULK ACTIONS (CHECKBOXES) ====================
+
+function toggleClientSelectAll(masterCb) {
+    const table = masterCb.closest('table');
+    if (!table) return;
+    table.querySelectorAll('.dashboard-client-checkbox').forEach(cb => {
+        cb.checked = masterCb.checked;
+    });
+    updateClientSelectedCount();
+}
+
+function updateClientSelectedCount() {
+    const checked = document.querySelectorAll('.dashboard-client-checkbox:checked');
+    const count = checked.length;
+    const bar = document.getElementById('clientBulkActions');
+    const countEl = document.getElementById('clientSelectedCount');
+    const sendBtn = document.getElementById('bulkSendBtn');
+    const archiveBtn = document.getElementById('bulkArchiveBtn');
+
+    countEl.textContent = count;
+
+    if (count > 0) {
+        bar.classList.add('visible');
+    } else {
+        bar.classList.remove('visible');
+        return;
+    }
+
+    // Check if all selected are stage 1 → show send button
+    let allStage1 = true;
+    checked.forEach(cb => {
+        const tr = cb.closest('tr');
+        if (tr && tr.dataset.stage !== '1-Send_Questionnaire') allStage1 = false;
+    });
+    sendBtn.style.display = allStage1 ? '' : 'none';
+
+    // In archive mode, switch archive button to reactivate
+    if (showArchivedMode) {
+        archiveBtn.innerHTML = '<i data-lucide="archive-restore" class="icon-sm"></i> הפעל מחדש';
+        archiveBtn.className = 'btn btn-sm btn-outline-success';
+    } else {
+        archiveBtn.innerHTML = '<i data-lucide="archive" class="icon-sm"></i> העבר לארכיון';
+        archiveBtn.className = 'btn btn-sm btn-danger';
+    }
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function resetClientBulkSelection() {
+    document.querySelectorAll('.dashboard-client-checkbox, .dashboard-select-all').forEach(cb => cb.checked = false);
+    const bar = document.getElementById('clientBulkActions');
+    if (bar) bar.classList.remove('visible');
+}
+
+function bulkArchiveClients() {
+    const checked = document.querySelectorAll('.dashboard-client-checkbox:checked');
+    if (checked.length === 0) return;
+
+    const ids = Array.from(checked).map(cb => cb.value);
+    const active = !showArchivedMode; // active mode → archive; archive mode → reactivate
+    const action = active ? 'להעביר לארכיון' : 'להפעיל מחדש';
+
+    showConfirmDialog(
+        `${action} ${ids.length} לקוחות?`,
+        async () => {
+            for (const id of ids) {
+                await executeToggleActive(id, !active);
+            }
+            resetClientBulkSelection();
+        },
+        active ? 'העבר לארכיון' : 'הפעל מחדש',
+        active
+    );
+}
+
+function bulkSendQuestionnaires() {
+    const checked = document.querySelectorAll('.dashboard-client-checkbox:checked');
+    if (checked.length === 0) return;
+
+    const ids = Array.from(checked).map(cb => cb.value);
+
+    showConfirmDialog(
+        `לשלוח שאלון ל-${ids.length} לקוחות?`,
+        () => {
+            sendQuestionnaires(ids);
+            resetClientBulkSelection();
+        },
+        'שלח'
+    );
 }
 
 // ==================== UTILITIES ====================
@@ -4379,6 +4568,21 @@ function clearRolloverPreview() {
     document.getElementById('rolloverPreview').classList.remove('visible');
     document.getElementById('rolloverPreviewBody').innerHTML = '';
 }
+
+// ==================== ROW MENU GLOBAL LISTENERS ====================
+
+// Close row menus on click outside
+document.addEventListener('click', (e) => {
+    if (!e.target.closest('.row-menu') && !e.target.closest('.action-btn.overflow') && !e.target.closest('.header-more-wrapper')) {
+        closeAllRowMenus();
+    }
+});
+
+// Right-click context menu on client table rows
+document.getElementById('clientsTableContainer').addEventListener('contextmenu', openClientContextMenu);
+
+// Close row menus on scroll
+document.addEventListener('scroll', closeAllRowMenus, true);
 
 // ==================== INIT ====================
 

@@ -108,10 +108,21 @@
 
                 <div class="card">
                     <div class="card-header">
-                        <h2><i data-lucide="users" class="icon"></i> רשימת לקוחות</h2>
-                        <button class="btn btn-secondary" onclick="exportToExcel()">
-                            <i data-lucide="download" class="icon-sm"></i> ייצוא לאקסל
-                        </button>
+                        <h2><i data-lucide="users" class="icon"></i> רשימת לקוחות <span id="headerArchiveLabel"></span></h2>
+                        <div class="header-more-wrapper">
+                            <button class="btn btn-secondary" onclick="toggleHeaderMore(this, event)">
+                                <i data-lucide="more-horizontal" class="icon-sm"></i> עוד
+                            </button>
+                            <div class="row-menu" id="headerMoreMenu">
+                                <button onclick="exportToExcel(); closeAllRowMenus();">
+                                    <i data-lucide="download"></i> ייצוא לאקסל
+                                </button>
+                                <hr>
+                                <button onclick="toggleArchiveMode(); closeAllRowMenus();">
+                                    <i data-lucide="archive"></i> <span id="headerArchiveMenuLabel">לקוחות מושבתים</span>
+                                </button>
+                            </div>
+                        </div>
                     </div>
                     <div class="card-body">
                         <div class="filters">
@@ -137,9 +148,25 @@
                                     <option value="">הכל</option>
                                 </select>
                             </div>
-                            <button class="archive-toggle-btn" id="archiveToggleBtn" onclick="toggleArchiveMode()">
-                                <i data-lucide="archive" class="icon-sm"></i>
-                                <span id="archiveToggleLabel">ארכיון</span>
+                        </div>
+
+                        <!-- Archive Mode Banner -->
+                        <div class="archive-banner" id="archiveBanner">
+                            <i data-lucide="archive" class="icon-sm"></i>
+                            <span>מוצגים לקוחות מושבתים בלבד</span>
+                            <button class="btn btn-sm btn-secondary" onclick="toggleArchiveMode()">
+                                <i data-lucide="arrow-right" class="icon-sm"></i> חזרה לרשימה
+                            </button>
+                        </div>
+
+                        <!-- Client Bulk Actions Bar -->
+                        <div class="client-bulk-actions" id="clientBulkActions">
+                            <span class="client-bulk-count"><span id="clientSelectedCount">0</span> נבחרו</span>
+                            <button class="btn btn-sm btn-primary" id="bulkSendBtn" style="display:none" onclick="bulkSendQuestionnaires()">
+                                <i data-lucide="send" class="icon-sm"></i> שלח שאלון
+                            </button>
+                            <button class="btn btn-sm btn-danger" id="bulkArchiveBtn" onclick="bulkArchiveClients()">
+                                <i data-lucide="archive" class="icon-sm"></i> העבר לארכיון
                             </button>
                         </div>
 
@@ -669,6 +696,9 @@
             </div>
         </div>
     </div>
+
+    <!-- Client Context Menu -->
+    <div id="clientContextMenu" class="row-menu context-menu"></div>
 
     <!-- Stage Dropdown -->
     <div id="stageDropdown" class="stage-dropdown" style="display:none;"></div>
