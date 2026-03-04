@@ -1,7 +1,14 @@
 // Configuration
 const API_BASE = 'https://liozshor.app.n8n.cloud/webhook';
-const ADMIN_TOKEN_KEY = 'QKiwUBXVH@%#1gD7t@rB]<,dM.[NC5b_';
+const ADMIN_TOKEN_KEY = 'admin_token';
 const SESSION_FLAG_KEY = 'admin_session_active';
+
+// One-time migration: rename legacy localStorage key to 'admin_token'
+(function() {
+    const OLD = 'QKiwUBXVH@%#1gD7t@rB]<,dM.[NC5b_';
+    const v = localStorage.getItem(OLD);
+    if (v) { localStorage.setItem('admin_token', v); localStorage.removeItem(OLD); }
+})();
 
 // State
 let authToken = localStorage.getItem(ADMIN_TOKEN_KEY) || '';
@@ -32,6 +39,18 @@ const SORT_CONFIG = {
 let currentSort = { column: null, direction: 'asc' };
 
 // ==================== AUTH ====================
+
+/** Decode admin token and check if expired (exp is in ms) */
+function isTokenExpired(token) {
+    try {
+        const parts = token.split('.');
+        if (parts.length < 2) return false;
+        const payload = JSON.parse(atob(parts[0]));
+        return payload.exp ? Date.now() > payload.exp : false;
+    } catch (e) {
+        return false;
+    }
+}
 
 async function login() {
     const password = document.getElementById('passwordInput').value;
@@ -78,6 +97,14 @@ function logout() {
 async function checkAuth() {
     if (!authToken) return;
 
+    // Reject expired tokens before trusting sessionStorage
+    if (isTokenExpired(authToken)) {
+        localStorage.removeItem(ADMIN_TOKEN_KEY);
+        sessionStorage.removeItem(SESSION_FLAG_KEY);
+        authToken = '';
+        return;
+    }
+
     // If session already active in this browser window, skip API call
     if (sessionStorage.getItem(SESSION_FLAG_KEY) === 'true') {
         document.getElementById('loginScreen').style.display = 'none';
@@ -89,7 +116,7 @@ async function checkAuth() {
 
     // New tab/window - verify token with API
     try {
-        const response = await fetchWithTimeout(`${API_BASE}/admin-verify?token=${authToken}`, {}, FETCH_TIMEOUTS.quick);
+        const response = await fetchWithTimeout(`${API_BASE}/admin-verify`, { headers: { 'Authorization': `Bearer ${authToken}` } }, FETCH_TIMEOUTS.quick);
         const data = await response.json();
 
         if (data.ok) {
@@ -142,7 +169,7 @@ async function loadDashboard(silent = false) {
 
     try {
         const year = document.getElementById('yearFilter')?.value || '2025';
-        const response = await fetchWithTimeout(`${API_BASE}/admin-dashboard?token=${authToken}&year=${year}&_t=${Date.now()}`, {}, FETCH_TIMEOUTS.load);
+        const response = await fetchWithTimeout(`${API_BASE}/admin-dashboard?year=${year}&_t=${Date.now()}`, { headers: { 'Authorization': `Bearer ${authToken}` } }, FETCH_TIMEOUTS.load);
         const data = await response.json();
 
         if (!silent) hideLoading();
@@ -735,7 +762,7 @@ function refreshData() {
 async function loadAIReviewCount() {
     const badge = document.getElementById('aiReviewTabBadge');
     try {
-        const resp = await fetchWithTimeout(`${API_BASE}/get-pending-classifications?token=${authToken}`, {}, FETCH_TIMEOUTS.quick);
+        const resp = await fetchWithTimeout(`${API_BASE}/get-pending-classifications`, { headers: { 'Authorization': `Bearer ${authToken}` } }, FETCH_TIMEOUTS.quick);
         const data = await resp.json();
         badge.classList.remove('ai-badge-loading');
         if (data.ok && data.stats && data.stats.total_pending > 0) {
@@ -1000,7 +1027,7 @@ async function loadPendingClients(silent = false) {
 
     try {
         const year = document.getElementById('sendYearFilter').value;
-        const response = await fetchWithTimeout(`${API_BASE}/admin-pending?token=${authToken}&year=${year}`, {}, FETCH_TIMEOUTS.load);
+        const response = await fetchWithTimeout(`${API_BASE}/admin-pending?year=${year}`, { headers: { 'Authorization': `Bearer ${authToken}` } }, FETCH_TIMEOUTS.load);
         const data = await response.json();
 
         if (!silent) hideLoading();
@@ -1506,8 +1533,8 @@ const REJECTION_REASONS = {
 
 async function getDocPreviewUrl(itemId) {
     const response = await fetchWithTimeout(
-        `${API_BASE}/get-preview-url?token=${authToken}&itemId=${encodeURIComponent(itemId)}`,
-        {}, FETCH_TIMEOUTS.load
+        `${API_BASE}/get-preview-url?itemId=${encodeURIComponent(itemId)}`,
+        { headers: { 'Authorization': `Bearer ${authToken}` } }, FETCH_TIMEOUTS.load
     );
     const data = await response.json();
     if (!data.ok) throw new Error(data.error || 'Failed to get preview URL');
@@ -1598,7 +1625,7 @@ async function loadAIClassifications(silent = false) {
     if (!silent) showLoading('טוען סיווגים...');
 
     try {
-        const response = await fetchWithTimeout(`${API_BASE}/get-pending-classifications?token=${authToken}`, {}, FETCH_TIMEOUTS.load);
+        const response = await fetchWithTimeout(`${API_BASE}/get-pending-classifications`, { headers: { 'Authorization': `Bearer ${authToken}` } }, FETCH_TIMEOUTS.load);
         const data = await response.json();
 
         if (!silent) hideLoading();
@@ -3978,6 +4005,10 @@ function showModal(type, title, body, stats = null) {
 
     document.getElementById('resultModal').classList.add('visible');
     if (typeof lucide !== 'undefined') lucide.createIcons();
+
+    if (type === 'success') {
+        setTimeout(() => closeModal(), 3000);
+    }
 }
 
 function closeModal() {

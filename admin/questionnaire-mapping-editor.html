@@ -673,10 +673,17 @@
     <script>
         // Configuration
         const API_BASE = 'https://liozshor.app.n8n.cloud/webhook';
-        const ADMIN_TOKEN_KEY = 'QKiwUBXVH@%#1gD7t@rB]<,dM.[NC5b_';
+        const ADMIN_TOKEN_KEY = 'admin_token';
         const SESSION_FLAG_KEY = 'admin_session_active';
         const MAPPING_API = 'https://raw.githubusercontent.com/LiozShor/annual-reports-client-portal/main/questionnaire-mapping.json';
         const DOC_TYPES_API = 'https://raw.githubusercontent.com/LiozShor/annual-reports-client-portal/main/document-types.json';
+
+        // One-time migration: rename legacy localStorage key to 'admin_token'
+        (function() {
+            const OLD = 'QKiwUBXVH@%#1gD7t@rB]<,dM.[NC5b_';
+            const v = localStorage.getItem(OLD);
+            if (v) { localStorage.setItem('admin_token', v); localStorage.removeItem(OLD); }
+        })();
 
         // State
         let authToken = localStorage.getItem(ADMIN_TOKEN_KEY) || '';
@@ -723,6 +730,18 @@
         if (typeof lucide !== 'undefined') lucide.createIcons();
 
         // ==================== AUTH ====================
+
+        /** Decode admin token and check if expired (exp is in ms) */
+        function isTokenExpired(token) {
+            try {
+                const parts = token.split('.');
+                if (parts.length < 2) return false;
+                const payload = JSON.parse(atob(parts[0]));
+                return payload.exp ? Date.now() > payload.exp : false;
+            } catch (e) {
+                return false;
+            }
+        }
 
         async function login() {
             const password = document.getElementById('passwordInput').value;
@@ -776,6 +795,14 @@
         async function checkAuth() {
             if (!authToken) return;
 
+            // Reject expired tokens before trusting sessionStorage
+            if (isTokenExpired(authToken)) {
+                localStorage.removeItem(ADMIN_TOKEN_KEY);
+                sessionStorage.removeItem(SESSION_FLAG_KEY);
+                authToken = '';
+                return;
+            }
+
             // If session already active in this browser window, skip API call
             if (sessionStorage.getItem(SESSION_FLAG_KEY) === 'true') {
                 document.getElementById('loginScreen').style.display = 'none';
@@ -786,7 +813,7 @@
 
             // New tab/window - verify token with API
             try {
-                const response = await fetch(`${API_BASE}/admin-verify?token=${authToken}`);
+                const response = await fetch(`${API_BASE}/admin-verify`, { headers: { 'Authorization': `Bearer ${authToken}` } });
                 const data = await response.json();
 
                 if (data.ok) {
