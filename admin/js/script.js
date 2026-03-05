@@ -989,11 +989,9 @@ async function addManualClient() {
         showModal('warning', 'אימייל לא תקין', 'כתובת האימייל אינה תקינה');
         return;
     }
-    // Warning if already exists in dashboard list
+    // Block if email already exists
     if (existingEmails.has(email)) {
-        showConfirmDialog('כתובת המייל הזו כבר קיימת ברשימת הלקוחות. האם להוסיף בכל זאת?', async () => {
-            await _doManualAdd(name, email, year);
-        }, 'הוסף בכל זאת');
+        showModal('warning', 'לקוח קיים', 'כתובת המייל הזו כבר קיימת ברשימת הלקוחות.');
         return;
     }
 
