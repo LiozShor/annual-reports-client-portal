@@ -1149,33 +1149,38 @@ async function sendQuestionnaires(reportIds) {
     if (_sendQuestionnairesLocked) return;
     _sendQuestionnairesLocked = true;
 
-    const total = reportIds.length;
-    let sent = 0, errors = 0;
+    const isBulk = reportIds.length > 1;
+    const timeoutMs = isBulk ? FETCH_TIMEOUTS.batch : FETCH_TIMEOUTS.slow;
+    const safetyMs = isBulk ? 95000 : 25000;
 
     try {
-        for (let i = 0; i < total; i++) {
-            showLoading(total > 1 ? `שולח שאלון ${i + 1} מתוך ${total}...` : 'שולח שאלון...');
-            const response = await fetchWithTimeout(`${API_BASE}/admin-send-questionnaires`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ token: authToken, report_ids: [reportIds[i]] })
-            }, FETCH_TIMEOUTS.slow);
-            const data = await response.json();
-            if (data.ok) sent++;
-            else errors++;
-        }
-    } finally {
-        hideLoading();
-        _sendQuestionnairesLocked = false;
-    }
+        showLoading(isBulk ? `שולח ${reportIds.length} שאלונים...` : 'שולח שאלון...', safetyMs);
+        const response = await fetchWithTimeout(`${API_BASE}/admin-send-questionnaires`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ token: authToken, report_ids: reportIds })
+        }, timeoutMs);
+        const data = await response.json();
 
-    if (sent > 0) {
-        showModal('success', 'נשלח בהצלחה!', 'השאלונים נשלחו ללקוחות.', { sent });
-        loadDashboard();
-        loadPendingClients(true);
-    }
-    if (errors > 0) {
-        showAIToast(`${errors} שאלונים לא נשלחו`, 'danger');
+        hideLoading();
+
+        if (data.ok) {
+            const sent = data.sent || reportIds.length;
+            const failed = data.failed || 0;
+            showModal('success', 'נשלח בהצלחה!', 'השאלונים נשלחו ללקוחות.', { sent });
+            if (failed > 0) {
+                showAIToast(`${failed} שאלונים לא נשלחו`, 'danger');
+            }
+            loadDashboard();
+            loadPendingClients(true);
+        } else {
+            showModal('error', 'שגיאה', data.error || 'שליחת השאלונים נכשלה.');
+        }
+    } catch (err) {
+        hideLoading();
+        showModal('error', 'שגיאה', 'שליחת השאלונים נכשלה. נסו שוב.');
+    } finally {
+        _sendQuestionnairesLocked = false;
     }
 }
 
@@ -3717,29 +3722,31 @@ async function executeReminderAction(action, reportIds, value, forceOverride) {
     };
 
     if (isBulk && action === 'send_now') {
-        // Sequential with progress counter
-        let sent = 0, errors = 0;
+        // Single batch request for all report IDs
         try {
-            for (let i = 0; i < reportIds.length; i++) {
-                showLoading(`שולח תזכורת ${i + 1} מתוך ${reportIds.length}...`);
-                const body = { token: authToken, action, report_ids: [reportIds[i]] };
-                if (reminderDefaultMax != null) body.default_max = reminderDefaultMax;
-                if (forceOverride) body.force_override = true;
-                const response = await fetchWithTimeout(`${API_BASE}/admin-reminders`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(body)
-                }, FETCH_TIMEOUTS.mutate);
-                let data;
-                try { data = await response.json(); } catch (e) { errors++; continue; }
-                if (data.ok) sent++;
-                else errors++;
+            showLoading(`שולח ${reportIds.length} תזכורות...`, 95000);
+            const body = { token: authToken, action, report_ids: reportIds };
+            if (reminderDefaultMax != null) body.default_max = reminderDefaultMax;
+            if (forceOverride) body.force_override = true;
+            const response = await fetchWithTimeout(`${API_BASE}/admin-reminders`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body)
+            }, FETCH_TIMEOUTS.batch);
+            let data;
+            try { data = await response.json(); } catch (e) {
+                hideLoading();
+                showAIToast('שגיאה בשליחת תזכורות', 'danger');
+                loadReminders(true);
+                return;
             }
-        } finally {
             hideLoading();
+            if (data.ok) showAIToast('תזכורות נשלחו', 'success');
+            else showAIToast(data.error || 'שגיאה בשליחת תזכורות', 'danger');
+        } catch (err) {
+            hideLoading();
+            showAIToast('שגיאה בשליחת תזכורות', 'danger');
         }
-        if (sent > 0) showAIToast('תזכורות נשלחו', 'success');
-        if (errors > 0) showAIToast(`${errors} תזכורות לא נשלחו`, 'danger');
         loadReminders(true);
         return;
     }
@@ -4260,16 +4267,16 @@ function exportToExcel() {
 
 let _loadingSafetyTimer = null;
 
-function showLoading(text) {
+function showLoading(text, safetyMs = 25000) {
     document.getElementById('loadingText').textContent = text || 'מעבד...';
     document.getElementById('loadingOverlay').classList.add('visible');
 
-    // Safety timeout: auto-hide after 25s and show error
+    // Safety timeout: auto-hide and show error
     clearTimeout(_loadingSafetyTimer);
     _loadingSafetyTimer = setTimeout(function () {
         hideLoading();
         showModal('error', 'שגיאה', 'הפעולה ארכה זמן רב מדי. אנא נסו שוב.');
-    }, 25000);
+    }, safetyMs);
 }
 
 function hideLoading() {
