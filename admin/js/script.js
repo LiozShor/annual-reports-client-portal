@@ -3689,8 +3689,7 @@ function reminderBulkAction(action) {
             .filter(r => r && r.reminder_suppress === 'forever')
             .map(r => r.name);
         if (mutedNames.length > 0) {
-            showModal('warning', 'לקוחות עם תזכורות כבויות',
-                `לא ניתן לשלוח תזכורות כאשר נבחרו לקוחות עם תזכורות כבויות:<br><br><strong>${mutedNames.join(', ')}</strong><br><br>הסר אותם מהבחירה ונסה שוב.`);
+            showAIToast(`לא ניתן לשלוח — ${mutedNames.join(', ')} עם תזכורות כבויות. הסר מהבחירה ונסה שוב.`, 'warning');
             return;
         }
         const recentIds = reportIds.filter(id => {
