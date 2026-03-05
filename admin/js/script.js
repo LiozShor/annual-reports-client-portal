@@ -3654,7 +3654,7 @@ function toggleSuppressMenu(btn, e) {
 
 function confirmSuppress(action, reportId, name) {
     document.querySelectorAll('.suppress-menu.open').forEach(m => m.classList.remove('open'));
-    const msg = `להשתיק לצמיתות את ${name}?`;
+    const msg = `להפסיק להזכיר ל${name}?`;
     showConfirmDialog(msg, () => executeReminderAction(action, [reportId]), 'השתק', true);
 }
 
