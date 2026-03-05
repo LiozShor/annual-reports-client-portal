@@ -4194,8 +4194,19 @@ function updateClientSelectedCount() {
 
 function resetClientBulkSelection() {
     document.querySelectorAll('.dashboard-client-checkbox, .dashboard-select-all').forEach(cb => cb.checked = false);
-    const bar = document.getElementById('clientBulkActions');
-    if (bar) bar.classList.remove('visible');
+    updateClientSelectedCount();
+}
+
+function cancelReminderSelection() {
+    document.querySelectorAll('.reminder-checkbox, .reminder-select-all').forEach(cb => cb.checked = false);
+    updateReminderSelectedCount();
+}
+
+function cancelSendSelection() {
+    document.querySelectorAll('.client-checkbox').forEach(cb => cb.checked = false);
+    const selectAll = document.getElementById('selectAll');
+    if (selectAll) selectAll.checked = false;
+    updateSelectedCount();
 }
 
 function bulkArchiveClients() {
