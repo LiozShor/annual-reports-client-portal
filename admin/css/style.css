@@ -2930,6 +2930,42 @@ tr.reminder-loading td:last-child {
     line-height: 1;
 }
 
+/* Reminder Date Cell — Clickable Inline Edit */
+.reminder-date-cell {
+    cursor: pointer;
+    padding: 4px 10px;
+}
+
+.reminder-date-cell:hover {
+    filter: brightness(0.95);
+}
+
+.reminder-date-editor {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.reminder-date-input {
+    width: 130px;
+    padding: 2px 6px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 13px;
+    background: var(--surface-primary);
+    outline: none;
+    box-shadow: 0 0 0 2px var(--primary-100);
+    direction: ltr;
+}
+
+.reminder-date-save,
+.reminder-date-cancel {
+    padding: 2px 6px !important;
+    font-size: 13px !important;
+    min-width: 0 !important;
+    line-height: 1;
+}
+
 .btn-link {
     background: transparent;
     border-color: transparent;
