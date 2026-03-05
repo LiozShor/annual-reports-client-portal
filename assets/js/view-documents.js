@@ -200,10 +200,25 @@ function renderDocuments() {
     const isHe = currentLang === 'he';
 
     if (currentData.document_count === 0) {
-        container.innerHTML = isHe
-            ? '<div class="success-message">כל המסמכים התקבלו! אין מסמכים חסרים.</div>'
-            : '<div class="success-message">All documents received! No missing documents.</div>';
-        // Initialize Lucide icons after render
+        const stage = currentData.report?.stage || '';
+        const isPreQuestionnaire = stage.startsWith('1-') || stage.startsWith('2-');
+
+        if (isPreQuestionnaire) {
+            const isAdmin = !!adminToken;
+            const ctaHtml = (!isAdmin && clientToken) ? `<a href="index.html?report_id=${encodeURIComponent(reportId)}&token=${encodeURIComponent(clientToken)}" class="btn btn-primary" style="margin-top: var(--sp-4)">${isHe ? 'מלא/י שאלון' : 'Fill Questionnaire'}</a>` : '';
+            container.innerHTML = `<div class="alert alert-info" style="flex-direction:column; align-items:center; text-align:center">
+                <i data-lucide="clipboard-list" class="icon"></i>
+                <span>${isHe
+                    ? 'טרם מולא שאלון שנתי. יש למלא את השאלון כדי שנוכל להכין את רשימת המסמכים הנדרשים.'
+                    : "The annual questionnaire hasn't been submitted yet. Please fill it out so we can prepare your required documents list."
+                }</span>
+                ${ctaHtml}
+            </div>`;
+        } else {
+            container.innerHTML = isHe
+                ? '<div class="success-message">כל המסמכים התקבלו! אין מסמכים חסרים.</div>'
+                : '<div class="success-message">All documents received! No missing documents.</div>';
+        }
         if (typeof lucide !== 'undefined') lucide.createIcons();
         return;
     }
