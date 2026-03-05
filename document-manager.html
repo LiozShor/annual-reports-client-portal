@@ -219,7 +219,7 @@
 
                 <div class="email-toggle">
                     <label class="switch">
-                        <input type="checkbox" id="emailToggle" checked onchange="sendEmailOnSave = this.checked">
+                        <input type="checkbox" id="emailToggle" onchange="sendEmailOnSave = this.checked">
                         <span class="switch-slider"></span>
                     </label>
                     <label for="emailToggle" class="text-sm">שלח אימייל התראה למשרד לאחר השמירה</label>
@@ -233,14 +233,23 @@
                         <i data-lucide="refresh-cw" class="icon-sm"></i> אפס טופס
                     </button>
                 </div>
+
+                <div id="approve-send-row" class="actions-row" style="display:none; margin-top:8px;">
+                    <button class="btn btn-success btn-lg" onclick="approveAndSendToClient()">
+                        <i data-lucide="send" class="icon-sm"></i> אשר ושלח ללקוח
+                    </button>
+                </div>
             </div>
 
             <!-- Success message -->
             <div id="success-message" class="success-view" style="display:none;">
                 <i data-lucide="circle-check" class="icon-2xl"></i>
-                <h2>הבקשה נשלחה בהצלחה!</h2>
-                <p>רשימת המסמכים עודכנה והודעה נשלחה למשרד.</p>
-                <p class="text-sm text-muted mt-2">אתה יכול לסגור את הדף כעת.</p>
+                <h2>השינויים נשמרו בהצלחה!</h2>
+                <p>רשימת המסמכים עודכנה באייר-טייבל.</p>
+                <button class="btn btn-success btn-lg" onclick="approveAndSendToClient()" style="margin-top:16px;">
+                    <i data-lucide="send" class="icon-sm"></i> אשר ושלח ללקוח
+                </button>
+                <p class="text-sm text-muted mt-2">או סגור את הדף אם אינך רוצה לשלוח כעת.</p>
             </div>
         </div>
     </div>

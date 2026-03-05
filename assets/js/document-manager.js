@@ -42,7 +42,7 @@ let markedForRestore = new Set();   // doc IDs to un-waive
 let statusChanges = new Map();      // docId → newStatus
 let noteChanges = new Map();        // docId → noteText
 let nameChanges = new Map();        // docId → newName
-let sendEmailOnSave = true;
+let sendEmailOnSave = false;
 let currentDropdownDocId = null;    // currently open status dropdown target
 let activeStatusFilter = '';        // currently active status filter (empty = show all)
 
@@ -512,10 +512,14 @@ function startNameEdit(docId) {
     if (!nameEl) return;
 
     const currentName = nameChanges.get(docId) || currentDocuments.find(d => d.id === docId)?.name || '';
+    const inputVal = htmlToMarkdown(currentName);
     nameEl.innerHTML = `
         <div class="name-edit-row">
-            <input type="text" class="name-edit-input" id="nameinput-${docId}"
-                   value="${escapeHtml(currentName)}" dir="auto">
+            <div style="flex:1;">
+                <input type="text" class="name-edit-input" id="nameinput-${docId}"
+                       value="${escapeHtml(inputVal)}" dir="auto">
+                <div class="name-preview" id="namepreview-${docId}" dir="auto">${sanitizeDocHtml(markdownToHtml(inputVal))}</div>
+            </div>
             <div class="name-edit-actions">
                 <button type="button" class="name-edit-save" onclick="saveNameEdit('${docId}')" title="שמור">
                     <i data-lucide="check" class="icon-xs"></i>
@@ -535,6 +539,10 @@ function startNameEdit(docId) {
             if (e.key === 'Enter') { e.preventDefault(); saveNameEdit(docId); }
             if (e.key === 'Escape') { e.preventDefault(); cancelNameEdit(docId); }
         });
+        input.addEventListener('input', () => {
+            const preview = document.getElementById(`namepreview-${docId}`);
+            if (preview) preview.innerHTML = sanitizeDocHtml(markdownToHtml(input.value));
+        });
     }
 
     // Hide pencil button while editing
@@ -546,19 +554,20 @@ function saveNameEdit(docId) {
     const input = document.getElementById(`nameinput-${docId}`);
     if (!input) return;
 
-    const newName = input.value.trim();
+    const rawInput = input.value.trim();
+    const converted = markdownToHtml(rawInput);
     const doc = currentDocuments.find(d => d.id === docId);
     if (!doc) return;
 
-    if (newName && newName !== doc.name) {
-        nameChanges.set(docId, newName);
+    if (converted && converted !== doc.name) {
+        nameChanges.set(docId, converted);
     } else {
         nameChanges.delete(docId);
     }
 
     // Revert to text display
     const nameEl = document.getElementById(`docname-${docId}`);
-    if (nameEl) nameEl.textContent = newName || doc.name;
+    if (nameEl) nameEl.innerHTML = sanitizeDocHtml(converted || doc.name);
 
     // Show pencil button again
     const pencilBtn = document.querySelector(`#doc-${docId} .name-edit-btn`);
@@ -576,7 +585,7 @@ function cancelNameEdit(docId) {
     if (!doc) return;
 
     const nameEl = document.getElementById(`docname-${docId}`);
-    if (nameEl) nameEl.textContent = nameChanges.get(docId) || doc.name;
+    if (nameEl) nameEl.innerHTML = sanitizeDocHtml(nameChanges.get(docId) || doc.name);
 
     // Show pencil button again
     const pencilBtn = document.querySelector(`#doc-${docId} .name-edit-btn`);
@@ -586,6 +595,16 @@ function cancelNameEdit(docId) {
 // Strip **bold** markdown markers for UI display
 function stripBold(str) {
     return (str || '').replace(/\*\*(.+?)\*\*/g, '$1');
+}
+
+// Convert HTML bold tags → **markdown** markers (for edit input display)
+function htmlToMarkdown(html) {
+    return (html || '').replace(/<b>(.*?)<\/b>/gi, '**$1**').replace(/<strong>(.*?)<\/strong>/gi, '**$1**');
+}
+
+// Convert **markdown** markers → <b> HTML tags (for storage)
+function markdownToHtml(str) {
+    return (str || '').replace(/\*\*(.+?)\*\*/g, '<b>$1</b>');
 }
 
 // Build metadata object for a template with collected variable values
@@ -814,6 +833,10 @@ function updateStatusOverview() {
     const hasChanges = markedForRemoval.size > 0 || docsToAdd.size > 0 ||
         markedForRestore.size > 0 || statusChanges.size > 0 || noteChanges.size > 0 || nameChanges.size > 0;
     document.getElementById('editSessionBar').style.display = hasChanges ? 'block' : 'none';
+
+    // Show Approve & Send button only when there are NO pending changes
+    const approveSendRow = document.getElementById('approve-send-row');
+    if (approveSendRow) approveSendRow.style.display = hasChanges ? 'none' : '';
 }
 
 // Toggle status filter (click on status count box)
@@ -1140,7 +1163,8 @@ async function confirmSubmit() {
     if (nameChanges.size > 0) {
         extensions.name_updates = [];
         nameChanges.forEach((newName, docId) => {
-            extensions.name_updates.push({ id: docId, issuer_name: newName });
+            const doc = currentDocuments.find(d => d.id === docId);
+            extensions.name_updates.push({ id: docId, issuer_name: newName, old_name: doc?.name || '' });
         });
     }
 
@@ -1222,7 +1246,7 @@ function resetForm() {
     statusChanges.clear();
     noteChanges.clear();
     docsToAdd.clear();
-    sendEmailOnSave = true;
+    sendEmailOnSave = false;
     document.getElementById('customDoc').value = '';
     document.getElementById('notes').value = '';
     document.getElementById('detailInput').classList.remove('show');
@@ -1231,7 +1255,7 @@ function resetForm() {
 
     // Reset email toggle checkbox
     const emailToggle = document.getElementById('emailToggle');
-    if (emailToggle) emailToggle.checked = true;
+    if (emailToggle) emailToggle.checked = false;
 
     // Reset status filter
     activeStatusFilter = '';
@@ -1319,6 +1343,33 @@ function sanitizeUrl(url) {
         if (parsed.protocol === 'https:' || parsed.protocol === 'http:') return url;
     } catch (e) { /* invalid URL */ }
     return '';
+}
+
+// Generate approval token (murmur-hash style, deterministic)
+function generateApprovalToken(reportId, secret) {
+    const str = reportId + ':' + secret;
+    let h1 = 0xdeadbeef, h2 = 0x41c6ce57;
+    for (let i = 0; i < str.length; i++) {
+        const ch = str.charCodeAt(i);
+        h1 = Math.imul(h1 ^ ch, 2654435761);
+        h2 = Math.imul(h2 ^ ch, 1597334677);
+    }
+    h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909);
+    h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909);
+    return (4294967296 * (2097151 & h2) + (h1 >>> 0)).toString(36);
+}
+
+function approveAndSendToClient() {
+    showConfirmDialog(
+        `שלח רשימת מסמכים ל-${CLIENT_NAME}?`,
+        () => {
+            const token = generateApprovalToken(REPORT_ID, 'MOSHE_1710');
+            const url = `${API_BASE}/approve-and-send?report_id=${REPORT_ID}&token=${token}&confirm=1`;
+            window.open(url, '_blank');
+        },
+        'שלח ללקוח',
+        false
+    );
 }
 
 // Close detail input and status dropdown when clicking outside
