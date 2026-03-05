@@ -1140,36 +1140,34 @@ let _sendQuestionnairesLocked = false;
 async function sendQuestionnaires(reportIds) {
     if (_sendQuestionnairesLocked) return;
     _sendQuestionnairesLocked = true;
-    showLoading(`שולח ${reportIds.length} שאלונים...`);
+
+    const total = reportIds.length;
+    let sent = 0, errors = 0;
 
     try {
-        const response = await fetchWithTimeout(`${API_BASE}/admin-send-questionnaires`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                token: authToken,
-                report_ids: reportIds
-            })
-        }, FETCH_TIMEOUTS.slow);
-
-        const data = await response.json();
+        for (let i = 0; i < total; i++) {
+            showLoading(total > 1 ? `שולח שאלון ${i + 1} מתוך ${total}...` : 'שולח שאלון...');
+            const response = await fetchWithTimeout(`${API_BASE}/admin-send-questionnaires`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ token: authToken, report_ids: [reportIds[i]] })
+            }, FETCH_TIMEOUTS.slow);
+            const data = await response.json();
+            if (data.ok) sent++;
+            else errors++;
+        }
+    } finally {
         hideLoading();
+        _sendQuestionnairesLocked = false;
+    }
 
-        if (!data.ok) throw new Error(data.error);
-
-        showModal('success', 'נשלח בהצלחה!',
-            `השאלונים נשלחו ללקוחות.`,
-            { sent: data.sent }
-        );
-
+    if (sent > 0) {
+        showModal('success', 'נשלח בהצלחה!', 'השאלונים נשלחו ללקוחות.', { sent });
         loadDashboard();
         loadPendingClients(true);
-
-    } catch (error) {
-        hideLoading();
-        showModal('error', 'שגיאה', getErrorMessage(error, 'he'));
-    } finally {
-        _sendQuestionnairesLocked = false;
+    }
+    if (errors > 0) {
+        showAIToast(`${errors} שאלונים לא נשלחו`, 'danger');
     }
 }
 
@@ -3702,6 +3700,34 @@ async function executeReminderAction(action, reportIds, value, forceOverride) {
         change_date: 'מעדכן...',
         set_max: 'מעדכן...'
     };
+
+    if (isBulk && action === 'send_now') {
+        // Sequential with progress counter
+        let sent = 0, errors = 0;
+        try {
+            for (let i = 0; i < reportIds.length; i++) {
+                showLoading(`שולח תזכורת ${i + 1} מתוך ${reportIds.length}...`);
+                const body = { token: authToken, action, report_ids: [reportIds[i]] };
+                if (reminderDefaultMax != null) body.default_max = reminderDefaultMax;
+                if (forceOverride) body.force_override = true;
+                const response = await fetchWithTimeout(`${API_BASE}/admin-reminders`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body)
+                }, FETCH_TIMEOUTS.mutate);
+                let data;
+                try { data = await response.json(); } catch (e) { errors++; continue; }
+                if (data.ok) sent++;
+                else errors++;
+            }
+        } finally {
+            hideLoading();
+        }
+        if (sent > 0) showAIToast('תזכורות נשלחו', 'success');
+        if (errors > 0) showAIToast(`${errors} תזכורות לא נשלחו`, 'danger');
+        loadReminders(true);
+        return;
+    }
 
     if (isBulk) {
         showLoading('מעדכן...');
