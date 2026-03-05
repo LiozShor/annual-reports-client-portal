@@ -3351,7 +3351,7 @@ function isExhausted(r) {
 }
 
 function getReminderStatus(r) {
-    if (r.reminder_suppress === 'forever') return { label: 'כבה תזכורות', class: 'reminder-status-suppressed', key: 'suppressed' };
+    if (r.reminder_suppress === 'forever') return { label: 'ללא תזכורות', class: 'reminder-status-suppressed', key: 'suppressed' };
     if (isExhausted(r)) return { label: 'מוצה', class: 'reminder-status-exhausted', key: 'exhausted' };
     return { label: 'פעיל', class: 'reminder-status-active', key: 'active' };
 }
@@ -3559,7 +3559,7 @@ function buildReminderTable(items, showDocs) {
                                     <i data-lucide="bell-minus" class="icon-sm"></i>
                                 </button>
                                 <div class="suppress-menu">
-                                    <button class="danger" onclick="confirmSuppress('suppress_forever', '${escapeAttr(r.report_id)}', '${escapeAttr(r.name)}')">כבה תזכורות</button>
+                                    <button class="danger" onclick="confirmSuppress('suppress_forever', '${escapeAttr(r.report_id)}', '${escapeAttr(r.name)}')">ללא תזכורות</button>
                                 </div>
                             </div>
                         ` : `
@@ -3704,7 +3704,7 @@ function reminderBulkAction(action) {
         return;
     }
     if (action === 'suppress_forever') {
-        showConfirmDialog(`לכבות תזכורות ל-${reportIds.length} לקוחות?`, () => executeReminderAction(action, reportIds), 'כבה', true);
+        showConfirmDialog(`להפסיק תזכורות ל-${reportIds.length} לקוחות?`, () => executeReminderAction(action, reportIds), 'אשר', true);
         return;
     }
 
@@ -3808,7 +3808,7 @@ async function executeReminderAction(action, reportIds, value, forceOverride) {
 
         const actionLabels = {
             send_now: 'תזכורת נשלחה',
-            suppress_forever: 'תזכורות כובו',
+            suppress_forever: 'עודכן',
             unsuppress: 'הופעל מחדש',
             change_date: 'תאריך עודכן',
             set_max: 'מקסימום עודכן'
