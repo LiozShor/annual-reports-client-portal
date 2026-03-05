@@ -3351,7 +3351,7 @@ function isExhausted(r) {
 }
 
 function getReminderStatus(r) {
-    if (r.reminder_suppress === 'forever') return { label: 'מושתק לצמיתות', class: 'reminder-status-suppressed', key: 'suppressed' };
+    if (r.reminder_suppress === 'forever') return { label: 'כבה תזכורות', class: 'reminder-status-suppressed', key: 'suppressed' };
     if (isExhausted(r)) return { label: 'מוצה', class: 'reminder-status-exhausted', key: 'exhausted' };
     return { label: 'פעיל', class: 'reminder-status-active', key: 'active' };
 }
@@ -3524,8 +3524,9 @@ function buildReminderTable(items, showDocs) {
             maxCellHtml = `<span class="reminder-max-cell reminder-max-unlimited" id="max-cell-${escapeAttr(r.report_id)}" onclick="editClientMax('${escapeAttr(r.report_id)}', this)">ללא הגבלה</span>`;
         }
 
+        const isSuppressed = r.reminder_suppress === 'forever';
         html += `
-            <tr data-report-id="${escapeAttr(r.report_id)}">
+            <tr data-report-id="${escapeAttr(r.report_id)}"${isSuppressed ? ' class="reminder-row-suppressed"' : ''}>
                 <td><input type="checkbox" class="reminder-checkbox" value="${escapeAttr(r.report_id)}" onchange="updateReminderSelectedCount()"></td>
                 <td>
                     <strong class="client-link" onclick="viewClientDocs('${escapeAttr(r.report_id)}')">
@@ -3543,7 +3544,7 @@ function buildReminderTable(items, showDocs) {
                 </td>
                 ` : ''}
                 <td>${r.last_reminder_sent_at ? formatDateHe(r.last_reminder_sent_at.split('T')[0]) : '-'}</td>
-                <td class="reminder-date-cell" onclick="editReminderDate('${escapeAttr(r.report_id)}', this)"><span class="reminder-date ${dateClass}">${nextDate}</span></td>
+                <td${isSuppressed ? '' : ` class="reminder-date-cell" onclick="editReminderDate('${escapeAttr(r.report_id)}', this)"`}>${isSuppressed ? '-' : `<span class="reminder-date ${dateClass}">${nextDate}</span>`}</td>
                 <td>${r.reminder_count || 0}</td>
                 <td>${maxCellHtml}</td>
                 <td><span class="reminder-status ${status.class}">${status.label}</span></td>
@@ -3558,7 +3559,7 @@ function buildReminderTable(items, showDocs) {
                                     <i data-lucide="bell-minus" class="icon-sm"></i>
                                 </button>
                                 <div class="suppress-menu">
-                                    <button class="danger" onclick="confirmSuppress('suppress_forever', '${escapeAttr(r.report_id)}', '${escapeAttr(r.name)}')">השתק לצמיתות</button>
+                                    <button class="danger" onclick="confirmSuppress('suppress_forever', '${escapeAttr(r.report_id)}', '${escapeAttr(r.name)}')">כבה תזכורות</button>
                                 </div>
                             </div>
                         ` : `
@@ -3679,7 +3680,7 @@ function reminderBulkAction(action) {
         return;
     }
     if (action === 'suppress_forever') {
-        showConfirmDialog(`להשתיק לצמיתות ${reportIds.length} לקוחות?`, () => executeReminderAction(action, reportIds), 'השתק', true);
+        showConfirmDialog(`לכבות תזכורות ל-${reportIds.length} לקוחות?`, () => executeReminderAction(action, reportIds), 'כבה', true);
         return;
     }
 
@@ -3783,7 +3784,7 @@ async function executeReminderAction(action, reportIds, value, forceOverride) {
 
         const actionLabels = {
             send_now: 'תזכורת נשלחה',
-            suppress_forever: 'הושתק לצמיתות',
+            suppress_forever: 'תזכורות כובו',
             unsuppress: 'הופעל מחדש',
             change_date: 'תאריך עודכן',
             set_max: 'מקסימום עודכן'
