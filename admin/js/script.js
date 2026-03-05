@@ -3606,19 +3606,7 @@ function buildReminderTable(items, showDocs) {
                             <button class="action-btn send" onclick="reminderAction('send_now', '${escapeAttr(r.report_id)}')" title="שלח עכשיו">
                                 <i data-lucide="send" class="icon-sm"></i>
                             </button>
-                            <div class="reminder-suppress-dropdown">
-                                <button class="action-btn reminder-suppress-btn" onclick="toggleSuppressMenu(this, event)" title="השתק">
-                                    <i data-lucide="bell-minus" class="icon-sm"></i>
-                                </button>
-                                <div class="suppress-menu">
-                                    <button class="danger" onclick="confirmSuppress('suppress_forever', '${escapeAttr(r.report_id)}', '${escapeAttr(r.name)}')">ללא תזכורות</button>
-                                </div>
-                            </div>
-                        ` : `
-                            <button class="action-btn send" onclick="reminderAction('unsuppress', '${escapeAttr(r.report_id)}')" title="הפעל מחדש">
-                                <i data-lucide="bell" class="icon-sm"></i>
-                            </button>
-                        `}
+                        ` : ''}
                         <button class="action-btn reminder-date-btn" onclick="showReminderDatePicker('${escapeAttr(r.report_id)}', '${r.reminder_next_date || ''}')" title="שנה תאריך">
                             <i data-lucide="calendar" class="icon-sm"></i>
                         </button>
