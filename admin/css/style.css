@@ -2452,6 +2452,19 @@ tr.reminder-row-suppressed td {
     opacity: 0.6;
 }
 
+.reminder-bulk-muted-warning {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 10px;
+    border-radius: 99px;
+    background: var(--warning-50, #fffbeb);
+    color: var(--warning-700, #b45309);
+    border: 1px solid var(--warning-200, #fde68a);
+    font-size: 12px;
+    font-weight: 500;
+}
+
 .reminder-status-exhausted {
     background: var(--danger-100);
     color: var(--danger-700);

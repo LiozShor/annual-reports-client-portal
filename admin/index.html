@@ -481,6 +481,9 @@
                 <!-- Bulk Actions -->
                 <div class="reminder-bulk-actions" id="reminderBulkActions" style="display:none;" role="toolbar" aria-label="פעולות על תזכורות נבחרות">
                     <span class="reminder-bulk-count"><span id="reminderSelectedCount">0</span> נבחרו</span>
+                    <span class="reminder-bulk-muted-warning" id="reminderBulkMutedWarning" style="display:none;">
+                        <i data-lucide="bell-off" class="icon-sm"></i> <span id="reminderBulkMutedCount"></span> עם תזכורות כבויות
+                    </span>
                     <button class="btn btn-sm btn-primary" onclick="reminderBulkAction('send_now')">
                         <i data-lucide="send" class="icon-sm"></i> שלח עכשיו
                     </button>
