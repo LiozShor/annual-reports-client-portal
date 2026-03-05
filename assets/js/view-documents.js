@@ -248,7 +248,9 @@ function renderDocuments() {
             for (const doc of cat.docs) {
                 totalDocs++;
                 // Document names may contain <b> tags from SSOT — render as HTML
-                const docName = isHe ? doc.name_he : (doc.name_en || doc.name_he);
+                const docName = isHe
+                    ? (doc.name_he || doc.issuer_name || 'מסמך')
+                    : (doc.name_en || doc.issuer_name || doc.name_he || 'Document');
 
                 let badgeClass = '';
                 let badgeText = '';

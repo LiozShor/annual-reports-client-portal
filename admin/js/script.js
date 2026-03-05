@@ -1252,7 +1252,7 @@ function renderReviewTable(queue) {
         container.innerHTML = `
             <div class="empty-state">
                 <div class="empty-state-icon"><i data-lucide="inbox" class="icon-2xl"></i></div>
-                <p>אין לקוחות מוכנים לבדיקה כרגע</p>
+                <p>אין לקוחות מוכנים להכנה כרגע</p>
             </div>
         `;
         if (typeof lucide !== 'undefined') lucide.createIcons();
@@ -1381,7 +1381,7 @@ function exportReviewToExcel() {
 
     const ws = XLSX.utils.json_to_sheet(exportData);
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'מוכנים לבדיקה');
+    XLSX.utils.book_append_sheet(wb, ws, 'מוכנים להכנה');
     XLSX.writeFile(wb, `review_queue_${new Date().toISOString().split('T')[0]}.xlsx`);
 }
 
@@ -1847,7 +1847,7 @@ const AI_DOC_NAMES = {
     T303:'אישור קצבת נכות', T304:'אישור דמי לידה',
     T305:'אישור קצבת שאירים', T306:'אישור קצבת שאירים (בן/בת זוג)',
     T401:'אישור משיכת ביטוח', T402:'אישור משיכת ביטוח (נוסף)',
-    T501:'אישור שנתי קופת גמל', T601:'טופס 867',
+    T501:'אישור שנתי קופת גמל', T601:'טופס 867 (אישור ניכוי מס)',
     T701:'דוח רווחי קריפטו', T801:'אישור זכייה',
     T901:'חוזה שכירות (הכנסה)', T902:'חוזה שכירות (הוצאה)',
     T1001:'רשימת מלאי', T1101:'אישור ניכוי מס הכנסה', T1102:'אישור ניכוי ביטוח לאומי',
