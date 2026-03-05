@@ -1149,36 +1149,76 @@ async function sendQuestionnaires(reportIds) {
     if (_sendQuestionnairesLocked) return;
     _sendQuestionnairesLocked = true;
 
-    const isBulk = reportIds.length > 1;
-    const timeoutMs = isBulk ? FETCH_TIMEOUTS.batch : FETCH_TIMEOUTS.slow;
-    const safetyMs = isBulk ? 95000 : 25000;
+    const CHUNK_SIZE = 25;
+    const totalCount = reportIds.length;
+    const isBulk = totalCount > 1;
+    const chunks = [];
+    for (let i = 0; i < totalCount; i += CHUNK_SIZE) {
+        chunks.push(reportIds.slice(i, i + CHUNK_SIZE));
+    }
+
+    // Safety timer scales with chunk count: ~90s per chunk of 25 (each email ~2.5s + overhead)
+    const safetyMs = isBulk ? Math.max(95000, chunks.length * 90000) : 25000;
+
+    let totalSent = 0;
+    let totalFailed = 0;
+    let allErrors = [];
 
     try {
-        showLoading(isBulk ? `שולח ${reportIds.length} שאלונים...` : 'שולח שאלון...', safetyMs);
-        const response = await fetchWithTimeout(`${API_BASE}/admin-send-questionnaires`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ token: authToken, report_ids: reportIds })
-        }, timeoutMs);
-        const data = await response.json();
+        showLoading(isBulk ? `שולח שאלונים... (0/${totalCount})` : 'שולח שאלון...', safetyMs);
+
+        for (let i = 0; i < chunks.length; i++) {
+            const chunk = chunks[i];
+            const chunkTimeout = Math.max(FETCH_TIMEOUTS.batch, chunk.length * 4000);
+
+            if (chunks.length > 1) {
+                const progress = i * CHUNK_SIZE;
+                showLoading(`שולח שאלונים... (${progress}/${totalCount})`);
+            }
+
+            const response = await fetchWithTimeout(`${API_BASE}/admin-send-questionnaires`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ token: authToken, report_ids: chunk })
+            }, chunkTimeout);
+            const data = await response.json();
+
+            if (data.ok !== undefined) {
+                totalSent += data.sent || 0;
+                totalFailed += data.failed || 0;
+                if (data.errors) allErrors.push(...data.errors);
+            } else {
+                // Whole chunk failed
+                totalFailed += chunk.length;
+                allErrors.push({ message: data.error || 'Chunk failed' });
+            }
+        }
 
         hideLoading();
 
-        if (data.ok) {
-            const sent = data.sent || reportIds.length;
-            const failed = data.failed || 0;
-            showModal('success', 'נשלח בהצלחה!', 'השאלונים נשלחו ללקוחות.', { sent });
-            if (failed > 0) {
-                showAIToast(`${failed} שאלונים לא נשלחו`, 'danger');
-            }
+        if (totalFailed === 0) {
+            showModal('success', 'נשלח בהצלחה!', 'השאלונים נשלחו ללקוחות.', { sent: totalSent });
+        } else if (totalSent > 0) {
+            showModal('warning', 'שליחה חלקית',
+                `נשלחו ${totalSent} שאלונים בהצלחה.\n${totalFailed} שאלונים לא נשלחו.`,
+                { sent: totalSent, failed: totalFailed });
+        } else {
+            showModal('error', 'שגיאה', `כל ${totalFailed} השאלונים נכשלו בשליחה.`);
+        }
+
+        loadDashboard();
+        loadPendingClients(true);
+    } catch (err) {
+        hideLoading();
+        if (totalSent > 0) {
+            showModal('warning', 'שליחה חלקית',
+                `נשלחו ${totalSent} שאלונים. השליחה הופסקה עקב שגיאה.`,
+                { sent: totalSent, failed: totalCount - totalSent });
             loadDashboard();
             loadPendingClients(true);
         } else {
-            showModal('error', 'שגיאה', data.error || 'שליחת השאלונים נכשלה.');
+            showModal('error', 'שגיאה', 'שליחת השאלונים נכשלה. נסו שוב.');
         }
-    } catch (err) {
-        hideLoading();
-        showModal('error', 'שגיאה', 'שליחת השאלונים נכשלה. נסו שוב.');
     } finally {
         _sendQuestionnairesLocked = false;
     }
@@ -3547,7 +3587,19 @@ function buildReminderTable(items, showDocs) {
                 <td${isSuppressed ? '' : ` class="reminder-date-cell" onclick="editReminderDate('${escapeAttr(r.report_id)}', this)"`}>${isSuppressed ? '-' : `<span class="reminder-date ${dateClass}">${nextDate}</span>`}</td>
                 <td>${r.reminder_count || 0}</td>
                 <td>${maxCellHtml}</td>
-                <td><span class="reminder-status ${status.class}">${status.label}</span></td>
+                <td>
+                    <div class="reminder-status-dropdown">
+                        <button class="reminder-status-btn ${status.class}" onclick="toggleStatusMenu(this, event)">
+                            ${status.label} <i data-lucide="chevron-down" class="icon-xs"></i>
+                        </button>
+                        <div class="suppress-menu status-menu">
+                            ${isSuppressed
+                                ? `<button onclick="reminderAction('unsuppress', '${escapeAttr(r.report_id)}')">פעיל</button>`
+                                : `<button class="danger" onclick="confirmSuppress('suppress_forever', '${escapeAttr(r.report_id)}', '${escapeAttr(r.name)}')">ללא תזכורות</button>`
+                            }
+                        </div>
+                    </div>
+                </td>
                 <td>
                     <div class="reminder-row-actions">
                         ${!r.reminder_suppress ? `
@@ -3654,6 +3706,17 @@ function reminderAction(action, reportId) {
         }
     }
     executeReminderAction(action, [reportId]);
+}
+
+function toggleStatusMenu(btn, e) {
+    e.stopPropagation();
+    const menu = btn.nextElementSibling;
+    const wasOpen = menu.classList.contains('open');
+    document.querySelectorAll('.suppress-menu.open').forEach(m => m.classList.remove('open'));
+    if (!wasOpen) {
+        positionFloating(btn, menu);
+        menu.classList.add('open');
+    }
 }
 
 function toggleSuppressMenu(btn, e) {

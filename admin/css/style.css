@@ -2422,7 +2422,30 @@ tr:hover .client-view-link {
 }
 
 
-/* Status Badge */
+/* Status Badge / Dropdown */
+.reminder-status-dropdown {
+    position: relative;
+    display: inline-block;
+}
+
+.reminder-status-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px var(--sp-3);
+    border-radius: var(--radius-full);
+    font-size: var(--text-xs);
+    font-weight: 600;
+    white-space: nowrap;
+    border: none;
+    cursor: pointer;
+    background: inherit;
+}
+
+.reminder-status-btn:hover {
+    filter: brightness(0.93);
+}
+
 .reminder-status {
     display: inline-flex;
     align-items: center;
