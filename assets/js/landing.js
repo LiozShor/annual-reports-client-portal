@@ -77,7 +77,9 @@ const STAGE_ORDER = {
     '2-Waiting_For_Answers': 2,
     '3-Collecting_Docs': 3,
     '4-Review': 4,
-    '5-Completed': 5
+    '6-Moshe_Review': 5,
+    '7-Before_Signing': 6,
+    '8-Completed': 7
 };
 
 function stageRank(s) {

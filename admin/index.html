@@ -90,19 +90,27 @@
                     </div>
                     <div class="stat-card stage-2" onclick="toggleStageFilter('2')" ondblclick="toggleStageFilter('')">
                         <div class="stat-number" id="stat-stage2">-</div>
-                        <div class="stat-label"><i data-lucide="hourglass" class="icon-sm"></i> ממתינים לתשובה</div>
+                        <div class="stat-label"><i data-lucide="hourglass" class="icon-sm"></i> טרם מילאו שאלון</div>
                     </div>
                     <div class="stat-card stage-3" onclick="toggleStageFilter('3')" ondblclick="toggleStageFilter('')">
                         <div class="stat-number" id="stat-stage3">-</div>
-                        <div class="stat-label"><i data-lucide="folder-open" class="icon-sm"></i> אוספים מסמכים</div>
+                        <div class="stat-label"><i data-lucide="folder-open" class="icon-sm"></i> חסרים מסמכים</div>
                     </div>
                     <div class="stat-card stage-4" onclick="toggleStageFilter('4')" ondblclick="toggleStageFilter('')">
                         <div class="stat-number" id="stat-stage4">-</div>
-                        <div class="stat-label"><i data-lucide="search" class="icon-sm"></i> בבדיקה</div>
+                        <div class="stat-label"><i data-lucide="file-text" class="icon-sm"></i> מוכנים להכנה</div>
                     </div>
                     <div class="stat-card stage-5" onclick="toggleStageFilter('5')" ondblclick="toggleStageFilter('')">
                         <div class="stat-number" id="stat-stage5">-</div>
-                        <div class="stat-label"><i data-lucide="circle-check" class="icon-sm"></i> הושלם</div>
+                        <div class="stat-label"><i data-lucide="user-check" class="icon-sm"></i> לבדיקה של משה</div>
+                    </div>
+                    <div class="stat-card stage-6" onclick="toggleStageFilter('6')" ondblclick="toggleStageFilter('')">
+                        <div class="stat-number" id="stat-stage6">-</div>
+                        <div class="stat-label"><i data-lucide="pen-tool" class="icon-sm"></i> לפני חתימה</div>
+                    </div>
+                    <div class="stat-card stage-7" onclick="toggleStageFilter('7')" ondblclick="toggleStageFilter('')">
+                        <div class="stat-number" id="stat-stage7">-</div>
+                        <div class="stat-label"><i data-lucide="circle-check" class="icon-sm"></i> הוגש</div>
                     </div>
                 </div>
 
@@ -136,10 +144,12 @@
                                 <select id="stageFilter" onchange="filterClients()">
                                     <option value="">הכל</option>
                                     <option value="1">ממתינים לשליחה</option>
-                                    <option value="2">ממתינים לתשובה</option>
-                                    <option value="3">אוספים מסמכים</option>
-                                    <option value="4">בבדיקה</option>
-                                    <option value="5">הושלם</option>
+                                    <option value="2">טרם מילאו שאלון</option>
+                                    <option value="3">חסרים מסמכים</option>
+                                    <option value="4">מוכנים להכנה</option>
+                                    <option value="5">לבדיקה של משה</option>
+                                    <option value="6">לפני חתימה</option>
+                                    <option value="7">הוגש</option>
                                 </select>
                             </div>
                             <div class="filter-group">
