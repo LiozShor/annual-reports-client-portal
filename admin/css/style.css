@@ -115,15 +115,15 @@ body {
 /* ==================== STATS GRID ==================== */
 .stats-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-    gap: var(--sp-4);
+    grid-template-columns: repeat(8, 1fr);
+    gap: var(--sp-3);
     margin-bottom: var(--sp-6);
 }
 
 .stat-card {
     background: white;
     border-radius: var(--radius-lg);
-    padding: var(--sp-5);
+    padding: var(--sp-3) var(--sp-2);
     text-align: center;
     box-shadow: var(--shadow-sm);
     border-inline-start: 3px solid var(--brand-500);
@@ -162,7 +162,7 @@ body {
 }
 
 .stat-number {
-    font-size: var(--text-3xl);
+    font-size: var(--text-2xl);
     font-weight: 700;
     color: var(--gray-800);
     margin-bottom: var(--sp-1);
