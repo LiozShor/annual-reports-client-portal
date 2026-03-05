@@ -3599,13 +3599,13 @@ function buildReminderTable(items, showDocs) {
                 </td>
                 ` : ''}
                 <td>${r.last_reminder_sent_at ? formatDateHe(r.last_reminder_sent_at.split('T')[0]) : '-'}</td>
-                <td${isSuppressed ? '' : ` class="reminder-date-cell" onclick="editReminderDate('${escapeAttr(r.report_id)}', this)"`}>${isSuppressed ? '-' : `<span class="reminder-date ${dateClass}">${nextDate}</span>`}</td>
+                <td${isSuppressed ? '' : ` class="reminder-date-cell" onclick="editReminderDate('${escapeAttr(r.report_id)}', this)" tabindex="0" role="button" aria-label="ערוך תאריך" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();editReminderDate('${escapeAttr(r.report_id)}',this);}"`}>${isSuppressed ? '-' : `<span class="reminder-date ${dateClass}">${nextDate}</span>`}</td>
                 <td>${r.reminder_count || 0}</td>
                 <td>${maxCellHtml}</td>
                 <td>
                     <div class="reminder-status-dropdown">
                         <button class="reminder-status-btn ${status.class}" onclick="toggleStatusMenu(this, event)">
-                            ${status.label} <i data-lucide="chevron-down" class="icon-xs"></i>
+                            ${status.label} <span class="stage-caret">&#x25BE;</span>
                         </button>
                         <div class="suppress-menu status-menu">
                             ${isSuppressed
@@ -3648,9 +3648,17 @@ function formatDateHe(dateStr) {
 }
 
 function toggleReminderSelectAll(masterCb) {
-    // Only toggle checkboxes within the same table section
     const table = masterCb.closest('table');
     table.querySelectorAll('.reminder-checkbox').forEach(cb => cb.checked = masterCb.checked);
+    // Sync section header checkbox
+    const section = masterCb.closest('.reminder-section');
+    if (section) {
+        const headerCb = section.querySelector('.reminder-section-select-all');
+        if (headerCb) {
+            headerCb.checked = masterCb.checked;
+            headerCb.indeterminate = false;
+        }
+    }
     updateReminderSelectedCount();
 }
 
@@ -3663,10 +3671,33 @@ function toggleSectionSelectAll(headerCb) {
     updateReminderSelectedCount();
 }
 
+function syncMasterCheckboxes() {
+    document.querySelectorAll('table').forEach(table => {
+        const cbs = Array.from(table.querySelectorAll('.reminder-checkbox'));
+        if (!cbs.length) return;
+        const allChecked = cbs.every(cb => cb.checked);
+        const someChecked = cbs.some(cb => cb.checked);
+        const masterCb = table.querySelector('.reminder-select-all');
+        if (masterCb) {
+            masterCb.checked = allChecked;
+            masterCb.indeterminate = !allChecked && someChecked;
+        }
+        const section = table.closest('.reminder-section');
+        if (section) {
+            const headerCb = section.querySelector('.reminder-section-select-all');
+            if (headerCb) {
+                headerCb.checked = allChecked;
+                headerCb.indeterminate = !allChecked && someChecked;
+            }
+        }
+    });
+}
+
 function updateReminderSelectedCount() {
     const checkedIds = Array.from(document.querySelectorAll('.reminder-checkbox:checked')).map(cb => cb.value);
     const count = checkedIds.length;
     document.getElementById('reminderSelectedCount').textContent = count;
+    syncMasterCheckboxes();
 
     const mutedCount = checkedIds.filter(id => {
         const r = remindersData.find(x => x.report_id === id);
@@ -3689,6 +3720,14 @@ function updateReminderSelectedCount() {
         rbar.style.display = 'none';
     }
     if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function deselectMutedClients() {
+    document.querySelectorAll('.reminder-checkbox:checked').forEach(cb => {
+        const r = remindersData.find(x => x.report_id === cb.value);
+        if (r && r.reminder_suppress === 'forever') cb.checked = false;
+    });
+    updateReminderSelectedCount();
 }
 
 function reminderAction(action, reportId) {
@@ -3732,20 +3771,17 @@ function toggleStatusMenu(btn, e) {
     if (!wasOpen) {
         positionFloating(btn, menu);
         menu.classList.add('open');
+        const onEsc = (ke) => {
+            if (ke.key === 'Escape') {
+                menu.classList.remove('open');
+                btn.focus();
+                document.removeEventListener('keydown', onEsc);
+            }
+        };
+        document.addEventListener('keydown', onEsc);
     }
 }
 
-function toggleSuppressMenu(btn, e) {
-    e.stopPropagation();
-    const menu = btn.nextElementSibling;
-    const wasOpen = menu.classList.contains('open');
-    // Close all open menus first
-    document.querySelectorAll('.suppress-menu.open').forEach(m => m.classList.remove('open'));
-    if (!wasOpen) {
-        positionFloating(btn, menu);
-        menu.classList.add('open');
-    }
-}
 
 function confirmSuppress(action, reportId, name) {
     document.querySelectorAll('.suppress-menu.open').forEach(m => m.classList.remove('open'));
@@ -3763,14 +3799,6 @@ function reminderBulkAction(action) {
     if (reportIds.length === 0) return;
 
     if (action === 'send_now') {
-        const mutedNames = reportIds
-            .map(id => remindersData.find(x => x.report_id === id))
-            .filter(r => r && r.reminder_suppress === 'forever')
-            .map(r => r.name);
-        if (mutedNames.length > 0) {
-            showAIToast(`לא ניתן לשלוח — ${mutedNames.join(', ')} עם תזכורות כבויות. הסר מהבחירה ונסה שוב.`, 'warning');
-            return;
-        }
         const recentIds = reportIds.filter(id => {
             const r = remindersData.find(x => x.report_id === id);
             return r && r.last_reminder_sent_at && (Date.now() - new Date(r.last_reminder_sent_at).getTime()) < 86400000;
@@ -3782,7 +3810,7 @@ function reminderBulkAction(action) {
         return;
     }
     if (action === 'suppress_forever') {
-        showConfirmDialog(`להפסיק תזכורות ל-${reportIds.length} לקוחות?`, () => executeReminderAction(action, reportIds), 'אשר', true);
+        showConfirmDialog(`להפסיק תזכורות ל-${reportIds.length} לקוחות?`, () => executeReminderAction(action, reportIds), 'השתק', true);
         return;
     }
 
@@ -3812,7 +3840,7 @@ async function executeReminderAction(action, reportIds, value, forceOverride) {
     const isBulk = reportIds.length > 1;
     const actionLoadingLabels = {
         send_now: 'שולח...',
-        suppress_forever: 'משתיק...',
+        suppress_forever: 'מפסיק תזכורות...',
         unsuppress: 'מפעיל...',
         change_date: 'מעדכן...',
         set_max: 'מעדכן...'
@@ -3886,8 +3914,8 @@ async function executeReminderAction(action, reportIds, value, forceOverride) {
 
         const actionLabels = {
             send_now: 'תזכורת נשלחה',
-            suppress_forever: 'עודכן',
-            unsuppress: 'הופעל מחדש',
+            suppress_forever: 'תזכורות הופסקו',
+            unsuppress: 'תזכורות הופעלו מחדש',
             change_date: 'תאריך עודכן',
             set_max: 'מקסימום עודכן'
         };
@@ -3946,8 +3974,8 @@ function editReminderDate(reportId, cell) {
 
     cell.innerHTML = `<span class="reminder-date-editor">
         <input type="date" value="${currentDate}" class="reminder-date-input">
-        <button class="btn btn-sm btn-primary reminder-date-save" title="שמור">✓</button>
-        <button class="btn btn-sm btn-ghost reminder-date-cancel" title="ביטול">✕</button>
+        <button class="btn btn-sm btn-primary reminder-date-save" title="שמור" aria-label="שמור">✓</button>
+        <button class="btn btn-sm btn-ghost reminder-date-cancel" title="ביטול" aria-label="בטל">✕</button>
     </span>`;
     const input = cell.querySelector('.reminder-date-input');
     input.focus();

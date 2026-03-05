@@ -2321,8 +2321,8 @@ tr:hover .client-view-link {
 }
 
 .reminder-section-select-all {
-    width: 15px;
-    height: 15px;
+    width: 16px;
+    height: 16px;
     cursor: pointer;
     flex-shrink: 0;
 }
@@ -2438,7 +2438,7 @@ tr:hover .client-view-link {
 .reminder-status-btn {
     display: inline-flex;
     align-items: center;
-    gap: 4px;
+    gap: var(--sp-1);
     padding: 2px var(--sp-3);
     border-radius: var(--radius-full);
     font-size: var(--text-xs);
@@ -2447,10 +2447,17 @@ tr:hover .client-view-link {
     border: none;
     cursor: pointer;
     background: inherit;
+    transition: box-shadow var(--transition-fast), transform var(--transition-fast);
 }
 
 .reminder-status-btn:hover {
-    filter: brightness(0.93);
+    box-shadow: var(--shadow-sm);
+    transform: translateY(-1px);
+}
+
+.reminder-status-btn:active {
+    transform: translateY(0);
+    box-shadow: none;
 }
 
 .reminder-status {
@@ -2475,24 +2482,35 @@ tr:hover .client-view-link {
 
 tr.reminder-row-suppressed {
     background: var(--gray-50);
-    color: var(--gray-400);
 }
 
 tr.reminder-row-suppressed td {
-    opacity: 0.6;
+    color: var(--gray-400);
+}
+
+tr.reminder-row-suppressed td:nth-child(2),
+tr.reminder-row-suppressed td:nth-child(7) {
+    color: inherit;
+    opacity: 1;
 }
 
 .reminder-bulk-muted-warning {
     display: inline-flex;
     align-items: center;
     gap: 4px;
-    padding: 3px 10px;
-    border-radius: 99px;
+    padding: var(--sp-1) var(--sp-3);
+    border-radius: var(--radius-full);
     background: var(--warning-50, #fffbeb);
     color: var(--warning-700, #b45309);
     border: 1px solid var(--warning-200, #fde68a);
-    font-size: 12px;
+    font-size: var(--text-xs);
     font-weight: 500;
+    cursor: pointer;
+    transition: background var(--transition-fast);
+}
+
+.reminder-bulk-muted-warning:hover {
+    background: var(--warning-100);
 }
 
 .reminder-status-exhausted {
@@ -2571,11 +2589,11 @@ tr.reminder-loading td:last-child {
     position: fixed;
     z-index: 1001;
     background: white;
-    border: 1px solid var(--gray-200);
-    border-radius: var(--radius-md);
-    box-shadow: var(--shadow-md);
-    min-width: 140px;
-    padding: var(--sp-1) 0;
+    border: 1px solid var(--gray-300);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-lg);
+    min-width: 160px;
+    padding: var(--sp-2);
 }
 
 .suppress-menu[data-side="bottom"] { animation: floatInDown 120ms ease-out; }
@@ -2584,16 +2602,19 @@ tr.reminder-loading td:last-child {
 .suppress-menu.open { display: block; }
 
 .suppress-menu button {
-    display: block;
+    all: unset;
+    display: flex;
+    align-items: center;
     width: 100%;
     padding: var(--sp-2) var(--sp-3);
-    border: none;
-    background: none;
-    text-align: start;
+    border-radius: var(--radius-md);
     cursor: pointer;
     font-size: var(--text-sm);
+    font-family: inherit;
     color: var(--gray-700);
     white-space: nowrap;
+    box-sizing: border-box;
+    transition: background var(--transition-fast);
 }
 
 .suppress-menu button:hover { background: var(--gray-50); }
