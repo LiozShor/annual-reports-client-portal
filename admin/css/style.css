@@ -269,6 +269,42 @@ body {
     min-width: 180px;
 }
 
+/* ==================== SCROLLABLE TABLE CONTAINERS ==================== */
+.table-scroll-container {
+    max-height: calc(100vh - 260px);
+    overflow-y: auto;
+    overflow-x: auto;
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius-lg);
+}
+
+.table-scroll-container:focus-visible {
+    outline: 2px solid var(--brand-400);
+    outline-offset: 2px;
+}
+
+.table-scroll-container table {
+    border-collapse: separate;
+    border-spacing: 0;
+}
+
+.table-scroll-container thead th {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background: var(--gray-50);
+}
+
+/* Reminder accordion tables: shorter since they share vertical space */
+.reminder-section-body .table-scroll-container {
+    max-height: calc(100vh - 400px);
+}
+
+/* Fix: .card overflow:hidden kills sticky — override when scroll container inside */
+.card:has(.table-scroll-container) {
+    overflow: visible;
+}
+
 /* ==================== TABLE OVERRIDES ==================== */
 table {
     width: 100%;
