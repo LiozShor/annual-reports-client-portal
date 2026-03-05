@@ -10,6 +10,7 @@ const FETCH_TIMEOUTS = {
     load: 10000,     // Data loads (documents, dashboard)
     mutate: 15000,   // Write operations (save, send, approve)
     slow: 20000,     // Heavy operations (bulk import, AI classification)
+    batch: 90000,    // Batch email sends (all clients in one request)
     rollover: 120000 // Year rollover (processes all clients, may take 1-2 min)
 };
 
