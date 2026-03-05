@@ -160,7 +160,7 @@
                         </div>
 
                         <!-- Client Bulk Actions Bar -->
-                        <div class="client-bulk-actions" id="clientBulkActions">
+                        <div class="client-bulk-actions" id="clientBulkActions" role="toolbar" aria-label="פעולות על לקוחות נבחרים">
                             <span class="client-bulk-count"><span id="clientSelectedCount">0</span> נבחרו</span>
                             <button class="btn btn-sm btn-primary" id="bulkSendBtn" style="display:none" onclick="bulkSendQuestionnaires()">
                                 <i data-lucide="send" class="icon-sm"></i> שלח שאלון
@@ -398,7 +398,7 @@
                             </div>
                         </div>
 
-                        <div id="sendActions" class="send-actions">
+                        <div id="sendActions" class="send-actions" role="toolbar" aria-label="פעולות שליחת שאלון">
                             <button class="btn btn-success" onclick="sendToSelected()">
                                 <i data-lucide="send" class="icon-sm"></i> שלח לנבחרים (<span id="selectedCount">0</span>)
                             </button>
@@ -471,7 +471,7 @@
                 </div>
 
                 <!-- Bulk Actions -->
-                <div class="reminder-bulk-actions" id="reminderBulkActions" style="display:none;">
+                <div class="reminder-bulk-actions" id="reminderBulkActions" style="display:none;" role="toolbar" aria-label="פעולות על תזכורות נבחרות">
                     <span class="reminder-bulk-count"><span id="reminderSelectedCount">0</span> נבחרו</span>
                     <button class="btn btn-sm btn-primary" onclick="reminderBulkAction('send_now')">
                         <i data-lucide="send" class="icon-sm"></i> שלח עכשיו
