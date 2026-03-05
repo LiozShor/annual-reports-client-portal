@@ -3486,6 +3486,7 @@ function renderRemindersTable(typeA, typeB) {
     html += `<div class="reminder-section${openSections.has(0) ? ' open' : ''}">`;
     html += `<div class="reminder-section-header reminder-section-a" onclick="toggleReminderSection(this)">
         <i data-lucide="chevron-left" class="icon-sm reminder-chevron"></i>
+        <input type="checkbox" class="reminder-section-select-all" onclick="event.stopPropagation()" onchange="toggleSectionSelectAll(this)" title="בחר הכל">
         <i data-lucide="clipboard-list" class="icon-sm"></i>
         <h3>לא מילאו שאלון</h3>
         <span class="reminder-section-count">${typeA.length}</span>
@@ -3503,6 +3504,7 @@ function renderRemindersTable(typeA, typeB) {
     html += `<div class="reminder-section${openSections.has(1) ? ' open' : ''}">`;
     html += `<div class="reminder-section-header reminder-section-b" onclick="toggleReminderSection(this)">
         <i data-lucide="chevron-left" class="icon-sm reminder-chevron"></i>
+        <input type="checkbox" class="reminder-section-select-all" onclick="event.stopPropagation()" onchange="toggleSectionSelectAll(this)" title="בחר הכל">
         <i data-lucide="folder-open" class="icon-sm"></i>
         <h3>חסרים מסמכים</h3>
         <span class="reminder-section-count">${typeB.length}</span>
@@ -3636,6 +3638,15 @@ function toggleReminderSelectAll(masterCb) {
     // Only toggle checkboxes within the same table section
     const table = masterCb.closest('table');
     table.querySelectorAll('.reminder-checkbox').forEach(cb => cb.checked = masterCb.checked);
+    updateReminderSelectedCount();
+}
+
+function toggleSectionSelectAll(headerCb) {
+    const section = headerCb.closest('.reminder-section');
+    section.querySelectorAll('.reminder-checkbox').forEach(cb => cb.checked = headerCb.checked);
+    // Sync the in-table select-all checkbox too
+    const tableSelectAll = section.querySelector('.reminder-select-all');
+    if (tableSelectAll) tableSelectAll.checked = headerCb.checked;
     updateReminderSelectedCount();
 }
 
