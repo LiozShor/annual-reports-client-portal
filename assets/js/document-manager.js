@@ -516,9 +516,8 @@ function startNameEdit(docId) {
     nameEl.innerHTML = `
         <div class="name-edit-row">
             <div style="flex:1;">
-                <input type="text" class="name-edit-input" id="nameinput-${docId}"
-                       value="${escapeHtml(inputVal)}" dir="auto">
-                <div class="name-preview" id="namepreview-${docId}" dir="auto">${sanitizeDocHtml(markdownToHtml(inputVal))}</div>
+                <input type="text" class="name-edit-input" id="nameinput-${docId}" dir="auto">
+                <div class="name-preview" id="namepreview-${docId}" dir="auto"></div>
             </div>
             <div class="name-edit-actions">
                 <button type="button" class="name-edit-save" onclick="saveNameEdit('${docId}')" title="שמור">
@@ -533,6 +532,9 @@ function startNameEdit(docId) {
 
     const input = document.getElementById(`nameinput-${docId}`);
     if (input) {
+        // Set value programmatically — avoids HTML attribute quote-escaping issue with בע"מ etc.
+        input.value = inputVal;
+        document.getElementById(`namepreview-${docId}`).innerHTML = sanitizeDocHtml(markdownToHtml(inputVal));
         input.focus();
         input.select();
         input.addEventListener('keydown', (e) => {
