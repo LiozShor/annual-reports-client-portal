@@ -3352,7 +3352,6 @@ function isExhausted(r) {
 
 function getReminderStatus(r) {
     if (r.reminder_suppress === 'forever') return { label: 'מושתק לצמיתות', class: 'reminder-status-suppressed', key: 'suppressed' };
-    if (r.reminder_suppress === 'this_month') return { label: 'מושתק החודש', class: 'reminder-status-suppressed', key: 'suppressed' };
     if (isExhausted(r)) return { label: 'מוצה', class: 'reminder-status-exhausted', key: 'exhausted' };
     return { label: 'פעיל', class: 'reminder-status-active', key: 'active' };
 }
@@ -3544,7 +3543,7 @@ function buildReminderTable(items, showDocs) {
                 </td>
                 ` : ''}
                 <td>${r.last_reminder_sent_at ? formatDateHe(r.last_reminder_sent_at.split('T')[0]) : '-'}</td>
-                <td><span class="reminder-date ${dateClass}">${nextDate}</span></td>
+                <td class="reminder-date-cell" onclick="editReminderDate('${escapeAttr(r.report_id)}', this)"><span class="reminder-date ${dateClass}">${nextDate}</span></td>
                 <td>${r.reminder_count || 0}</td>
                 <td>${maxCellHtml}</td>
                 <td><span class="reminder-status ${status.class}">${status.label}</span></td>
@@ -3559,7 +3558,6 @@ function buildReminderTable(items, showDocs) {
                                     <i data-lucide="bell-minus" class="icon-sm"></i>
                                 </button>
                                 <div class="suppress-menu">
-                                    <button onclick="confirmSuppress('suppress_this_month', '${escapeAttr(r.report_id)}', '${escapeAttr(r.name)}')">השתק החודש</button>
                                     <button class="danger" onclick="confirmSuppress('suppress_forever', '${escapeAttr(r.report_id)}', '${escapeAttr(r.name)}')">השתק לצמיתות</button>
                                 </div>
                             </div>
@@ -3656,11 +3654,8 @@ function toggleSuppressMenu(btn, e) {
 
 function confirmSuppress(action, reportId, name) {
     document.querySelectorAll('.suppress-menu.open').forEach(m => m.classList.remove('open'));
-    const msg = action === 'suppress_forever'
-        ? `להשתיק לצמיתות את ${name}?`
-        : `להשתיק את ${name} החודש?`;
-    const isDanger = action === 'suppress_forever';
-    showConfirmDialog(msg, () => executeReminderAction(action, [reportId]), 'השתק', isDanger);
+    const msg = `להשתיק לצמיתות את ${name}?`;
+    showConfirmDialog(msg, () => executeReminderAction(action, [reportId]), 'השתק', true);
 }
 
 // Close suppress menus on outside click
@@ -3714,7 +3709,6 @@ async function executeReminderAction(action, reportIds, value, forceOverride) {
     const isBulk = reportIds.length > 1;
     const actionLoadingLabels = {
         send_now: 'שולח...',
-        suppress_this_month: 'משתיק...',
         suppress_forever: 'משתיק...',
         unsuppress: 'מפעיל...',
         change_date: 'מעדכן...',
@@ -3789,7 +3783,6 @@ async function executeReminderAction(action, reportIds, value, forceOverride) {
 
         const actionLabels = {
             send_now: 'תזכורת נשלחה',
-            suppress_this_month: 'הושתק החודש',
             suppress_forever: 'הושתק לצמיתות',
             unsuppress: 'הופעל מחדש',
             change_date: 'תאריך עודכן',
@@ -3840,6 +3833,40 @@ function showReminderDatePicker(reportId, currentDate) {
     });
 
     input.showPicker();
+}
+
+function editReminderDate(reportId, cell) {
+    if (cell.querySelector('.reminder-date-editor')) return;
+    const r = remindersData.find(x => x.report_id === reportId);
+    if (!r) return;
+    const currentDate = r.reminder_next_date || '';
+
+    cell.innerHTML = `<span class="reminder-date-editor">
+        <input type="date" value="${currentDate}" class="reminder-date-input">
+        <button class="btn btn-sm btn-primary reminder-date-save" title="שמור">✓</button>
+        <button class="btn btn-sm btn-ghost reminder-date-cancel" title="ביטול">✕</button>
+    </span>`;
+    const input = cell.querySelector('.reminder-date-input');
+    input.focus();
+
+    const save = () => {
+        const val = input.value;
+        if (val) executeReminderAction('change_date', [reportId], val);
+        else restoreDateCell(cell, r);
+    };
+
+    cell.querySelector('.reminder-date-save').addEventListener('click', (e) => { e.stopPropagation(); save(); });
+    cell.querySelector('.reminder-date-cancel').addEventListener('click', (e) => { e.stopPropagation(); restoreDateCell(cell, r); });
+    input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') { e.preventDefault(); save(); }
+        if (e.key === 'Escape') { e.preventDefault(); restoreDateCell(cell, r); }
+    });
+}
+
+function restoreDateCell(cell, r) {
+    const nextDate = r.reminder_next_date ? formatDateHe(r.reminder_next_date) : '-';
+    const dateClass = r.reminder_next_date && r.reminder_next_date < new Date().toISOString().split('T')[0] ? 'reminder-date-overdue' : '';
+    cell.innerHTML = `<span class="reminder-date ${dateClass}">${nextDate}</span>`;
 }
 
 // ==================== REMINDER SETTINGS MODAL ====================
