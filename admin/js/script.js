@@ -3691,6 +3691,12 @@ function reminderAction(action, reportId) {
             }
         }
     }
+    if (action === 'send_now') {
+        const r = remindersData.find(x => x.report_id === reportId);
+        const name = r ? r.name : '';
+        showConfirmDialog(`לשלוח תזכורת ל${name}?`, () => executeReminderAction(action, [reportId]), 'שלח');
+        return;
+    }
     executeReminderAction(action, [reportId]);
 }
 
