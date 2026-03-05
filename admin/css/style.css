@@ -2320,6 +2320,13 @@ tr:hover .client-view-link {
     margin-bottom: var(--sp-3);
 }
 
+.reminder-section-select-all {
+    width: 15px;
+    height: 15px;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
 .reminder-section-body {
     display: none;
 }
