@@ -18,9 +18,9 @@ const STAGES = {
     '2-Waiting_For_Answers': { num: 2, label: 'טרם מילא שאלון',         icon: 'hourglass',      class: 'stage-2' },
     '3-Collecting_Docs':     { num: 3, label: 'מילא שאלון וחסרים מסמכים', icon: 'folder-open',    class: 'stage-3' },
     '4-Review':              { num: 4, label: 'מוכן להכנה',             icon: 'file-text',      class: 'stage-4' },
-    '6-Moshe_Review':        { num: 5, label: 'מוכן לבדיקה של משה',     icon: 'user-check',     class: 'stage-5' },
-    '7-Before_Signing':      { num: 6, label: 'לפני חתימה של הלקוח',    icon: 'pen-tool',       class: 'stage-6' },
-    '8-Completed':           { num: 7, label: 'הוגש',                  icon: 'circle-check',   class: 'stage-7' }
+    '5-Moshe_Review':        { num: 5, label: 'מוכן לבדיקה של משה',     icon: 'user-check',     class: 'stage-5' },
+    '6-Before_Signing':      { num: 6, label: 'לפני חתימה של הלקוח',    icon: 'pen-tool',       class: 'stage-6' },
+    '7-Completed':           { num: 7, label: 'הוגש',                  icon: 'circle-check',   class: 'stage-7' }
 };
 
 const STAGE_NUM_TO_KEY = Object.fromEntries(Object.entries(STAGES).map(([k, v]) => [v.num, k]));
