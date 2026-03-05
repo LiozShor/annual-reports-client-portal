@@ -1113,6 +1113,16 @@ function toggleSelectAll() {
 function updateSelectedCount() {
     const selected = document.querySelectorAll('.client-checkbox:checked').length;
     document.getElementById('selectedCount').textContent = selected;
+    const sendBar = document.getElementById('sendActions');
+    if (selected > 0) {
+        sendBar.style.display = '';
+        sendBar.classList.add('floating-bulk-bar');
+        document.getElementById('pendingClientsContainer').style.paddingBottom = '72px';
+    } else {
+        sendBar.classList.remove('floating-bulk-bar');
+        sendBar.style.display = 'block';
+        document.getElementById('pendingClientsContainer').style.paddingBottom = '';
+    }
 }
 
 async function sendToSelected() {
@@ -3592,7 +3602,14 @@ function toggleReminderSelectAll(masterCb) {
 function updateReminderSelectedCount() {
     const count = document.querySelectorAll('.reminder-checkbox:checked').length;
     document.getElementById('reminderSelectedCount').textContent = count;
-    document.getElementById('reminderBulkActions').style.display = count > 0 ? 'flex' : 'none';
+    const rbar = document.getElementById('reminderBulkActions');
+    if (count > 0) {
+        rbar.style.display = '';
+        rbar.classList.add('floating-bulk-bar');
+    } else {
+        rbar.classList.remove('floating-bulk-bar');
+        rbar.style.display = 'none';
+    }
 }
 
 function reminderAction(action, reportId) {
@@ -4145,9 +4162,9 @@ function updateClientSelectedCount() {
     countEl.textContent = count;
 
     if (count > 0) {
-        bar.classList.add('visible');
+        bar.classList.add('visible', 'floating-bulk-bar');
     } else {
-        bar.classList.remove('visible');
+        bar.classList.remove('visible', 'floating-bulk-bar');
         return;
     }
 
