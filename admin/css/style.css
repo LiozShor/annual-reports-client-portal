@@ -2443,6 +2443,15 @@ tr:hover .client-view-link {
     color: var(--gray-600);
 }
 
+tr.reminder-row-suppressed {
+    background: var(--gray-50);
+    color: var(--gray-400);
+}
+
+tr.reminder-row-suppressed td {
+    opacity: 0.6;
+}
+
 .reminder-status-exhausted {
     background: var(--danger-100);
     color: var(--danger-700);
