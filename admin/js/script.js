@@ -3607,9 +3607,7 @@ function buildReminderTable(items, showDocs) {
                                 <i data-lucide="send" class="icon-sm"></i>
                             </button>
                         ` : ''}
-                        <button class="action-btn reminder-date-btn" onclick="showReminderDatePicker('${escapeAttr(r.report_id)}', '${r.reminder_next_date || ''}')" title="שנה תאריך">
-                            <i data-lucide="calendar" class="icon-sm"></i>
-                        </button>
+
                     </div>
                 </td>
             </tr>
