@@ -247,6 +247,7 @@ function renderClientsTable(clients) {
     }
 
     let html = `
+        <div class="table-scroll-container" role="region" aria-label="טבלת לקוחות" tabindex="0">
         <table>
             <thead>
                 <tr>
@@ -333,7 +334,7 @@ function renderClientsTable(clients) {
         `;
     }
 
-    html += '</tbody></table>';
+    html += '</tbody></table></div>';
     container.innerHTML = html;
     if (typeof lucide !== 'undefined') lucide.createIcons();
 }
@@ -1063,6 +1064,9 @@ async function loadPendingClients(silent = false) {
 function renderPendingClients() {
     const container = document.getElementById('pendingClientsContainer');
 
+    // Filter out archived clients
+    pendingClients = pendingClients.filter(c => c.is_active !== false);
+
     if (pendingClients.length === 0) {
         container.innerHTML = `
             <div class="empty-state">
@@ -1076,6 +1080,7 @@ function renderPendingClients() {
     }
 
     let html = `
+        <div class="table-scroll-container" role="region" aria-label="לקוחות ממתינים לשליחה" tabindex="0">
         <table>
             <thead>
                 <tr>
@@ -1106,7 +1111,7 @@ function renderPendingClients() {
         `;
     }
 
-    html += '</tbody></table>';
+    html += '</tbody></table></div>';
     container.innerHTML = html;
     document.getElementById('sendActions').style.display = 'block';
     updateSelectedCount();
@@ -1240,6 +1245,9 @@ async function sendQuestionnaires(reportIds) {
 function renderReviewTable(queue) {
     const container = document.getElementById('reviewTableContainer');
 
+    // Filter out archived clients
+    if (queue) queue = queue.filter(c => c.is_active !== false);
+
     if (!queue || queue.length === 0) {
         container.innerHTML = `
             <div class="empty-state">
@@ -1254,6 +1262,7 @@ function renderReviewTable(queue) {
     const now = new Date();
 
     let html = `
+        <div class="table-scroll-container" role="region" aria-label="תור בדיקה" tabindex="0">
         <table>
             <thead>
                 <tr>
@@ -1312,7 +1321,7 @@ function renderReviewTable(queue) {
         `;
     }
 
-    html += '</tbody></table>';
+    html += '</tbody></table></div>';
     container.innerHTML = html;
     if (typeof lucide !== 'undefined') lucide.createIcons();
 }
@@ -1791,7 +1800,7 @@ function applyAIFilters() {
     const typeFilter = document.getElementById('aiTypeFilter').value;
     const reviewStatusFilter = document.getElementById('aiReviewStatusFilter')?.value || '';
 
-    let filtered = aiClassificationsData;
+    let filtered = aiClassificationsData.filter(item => item.client_is_active !== false);
 
     if (searchText) {
         filtered = filtered.filter(item =>
@@ -3452,7 +3461,7 @@ document.addEventListener('keydown', (e) => {
 function filterReminders() {
     const search = (document.getElementById('reminderSearchInput').value || '').trim().toLowerCase();
 
-    let filtered = remindersData;
+    let filtered = remindersData.filter(r => r.is_active !== false);
 
     if (search) {
         filtered = filtered.filter(r => (r.name || '').toLowerCase().includes(search));
@@ -3551,6 +3560,7 @@ function buildReminderTable(items, showDocs) {
     const weekFromNow = new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0];
 
     let html = `
+        <div class="table-scroll-container" role="region" aria-label="טבלת תזכורות" tabindex="0">
         <table>
             <thead>
                 <tr>
@@ -3640,7 +3650,7 @@ function buildReminderTable(items, showDocs) {
         `;
     }
 
-    html += '</tbody></table>';
+    html += '</tbody></table></div>';
     return html;
 }
 
