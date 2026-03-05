@@ -3602,8 +3602,22 @@ function toggleReminderSelectAll(masterCb) {
 }
 
 function updateReminderSelectedCount() {
-    const count = document.querySelectorAll('.reminder-checkbox:checked').length;
+    const checkedIds = Array.from(document.querySelectorAll('.reminder-checkbox:checked')).map(cb => cb.value);
+    const count = checkedIds.length;
     document.getElementById('reminderSelectedCount').textContent = count;
+
+    const mutedCount = checkedIds.filter(id => {
+        const r = remindersData.find(x => x.report_id === id);
+        return r && r.reminder_suppress === 'forever';
+    }).length;
+    const mutedWarning = document.getElementById('reminderBulkMutedWarning');
+    if (mutedCount > 0) {
+        document.getElementById('reminderBulkMutedCount').textContent = mutedCount;
+        mutedWarning.style.display = '';
+    } else {
+        mutedWarning.style.display = 'none';
+    }
+
     const rbar = document.getElementById('reminderBulkActions');
     if (count > 0) {
         rbar.style.display = '';
@@ -3612,6 +3626,7 @@ function updateReminderSelectedCount() {
         rbar.classList.remove('floating-bulk-bar');
         rbar.style.display = 'none';
     }
+    if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
 function reminderAction(action, reportId) {
