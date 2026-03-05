@@ -38,7 +38,7 @@
       "id": "form_867",
       "category": "banks",
       "airtable_type": "Form_867",
-      "name": { "he": "טופס 867", "en": "Form 867" },
+      "name": { "he": "טופס 867 (אישור ניכוי מס)", "en": "Form 867 (Tax Deduction Certificate)" },
       "details": [{ "key": "institution_name", "type": "text" }]
     },
     "crypto_report": {
