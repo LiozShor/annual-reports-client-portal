@@ -297,12 +297,15 @@ function renderClientsTable(clients) {
                     </span>
                 </td>
                 <td>
-                    <div class="docs-progress-cell clickable-docs" onclick="toggleDocsPopover(event, '${rid}', '${cName}')" tabindex="0" role="button" title="לחץ לצפייה במסמכים">
+                    ${stageNum <= 2
+                        ? '<span class="missing-count not-applicable">—</span>'
+                        : `<div class="docs-progress-cell clickable-docs" onclick="toggleDocsPopover(event, '${rid}', '${cName}')" tabindex="0" role="button" title="לחץ לצפייה במסמכים">
                         <span class="docs-count">${docsReceived}/${docsTotal}</span>
                         <div class="progress-bar">
                             <div class="progress-fill" style="width: ${progressPercent}%"></div>
                         </div>
-                    </div>
+                    </div>`
+                    }
                 </td>
                 <td>
                     ${stageNum <= 2
