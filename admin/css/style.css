@@ -140,7 +140,9 @@ body {
 .stat-card.stage-2 { border-inline-start-color: var(--warning-500); }
 .stat-card.stage-3 { border-inline-start-color: var(--info-500); }
 .stat-card.stage-4 { border-inline-start-color: #8B5CF6; }
-.stat-card.stage-5 { border-inline-start-color: var(--success-500); }
+.stat-card.stage-5 { border-inline-start-color: #0D9488; }
+.stat-card.stage-6 { border-inline-start-color: #C2410C; }
+.stat-card.stage-7 { border-inline-start-color: var(--success-500); }
 
 .stat-card.active {
     box-shadow: var(--shadow-md);
@@ -341,6 +343,16 @@ tr.duplicate {
 }
 
 .stage-badge.stage-5 {
+    background: #CCFBF1;
+    color: #0F766E;
+}
+
+.stage-badge.stage-6 {
+    background: #FFF7ED;
+    color: #C2410C;
+}
+
+.stage-badge.stage-7 {
     background: var(--success-100);
     color: var(--success-700);
 }
@@ -1215,6 +1227,12 @@ tr:hover .client-view-link {
     border-radius: var(--radius-full);
     font-size: var(--text-xs);
     font-weight: 700;
+}
+
+.missing-count.not-applicable {
+    background: var(--gray-100);
+    color: var(--gray-400);
+    cursor: default;
 }
 
 .missing-count.has-missing {

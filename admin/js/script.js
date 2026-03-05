@@ -14,11 +14,13 @@ let showArchivedMode = false;
 // ==================== SSOT CONSTANTS ====================
 
 const STAGES = {
-    '1-Send_Questionnaire':  { num: 1, label: 'ממתין לשליחה',  icon: 'clipboard-list', class: 'stage-1' },
-    '2-Waiting_For_Answers': { num: 2, label: 'ממתין לתשובה',  icon: 'hourglass',      class: 'stage-2' },
-    '3-Collecting_Docs':     { num: 3, label: 'אוסף מסמכים',   icon: 'folder-open',    class: 'stage-3' },
-    '4-Review':              { num: 4, label: 'בבדיקה',        icon: 'search',         class: 'stage-4' },
-    '5-Completed':           { num: 5, label: 'הושלם',         icon: 'circle-check',   class: 'stage-5' }
+    '1-Send_Questionnaire':  { num: 1, label: 'ממתין לשליחה',           icon: 'clipboard-list', class: 'stage-1' },
+    '2-Waiting_For_Answers': { num: 2, label: 'טרם מילא שאלון',         icon: 'hourglass',      class: 'stage-2' },
+    '3-Collecting_Docs':     { num: 3, label: 'מילא שאלון וחסרים מסמכים', icon: 'folder-open',    class: 'stage-3' },
+    '4-Review':              { num: 4, label: 'מוכן להכנה',             icon: 'file-text',      class: 'stage-4' },
+    '6-Moshe_Review':        { num: 5, label: 'מוכן לבדיקה של משה',     icon: 'user-check',     class: 'stage-5' },
+    '7-Before_Signing':      { num: 6, label: 'לפני חתימה של הלקוח',    icon: 'pen-tool',       class: 'stage-6' },
+    '8-Completed':           { num: 7, label: 'הוגש',                  icon: 'circle-check',   class: 'stage-7' }
 };
 
 const STAGE_NUM_TO_KEY = Object.fromEntries(Object.entries(STAGES).map(([k, v]) => [v.num, k]));
@@ -265,6 +267,7 @@ function renderClientsTable(clients) {
         const docsTotal = client.docs_total || 0;
         const progressPercent = docsTotal > 0 ? Math.round((docsReceived / docsTotal) * 100) : 0;
         const missingCount = docsTotal - docsReceived;
+        const stageNum = stage.num || 0;
         const rid = escapeAttr(client.report_id);
         const cName = escapeAttr(client.name);
         const isActive = client.is_active !== false;
@@ -302,7 +305,10 @@ function renderClientsTable(clients) {
                     </div>
                 </td>
                 <td>
-                    <span class="missing-count clickable-count ${missingCount > 0 ? 'has-missing' : 'all-done'}" onclick="toggleDocsPopover(event, '${rid}', '${cName}')" tabindex="0" role="button" title="לחץ לצפייה במסמכים">${missingCount > 0 ? missingCount : '✓'}</span>
+                    ${stageNum <= 2
+                        ? '<span class="missing-count not-applicable">—</span>'
+                        : `<span class="missing-count clickable-count ${missingCount > 0 ? 'has-missing' : 'all-done'}" onclick="toggleDocsPopover(event, '${rid}', '${cName}')" tabindex="0" role="button" title="לחץ לצפייה במסמכים">${missingCount > 0 ? missingCount : '✓'}</span>`
+                    }
                 </td>
                 <td>
                     ${client.stage === '1-Send_Questionnaire' ?
@@ -587,7 +593,7 @@ function updateClientStageInPlace(reportId, newStage) {
 }
 
 function recalculateStats() {
-    const counts = { total: 0, stage1: 0, stage2: 0, stage3: 0, stage4: 0, stage5: 0 };
+    const counts = { total: 0, stage1: 0, stage2: 0, stage3: 0, stage4: 0, stage5: 0, stage6: 0, stage7: 0 };
 
     for (const client of clientsData) {
         if (client.is_active === false) continue; // Skip deactivated clients in stats
@@ -602,6 +608,8 @@ function recalculateStats() {
     document.getElementById('stat-stage3').textContent = counts.stage3;
     document.getElementById('stat-stage4').textContent = counts.stage4;
     document.getElementById('stat-stage5').textContent = counts.stage5;
+    document.getElementById('stat-stage6').textContent = counts.stage6;
+    document.getElementById('stat-stage7').textContent = counts.stage7;
 }
 
 // Close dropdowns/popovers on Escape; Enter on clickable counts triggers click
