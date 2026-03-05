@@ -3669,6 +3669,15 @@ function reminderBulkAction(action) {
     if (reportIds.length === 0) return;
 
     if (action === 'send_now') {
+        const mutedNames = reportIds
+            .map(id => remindersData.find(x => x.report_id === id))
+            .filter(r => r && r.reminder_suppress === 'forever')
+            .map(r => r.name);
+        if (mutedNames.length > 0) {
+            showModal('warning', 'לקוחות עם תזכורות כבויות',
+                `לא ניתן לשלוח תזכורות כאשר נבחרו לקוחות עם תזכורות כבויות:<br><br><strong>${mutedNames.join(', ')}</strong><br><br>הסר אותם מהבחירה ונסה שוב.`);
+            return;
+        }
         const recentIds = reportIds.filter(id => {
             const r = remindersData.find(x => x.report_id === id);
             return r && r.last_reminder_sent_at && (Date.now() - new Date(r.last_reminder_sent_at).getTime()) < 86400000;
