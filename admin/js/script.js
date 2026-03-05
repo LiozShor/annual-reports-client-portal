@@ -3329,7 +3329,7 @@ let remindersData = [];
 let reminderLoaded = false;
 let reminderDefaultMax = null; // null = unlimited
 let reminderSendDay = null; // null = not configured
-let activeCardFilter = null;
+let activeCardFilter = 'scheduled';
 
 async function loadReminders(silent = false) {
     if (!silent) showLoading('טוען תזכורות...');
@@ -3382,6 +3382,19 @@ function updateReminderStats(stats) {
     document.getElementById('reminder-stat-due').textContent = stats.due_this_week || 0;
     document.getElementById('reminder-stat-suppressed').textContent = stats.suppressed || 0;
     document.getElementById('reminder-stat-exhausted').textContent = stats.exhausted || 0;
+    // Apply active state for current filter
+    const cardMap = { scheduled: 'reminder-stat-scheduled', due_this_week: 'reminder-stat-due', suppressed: 'reminder-stat-suppressed', exhausted: 'reminder-stat-exhausted' };
+    document.querySelectorAll('.reminder-stat-item').forEach(card => {
+        card.classList.remove('reminder-stat-active');
+        card.setAttribute('aria-pressed', 'false');
+    });
+    if (activeCardFilter) {
+        const activeCard = document.querySelector(`.${cardMap[activeCardFilter]}`);
+        if (activeCard) {
+            activeCard.closest('.reminder-stat-item').classList.add('reminder-stat-active');
+            activeCard.closest('.reminder-stat-item').setAttribute('aria-pressed', 'true');
+        }
+    }
 }
 
 function isExhausted(r) {
