@@ -168,6 +168,10 @@
                             <button class="btn btn-sm btn-danger" id="bulkArchiveBtn" onclick="bulkArchiveClients()">
                                 <i data-lucide="archive" class="icon-sm"></i> העבר לארכיון
                             </button>
+                            <button class="btn btn-sm btn-ghost" onclick="resetClientBulkSelection()">ביטול</button>
+                            <button class="btn btn-sm btn-ghost bulk-bar-close" onclick="resetClientBulkSelection()" aria-label="סגור">
+                                <i data-lucide="x" class="icon-sm"></i>
+                            </button>
                         </div>
 
                         <div id="clientsTableContainer">
@@ -405,6 +409,10 @@
                             <button class="btn btn-primary" onclick="sendToAll()">
                                 <i data-lucide="mail" class="icon-sm"></i> שלח לכולם
                             </button>
+                            <button class="btn btn-sm btn-ghost" onclick="cancelSendSelection()">ביטול</button>
+                            <button class="btn btn-sm btn-ghost bulk-bar-close" onclick="cancelSendSelection()" aria-label="סגור">
+                                <i data-lucide="x" class="icon-sm"></i>
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -481,6 +489,10 @@
                     </button>
                     <button class="btn btn-sm btn-secondary" onclick="reminderBulkAction('suppress_forever')">
                         <i data-lucide="bell-off" class="icon-sm"></i> השתק לצמיתות
+                    </button>
+                    <button class="btn btn-sm btn-ghost" onclick="cancelReminderSelection()">ביטול</button>
+                    <button class="btn btn-sm btn-ghost bulk-bar-close" onclick="cancelReminderSelection()" aria-label="סגור">
+                        <i data-lucide="x" class="icon-sm"></i>
                     </button>
                 </div>
 

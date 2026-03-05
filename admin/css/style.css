@@ -2660,6 +2660,10 @@ tr.reminder-loading td:last-child {
     margin-top: 0;
 }
 
+.bulk-bar-close {
+    padding-inline: var(--sp-2);
+}
+
 /* Padding protection when bulk bar floats over table containers */
 .client-bulk-actions.floating-bulk-bar ~ #clientsTableContainer,
 .reminder-bulk-actions.floating-bulk-bar ~ #reminderTableContainer {
