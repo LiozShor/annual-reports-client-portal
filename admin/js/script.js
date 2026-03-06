@@ -285,6 +285,9 @@ function renderClientsTable(clients) {
                         >
                             ${escapeHtml(client.name)}
                         </strong>
+                        <a class="client-edit-link" href="javascript:void(0)" onclick="event.stopPropagation(); openClientDetailModal('${rid}')" title="עריכת פרטים">
+                            <i data-lucide="pencil" class="icon-xs"></i>
+                        </a>
                         <a class="client-view-link" href="javascript:void(0)" onclick="event.stopPropagation(); viewClient('${rid}')" title="צפייה כלקוח">
                             <i data-lucide="external-link" class="icon-xs"></i>
                         </a>
@@ -955,7 +958,7 @@ async function startImport() {
     const year = document.getElementById('importYear').value;
 
     const success = await performServerImport(
-        validClients.map(c => ({ name: c.name, email: c.email })),
+        validClients.map(c => ({ name: c.name, email: c.email, phone: c.phone || '' })),
         year,
         'הלקוחות נוספו בהצלחה למערכת.'
     );
@@ -991,6 +994,7 @@ function setAddMode(mode) {
 async function addManualClient() {
     const name = document.getElementById('manualName').value.trim();
     const email = document.getElementById('manualEmail').value.trim().toLowerCase();
+    const phone = (document.getElementById('manualPhone')?.value || '').trim();
     const year = document.getElementById('manualYear').value;
 
     if (!name || !email) {
@@ -1007,12 +1011,12 @@ async function addManualClient() {
         return;
     }
 
-    await _doManualAdd(name, email, year);
+    await _doManualAdd(name, email, phone, year);
 }
 
-async function _doManualAdd(name, email, year) {
+async function _doManualAdd(name, email, phone, year) {
     const data = await performServerImport(
-        [{ name, email }],
+        [{ name, email, phone }],
         year,
         null,
         { suppressModal: true }
@@ -1021,6 +1025,8 @@ async function _doManualAdd(name, email, year) {
     if (data) {
         document.getElementById('manualName').value = '';
         document.getElementById('manualEmail').value = '';
+        const phoneEl = document.getElementById('manualPhone');
+        if (phoneEl) phoneEl.value = '';
 
         const reportId = data.report_ids?.[0];
         if (reportId) {
@@ -4214,6 +4220,104 @@ async function executeToggleActive(reportId, active) {
         recalculateStats();
         filterClients();
         showAIToast('שגיאה בעדכון: ' + error.message, 'danger');
+    }
+}
+
+// ==================== CLIENT DETAIL MODAL ====================
+
+async function openClientDetailModal(reportId) {
+    document.getElementById('clientDetailReportId').value = reportId;
+    document.getElementById('clientDetailName').value = '';
+    document.getElementById('clientDetailEmail').value = '';
+    document.getElementById('clientDetailPhone').value = '';
+    document.getElementById('clientDetailModal').classList.add('show');
+
+    showLoading('טוען פרטי לקוח...');
+    try {
+        const response = await fetchWithTimeout(`${API_BASE}/admin-update-client`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ token: authToken, report_id: reportId, action: 'get' })
+        }, FETCH_TIMEOUTS.load);
+        const data = await response.json();
+        hideLoading();
+
+        if (!data.ok) throw new Error(data.error || 'שגיאה בטעינה');
+
+        document.getElementById('clientDetailName').value = data.client.name || '';
+        document.getElementById('clientDetailEmail').value = data.client.email || '';
+        document.getElementById('clientDetailPhone').value = data.client.phone || '';
+    } catch (error) {
+        hideLoading();
+        closeClientDetailModal();
+        showAIToast('שגיאה בטעינת פרטי לקוח: ' + error.message, 'danger');
+    }
+}
+
+function closeClientDetailModal() {
+    document.getElementById('clientDetailModal').classList.remove('show');
+    document.getElementById('clientDetailReportId').value = '';
+    document.getElementById('clientDetailName').value = '';
+    document.getElementById('clientDetailEmail').value = '';
+    document.getElementById('clientDetailPhone').value = '';
+}
+
+async function saveClientDetails() {
+    const reportId = document.getElementById('clientDetailReportId').value;
+    const name = document.getElementById('clientDetailName').value.trim();
+    const email = document.getElementById('clientDetailEmail').value.trim().toLowerCase();
+    const phone = document.getElementById('clientDetailPhone').value.trim();
+
+    if (!name) {
+        showAIToast('יש להזין שם', 'warning');
+        return;
+    }
+    if (!isValidEmail(email)) {
+        showAIToast('כתובת אימייל לא תקינה', 'warning');
+        return;
+    }
+
+    const doSave = async () => {
+        showLoading('שומר פרטים...');
+        try {
+            const response = await fetchWithTimeout(`${API_BASE}/admin-update-client`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ token: authToken, report_id: reportId, action: 'update', name, email, phone })
+            }, FETCH_TIMEOUTS.mutate);
+            const data = await response.json();
+            hideLoading();
+
+            if (!data.ok) throw new Error(data.error || 'שגיאה בשמירה');
+
+            // Optimistic update in clientsData
+            const client = clientsData.find(c => c.report_id === reportId);
+            if (client) {
+                client.name = name;
+                client.email = email;
+                client.phone = phone;
+                filterClients();
+            }
+
+            closeClientDetailModal();
+            showAIToast('פרטי הלקוח עודכנו בהצלחה', 'success');
+        } catch (error) {
+            hideLoading();
+            showAIToast('שגיאה בשמירה: ' + error.message, 'danger');
+        }
+    };
+
+    // If email changed, confirm first
+    const client = clientsData.find(c => c.report_id === reportId);
+    if (client && client.email !== email) {
+        showConfirmDialog(
+            `שינוי כתובת אימייל מ-"${client.email}" ל-"${email}"?\n\nשים לב: הלקוח ישתמש בכתובת החדשה מהפעם הבאה.`,
+            doSave,
+            'שנה אימייל',
+            true
+        );
+    } else {
+        await doSave();
     }
 }
 
