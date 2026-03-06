@@ -1158,7 +1158,7 @@ async function confirmSubmit() {
             // Custom doc (not from dropdown)
             return {
                 issuer_name: name,
-                issuer_name_en: '',
+                issuer_name_en: name,
                 template_id: 'general_doc',
                 category: 'general',
                 person: 'client',
