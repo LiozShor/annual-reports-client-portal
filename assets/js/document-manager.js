@@ -120,7 +120,7 @@ if (!REPORT_ID || REPORT_ID === 'null' || REPORT_ID === 'undefined') {
     }
 }
 
-// Show alert
+// Show alert (in-flow banner at top of page)
 function showAlert(msg, type = 'success') {
     const alert = document.getElementById('alert');
     const typeMap = { 'error': 'danger', 'success': 'success', 'warning': 'warning', 'info': 'info' };
@@ -132,6 +132,24 @@ function showAlert(msg, type = 'success') {
         alert.classList.remove('show');
         alert.style.display = 'none';
     }, 5000);
+}
+
+// Fixed-position toast visible regardless of scroll
+function showToast(msg, type = 'info') {
+    let t = document.getElementById('_fixedToast');
+    if (!t) {
+        t = document.createElement('div');
+        t.id = '_fixedToast';
+        t.style.cssText = 'position:fixed;top:20px;left:50%;transform:translateX(-50%);z-index:10000;padding:12px 24px;border-radius:8px;font-size:14px;font-weight:500;box-shadow:0 4px 12px rgba(0,0,0,.15);transition:opacity .3s;direction:rtl;max-width:90vw;text-align:center;';
+        document.body.appendChild(t);
+    }
+    const colors = { info: '#eff6ff;#1e40af;#bfdbfe', success: '#f0fdf4;#166534;#bbf7d0', error: '#fef2f2;#991b1b;#fecaca' };
+    const [bg, fg, bd] = (colors[type] || colors.info).split(';');
+    t.style.background = bg; t.style.color = fg; t.style.border = `1px solid ${bd}`;
+    t.textContent = msg;
+    t.style.opacity = '1'; t.style.display = 'block';
+    clearTimeout(t._timer);
+    t._timer = setTimeout(() => { t.style.opacity = '0'; setTimeout(() => t.style.display = 'none', 300); }, 5000);
 }
 
 // Load documents
@@ -1406,7 +1424,7 @@ function approveAndSendToClient() {
         async () => {
             const token = generateApprovalToken(REPORT_ID, 'MOSHE_1710');
             const url = `${API_BASE}/approve-and-send?report_id=${REPORT_ID}&token=${token}&confirm=1&respond=json`;
-            showAlert('שולח רשימת מסמכים...', 'info');
+            showToast('שולח רשימת מסמכים...', 'info');
             try {
                 const res = await fetchWithTimeout(url, {}, FETCH_TIMEOUTS.mutate);
                 const data = await res.json();
@@ -1414,12 +1432,12 @@ function approveAndSendToClient() {
                     if (!DOCS_FIRST_SENT_AT) DOCS_FIRST_SENT_AT = new Date().toISOString();
                     if (!CURRENT_STAGE || CURRENT_STAGE.charAt(0) < '3') CURRENT_STAGE = '3-Collecting_Docs';
                     updateSentBadge();
-                    showAlert('רשימת המסמכים נשלחה ללקוח בהצלחה!', 'success');
+                    showToast('רשימת המסמכים נשלחה ללקוח בהצלחה!', 'success');
                 } else {
-                    showAlert('שגיאה בשליחת המייל. נסה שנית.', 'error');
+                    showToast('שגיאה בשליחת המייל. נסה שנית.', 'error');
                 }
             } catch (e) {
-                showAlert('שגיאה בשליחת המייל. נסה שנית.', 'error');
+                showToast('שגיאה בשליחת המייל. נסה שנית.', 'error');
             }
         },
         sentDate ? 'שלח שוב' : 'שלח ללקוח',
