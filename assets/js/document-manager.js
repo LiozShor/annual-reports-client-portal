@@ -536,7 +536,9 @@ function startNameEdit(docId) {
         input.value = inputVal;
         document.getElementById(`namepreview-${docId}`).innerHTML = sanitizeDocHtml(markdownToHtml(inputVal));
         input.focus();
-        input.select();
+        // Place cursor at end (left side in RTL) so חברת בע"מ** is visible, not scrolled out
+        const len = inputVal.length;
+        input.setSelectionRange(len, len);
         input.addEventListener('keydown', (e) => {
             if (e.key === 'Enter') { e.preventDefault(); saveNameEdit(docId); }
             if (e.key === 'Escape') { e.preventDefault(); cancelNameEdit(docId); }
