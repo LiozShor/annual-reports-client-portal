@@ -838,8 +838,10 @@ function updateStatusOverview() {
         markedForRestore.size > 0 || statusChanges.size > 0 || noteChanges.size > 0 || nameChanges.size > 0;
     document.getElementById('editSessionBar').style.display = hasChanges ? 'block' : 'none';
 
-    // Show Approve & Send button only when there are NO pending changes
+    // Mutually exclusive: save+reset row shown when changes pending, approve-send row when clean
+    const saveResetRow = document.getElementById('save-reset-row');
     const approveSendRow = document.getElementById('approve-send-row');
+    if (saveResetRow) saveResetRow.style.display = hasChanges ? '' : 'none';
     if (approveSendRow) approveSendRow.style.display = hasChanges ? 'none' : '';
 }
 
