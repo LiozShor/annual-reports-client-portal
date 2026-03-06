@@ -1042,7 +1042,7 @@ function openConfirmation() {
         nameChanges.forEach((newName, docId) => {
             const doc = currentDocuments.find(d => d.id === docId);
             if (doc) {
-                summary += `<li class="change-name">${stripHtml(doc.name)} → ${escapeHtml(newName)}</li>`;
+                summary += `<li class="change-name">${sanitizeDocHtml(doc.name)} → ${sanitizeDocHtml(newName)}</li>`;
             }
         });
         summary += '</ul>';
@@ -1054,17 +1054,25 @@ function openConfirmation() {
         summary += '<ul class="changes-list"><li>' + escapeHtml(notes) + '</li></ul>';
     }
 
-    // Email toggle warning
-    if (!sendEmailOnSave) {
-        summary += `<div class="email-skip-warning">
-            <strong>שים לב:</strong> אימייל התראה למשרד <strong>לא</strong> יישלח עבור שינויים אלו.
-        </div>`;
-    }
-
     summary += '</div>';
 
     document.getElementById('changesSummary').innerHTML = summary;
+
+    // Sync email toggle state and update confirm button label
+    const emailToggle = document.getElementById('emailToggle');
+    if (emailToggle) emailToggle.checked = sendEmailOnSave;
+    updateConfirmBtn();
+
     document.getElementById('confirmModal').classList.add('show');
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+// Update confirm button label based on sendEmailOnSave
+function updateConfirmBtn() {
+    const btn = document.getElementById('confirmBtn');
+    if (!btn) return;
+    const label = sendEmailOnSave ? 'אשר ושלח למשרד' : 'אשר שינויים';
+    btn.innerHTML = `<i data-lucide="circle-check" class="icon-sm"></i> ${label}`;
     if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
@@ -1257,10 +1265,6 @@ function resetForm() {
     document.getElementById('docTypeSelect').value = '';
     pendingTemplate = null;
 
-    // Reset email toggle checkbox
-    const emailToggle = document.getElementById('emailToggle');
-    if (emailToggle) emailToggle.checked = false;
-
     // Reset status filter
     activeStatusFilter = '';
     const boxes = document.querySelectorAll('.status-count-box');
@@ -1361,6 +1365,26 @@ function generateApprovalToken(reportId, secret) {
     h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909);
     h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909);
     return (4294967296 * (2097151 & h2) + (h1 >>> 0)).toString(36);
+}
+
+function showConfirmDialog(message, onConfirm, confirmText = 'אישור', danger = false) {
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay show';
+    overlay.innerHTML = `
+        <div class="modal-panel">
+            <div class="modal-panel-body" style="padding-top:24px;">
+                <p>${escapeHtml(message)}</p>
+            </div>
+            <div class="modal-panel-footer">
+                <button class="btn btn-ghost" id="_confirmCancel">ביטול</button>
+                <button class="btn ${danger ? 'btn-danger' : 'btn-primary'}" id="_confirmOk">
+                    ${escapeHtml(confirmText)}
+                </button>
+            </div>
+        </div>`;
+    document.body.appendChild(overlay);
+    overlay.querySelector('#_confirmCancel').onclick = () => overlay.remove();
+    overlay.querySelector('#_confirmOk').onclick = () => { overlay.remove(); onConfirm(); };
 }
 
 function approveAndSendToClient() {

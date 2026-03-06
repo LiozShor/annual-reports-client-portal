@@ -217,14 +217,6 @@
                     </div><!-- /.collapsible-content -->
                 </div>
 
-                <div class="email-toggle">
-                    <label class="switch">
-                        <input type="checkbox" id="emailToggle" onchange="sendEmailOnSave = this.checked">
-                        <span class="switch-slider"></span>
-                    </label>
-                    <label for="emailToggle" class="text-sm">שלח אימייל התראה למשרד לאחר השמירה</label>
-                </div>
-
                 <div class="actions-row">
                     <button class="btn btn-primary btn-lg" onclick="openConfirmation()">
                         <i data-lucide="save" class="icon-sm"></i> שמור שינויים
@@ -267,14 +259,18 @@
                 <div class="alert alert-warning mt-4">
                     <strong>הבהרה:</strong> הסרת מסמכים: סמן את התיבות ליד מסמכים לא רלוונטיים — הם יוסרו מרשימת המסמכים של הלקוח
                 </div>
-                <p class="text-sm text-muted mt-3">
-                    <strong>שים לב:</strong> לאחר שמירת השינויים, יישלח אימייל אוטומטי למשרד הרואה חשבון עם פירוט השינויים.
-                </p>
+                <div class="email-toggle mt-4">
+                    <label class="switch">
+                        <input type="checkbox" id="emailToggle" onchange="sendEmailOnSave = this.checked; updateConfirmBtn()">
+                        <span class="switch-slider"></span>
+                    </label>
+                    <label for="emailToggle" class="text-sm">שלח אימייל התראה למשרד לאחר השמירה</label>
+                </div>
             </div>
             <div class="modal-panel-footer">
                 <button class="btn btn-ghost" onclick="closeConfirmation()">ביטול</button>
-                <button class="btn btn-primary" onclick="confirmSubmit()">
-                    <i data-lucide="circle-check" class="icon-sm"></i> אישור ושליחה
+                <button class="btn btn-primary" id="confirmBtn" onclick="confirmSubmit()">
+                    <i data-lucide="circle-check" class="icon-sm"></i> אשר שינויים
                 </button>
             </div>
         </div>
