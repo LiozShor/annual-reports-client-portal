@@ -9,6 +9,8 @@ const REPORT_ID = params.get('report_id');
 let CLIENT_NAME = '';
 let SPOUSE_NAME = '';
 let YEAR = '';
+let CURRENT_STAGE = '';
+let DOCS_FIRST_SENT_AT = null;
 const API_BASE = 'https://liozshor.app.n8n.cloud/webhook';
 
 // Admin auth token — required for this office-only page
@@ -163,6 +165,9 @@ async function loadDocuments() {
             const yearEl = document.getElementById('year');
             if (yearEl) yearEl.textContent = YEAR;
         }
+        if (data.stage) CURRENT_STAGE = data.stage;
+        DOCS_FIRST_SENT_AT = data.docs_first_sent_at || null;
+        updateSentBadge();
 
         // Handle case where report is found but stage is 1 (Not Started)
         if (data.stage && (data.stage.startsWith('1') || data.stage.startsWith('2'))) {
@@ -1390,16 +1395,38 @@ function showConfirmDialog(message, onConfirm, confirmText = 'אישור', dange
 }
 
 function approveAndSendToClient() {
+    const sentDate = DOCS_FIRST_SENT_AT
+        ? new Date(DOCS_FIRST_SENT_AT).toLocaleDateString('he-IL')
+        : null;
+    const message = sentDate
+        ? `הרשימה נשלחה ב-${sentDate}. לשלוח שוב ל-${CLIENT_NAME}?`
+        : `שלח רשימת מסמכים ל-${CLIENT_NAME}?`;
     showConfirmDialog(
-        `שלח רשימת מסמכים ל-${CLIENT_NAME}?`,
+        message,
         () => {
             const token = generateApprovalToken(REPORT_ID, 'MOSHE_1710');
-            const url = `${API_BASE}/approve-and-send?report_id=${REPORT_ID}&token=${token}&confirm=1`;
+            const url = `${API_BASE}/approve-and-send?report_id=${REPORT_ID}&token=${token}`;
             window.open(url, '_blank');
         },
-        'שלח ללקוח',
+        sentDate ? 'שלח שוב' : 'שלח ללקוח',
         false
     );
+}
+
+function updateSentBadge() {
+    const el = document.getElementById('sentBadge');
+    if (!el) return;
+    const stageNum = parseInt((CURRENT_STAGE || '').charAt(0), 10);
+    if (DOCS_FIRST_SENT_AT) {
+        const date = new Date(DOCS_FIRST_SENT_AT).toLocaleDateString('he-IL');
+        el.innerHTML = `<span class="badge badge-success">נשלח ללקוח ${date}</span>`;
+        el.style.display = '';
+    } else if (stageNum >= 3) {
+        el.innerHTML = `<span class="badge badge-neutral">טרם נשלח ללקוח</span>`;
+        el.style.display = '';
+    } else {
+        el.style.display = 'none';
+    }
 }
 
 // Close detail input and status dropdown when clicking outside
