@@ -218,19 +218,20 @@
                     </div><!-- /.collapsible-content -->
                 </div>
 
-                <div id="save-reset-row" class="actions-row" style="display:none;">
-                    <button class="btn btn-primary btn-lg" onclick="openConfirmation()">
-                        <i data-lucide="save" class="icon-sm"></i> שמור שינויים
-                    </button>
-                    <button class="btn btn-ghost" onclick="resetForm()">
-                        <i data-lucide="refresh-cw" class="icon-sm"></i> אפס טופס
-                    </button>
-                </div>
-
-                <div id="approve-send-row" class="actions-row">
-                    <button class="btn btn-success btn-lg" onclick="approveAndSendToClient()">
-                        <i data-lucide="send" class="icon-sm"></i> אשר ושלח ללקוח
-                    </button>
+                <div class="actions-row">
+                    <div id="save-reset-row" style="display:none;">
+                        <button class="btn btn-primary btn-lg" onclick="openConfirmation()">
+                            <i data-lucide="save" class="icon-sm"></i> שמור שינויים
+                        </button>
+                        <button class="btn btn-ghost" onclick="resetForm()">
+                            <i data-lucide="refresh-cw" class="icon-sm"></i> אפס טופס
+                        </button>
+                    </div>
+                    <div id="approve-send-row">
+                        <button class="btn btn-success btn-lg" onclick="approveAndSendToClient()">
+                            <i data-lucide="send" class="icon-sm"></i> אשר ושלח ללקוח
+                        </button>
+                    </div>
                 </div>
             </div>
 
