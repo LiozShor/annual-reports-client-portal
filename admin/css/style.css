@@ -3986,3 +3986,43 @@ tr:hover .copy-email-btn {
         align-items: center;
     }
 }
+
+/* ==================== CLIENT EDIT LINK ==================== */
+.client-edit-link {
+    color: var(--gray-400);
+    display: inline-flex;
+    align-items: center;
+    opacity: 0;
+    transition: opacity var(--transition-fast), color var(--transition-fast);
+}
+
+tr:hover .client-edit-link {
+    opacity: 1;
+}
+
+.client-edit-link:hover {
+    color: var(--brand-600);
+}
+
+/* ==================== CLIENT DETAIL FORM ==================== */
+.client-detail-form .form-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 12px;
+}
+
+.client-detail-form input[type="text"] {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid var(--gray-300);
+    border-radius: var(--radius-md);
+    font-size: var(--text-sm);
+    transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.client-detail-form input[type="text"]:focus {
+    outline: none;
+    border-color: var(--brand-500);
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+}

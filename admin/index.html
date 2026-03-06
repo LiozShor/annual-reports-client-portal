@@ -219,6 +219,10 @@
                                     <input type="text" id="manualEmail" placeholder="israel@example.com">
                                 </div>
                                 <div class="form-field">
+                                    <label class="form-label">טלפון:</label>
+                                    <input type="text" id="manualPhone" placeholder="050-0000000">
+                                </div>
+                                <div class="form-field">
                                     <label class="form-label">שנת דוח:</label>
                                     <select id="manualYear">
                                     </select>
@@ -250,16 +254,19 @@
                                         <tr>
                                             <th>name</th>
                                             <th>email</th>
+                                            <th>phone</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         <tr>
                                             <td>משה כהן</td>
                                             <td>moshe@example.com</td>
+                                            <td>050-1234567</td>
                                         </tr>
                                         <tr>
                                             <td>שרה לוי</td>
                                             <td>sara@example.com</td>
+                                            <td></td>
                                         </tr>
                                     </tbody>
                                 </table>
@@ -714,6 +721,37 @@
                 <button class="btn btn-secondary" onclick="closeReminderSettingsModal()">ביטול</button>
                 <button class="btn btn-primary" onclick="saveReminderSettings()">
                     <i data-lucide="check" class="icon-sm"></i> שמור הגדרות
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Client Detail Modal -->
+    <div class="ai-modal-overlay" id="clientDetailModal" onclick="if(event.target===this)closeClientDetailModal()">
+        <div class="ai-modal-panel">
+            <div class="ai-modal-panel-header">
+                <h3><i data-lucide="pencil" class="icon-sm"></i> עריכת פרטי לקוח</h3>
+                <button class="btn btn-ghost" onclick="closeClientDetailModal()"><i data-lucide="x" class="icon-sm"></i></button>
+            </div>
+            <div class="ai-modal-panel-body client-detail-form">
+                <input type="hidden" id="clientDetailReportId">
+                <div class="form-field">
+                    <label class="form-label">שם מלא:</label>
+                    <input type="text" id="clientDetailName" placeholder="ישראל ישראלי">
+                </div>
+                <div class="form-field">
+                    <label class="form-label">אימייל:</label>
+                    <input type="text" id="clientDetailEmail" placeholder="israel@example.com">
+                </div>
+                <div class="form-field">
+                    <label class="form-label">טלפון:</label>
+                    <input type="text" id="clientDetailPhone" placeholder="050-0000000">
+                </div>
+            </div>
+            <div class="ai-modal-panel-footer">
+                <button class="btn btn-secondary" onclick="closeClientDetailModal()">ביטול</button>
+                <button class="btn btn-primary" onclick="saveClientDetails()">
+                    <i data-lucide="check" class="icon-sm"></i> שמור
                 </button>
             </div>
         </div>
