@@ -1403,10 +1403,24 @@ function approveAndSendToClient() {
         : `שלח רשימת מסמכים ל-${CLIENT_NAME}?`;
     showConfirmDialog(
         message,
-        () => {
+        async () => {
             const token = generateApprovalToken(REPORT_ID, 'MOSHE_1710');
-            const url = `${API_BASE}/approve-and-send?report_id=${REPORT_ID}&token=${token}`;
-            window.open(url, '_blank');
+            const url = `${API_BASE}/approve-and-send?report_id=${REPORT_ID}&token=${token}&confirm=1&respond=json`;
+            showAlert('שולח רשימת מסמכים...', 'info');
+            try {
+                const res = await fetchWithTimeout(url, {}, FETCH_TIMEOUTS.mutate);
+                const data = await res.json();
+                if (data.ok) {
+                    if (!DOCS_FIRST_SENT_AT) DOCS_FIRST_SENT_AT = new Date().toISOString();
+                    if (!CURRENT_STAGE || CURRENT_STAGE.charAt(0) < '3') CURRENT_STAGE = '3-Collecting_Docs';
+                    updateSentBadge();
+                    showAlert('רשימת המסמכים נשלחה ללקוח בהצלחה!', 'success');
+                } else {
+                    showAlert('שגיאה בשליחת המייל. נסה שנית.', 'error');
+                }
+            } catch (e) {
+                showAlert('שגיאה בשליחת המייל. נסה שנית.', 'error');
+            }
         },
         sentDate ? 'שלח שוב' : 'שלח ללקוח',
         false
