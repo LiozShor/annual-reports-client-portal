@@ -355,7 +355,7 @@ function displayDocuments() {
                                     title="לחץ לשינוי סטטוס">${status.text} &#x25BE;</span>`
                         }
                     </div>
-                    <div class="note-editor" id="note-${doc.id}" style="display:none;">
+                    <div class="note-editor" id="note-${doc.id}" style="display:${hasNote ? 'block' : 'none'};">
                         <textarea class="note-textarea" id="notetext-${doc.id}"
                                   oninput="trackNoteChange('${doc.id}')"
                                   placeholder="הערת משרד...">${escapeHtml(doc.bookkeepers_notes || '')}</textarea>
@@ -527,6 +527,7 @@ function trackNoteChange(docId) {
         btn.classList.toggle('note-modified', noteChanges.has(docId));
         if (typeof lucide !== 'undefined') lucide.createIcons();
     }
+    updateEditBar();
 }
 
 // Inline document name editing
