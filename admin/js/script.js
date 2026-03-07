@@ -749,6 +749,98 @@ function renderDocsPopover(popover, documents, clientName) {
     popover.innerHTML = html;
 }
 
+// ==================== REMINDER HISTORY POPOVER ====================
+
+const historyCache = new Map();
+
+function toggleHistoryPopover(event, reportId) {
+    event.stopPropagation();
+    const popover = document.getElementById('reminderHistoryPopover');
+
+    if (popover.style.display !== 'none' && popover.dataset.reportId === reportId) {
+        closeHistoryPopover();
+        return;
+    }
+
+    popover.dataset.reportId = reportId;
+    positionFloating(event.currentTarget, popover);
+    popover.style.display = 'block';
+
+    if (historyCache.has(reportId)) {
+        renderHistoryPopover(popover, historyCache.get(reportId));
+    } else {
+        popover.innerHTML = '<div class="docs-popover-loading">טוען היסטוריה...</div>';
+        fetchHistoryForPopover(reportId);
+    }
+
+    requestAnimationFrame(() => {
+        document.addEventListener('click', _closeHistoryPopoverOnClick, { once: true });
+    });
+}
+
+function _closeHistoryPopoverOnClick() {
+    closeHistoryPopover();
+}
+
+function closeHistoryPopover() {
+    const popover = document.getElementById('reminderHistoryPopover');
+    if (popover) popover.style.display = 'none';
+    document.removeEventListener('click', _closeHistoryPopoverOnClick);
+}
+
+async function fetchHistoryForPopover(reportId) {
+    try {
+        const response = await fetchWithTimeout(`${API_BASE}/admin-reminders`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ token: authToken, action: 'get_history', report_id: reportId })
+        }, FETCH_TIMEOUTS.quick);
+        const data = await response.json();
+        if (!data.ok) {
+            const popover = document.getElementById('reminderHistoryPopover');
+            if (popover.dataset.reportId === reportId) {
+                popover.innerHTML = '<div class="docs-popover-loading">שגיאה בטעינה</div>';
+            }
+            return;
+        }
+        historyCache.set(reportId, data.history || []);
+        const popover = document.getElementById('reminderHistoryPopover');
+        if (popover.style.display !== 'none' && popover.dataset.reportId === reportId) {
+            renderHistoryPopover(popover, data.history || []);
+        }
+    } catch (err) {
+        const popover = document.getElementById('reminderHistoryPopover');
+        if (popover.dataset.reportId === reportId) {
+            popover.innerHTML = '<div class="docs-popover-loading">שגיאה בטעינה</div>';
+        }
+    }
+}
+
+function renderHistoryPopover(popover, history) {
+    if (!history.length) {
+        popover.innerHTML = `
+            <div class="docs-popover-title" style="text-align:center;padding:16px;">
+                <i data-lucide="clock" style="width:20px;height:20px;margin-bottom:8px;opacity:0.4;"></i>
+                <div>לא נשלחו תזכורות</div>
+            </div>`;
+        if (typeof lucide !== 'undefined') lucide.createIcons({ attrs: { class: 'icon-sm' } });
+        return;
+    }
+
+    const TYPE_LABELS = { A: 'שאלון', B: 'מסמכים' };
+    let html = `<div class="docs-popover-title">היסטוריית שליחה (${history.length})</div>`;
+    for (const entry of history) {
+        const dateStr = entry.sent_at ? formatDateHe(entry.sent_at.split('T')[0]) : '-';
+        const typeLabel = TYPE_LABELS[entry.type] || entry.type || '-';
+        html += `<div class="docs-popover-item">
+            <span class="docs-popover-icon" style="font-size:11px;opacity:0.5;">●</span>
+            <span>${dateStr}</span>
+            <span style="margin-right:auto;color:var(--text-tertiary);font-size:12px;">${typeLabel}</span>
+        </div>`;
+    }
+    popover.innerHTML = html;
+}
+
 // ==================== COPY TO CLIPBOARD ====================
 
 function copyToClipboard(text, btn) {
@@ -2167,7 +2259,6 @@ function renderAICard(item) {
             : (docName || templateLabel);
         classificationHtml = `
             <span class="ai-template-match">${escapeHtml(docDisplayName)}</span>
-            <span class="ai-confidence-badge ${confidenceClass}">${confidencePercent}%</span>
         `;
         const approveDisabled = item.is_unrequested;
         actionsHtml = `
@@ -2272,7 +2363,6 @@ function renderAICard(item) {
             : (docName || templateLabel);
         classificationHtml = `
             <span class="ai-template-match">${escapeHtml(docDisplayName)}</span>
-            <span class="ai-confidence-badge ${confidenceClass}">${confidencePercent}%</span>
         `;
         const fuzzyApproveDisabled = item.is_unrequested;
         actionsHtml = `
@@ -2296,7 +2386,6 @@ function renderAICard(item) {
             : '';
         classificationHtml = `
             <span class="ai-template-unmatched">לא זוהה</span>
-            <span class="ai-confidence-badge ai-confidence-low">--</span>
             ${reasonHtml}
         `;
         actionsHtml = `
@@ -3623,7 +3712,7 @@ function buildReminderTable(items, showDocs) {
                     ` : '-'}
                 </td>
                 ` : ''}
-                <td>${r.last_reminder_sent_at ? formatDateHe(r.last_reminder_sent_at.split('T')[0]) : '-'}</td>
+                <td class="clickable-docs" onclick="toggleHistoryPopover(event, '${escapeAttr(r.report_id)}')" tabindex="0" role="button" aria-label="היסטוריית שליחה" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleHistoryPopover(event,'${escapeAttr(r.report_id)}');}">${r.last_reminder_sent_at ? formatDateHe(r.last_reminder_sent_at.split('T')[0]) : '-'}</td>
                 <td${isSuppressed ? '' : ` class="reminder-date-cell" onclick="editReminderDate('${escapeAttr(r.report_id)}', this)" tabindex="0" role="button" aria-label="ערוך תאריך" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();editReminderDate('${escapeAttr(r.report_id)}',this);}"`}>${isSuppressed ? '-' : `<span class="reminder-date ${dateClass}">${nextDate}</span>`}</td>
                 <td>${r.reminder_count || 0}</td>
                 <td>${maxCellHtml}</td>
@@ -3862,6 +3951,10 @@ function clearRowLoading(reportId) {
 }
 
 async function executeReminderAction(action, reportIds, value, forceOverride) {
+    // DL-109: Invalidate history cache on send_now
+    if (action === 'send_now') {
+        for (const rid of reportIds) historyCache.delete(rid);
+    }
     const isBulk = reportIds.length > 1;
     const actionLoadingLabels = {
         send_now: 'שולח...',
