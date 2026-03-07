@@ -48,6 +48,10 @@ let sendEmailOnSave = false;
 let currentDropdownDocId = null;    // currently open status dropdown target
 let activeStatusFilter = '';        // currently active status filter (empty = show all)
 
+// Questions for client state
+let clientQuestions = [];           // current questions array [{id, text, answer}]
+let originalQuestionsJSON = '[]';   // snapshot for dirty checking
+
 // Variable name → Hebrew label mapping (UI only)
 const VAR_LABELS = {
     employer_name: 'שם המעסיק',
@@ -212,6 +216,14 @@ async function loadDocuments() {
         // Store templates and categories from API (SSOT)
         apiTemplates = data.templates || [];
         apiCategories = data.categories_list || [];
+
+        // Load client questions
+        try {
+            clientQuestions = JSON.parse(data.client_questions || '[]');
+            if (!Array.isArray(clientQuestions)) clientQuestions = [];
+        } catch (e) { clientQuestions = []; }
+        originalQuestionsJSON = JSON.stringify(clientQuestions);
+        renderQuestions();
 
         initDocumentDropdown();
         displayDocuments();
@@ -859,7 +871,8 @@ function updateStatusOverview() {
 
     // Show edit session bar only when there are pending changes
     const hasChanges = markedForRemoval.size > 0 || docsToAdd.size > 0 ||
-        markedForRestore.size > 0 || statusChanges.size > 0 || noteChanges.size > 0 || nameChanges.size > 0;
+        markedForRestore.size > 0 || statusChanges.size > 0 || noteChanges.size > 0 || nameChanges.size > 0 ||
+        questionsAreDirty();
     document.getElementById('editSessionBar').style.display = hasChanges ? 'block' : 'none';
 
     // Mutually exclusive: save+reset row shown when changes pending, approve-send row when clean
@@ -993,7 +1006,8 @@ function openConfirmation() {
         markedForRestore.size > 0 ||
         statusChanges.size > 0 ||
         noteChanges.size > 0 ||
-        nameChanges.size > 0;
+        nameChanges.size > 0 ||
+        questionsAreDirty();
 
     if (!hasChanges) {
         showAlert(TXT_NO_CHANGES, 'error');
@@ -1070,6 +1084,19 @@ function openConfirmation() {
             if (doc) {
                 summary += `<li class="change-name">${sanitizeDocHtml(doc.name)} → ${sanitizeDocHtml(newName)}</li>`;
             }
+        });
+        summary += '</ul>';
+    }
+
+    // Questions changes (amber)
+    if (questionsAreDirty()) {
+        const qCount = clientQuestions.filter(q => q.text.trim()).length;
+        summary += `<h4 style="color:#D97706;"><i data-lucide="message-circle" class="icon-sm" style="display:inline;vertical-align:middle;"></i> שאלות ללקוח (${qCount}):</h4>`;
+        summary += '<ul class="changes-list">';
+        clientQuestions.filter(q => q.text.trim()).forEach((q, i) => {
+            const preview = q.text.length > 60 ? q.text.substring(0, 60) + '...' : q.text;
+            const answerTag = q.answer ? ' <span style="color:var(--success-600);">(נענתה)</span>' : '';
+            summary += `<li style="color:#D97706;">${i + 1}. ${escapeHtml(preview)}${answerTag}</li>`;
         });
         summary += '</ul>';
     }
@@ -1206,6 +1233,11 @@ async function confirmSubmit() {
         });
     }
 
+    // Client questions
+    if (questionsAreDirty()) {
+        extensions.client_questions = clientQuestions.filter(q => q.text.trim());
+    }
+
     const payload = {
         data: {
             fields: [
@@ -1290,6 +1322,11 @@ function resetForm() {
     document.getElementById('detailInput').classList.remove('show');
     document.getElementById('docTypeSelect').value = '';
     pendingTemplate = null;
+    nameChanges.clear();
+
+    // Reset questions to original state
+    try { clientQuestions = JSON.parse(originalQuestionsJSON); } catch (e) { clientQuestions = []; }
+    renderQuestions();
 
     // Reset status filter
     activeStatusFilter = '';
@@ -1360,6 +1397,118 @@ async function confirmSendQuestionnaire() {
         btn.disabled = false;
         _sendQuestionnaireLocked = false;
     }
+}
+
+// ==================== CLIENT QUESTIONS ====================
+
+function questionsAreDirty() {
+    return JSON.stringify(clientQuestions) !== originalQuestionsJSON;
+}
+
+function renderQuestions() {
+    const container = document.getElementById('questionsContainer');
+    if (!container) return;
+
+    // Update badge count
+    const badge = document.getElementById('questionsCount');
+    const activeCount = clientQuestions.filter(q => q.text.trim()).length;
+    if (badge) {
+        badge.textContent = activeCount;
+        badge.style.display = activeCount > 0 ? 'inline-flex' : 'none';
+    }
+
+    if (clientQuestions.length === 0) {
+        container.innerHTML = `
+            <div class="questions-empty-state">
+                <i data-lucide="message-circle" class="icon-lg"></i>
+                <p>אין שאלות ללקוח. הוסף שאלה כדי לשלוח אותה באימייל הבא.</p>
+                <button class="btn btn-ghost btn-sm" onclick="addQuestion()">
+                    <i data-lucide="plus" class="icon-sm"></i> הוסף שאלה
+                </button>
+            </div>`;
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+        return;
+    }
+
+    let html = '';
+    clientQuestions.forEach((q, idx) => {
+        const answered = q.answer && q.answer.trim();
+        html += `
+        <div class="question-item ${answered ? 'question-answered' : ''}" data-qid="${q.id}">
+            <div class="question-number">${idx + 1}</div>
+            <div class="question-body">
+                <div class="question-label">שאלה</div>
+                <textarea class="question-text-input" rows="1"
+                    placeholder="הקלד שאלה ללקוח..."
+                    oninput="updateQuestionText('${q.id}', this.value); autoResizeTextarea(this)"
+                    onfocus="autoResizeTextarea(this)">${escapeHtml(q.text)}</textarea>
+                <div class="question-label">תשובת הלקוח</div>
+                <textarea class="question-answer-input" rows="1"
+                    placeholder="תשובה (תמולא ע״י הלקוח או ידנית)"
+                    oninput="updateQuestionAnswer('${q.id}', this.value); autoResizeTextarea(this)"
+                    onfocus="autoResizeTextarea(this)">${escapeHtml(q.answer || '')}</textarea>
+            </div>
+            <button class="question-delete" onclick="deleteQuestion('${q.id}')" title="מחק שאלה">
+                <i data-lucide="trash-2" class="icon-sm"></i>
+            </button>
+        </div>`;
+    });
+    html += `<button class="questions-add-btn" onclick="addQuestion()">
+        <i data-lucide="plus" class="icon-sm"></i> הוסף שאלה
+    </button>`;
+
+    container.innerHTML = html;
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+
+    // Auto-resize existing textareas
+    container.querySelectorAll('textarea').forEach(ta => autoResizeTextarea(ta));
+}
+
+function autoResizeTextarea(el) {
+    el.style.height = 'auto';
+    el.style.height = el.scrollHeight + 'px';
+}
+
+function addQuestion() {
+    clientQuestions.push({
+        id: 'q_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+        text: '',
+        answer: ''
+    });
+    renderQuestions();
+    updateStats();
+
+    // Focus the new question's text input
+    const container = document.getElementById('questionsContainer');
+    const inputs = container.querySelectorAll('.question-text-input');
+    if (inputs.length > 0) inputs[inputs.length - 1].focus();
+}
+
+function deleteQuestion(id) {
+    clientQuestions = clientQuestions.filter(q => q.id !== id);
+    renderQuestions();
+    updateStats();
+}
+
+function updateQuestionText(id, text) {
+    const q = clientQuestions.find(q => q.id === id);
+    if (q) q.text = text;
+    updateStats();
+}
+
+function updateQuestionAnswer(id, answer) {
+    const q = clientQuestions.find(q => q.id === id);
+    if (q) {
+        q.answer = answer;
+        // Update answered visual state
+        const item = document.querySelector(`.question-item[data-qid="${id}"]`);
+        if (item) item.classList.toggle('question-answered', !!answer.trim());
+        const numEl = item?.querySelector('.question-number');
+        if (numEl) {
+            // Answered badge color is handled by CSS class
+        }
+    }
+    updateStats();
 }
 
 // Escape HTML
