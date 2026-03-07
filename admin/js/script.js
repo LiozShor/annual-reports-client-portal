@@ -2205,7 +2205,7 @@ function renderAICard(item) {
                             data-doc-record-id="${escapeAttr(d.doc_record_id || '')}"
                             data-doc-name="${escapeAttr(docName)}"
                             onchange="handleComparisonRadio('${escapeAttr(item.id)}', this)">
-                        ${escapeHtml(docName)}
+                        ${renderDocLabel(docName)}
                     </label>
                 `;
             }).join('');
@@ -3011,7 +3011,7 @@ function updateClientDocState(clientName, docRecordId) {
                                     data-doc-record-id="${escapeAttr(d.doc_record_id || '')}"
                                     data-doc-name="${escapeAttr(docName)}"
                                     onchange="handleComparisonRadio('${escapeAttr(cardId)}', this)">
-                                ${escapeHtml(docName)}
+                                ${renderDocLabel(docName)}
                             </label>
                         `;
                     }).join('')}
@@ -4624,6 +4624,11 @@ function escapeHtml(text) {
     const div = document.createElement('div');
     div.textContent = text || '';
     return div.innerHTML;
+}
+
+/** Escape HTML but preserve <b></b> tags for SSOT doc name formatting */
+function renderDocLabel(name) {
+    return escapeHtml(name).replace(/&lt;b&gt;/g, '<b>').replace(/&lt;\/b&gt;/g, '</b>');
 }
 
 function isValidEmail(email) {
