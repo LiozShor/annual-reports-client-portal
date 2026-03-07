@@ -166,6 +166,21 @@
                 <!-- Document list -->
                 <div id="existingDocs" class="document-list"></div>
 
+                <!-- Questions for client section -->
+                <div class="questions-section">
+                    <button class="collapsible-trigger" onclick="this.setAttribute('aria-expanded', this.getAttribute('aria-expanded')==='true'?'false':'true'); this.nextElementSibling.classList.toggle('open')" aria-expanded="false">
+                        <span class="flex items-center gap-2">
+                            <i data-lucide="message-circle" class="icon-sm"></i>
+                            שאלות ללקוח
+                            <span id="questionsCount" class="badge badge-neutral" style="display:none;">0</span>
+                        </span>
+                        <i data-lucide="chevron-down" class="icon-sm"></i>
+                    </button>
+                    <div class="collapsible-content">
+                        <div id="questionsContainer" class="questions-container"></div>
+                    </div>
+                </div>
+
                 <!-- Add documents section -->
                 <div class="add-section">
                     <button class="collapsible-trigger" onclick="this.setAttribute('aria-expanded', this.getAttribute('aria-expanded')==='true'?'false':'true'); this.nextElementSibling.classList.toggle('open')" aria-expanded="false">

@@ -924,6 +924,175 @@ body {
     display: flex;
 }
 
+/* ==================== QUESTIONS SECTION ==================== */
+.questions-section {
+    background: white;
+    border: 2px solid var(--warning-200);
+    border-radius: var(--radius-lg);
+    padding: 0;
+    margin: var(--sp-5) var(--sp-6);
+    overflow: hidden;
+}
+
+.questions-section > .collapsible-trigger {
+    background: var(--warning-50);
+    padding: var(--sp-4) var(--sp-6);
+    font-size: var(--text-base);
+    font-weight: 700;
+    color: var(--warning-700);
+    border-bottom: 1px solid var(--warning-100);
+}
+
+.questions-section > .collapsible-trigger:hover {
+    background: var(--warning-100);
+}
+
+.questions-section > .collapsible-content {
+    padding: 0;
+}
+
+.questions-section > .collapsible-content.open {
+    padding: 0;
+}
+
+.questions-container {
+    padding: var(--sp-4) var(--sp-6) var(--sp-6);
+}
+
+.question-item {
+    display: flex;
+    gap: var(--sp-3);
+    padding: var(--sp-4);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--gray-200);
+    border-inline-start: 4px solid var(--gray-300);
+    background: white;
+    margin-bottom: var(--sp-3);
+    transition: border-color var(--transition-fast);
+}
+
+.question-item.question-answered {
+    border-inline-start-color: var(--success-500);
+    background: var(--success-50);
+}
+
+.question-number {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: var(--gray-100);
+    color: var(--gray-600);
+    font-size: var(--text-sm);
+    font-weight: 700;
+    flex-shrink: 0;
+}
+
+.question-answered .question-number {
+    background: var(--success-100);
+    color: var(--success-700);
+}
+
+.question-body {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-2);
+}
+
+.question-label {
+    font-size: var(--text-xs);
+    font-weight: 600;
+    color: var(--gray-500);
+    text-transform: uppercase;
+}
+
+.question-text-input,
+.question-answer-input {
+    width: 100%;
+    padding: var(--sp-2) var(--sp-3);
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius-md);
+    font-family: inherit;
+    font-size: var(--text-sm);
+    resize: vertical;
+    direction: rtl;
+    transition: border-color var(--transition-fast);
+    box-sizing: border-box;
+    min-height: 38px;
+}
+
+.question-text-input:focus,
+.question-answer-input:focus {
+    outline: none;
+    border-color: var(--brand-500);
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+}
+
+.question-answer-input {
+    background: var(--gray-50);
+}
+
+.question-delete {
+    background: none;
+    border: 1px solid transparent;
+    cursor: pointer;
+    padding: var(--sp-1);
+    border-radius: var(--radius-md);
+    color: var(--gray-300);
+    flex-shrink: 0;
+    transition: all var(--transition-fast);
+    display: flex;
+    align-items: flex-start;
+}
+
+.question-delete:hover {
+    background: var(--danger-50);
+    color: var(--danger-500);
+}
+
+.questions-empty-state {
+    text-align: center;
+    padding: var(--sp-8) var(--sp-4);
+    color: var(--gray-400);
+}
+
+.questions-empty-state .icon-lg {
+    color: var(--gray-300);
+    margin-bottom: var(--sp-2);
+}
+
+.questions-empty-state p {
+    font-size: var(--text-sm);
+    margin-bottom: var(--sp-4);
+}
+
+.questions-add-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--sp-2);
+    width: 100%;
+    padding: var(--sp-3);
+    border: 2px dashed var(--gray-200);
+    border-radius: var(--radius-md);
+    background: var(--gray-50);
+    color: var(--gray-500);
+    font-size: var(--text-sm);
+    font-weight: 600;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.questions-add-btn:hover {
+    border-color: var(--warning-300);
+    background: var(--warning-50);
+    color: var(--warning-700);
+}
+
 /* ==================== EMPTY STATE ==================== */
 .empty-state {
     text-align: center;
