@@ -2198,6 +2198,7 @@ function renderAICard(item) {
             // Card-style radio options
             const radiosHtml = sameTypeDocs.map(d => {
                 const docName = d.name || AI_DOC_NAMES[d.template_id] || d.template_id;
+                const docLabel = d.name_html || docName;
                 return `
                     <label class="ai-comparison-radio">
                         <input type="radio" name="compare_${escapeAttr(item.id)}"
@@ -2205,7 +2206,7 @@ function renderAICard(item) {
                             data-doc-record-id="${escapeAttr(d.doc_record_id || '')}"
                             data-doc-name="${escapeAttr(docName)}"
                             onchange="handleComparisonRadio('${escapeAttr(item.id)}', this)">
-                        <span>${renderDocLabel(docName)}</span>
+                        <span>${renderDocLabel(docLabel)}</span>
                     </label>
                 `;
             }).join('');
@@ -2259,7 +2260,7 @@ function renderAICard(item) {
                 <span class="ai-template-match">${escapeHtml(templateName)}</span>
             </span>
             <span class="ai-confidence-badge ${confidenceClass}">${confidencePercent}%</span>
-            <div class="ai-issuer-received">📥 התקבל מ: <span class="ai-issuer-value">${escapeHtml(aiIssuer)}</span></div>
+            <div class="ai-issuer-received">🤖 AI חושב שזה התקבל מ: <span class="ai-issuer-value">${escapeHtml(aiIssuer)}</span></div>
             ${comparisonHtml}
         `;
 
@@ -3004,6 +3005,7 @@ function updateClientDocState(clientName, docRecordId) {
                 <div class="ai-validation-options">
                     ${sameTypeDocs.map(d => {
                         const docName = d.name || AI_DOC_NAMES[d.template_id] || d.template_id;
+                        const docLabel = d.name_html || docName;
                         return `
                             <label class="ai-comparison-radio">
                                 <input type="radio" name="compare_${escapeAttr(cardId)}"
@@ -3011,7 +3013,7 @@ function updateClientDocState(clientName, docRecordId) {
                                     data-doc-record-id="${escapeAttr(d.doc_record_id || '')}"
                                     data-doc-name="${escapeAttr(docName)}"
                                     onchange="handleComparisonRadio('${escapeAttr(cardId)}', this)">
-                                <span>${renderDocLabel(docName)}</span>
+                                <span>${renderDocLabel(docLabel)}</span>
                             </label>
                         `;
                     }).join('')}
