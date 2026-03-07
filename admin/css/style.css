@@ -1765,31 +1765,36 @@ tr:hover .client-view-link {
 
 .ai-comparison-radio {
     display: flex;
-    align-items: flex-start;
-    gap: var(--sp-2);
-    padding: var(--sp-2) 0;
+    align-items: center;
+    gap: var(--sp-3);
+    padding: var(--sp-3) var(--sp-3);
+    border-radius: var(--radius-sm);
     cursor: pointer;
-    transition: color 0.15s;
+    transition: background 0.15s, color 0.15s;
     font-size: var(--text-sm);
     color: var(--gray-600);
+    line-height: 1.5;
 }
-.ai-comparison-radio b { color: var(--gray-800); }
+.ai-comparison-radio b { color: var(--gray-800); font-weight: 600; }
 
 .ai-comparison-radio + .ai-comparison-radio {
     border-top: 1px solid var(--gray-100);
 }
 
-.ai-comparison-radio:hover { color: var(--brand-600); }
+.ai-comparison-radio:hover {
+    background: var(--gray-50);
+    color: var(--brand-600);
+}
 
 .ai-comparison-radio.selected,
 .ai-comparison-radio:has(input:checked) {
     color: var(--brand-700);
-    font-weight: 500;
+    background: var(--brand-50);
 }
 
 .ai-comparison-radio input[type="radio"] {
     accent-color: var(--brand-600);
-    margin: 2px 0 0;
+    margin: 0;
     flex-shrink: 0;
 }
 
