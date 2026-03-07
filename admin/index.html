@@ -710,12 +710,6 @@
                            placeholder="ריק = ללא הגבלה">
                     <span class="form-help">מספר מקסימלי של תזכורות ללקוח. ריק = ללא הגבלה.</span>
                 </div>
-                <div class="form-field">
-                    <label class="form-label">יום שליחה בחודש:</label>
-                    <input type="number" id="settingsSendDayInput" min="1" max="28"
-                           placeholder="לדוגמה: 1 או 15">
-                    <span class="form-help">באיזה יום בחודש לשלוח תזכורות (1-28).</span>
-                </div>
             </div>
             <div class="ai-modal-panel-footer">
                 <button class="btn btn-secondary" onclick="closeReminderSettingsModal()">ביטול</button>
@@ -765,6 +759,9 @@
 
     <!-- Docs Popover -->
     <div id="docsPopover" class="docs-popover" style="display:none;"></div>
+
+    <!-- Reminder History Popover -->
+    <div id="reminderHistoryPopover" class="docs-popover" style="display:none;"></div>
 
     <!-- Script -->
     <script src="../assets/js/error-handler.js"></script>
