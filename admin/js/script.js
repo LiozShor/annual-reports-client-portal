@@ -751,8 +751,6 @@ function renderDocsPopover(popover, documents, clientName) {
 
 // ==================== REMINDER HISTORY POPOVER ====================
 
-const historyCache = new Map();
-
 function toggleHistoryPopover(event, reportId) {
     event.stopPropagation();
     const popover = document.getElementById('reminderHistoryPopover');
@@ -766,54 +764,20 @@ function toggleHistoryPopover(event, reportId) {
     positionFloating(event.currentTarget, popover);
     popover.style.display = 'block';
 
-    if (historyCache.has(reportId)) {
-        renderHistoryPopover(popover, historyCache.get(reportId));
-    } else {
-        popover.innerHTML = '<div class="docs-popover-loading">טוען היסטוריה...</div>';
-        fetchHistoryForPopover(reportId);
-    }
+    // DL-111: Read history from already-loaded remindersData (inline JSON field)
+    const item = remindersData.find(r => r.report_id === reportId);
+    const history = (item && Array.isArray(item.history)) ? item.history : [];
+    renderHistoryPopover(popover, history);
 
     requestAnimationFrame(() => {
-        document.addEventListener('click', _closeHistoryPopoverOnClick, { once: true });
+        document.addEventListener('click', closeHistoryPopover, { once: true });
     });
-}
-
-function _closeHistoryPopoverOnClick() {
-    closeHistoryPopover();
 }
 
 function closeHistoryPopover() {
     const popover = document.getElementById('reminderHistoryPopover');
     if (popover) popover.style.display = 'none';
-    document.removeEventListener('click', _closeHistoryPopoverOnClick);
-}
-
-async function fetchHistoryForPopover(reportId) {
-    try {
-        const response = await fetchWithTimeout(`${API_BASE}/admin-reminders`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ token: authToken, action: 'get_history', report_id: reportId })
-        }, FETCH_TIMEOUTS.quick);
-        const data = await response.json();
-        if (!data.ok) {
-            const popover = document.getElementById('reminderHistoryPopover');
-            if (popover.dataset.reportId === reportId) {
-                popover.innerHTML = '<div class="docs-popover-loading">שגיאה בטעינה</div>';
-            }
-            return;
-        }
-        historyCache.set(reportId, data.history || []);
-        const popover = document.getElementById('reminderHistoryPopover');
-        if (popover.style.display !== 'none' && popover.dataset.reportId === reportId) {
-            renderHistoryPopover(popover, data.history || []);
-        }
-    } catch (err) {
-        const popover = document.getElementById('reminderHistoryPopover');
-        if (popover.dataset.reportId === reportId) {
-            popover.innerHTML = '<div class="docs-popover-loading">שגיאה בטעינה</div>';
-        }
-    }
+    document.removeEventListener('click', closeHistoryPopover);
 }
 
 function renderHistoryPopover(popover, history) {
@@ -3957,10 +3921,6 @@ function clearRowLoading(reportId) {
 }
 
 async function executeReminderAction(action, reportIds, value, forceOverride) {
-    // DL-109: Invalidate history cache on send_now
-    if (action === 'send_now') {
-        for (const rid of reportIds) historyCache.delete(rid);
-    }
     const isBulk = reportIds.length > 1;
     const actionLoadingLabels = {
         send_now: 'שולח...',
