@@ -1744,7 +1744,7 @@ tr:hover .client-view-link {
     gap: var(--sp-1);
 }
 
-/* Validation area — card-style radio options */
+/* Validation area — lightweight list radio options */
 .ai-validation-area {
     width: 100%;
     margin-top: var(--sp-3);
@@ -1754,42 +1754,42 @@ tr:hover .client-view-link {
     font-size: var(--text-xs);
     font-weight: 600;
     color: var(--gray-500);
-    margin-bottom: var(--sp-2);
+    margin-bottom: var(--sp-1);
 }
 
 .ai-validation-options {
     display: flex;
     flex-direction: column;
-    gap: var(--sp-2);
+    gap: 0;
 }
 
 .ai-comparison-radio {
     display: flex;
-    align-items: center;
-    gap: var(--sp-3);
-    padding: var(--sp-4) var(--sp-4);
-    border: 1.5px solid var(--gray-200);
-    border-radius: var(--radius-md);
+    align-items: flex-start;
+    gap: var(--sp-2);
+    padding: var(--sp-2) 0;
     cursor: pointer;
-    transition: border-color 0.15s, background 0.15s;
+    transition: color 0.15s;
     font-size: var(--text-sm);
-    color: var(--gray-700);
+    color: var(--gray-600);
+}
+.ai-comparison-radio b { color: var(--gray-800); }
+
+.ai-comparison-radio + .ai-comparison-radio {
+    border-top: 1px solid var(--gray-100);
 }
 
-.ai-comparison-radio:hover {
-    border-color: var(--brand-300);
-    background: var(--brand-50);
-}
+.ai-comparison-radio:hover { color: var(--brand-600); }
 
 .ai-comparison-radio.selected,
 .ai-comparison-radio:has(input:checked) {
-    border-color: var(--brand-500);
-    background: var(--brand-50);
+    color: var(--brand-700);
+    font-weight: 500;
 }
 
 .ai-comparison-radio input[type="radio"] {
     accent-color: var(--brand-600);
-    margin: 0;
+    margin: 2px 0 0;
     flex-shrink: 0;
 }
 
@@ -3285,7 +3285,6 @@ tr.reminder-loading td:last-child {
     }
 
     .ai-comparison-radio {
-        padding: var(--sp-2) var(--sp-3);
         font-size: var(--text-xs);
     }
 
