@@ -2205,7 +2205,7 @@ function renderAICard(item) {
                             data-doc-record-id="${escapeAttr(d.doc_record_id || '')}"
                             data-doc-name="${escapeAttr(docName)}"
                             onchange="handleComparisonRadio('${escapeAttr(item.id)}', this)">
-                        ${renderDocLabel(docName)}
+                        ${renderDocLabel(d.name_html || docName)}
                     </label>
                 `;
             }).join('');
@@ -2259,7 +2259,6 @@ function renderAICard(item) {
                 <span class="ai-template-match">${escapeHtml(templateName)}</span>
             </span>
             <span class="ai-confidence-badge ${confidenceClass}">${confidencePercent}%</span>
-            <div class="ai-issuer-received">📥 התקבל מ: <span class="ai-issuer-value">${escapeHtml(aiIssuer)}</span></div>
             ${comparisonHtml}
         `;
 
@@ -3011,7 +3010,7 @@ function updateClientDocState(clientName, docRecordId) {
                                     data-doc-record-id="${escapeAttr(d.doc_record_id || '')}"
                                     data-doc-name="${escapeAttr(docName)}"
                                     onchange="handleComparisonRadio('${escapeAttr(cardId)}', this)">
-                                ${renderDocLabel(docName)}
+                                ${renderDocLabel(d.name_html || docName)}
                             </label>
                         `;
                     }).join('')}
