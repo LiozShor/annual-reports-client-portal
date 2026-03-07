@@ -2258,7 +2258,10 @@ function renderAICard(item) {
             ? `${templateLabel} – ${docName}`
             : (docName || templateLabel);
         classificationHtml = `
-            <span class="ai-template-match">${escapeHtml(docDisplayName)}</span>
+            <span class="ai-classification-type">
+                <span class="ai-confidence-prefix">🤖 AI חושב שזה:</span>
+                <span class="ai-template-match">${escapeHtml(docDisplayName)}</span>
+            </span>
         `;
         const approveDisabled = item.is_unrequested;
         actionsHtml = `
@@ -2289,7 +2292,7 @@ function renderAICard(item) {
             // Card-style radio options
             const radiosHtml = sameTypeDocs.map(d => {
                 const docName = d.name || AI_DOC_NAMES[d.template_id] || d.template_id;
-                const docLabel = d.name_html || docName;
+                const docLabel = d.name_short || d.name_html || docName;
                 return `
                     <label class="ai-comparison-radio">
                         <input type="radio" name="compare_${escapeAttr(item.id)}"
@@ -2347,7 +2350,7 @@ function renderAICard(item) {
 
         classificationHtml = `
             <span class="ai-classification-type">
-                <span class="ai-confidence-prefix">AI חושב שזה:</span>
+                <span class="ai-confidence-prefix">🤖 AI חושב שזה:</span>
                 <span class="ai-template-match">${escapeHtml(templateName)}</span>
             </span>
             <div class="ai-issuer-received">🤖 AI חושב שזה התקבל מ: <span class="ai-issuer-value">${escapeHtml(aiIssuer)}</span></div>
@@ -2362,7 +2365,10 @@ function renderAICard(item) {
             ? `${templateLabel} – ${docName}`
             : (docName || templateLabel);
         classificationHtml = `
-            <span class="ai-template-match">${escapeHtml(docDisplayName)}</span>
+            <span class="ai-classification-type">
+                <span class="ai-confidence-prefix">🤖 AI חושב שזה:</span>
+                <span class="ai-template-match">${escapeHtml(docDisplayName)}</span>
+            </span>
         `;
         const fuzzyApproveDisabled = item.is_unrequested;
         actionsHtml = `
@@ -2385,7 +2391,7 @@ function renderAICard(item) {
             ? `<div class="ai-reason-inline">${escapeHtml(item.ai_reason)}</div>`
             : '';
         classificationHtml = `
-            <span class="ai-template-unmatched">לא זוהה</span>
+            <span class="ai-template-unmatched">🤖 לא זוהה</span>
             ${reasonHtml}
         `;
         actionsHtml = `
@@ -3092,7 +3098,7 @@ function updateClientDocState(clientName, docRecordId) {
                 <div class="ai-validation-options">
                     ${sameTypeDocs.map(d => {
                         const docName = d.name || AI_DOC_NAMES[d.template_id] || d.template_id;
-                        const docLabel = d.name_html || docName;
+                        const docLabel = d.name_short || d.name_html || docName;
                         return `
                             <label class="ai-comparison-radio">
                                 <input type="radio" name="compare_${escapeAttr(cardId)}"
