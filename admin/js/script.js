@@ -2256,10 +2256,9 @@ function renderAICard(item) {
 
         classificationHtml = `
             <span class="ai-classification-type">
-                <span class="ai-confidence-prefix">סוג מסמך:</span>
+                <span class="ai-confidence-prefix">AI חושב שזה:</span>
                 <span class="ai-template-match">${escapeHtml(templateName)}</span>
             </span>
-            <span class="ai-confidence-badge ${confidenceClass}">${confidencePercent}%</span>
             <div class="ai-issuer-received">🤖 AI חושב שזה התקבל מ: <span class="ai-issuer-value">${escapeHtml(aiIssuer)}</span></div>
             ${comparisonHtml}
         `;
@@ -2328,7 +2327,6 @@ function renderAICard(item) {
                 ${viewFileBtn}
             </div>
             <div class="ai-card-body">
-                <div class="ai-verdict-title">✨ ממצאי זיהוי AI</div>
                 <div class="ai-classification-result">
                     <div class="ai-classification-label">
                         ${classificationHtml}
