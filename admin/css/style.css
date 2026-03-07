@@ -1231,7 +1231,7 @@ tr:hover .client-view-link {
     gap: 10px;
 }
 
-.docs-progress-cell.clickable-docs {
+.clickable-docs {
     cursor: pointer;
     border-radius: var(--radius-md);
     padding: 4px 8px;
@@ -1239,7 +1239,7 @@ tr:hover .client-view-link {
     transition: background var(--transition-fast);
 }
 
-.docs-progress-cell.clickable-docs:hover {
+.clickable-docs:hover {
     background: var(--brand-50);
 }
 
