@@ -2205,7 +2205,7 @@ function renderAICard(item) {
                             data-doc-record-id="${escapeAttr(d.doc_record_id || '')}"
                             data-doc-name="${escapeAttr(docName)}"
                             onchange="handleComparisonRadio('${escapeAttr(item.id)}', this)">
-                        ${renderDocLabel(d.name_html || docName)}
+                        <span>${renderDocLabel(docName)}</span>
                     </label>
                 `;
             }).join('');
@@ -2259,6 +2259,7 @@ function renderAICard(item) {
                 <span class="ai-template-match">${escapeHtml(templateName)}</span>
             </span>
             <span class="ai-confidence-badge ${confidenceClass}">${confidencePercent}%</span>
+            <div class="ai-issuer-received">📥 התקבל מ: <span class="ai-issuer-value">${escapeHtml(aiIssuer)}</span></div>
             ${comparisonHtml}
         `;
 
@@ -3010,7 +3011,7 @@ function updateClientDocState(clientName, docRecordId) {
                                     data-doc-record-id="${escapeAttr(d.doc_record_id || '')}"
                                     data-doc-name="${escapeAttr(docName)}"
                                     onchange="handleComparisonRadio('${escapeAttr(cardId)}', this)">
-                                ${renderDocLabel(d.name_html || docName)}
+                                <span>${renderDocLabel(docName)}</span>
                             </label>
                         `;
                     }).join('')}
@@ -3353,7 +3354,6 @@ function removeReviewedCards(clientName) {
 let remindersData = [];
 let reminderLoaded = false;
 let reminderDefaultMax = null; // null = unlimited
-let reminderSendDay = null; // null = not configured
 let activeCardFilter = 'scheduled';
 
 async function loadReminders(silent = false) {
@@ -3377,7 +3377,6 @@ async function loadReminders(silent = false) {
         remindersData = data.items || [];
         reminderLoaded = true;
         reminderDefaultMax = data.default_max !== undefined ? data.default_max : null;
-        reminderSendDay = data.send_day !== undefined ? data.send_day : null;
         updateReminderStats(data.stats || {});
         filterReminders();
     } catch (error) {
@@ -4031,8 +4030,6 @@ function restoreDateCell(cell, r) {
 function openReminderSettingsModal() {
     document.getElementById('settingsDefaultMaxInput').value =
         reminderDefaultMax != null ? reminderDefaultMax : '';
-    document.getElementById('settingsSendDayInput').value =
-        reminderSendDay != null ? reminderSendDay : '';
     document.getElementById('reminderSettingsModal').classList.add('show');
     document.getElementById('settingsDefaultMaxInput').focus();
     if (typeof lucide !== 'undefined') lucide.createIcons();
@@ -4044,12 +4041,6 @@ function closeReminderSettingsModal() {
 
 async function saveReminderSettings() {
     const maxVal = document.getElementById('settingsDefaultMaxInput').value.trim();
-    const dayVal = document.getElementById('settingsSendDayInput').value.trim();
-
-    if (dayVal !== '' && (parseInt(dayVal) < 1 || parseInt(dayVal) > 28)) {
-        showModal('error', 'שגיאה', 'יום בחודש חייב להיות בין 1 ל-28');
-        return;
-    }
 
     // Warn if new default max would exhaust active clients
     if (maxVal !== '') {
@@ -4062,7 +4053,7 @@ async function saveReminderSettings() {
             closeReminderSettingsModal();
             showConfirmDialog(
                 `${affected.length} לקוחות כבר שלחו ${newMax} תזכורות או יותר ויסומנו כ"מוצה". להמשיך?`,
-                () => doSaveReminderSettings(maxVal, dayVal),
+                () => doSaveReminderSettings(maxVal),
                 'המשך ושמור'
             );
             return;
@@ -4070,10 +4061,10 @@ async function saveReminderSettings() {
     }
 
     closeReminderSettingsModal();
-    doSaveReminderSettings(maxVal, dayVal);
+    doSaveReminderSettings(maxVal);
 }
 
-async function doSaveReminderSettings(maxVal, dayVal) {
+async function doSaveReminderSettings(maxVal) {
     showLoading('שומר הגדרות...');
     try {
         const response = await fetchWithTimeout(`${API_BASE}/admin-reminders`, {
@@ -4082,21 +4073,15 @@ async function doSaveReminderSettings(maxVal, dayVal) {
             body: JSON.stringify({
                 token: authToken,
                 action: 'update_configs',
-                configs: { reminder_default_max: maxVal, reminder_send_day: dayVal }
+                configs: { reminder_default_max: maxVal }
             })
         }, FETCH_TIMEOUTS.rollover);
         const data = await response.json();
         hideLoading();
         if (!data.ok) throw new Error('שגיאה בשמירת הגדרות');
-        const datesUpdated = data.dates_updated || 0;
-        const toastMsg = datesUpdated > 0
-            ? `הגדרות תזכורות עודכנו (${datesUpdated} תאריכים עודכנו)`
-            : 'הגדרות תזכורות עודכנו';
-        showAIToast(toastMsg, 'success');
-        // Update global state from response (no separate refresh needed)
+        showAIToast('הגדרות תזכורות עודכנו', 'success');
         remindersData = data.items || [];
         reminderDefaultMax = data.default_max !== undefined ? data.default_max : null;
-        reminderSendDay = data.send_day !== undefined ? data.send_day : null;
         updateReminderStats(data.stats || {});
         filterReminders();
     } catch (error) {
