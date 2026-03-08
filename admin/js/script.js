@@ -3682,8 +3682,8 @@ function buildReminderTable(items, showDocs) {
                     ` : '-'}
                 </td>
                 ` : ''}
-                <td class="reminder-date-cell" onclick="toggleHistoryPopover(event, '${escapeAttr(r.report_id)}')" tabindex="0" role="button" aria-label="היסטוריית שליחה" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleHistoryPopover(event,'${escapeAttr(r.report_id)}');}">${r.last_reminder_sent_at ? `<span class="reminder-date">${formatDateHe(r.last_reminder_sent_at.split('T')[0])}</span>` : '-'}</td>
-                <td${isSuppressed ? '' : ` class="reminder-date-cell" onclick="editReminderDate('${escapeAttr(r.report_id)}', this)" tabindex="0" role="button" aria-label="ערוך תאריך" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();editReminderDate('${escapeAttr(r.report_id)}',this);}"`}>${isSuppressed ? '-' : `<span class="reminder-date ${dateClass}">${nextDate}</span>`}</td>
+                <td class="reminder-date-cell" title="לחץ לצפייה בהיסטוריית שליחה" onclick="toggleHistoryPopover(event, '${escapeAttr(r.report_id)}')" tabindex="0" role="button" aria-label="היסטוריית שליחה" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleHistoryPopover(event,'${escapeAttr(r.report_id)}');}">${r.last_reminder_sent_at ? `<span class="reminder-date">${formatDateHe(r.last_reminder_sent_at.split('T')[0])}</span>` : '-'}</td>
+                <td${isSuppressed ? '' : ` class="reminder-date-cell" title="לחץ לעריכת תאריך" onclick="editReminderDate('${escapeAttr(r.report_id)}', this)" tabindex="0" role="button" aria-label="ערוך תאריך" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();editReminderDate('${escapeAttr(r.report_id)}',this);}"`}>${isSuppressed ? '-' : `<span class="reminder-date ${dateClass}">${nextDate}</span>`}</td>
                 <td>${r.reminder_count || 0}</td>
                 <td>${maxCellHtml}</td>
                 <td>
