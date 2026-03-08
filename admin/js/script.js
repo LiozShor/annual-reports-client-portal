@@ -5121,6 +5121,16 @@ let questionnairesData = [];
 let questionnaireLoaded = false;
 let questionnaireFilteredData = [];
 
+const QA_SORT_CONFIG = {
+    qa_name:  { accessor: i => i.client_info?.name || '', type: 'string' },
+    qa_stage: { accessor: i => {
+        const c = clientsData.find(c => c.report_id === i.report_record_id);
+        return STAGES[c?.stage]?.num || 0;
+    }, type: 'number' },
+    qa_date:  { accessor: i => i.client_info?.submission_date || '', type: 'string' }
+};
+let qaCurrentSort = { column: 'qa_name', direction: 'asc' };
+
 function initQuestionnaireYearFilter() {
     const sel = document.getElementById('questionnaireYearFilter');
     if (!sel || sel.options.length > 1) return; // already populated
@@ -5173,6 +5183,33 @@ function updateQuestionnaireStats() {
 
 }
 
+function toggleQaSort(column) {
+    if (qaCurrentSort.column === column) {
+        qaCurrentSort.direction = qaCurrentSort.direction === 'asc' ? 'desc' : 'asc';
+    } else {
+        qaCurrentSort.column = column;
+        qaCurrentSort.direction = 'asc';
+    }
+    filterQuestionnaires();
+}
+
+function sortQuestionnaires(items) {
+    const config = QA_SORT_CONFIG[qaCurrentSort.column];
+    if (!config) return items;
+
+    return [...items].sort((a, b) => {
+        const aVal = config.accessor(a);
+        const bVal = config.accessor(b);
+        let cmp;
+        if (config.type === 'string') {
+            cmp = String(aVal).localeCompare(String(bVal), 'he');
+        } else {
+            cmp = (aVal || 0) - (bVal || 0);
+        }
+        return qaCurrentSort.direction === 'asc' ? cmp : -cmp;
+    });
+}
+
 function filterQuestionnaires() {
     const search = (document.getElementById('questionnaireSearchInput')?.value || '').toLowerCase().trim();
 
@@ -5183,6 +5220,7 @@ function filterQuestionnaires() {
         return name.includes(search) || spouse.includes(search);
     });
 
+    questionnaireFilteredData = sortQuestionnaires(questionnaireFilteredData);
     renderQuestionnairesTable(questionnaireFilteredData);
 }
 
@@ -5200,6 +5238,11 @@ function renderQuestionnairesTable(items) {
         return;
     }
 
+    function qaSortAttr(col) {
+        if (qaCurrentSort.column !== col) return 'none';
+        return qaCurrentSort.direction === 'asc' ? 'ascending' : 'descending';
+    }
+
     let html = `
         <table>
             <thead>
@@ -5207,9 +5250,10 @@ function renderQuestionnairesTable(items) {
                     <th style="width:36px;">
                         <input type="checkbox" class="questionnaire-select-all" onchange="toggleQuestionnaireSelectAll(this)" title="בחר הכל">
                     </th>
-                    <th>שם לקוח</th>
+                    <th><button class="th-sort-btn" onclick="toggleQaSort('qa_name')" aria-sort="${qaSortAttr('qa_name')}">שם לקוח <span class="sort-arrows"><span class="sort-asc">▲</span><span class="sort-desc">▼</span></span></button></th>
                     <th>בן/בת זוג</th>
-                    <th>תאריך הגשה</th>
+                    <th><button class="th-sort-btn" onclick="toggleQaSort('qa_stage')" aria-sort="${qaSortAttr('qa_stage')}">שלב <span class="sort-arrows"><span class="sort-asc">▲</span><span class="sort-desc">▼</span></span></button></th>
+                    <th><button class="th-sort-btn" onclick="toggleQaSort('qa_date')" aria-sort="${qaSortAttr('qa_date')}">תאריך הגשה <span class="sort-arrows"><span class="sort-asc">▲</span><span class="sort-desc">▼</span></span></button></th>
                     <th style="width:112px; text-align:center;">פעולות</th>
                 </tr>
             </thead>
@@ -5220,6 +5264,8 @@ function renderQuestionnairesTable(items) {
         const name = item.client_info?.name || '—';
         const spouse = item.client_info?.spouse || '—';
         const date = formatDateDisplay(item.client_info?.submission_date || '');
+        const clientRecord = clientsData.find(c => c.report_id === id);
+        const stage = STAGES[clientRecord?.stage] || null;
 
         html += `
                 <tr data-qa-id="${id}" class="qa-main-row qa-row-clickable" onclick="toggleQuestionnaireDetail('${id}')">
@@ -5230,6 +5276,7 @@ function renderQuestionnairesTable(items) {
                     </td>
                     <td style="font-weight:600;">${escapeHtml(name)}</td>
                     <td>${escapeHtml(spouse)}</td>
+                    <td>${stage ? `<span class="stage-badge ${stage.class}"><i data-lucide="${stage.icon}" class="icon-sm"></i> ${stage.label}</span>` : '—'}</td>
                     <td>${date}</td>
                     <td class="qa-actions-cell" onclick="event.stopPropagation();">
                         <button class="action-btn view" onclick="navigateToDocManager('${id}')" title="מנהל מסמכים">
@@ -5244,7 +5291,7 @@ function renderQuestionnairesTable(items) {
                     </td>
                 </tr>
                 <tr class="qa-detail-row" id="detail-${id}" style="display:none;">
-                    <td colspan="5">
+                    <td colspan="6">
                         <div class="qa-detail-content">
                             ${buildQADetailHTML(item)}
                         </div>
