@@ -686,6 +686,11 @@ function startNameEdit(docId) {
         });
     }
 
+    // Expand group to fill row while editing so input has full width
+    const group = nameEl.closest('.doc-name-group');
+    if (group) { group.style.flex = '1'; group.style.maxWidth = 'none'; }
+    nameEl.style.flex = '1';
+
     // Hide pencil button while editing
     const pencilBtn = document.querySelector(`#doc-${docId} .name-edit-btn`);
     if (pencilBtn) pencilBtn.style.display = 'none';
@@ -708,7 +713,12 @@ function saveNameEdit(docId) {
 
     // Revert to text display
     const nameEl = document.getElementById(`docname-${docId}`);
-    if (nameEl) nameEl.innerHTML = sanitizeDocHtml(converted || doc.name);
+    if (nameEl) {
+        nameEl.style.flex = '';
+        nameEl.innerHTML = sanitizeDocHtml(converted || doc.name);
+        const group = nameEl.closest('.doc-name-group');
+        if (group) { group.style.flex = ''; group.style.maxWidth = ''; }
+    }
 
     // Show pencil button again
     const pencilBtn = document.querySelector(`#doc-${docId} .name-edit-btn`);
@@ -726,7 +736,12 @@ function cancelNameEdit(docId) {
     if (!doc) return;
 
     const nameEl = document.getElementById(`docname-${docId}`);
-    if (nameEl) nameEl.innerHTML = sanitizeDocHtml(nameChanges.get(docId) || doc.name);
+    if (nameEl) {
+        nameEl.style.flex = '';
+        nameEl.innerHTML = sanitizeDocHtml(nameChanges.get(docId) || doc.name);
+        const group = nameEl.closest('.doc-name-group');
+        if (group) { group.style.flex = ''; group.style.maxWidth = ''; }
+    }
 
     // Show pencil button again
     const pencilBtn = document.querySelector(`#doc-${docId} .name-edit-btn`);
