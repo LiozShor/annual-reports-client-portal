@@ -186,6 +186,27 @@
                     </div>
                 </div>
 
+                <!-- Questionnaire section -->
+                <div class="questions-section" id="questionnaireSection">
+                    <button class="collapsible-trigger" id="questionnaireTrigger"
+                        onclick="this.setAttribute('aria-expanded', this.getAttribute('aria-expanded')==='true'?'false':'true'); this.nextElementSibling.classList.toggle('open'); loadQuestionnaireForReport();"
+                        aria-expanded="false">
+                        <span class="flex items-center gap-2">
+                            <i data-lucide="file-text" class="icon-sm"></i>
+                            שאלון שהוגש
+                        </span>
+                        <i data-lucide="chevron-down" class="icon-sm"></i>
+                    </button>
+                    <div class="collapsible-content">
+                        <div style="display:flex; justify-content:flex-end; padding: var(--sp-3) var(--sp-4) 0;">
+                            <button class="btn btn-sm btn-ghost" onclick="printQuestionnaireFromDocManager()">
+                                <i data-lucide="printer" class="icon-sm"></i> הדפסה
+                            </button>
+                        </div>
+                        <div id="questionnaireContent" style="padding: 0 var(--sp-4) var(--sp-4);"></div>
+                    </div>
+                </div>
+
                 <!-- Add documents section -->
                 <div class="add-section">
                     <button class="collapsible-trigger" onclick="this.setAttribute('aria-expanded', this.getAttribute('aria-expanded')==='true'?'false':'true'); this.nextElementSibling.classList.toggle('open')" aria-expanded="false">

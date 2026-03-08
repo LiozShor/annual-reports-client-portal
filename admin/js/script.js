@@ -5137,16 +5137,16 @@ function renderQuestionnairesTable(items) {
         const date = formatDateDisplay(item.client_info?.submission_date || '');
 
         html += `
-                <tr data-qa-id="${id}" class="qa-main-row">
-                    <td>
+                <tr data-qa-id="${id}" class="qa-main-row qa-row-clickable" onclick="toggleQuestionnaireDetail('${id}')">
+                    <td onclick="event.stopPropagation();">
                         <input type="checkbox" class="questionnaire-row-checkbox"
                             data-qa-id="${id}"
                             onchange="updateQuestionnaireSelectedCount()">
                     </td>
-                    <td style="font-weight:600;"><span class="qa-client-link" onclick="toggleQuestionnaireDetail('${id}')">${escapeHtml(name)}</span></td>
+                    <td style="font-weight:600;">${escapeHtml(name)}</td>
                     <td>${escapeHtml(spouse)}</td>
                     <td>${date}</td>
-                    <td class="qa-actions-cell">
+                    <td class="qa-actions-cell" onclick="event.stopPropagation();">
                         <button class="action-btn view" onclick="navigateToDocManager('${id}')" title="מנהל מסמכים">
                             <i data-lucide="folder-open" class="icon-sm"></i>
                         </button>
@@ -5176,7 +5176,11 @@ function buildQADetailHTML(item) {
     const info = item.client_info || {};
     const answers = item.answers || [];
     let clientQuestions = [];
-    try { clientQuestions = JSON.parse(item.client_questions || '[]'); } catch (e) { clientQuestions = []; }
+    try {
+        const rawCQ = item.client_questions || item.raw_answers?.client_questions || '[]';
+        clientQuestions = JSON.parse(rawCQ);
+        if (!Array.isArray(clientQuestions)) clientQuestions = [];
+    } catch (e) { clientQuestions = []; }
 
     let html = `
         <div class="qa-summary-box">
@@ -5402,7 +5406,11 @@ function generateQuestionnairePrintHTML(items) {
         const info = item.client_info || {};
         const answers = item.answers || [];
         let clientQuestions = [];
-        try { clientQuestions = JSON.parse(item.client_questions || '[]'); } catch (e) { clientQuestions = []; }
+        try {
+            const rawCQ = item.client_questions || item.raw_answers?.client_questions || '[]';
+            clientQuestions = JSON.parse(rawCQ);
+            if (!Array.isArray(clientQuestions)) clientQuestions = [];
+        } catch (e) { clientQuestions = []; }
 
         const date = formatDateDisplay(info.submission_date || '');
         printHtml += `

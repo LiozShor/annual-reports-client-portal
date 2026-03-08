@@ -1761,3 +1761,111 @@ document.addEventListener('click', function (e) {
         closeStatusDropdown();
     }
 });
+
+// ==================== QUESTIONNAIRE VIEW ====================
+
+let _questionnaireData = null;
+let _questionnaireFetched = false;
+
+async function loadQuestionnaireForReport() {
+    if (_questionnaireFetched) return; // already loaded (or in progress)
+    _questionnaireFetched = true;
+
+    const container = document.getElementById('questionnaireContent');
+    if (!container) return;
+    container.innerHTML = '<div style="padding:var(--sp-4);color:var(--gray-500);font-size:var(--text-sm);">טוען שאלון...</div>';
+
+    try {
+        const url = `${API_BASE}/admin-questionnaires?token=${encodeURIComponent(ADMIN_TOKEN)}&report_id=${encodeURIComponent(REPORT_ID)}`;
+        const resp = await fetchWithTimeout(url, { method: 'GET' }, 20000);
+        const data = await resp.json();
+
+        if (!data.ok || !data.items?.length) {
+            container.innerHTML = '<p style="padding:var(--sp-4);color:var(--gray-400);font-size:var(--text-sm);">לא נמצא שאלון עבור לקוח זה</p>';
+            return;
+        }
+
+        _questionnaireData = data.items[0];
+        _renderQuestionnaire(container);
+    } catch (e) {
+        container.innerHTML = `<p style="padding:var(--sp-4);color:var(--error-600);font-size:var(--text-sm);">שגיאה בטעינת השאלון</p>`;
+        _questionnaireFetched = false; // allow retry
+    }
+}
+
+function _renderQuestionnaire(container) {
+    const qa = _questionnaireData;
+    const answers = qa.answers || [];
+
+    if (!answers.length) {
+        container.innerHTML = '<p style="padding:var(--sp-4);color:var(--gray-400);font-size:var(--text-sm);">אין תשובות בשאלון</p>';
+        return;
+    }
+
+    let html = `<table style="width:100%;border-collapse:collapse;font-size:var(--text-sm);" dir="rtl">
+        <thead>
+            <tr style="background:var(--gray-50);border-bottom:2px solid var(--gray-200);">
+                <th style="padding:var(--sp-2) var(--sp-4);text-align:right;font-weight:600;color:var(--gray-600);width:40%;">שאלה</th>
+                <th style="padding:var(--sp-2) var(--sp-4);text-align:right;font-weight:600;color:var(--gray-600);">תשובה</th>
+            </tr>
+        </thead>
+        <tbody>`;
+
+    answers.forEach(({ label, value }, i) => {
+        const bg = i % 2 === 1 ? 'background:var(--gray-50);' : '';
+        html += `<tr style="${bg}">
+            <td style="padding:var(--sp-2) var(--sp-4);vertical-align:top;font-weight:600;color:var(--gray-700);">${escapeHtml(label)}</td>
+            <td style="padding:var(--sp-2) var(--sp-4);color:var(--gray-800);">${escapeHtml(String(value || ''))}</td>
+        </tr>`;
+    });
+
+    html += `</tbody></table>`;
+    container.innerHTML = html;
+}
+
+function printQuestionnaireFromDocManager() {
+    if (!_questionnaireData) {
+        alert('יש לפתוח את השאלון לפני ההדפסה');
+        return;
+    }
+    const printWindow = window.open('', '_blank', 'width=900,height=700');
+    if (!printWindow) { alert('לא ניתן לפתוח חלון הדפסה. אפשר חלונות קופצים.'); return; }
+
+    const qa = _questionnaireData;
+    const info = qa.client_info || {};
+    const answers = qa.answers || [];
+    const date = info.submission_date ? new Date(info.submission_date).toLocaleDateString('he-IL', { day:'2-digit', month:'2-digit', year:'numeric' }) : '—';
+
+    let rows = answers.map((a, i) => `<tr>
+        <td class="q-col">${escapeHtml(a.label)}</td>
+        <td class="a-col">${escapeHtml(String(a.value || ''))}</td>
+    </tr>`).join('');
+
+    const html = `<!DOCTYPE html><html dir="rtl" lang="he"><head>
+<meta charset="UTF-8"><title>שאלון — ${escapeHtml(info.name || '')}</title>
+<style>
+  @page{margin:15mm;size:A4}*{box-sizing:border-box}
+  body{font-family:Arial,sans-serif;font-size:12pt;color:#1f2937;direction:rtl;margin:0}
+  .header{border-bottom:3px solid #4f46e5;padding-bottom:10px;margin-bottom:16px}
+  .header h2{margin:0 0 4px;font-size:18pt}.meta{font-size:10pt;color:#6b7280}
+  table{width:100%;border-collapse:collapse;font-size:10pt}
+  th{background:#f3f4f6;padding:7px 10px;font-weight:700;color:#374151;border-bottom:2px solid #d1d5db;text-align:right}
+  td{padding:6px 10px;border-bottom:1px solid #f3f4f6;vertical-align:top;text-align:right}
+  tr:nth-child(even) td{background:#f9fafb}
+  .q-col{font-weight:600;color:#374151;width:40%}.a-col{color:#4b5563}
+  .footer{margin-top:12px;font-size:8pt;color:#9ca3af;border-top:1px solid #e5e7eb;padding-top:8px}
+</style></head><body>
+<div class="header">
+  <h2>${escapeHtml(info.name || '—')}</h2>
+  <div class="meta">שנת מס ${escapeHtml(info.year || '—')} | הוגש: ${date} | ${escapeHtml(info.email || '—')}</div>
+</div>
+<table><thead><tr><th class="q-col">שאלה</th><th class="a-col">תשובה</th></tr></thead>
+<tbody>${rows}</tbody></table>
+<div class="footer">הודפס מתוך מערכת ניהול דוחות שנתיים — משה אציץ רו"ח</div>
+</body></html>`;
+
+    printWindow.document.write(html);
+    printWindow.document.close();
+    printWindow.focus();
+    setTimeout(() => printWindow.print(), 500);
+}
