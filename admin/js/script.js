@@ -5081,11 +5081,6 @@ function updateQuestionnaireStats() {
     const el = document.getElementById('questionnaire-stat-count');
     if (el) el.textContent = count;
 
-    const badge = document.getElementById('questionnaireCountBadge');
-    if (badge) {
-        badge.textContent = count;
-        badge.style.display = count > 0 ? '' : 'none';
-    }
 }
 
 function filterQuestionnaires() {
