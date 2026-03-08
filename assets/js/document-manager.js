@@ -371,19 +371,21 @@ function displayDocuments() {
                                 aria-label="שחזר מסמך">`
                             : ''
                         }
-                        <span class="document-icon"><i data-lucide="file-text" class="icon-sm"></i></span>
-                        <div class="document-name" id="docname-${doc.id}">${sanitizeDocHtml(displayName)}</div>
-                        <button type="button" class="name-edit-btn${isWaived ? ' action-hidden' : ''}"
-                            ${!isWaived ? `onclick="startNameEdit('${doc.id}')"` : ''}
-                            title="שנה שם מסמך"><i data-lucide="pencil" class="icon-xs"></i></button>
-                        ${doc.file_url && (effectiveStatus === 'Received' || effectiveStatus === 'Requires_Fix')
-                            ? `<a href="${doc.download_url ? escapeHtml(sanitizeUrl(doc.download_url)) : '#'}" ${doc.download_url ? 'download' : ''} rel="noopener noreferrer"
-                                    class="file-action-btn${doc.download_url ? '' : ' action-hidden'}" title="הורד קובץ" aria-label="הורד קובץ"><i data-lucide="download" class="icon-sm"></i></a>
-                               <a href="${escapeHtml(sanitizeUrl(doc.file_url))}" target="_blank" rel="noopener noreferrer"
-                                    class="file-action-btn" title="צפה בקובץ" aria-label="צפה בקובץ"><i data-lucide="external-link" class="icon-sm"></i></a>`
-                            : `<span class="file-action-btn action-hidden"><i data-lucide="download" class="icon-sm"></i></span>
-                               <span class="file-action-btn action-hidden"><i data-lucide="external-link" class="icon-sm"></i></span>`
-                        }
+                        <div class="doc-name-group">
+                            <span class="document-icon"><i data-lucide="file-text" class="icon-sm"></i></span>
+                            <div class="document-name" id="docname-${doc.id}">${sanitizeDocHtml(displayName)}</div>
+                            <button type="button" class="name-edit-btn${isWaived ? ' action-hidden' : ''}"
+                                ${!isWaived ? `onclick="startNameEdit('${doc.id}')"` : ''}
+                                title="שנה שם מסמך"><i data-lucide="pencil" class="icon-xs"></i></button>
+                            ${doc.file_url && (effectiveStatus === 'Received' || effectiveStatus === 'Requires_Fix')
+                                ? `<a href="${doc.download_url ? escapeHtml(sanitizeUrl(doc.download_url)) : '#'}" ${doc.download_url ? 'download' : ''} rel="noopener noreferrer"
+                                        class="file-action-btn${doc.download_url ? '' : ' action-hidden'}" title="הורד קובץ" aria-label="הורד קובץ"><i data-lucide="download" class="icon-sm"></i></a>
+                                   <a href="${escapeHtml(sanitizeUrl(doc.file_url))}" target="_blank" rel="noopener noreferrer"
+                                        class="file-action-btn" title="צפה בקובץ" aria-label="צפה בקובץ"><i data-lucide="external-link" class="icon-sm"></i></a>`
+                                : `<span class="file-action-btn action-hidden"><i data-lucide="download" class="icon-sm"></i></span>
+                                   <span class="file-action-btn action-hidden"><i data-lucide="external-link" class="icon-sm"></i></span>`
+                            }
+                        </div>
                         <button type="button" class="delete-toggle${isWaived ? ' action-hidden' : ''} ${!isWaived && markedForRemoval.has(doc.id) ? 'active' : ''}"
                             ${!isWaived ? `onclick="toggleRemoval('${doc.id}')" id="delete-btn-${doc.id}"` : ''}
                             aria-label="סמן להסרה"
