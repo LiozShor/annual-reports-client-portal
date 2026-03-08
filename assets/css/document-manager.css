@@ -588,19 +588,27 @@ body {
     50% { box-shadow: 0 0 0 6px rgba(0, 137, 123, 0); }
 }
 
-.note-editor {
-    padding: 0 var(--sp-4) var(--sp-3) var(--sp-4);
-    animation: slideDown 200ms ease;
-}
-
 @keyframes slideDown {
     from { opacity: 0; transform: translateY(-8px); }
     to { opacity: 1; transform: translateY(0); }
 }
 
-.note-textarea {
+/* ==================== NOTE POPOVER ==================== */
+.note-popover {
+    position: fixed;
+    z-index: 1001;
+    background: white;
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-lg);
+    width: 280px;
+    padding: var(--sp-3);
+    animation: slideDown 150ms ease;
+}
+
+.note-popover-textarea {
     width: 100%;
-    min-height: 60px;
+    min-height: 80px;
     padding: var(--sp-3);
     border: 1px solid var(--gray-200);
     border-radius: var(--radius-md);
@@ -612,7 +620,7 @@ body {
     box-sizing: border-box;
 }
 
-.note-textarea:focus {
+.note-popover-textarea:focus {
     outline: none;
     border-color: var(--brand-500);
     box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
