@@ -324,11 +324,13 @@ function renderClientsTable(clients) {
                 `<button class="action-btn send" onclick="sendSingle('${rid}')" title="שלח שאלון"><i data-lucide="send" class="icon-sm"></i></button>` :
                 ''}
                     ${(client.stage === '2-Waiting_For_Answers' || client.stage === '3-Collecting_Docs') ?
-                `<button class="action-btn reminder-set-btn" onclick="setManualReminder('${rid}', '${cName}')" title="הגדר תזכורת"><i data-lucide="bell-plus" class="icon-sm"></i></button>` :
+                `<button class="action-btn reminder-set-btn" onclick="sendDashboardReminder('${rid}', '${cName}')" title="שלח תזכורת"><i data-lucide="bell-ring" class="icon-sm"></i></button>` :
                 ''}
                     <div class="row-overflow-dropdown">
                         <button class="action-btn overflow" onclick="toggleRowMenu(this, event)" title="פעולות נוספות">⋮</button>
                         <div class="row-menu">
+                            ${stageNum >= 3 ?
+                `<button onclick="viewQuestionnaire('${rid}'); closeAllRowMenus();"><i data-lucide="file-text"></i> צפה בשאלון</button>` : ''}
                             ${isActive ?
                 `<button class="danger" onclick="deactivateClient('${rid}', '${cName}'); closeAllRowMenus();"><i data-lucide="archive"></i> העבר לארכיון</button>` :
                 `<button onclick="reactivateClient('${rid}'); closeAllRowMenus();"><i data-lucide="archive-restore"></i> הפעל מחדש</button>`}
@@ -4030,6 +4032,49 @@ function setManualReminder(reportId, clientName) {
     document.getElementById('confirmDialog').classList.add('show');
 }
 
+function sendDashboardReminder(reportId, clientName) {
+    showConfirmDialog(
+        `לשלוח תזכורת ל${clientName}?`,
+        () => executeReminderAction('send_now', [reportId]),
+        'שלח תזכורת'
+    );
+}
+
+async function viewQuestionnaire(reportId) {
+    let item = questionnairesData.find(i => i.report_record_id === reportId);
+    if (!item) {
+        try {
+            showLoading('טוען שאלון...');
+            const year = document.getElementById('questionnaireYearFilter')?.value || String(new Date().getFullYear() - 1);
+            const response = await fetchWithTimeout(
+                `${API_BASE}/admin-questionnaires?token=${encodeURIComponent(authToken)}&year=${encodeURIComponent(year)}`,
+                { method: 'GET' },
+                FETCH_TIMEOUTS.load
+            );
+            const data = await response.json();
+            hideLoading();
+            if (data.ok && data.items) {
+                questionnairesData = data.items;
+                questionnaireLoaded = true;
+                item = questionnairesData.find(i => i.report_record_id === reportId);
+            }
+        } catch (e) {
+            hideLoading();
+        }
+    }
+    if (!item) {
+        showAIToast('לא נמצא שאלון עבור לקוח זה', 'warning');
+        return;
+    }
+    const win = window.open('', '_blank', 'width=900,height=700');
+    if (!win) {
+        showAIToast('לא ניתן לפתוח חלון. אפשר חלונות קופצים.', 'error');
+        return;
+    }
+    win.document.write(generateQuestionnairePrintHTML([item]));
+    win.document.close();
+    win.focus();
+}
 
 function showReminderDatePicker(reportId, currentDate) {
     const input = document.createElement('input');
@@ -4434,12 +4479,16 @@ function openClientContextMenu(e) {
     const menu = document.getElementById('clientContextMenu');
     let items = '';
 
+    const stageNum = STAGES[stage]?.num || 0;
     if (isActive) {
         if (stage === '1-Send_Questionnaire') {
             items += `<button onclick="sendSingle('${rid}'); closeAllRowMenus();"><i data-lucide="send"></i> שלח שאלון</button>`;
         }
         if (stage === '2-Waiting_For_Answers' || stage === '3-Collecting_Docs') {
-            items += `<button onclick="setManualReminder('${rid}', '${cName}'); closeAllRowMenus();"><i data-lucide="bell-plus"></i> הגדר תזכורת</button>`;
+            items += `<button onclick="sendDashboardReminder('${rid}', '${cName}'); closeAllRowMenus();"><i data-lucide="bell-ring"></i> שלח תזכורת</button>`;
+        }
+        if (stageNum >= 3) {
+            items += `<button onclick="viewQuestionnaire('${rid}'); closeAllRowMenus();"><i data-lucide="file-text"></i> צפה בשאלון</button>`;
         }
         items += `<button onclick="viewClient('${rid}'); closeAllRowMenus();"><i data-lucide="external-link"></i> צפייה כלקוח</button>`;
         items += `<hr>`;
