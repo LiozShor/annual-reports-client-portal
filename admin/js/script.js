@@ -5223,16 +5223,24 @@ function buildQADetailHTML(item) {
         html += `</tbody></table>`;
     }
 
-    // Client questions section (DL-110)
+    // Client questions section (DL-110, DL-122: added answers)
     if (clientQuestions.length > 0) {
         html += `
         <div class="qa-client-questions">
             <div class="qa-client-questions-title">
                 <i data-lucide="help-circle" class="icon-sm"></i> שאלות הלקוח (${clientQuestions.length})
             </div>`;
-        clientQuestions.forEach(q => {
+        clientQuestions.forEach((q, idx) => {
             const text = typeof q === 'string' ? q : (q.text || q.question || JSON.stringify(q));
-            html += `<div class="qa-client-question-item">${escapeHtml(text)}</div>`;
+            const answer = (typeof q === 'object' && q.answer) ? q.answer.trim() : '';
+            const answered = !!answer;
+            html += `<div class="qa-client-question-item">
+                <div class="qa-cq-question">
+                    <span class="qa-cq-status ${answered ? 'qa-cq-answered' : 'qa-cq-unanswered'}"></span>
+                    <strong>${idx + 1}.</strong> ${escapeHtml(text)}
+                </div>
+                <div class="qa-cq-answer ${answered ? '' : 'qa-cq-no-answer'}">${answered ? escapeHtml(answer) : 'ללא תשובה'}</div>
+            </div>`;
         });
         html += `</div>`;
     }
@@ -5360,28 +5368,13 @@ function generateQuestionnairePrintHTML(items) {
   .qa-table tr:nth-child(even) td { background: #f9fafb; }
   .qa-table .q-col { font-weight: 600; color: #374151; width: 40%; }
   .qa-table .a-col { color: #4b5563; }
-  .client-questions {
-    background: #fffbeb;
-    border: 1px solid #fcd34d;
-    border-radius: 6px;
-    padding: 10px 12px;
-    margin-top: 12px;
-  }
-  .client-questions h4 {
-    margin: 0 0 8px;
-    font-size: 10pt;
-    color: #92400e;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-  }
-  .client-questions p {
-    margin: 4px 0;
-    font-size: 10pt;
-    color: #78350f;
-    padding: 4px 0;
-    border-bottom: 1px solid #fde68a;
-  }
-  .client-questions p:last-child { border-bottom: none; }
+  .client-questions { margin-top:12px; border-right:3px solid #d97706; padding:8px 12px; background:#fffbeb; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+  .client-questions h4 { margin:0 0 8px; font-size:10pt; color:#92400e; text-transform:uppercase; letter-spacing:0.05em; }
+  .cq-item { padding:6px 0; border-bottom:1px solid #fde68a; break-inside:avoid; }
+  .cq-item:last-child { border-bottom:none; }
+  .cq-q { font-weight:600; color:#78350f; font-size:10pt; }
+  .cq-a { color:#4b5563; font-size:10pt; margin-top:2px; padding-right:16px; }
+  .cq-no-answer { color:#9ca3af; font-style:italic; }
   .footer {
     margin-top: 12px;
     font-size: 8pt;
@@ -5452,9 +5445,13 @@ function generateQuestionnairePrintHTML(items) {
 
         if (clientQuestions.length > 0) {
             printHtml += `<div class="client-questions"><h4>שאלות הלקוח</h4>`;
-            clientQuestions.forEach(q => {
+            clientQuestions.forEach((q, idx) => {
                 const text = typeof q === 'string' ? q : (q.text || q.question || JSON.stringify(q));
-                printHtml += `<p>${escapeHtml(text)}</p>`;
+                const answer = (typeof q === 'object' && q.answer) ? q.answer.trim() : '';
+                printHtml += `<div class="cq-item">
+                    <div class="cq-q">${idx + 1}. ${escapeHtml(text)}</div>
+                    <div class="cq-a${answer ? '' : ' cq-no-answer'}">${answer ? escapeHtml(answer) : 'ללא תשובה'}</div>
+                </div>`;
             });
             printHtml += `</div>`;
         }

@@ -4339,6 +4339,14 @@ tr:hover .client-edit-link {
     border-bottom: none;
 }
 
+/* DL-122: Client question answer display */
+.qa-cq-question { display:flex; align-items:baseline; gap:var(--sp-1); }
+.qa-cq-status { width:8px; height:8px; border-radius:50%; flex-shrink:0; display:inline-block; }
+.qa-cq-answered { background:#10b981; }
+.qa-cq-unanswered { background:#f59e0b; border:1px solid #d97706; }
+.qa-cq-answer { margin-top:var(--sp-1); padding-right:var(--sp-4); color:var(--gray-600); font-size:var(--text-sm); }
+.qa-cq-no-answer { color:var(--gray-400); font-style:italic; }
+
 /* Responsive */
 @media (max-width: 768px) {
     .questionnaire-bulk-actions {

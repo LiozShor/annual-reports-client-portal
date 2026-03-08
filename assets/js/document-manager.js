@@ -1831,16 +1831,45 @@ function _renderQuestionnaire(container) {
     });
 
     html += `</tbody></table>`;
+
+    // Client questions section (DL-122)
+    let clientQuestions = [];
+    try {
+        const rawCQ = qa.client_questions || qa.raw_answers?.client_questions || '[]';
+        clientQuestions = typeof rawCQ === 'string' ? JSON.parse(rawCQ) : rawCQ;
+        if (!Array.isArray(clientQuestions)) clientQuestions = [];
+    } catch (e) { clientQuestions = []; }
+
+    if (clientQuestions.length > 0) {
+        html += `<div style="margin-top:var(--sp-3);background:#fffbeb;border:1px solid #fcd34d;border-radius:var(--radius-md);padding:var(--sp-3) var(--sp-4);">
+            <div style="font-size:var(--text-xs);font-weight:700;color:#92400e;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:var(--sp-2);">שאלות הלקוח (${clientQuestions.length})</div>`;
+        clientQuestions.forEach((q, idx) => {
+            const text = typeof q === 'string' ? q : (q.text || q.question || JSON.stringify(q));
+            const answer = (typeof q === 'object' && q.answer) ? q.answer.trim() : '';
+            const answered = !!answer;
+            const dotColor = answered ? '#10b981' : '#f59e0b';
+            const dotBorder = answered ? '' : 'border:1px solid #d97706;';
+            html += `<div style="padding:var(--sp-2) 0;border-bottom:1px solid #fde68a;">
+                <div style="display:flex;align-items:baseline;gap:var(--sp-1);">
+                    <span style="width:8px;height:8px;border-radius:50%;flex-shrink:0;display:inline-block;background:${dotColor};${dotBorder}"></span>
+                    <strong>${idx + 1}.</strong> <span style="color:#78350f;">${escapeHtml(text)}</span>
+                </div>
+                <div style="margin-top:var(--sp-1);padding-right:var(--sp-4);color:${answered ? 'var(--gray-600)' : 'var(--gray-400)'};font-size:var(--text-sm);${answered ? '' : 'font-style:italic;'}">${answered ? escapeHtml(answer) : 'ללא תשובה'}</div>
+            </div>`;
+        });
+        html += `</div>`;
+    }
+
     container.innerHTML = html;
 }
 
 function printQuestionnaireFromDocManager() {
     if (!_questionnaireData) {
-        alert('יש לפתוח את השאלון לפני ההדפסה');
+        showToast('יש לפתוח את השאלון לפני ההדפסה', 'warning');
         return;
     }
     const printWindow = window.open('', '_blank', 'width=900,height=700');
-    if (!printWindow) { alert('לא ניתן לפתוח חלון הדפסה. אפשר חלונות קופצים.'); return; }
+    if (!printWindow) { showToast('לא ניתן לפתוח חלון הדפסה. אפשר חלונות קופצים.', 'error'); return; }
 
     const qa = _questionnaireData;
     const info = qa.client_info || {};
@@ -1851,6 +1880,28 @@ function printQuestionnaireFromDocManager() {
         <td class="q-col">${escapeHtml(a.label)}</td>
         <td class="a-col">${escapeHtml(String(a.value || ''))}</td>
     </tr>`).join('');
+
+    // Client questions for print (DL-122)
+    let clientQuestions = [];
+    try {
+        const rawCQ = qa.client_questions || qa.raw_answers?.client_questions || '[]';
+        clientQuestions = typeof rawCQ === 'string' ? JSON.parse(rawCQ) : rawCQ;
+        if (!Array.isArray(clientQuestions)) clientQuestions = [];
+    } catch (e) { clientQuestions = []; }
+
+    let cqHtml = '';
+    if (clientQuestions.length > 0) {
+        cqHtml += `<div class="client-questions"><h4>שאלות הלקוח</h4>`;
+        clientQuestions.forEach((q, idx) => {
+            const text = typeof q === 'string' ? q : (q.text || q.question || JSON.stringify(q));
+            const answer = (typeof q === 'object' && q.answer) ? q.answer.trim() : '';
+            cqHtml += `<div class="cq-item">
+                <div class="cq-q">${idx + 1}. ${escapeHtml(text)}</div>
+                <div class="cq-a${answer ? '' : ' cq-no-answer'}">${answer ? escapeHtml(answer) : 'ללא תשובה'}</div>
+            </div>`;
+        });
+        cqHtml += `</div>`;
+    }
 
     const html = `<!DOCTYPE html><html dir="rtl" lang="he"><head>
 <meta charset="UTF-8"><title>שאלון — ${escapeHtml(info.name || '')}</title>
@@ -1864,6 +1915,13 @@ function printQuestionnaireFromDocManager() {
   td{padding:6px 10px;border-bottom:1px solid #f3f4f6;vertical-align:top;text-align:right}
   tr:nth-child(even) td{background:#f9fafb}
   .q-col{font-weight:600;color:#374151;width:40%}.a-col{color:#4b5563}
+  .client-questions{margin-top:12px;border-right:3px solid #d97706;padding:8px 12px;background:#fffbeb;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .client-questions h4{margin:0 0 8px;font-size:10pt;color:#92400e;text-transform:uppercase;letter-spacing:0.05em}
+  .cq-item{padding:6px 0;border-bottom:1px solid #fde68a;break-inside:avoid}
+  .cq-item:last-child{border-bottom:none}
+  .cq-q{font-weight:600;color:#78350f;font-size:10pt}
+  .cq-a{color:#4b5563;font-size:10pt;margin-top:2px;padding-right:16px}
+  .cq-no-answer{color:#9ca3af;font-style:italic}
   .footer{margin-top:12px;font-size:8pt;color:#9ca3af;border-top:1px solid #e5e7eb;padding-top:8px}
 </style></head><body>
 <div class="header">
@@ -1872,6 +1930,7 @@ function printQuestionnaireFromDocManager() {
 </div>
 <table><thead><tr><th class="q-col">שאלה</th><th class="a-col">תשובה</th></tr></thead>
 <tbody>${rows}</tbody></table>
+${cqHtml}
 <div class="footer">הודפס מתוך מערכת ניהול דוחות שנתיים — משה אציץ רו"ח</div>
 </body></html>`;
 
