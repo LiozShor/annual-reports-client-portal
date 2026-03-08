@@ -562,7 +562,7 @@ function trackNoteChange(docId) {
         btn.classList.toggle('note-modified', noteChanges.has(docId));
         if (typeof lucide !== 'undefined') lucide.createIcons();
     }
-    updateEditBar();
+    updateStats();
 }
 
 // Inline document name editing
