@@ -245,6 +245,8 @@ async function loadDocuments() {
         statusChanges = new Map();
         noteChanges = new Map();
         nameChanges = new Map();
+        const sendBtn = document.getElementById('approveSendBtn');
+        if (sendBtn) { sendBtn.disabled = false; sendBtn.title = ''; }
 
         initDocumentDropdown();
         displayDocuments();
