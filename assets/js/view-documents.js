@@ -24,7 +24,7 @@ function getCategoryIcon(emoji) {
     return CATEGORY_ICONS[emoji] || 'file-text';
 }
 
-/** Sanitize HTML: allow only <b> and <strong> tags, escape everything else */
+/** Sanitize HTML for Document Title */
 function sanitizeDocHtml(html) {
     if (!html) return '';
     const el = document.createElement('div');
@@ -34,6 +34,42 @@ function sanitizeDocHtml(html) {
     safe = safe.replace(/&lt;strong&gt;/gi, '<strong>').replace(/&lt;\/strong&gt;/gi, '</strong>');
     return safe;
 }
+
+/** Sanitize HTML for Help Content */
+function sanitizeHelpHtml(html) {
+    if (!html) return '';
+    const el = document.createElement('div');
+    el.textContent = html;
+    let safe = el.innerHTML;
+    safe = safe.replace(/&lt;b&gt;/gi, '<b>').replace(/&lt;\/b&gt;/gi, '</b>');
+    safe = safe.replace(/&lt;strong&gt;/gi, '<strong>').replace(/&lt;\/strong&gt;/gi, '</strong>');
+    safe = safe.replace(/&lt;i&gt;/gi, '<i>').replace(/&lt;\/i&gt;/gi, '</i>');
+    safe = safe.replace(/&lt;br\s*\/?&gt;/gi, '<br>');
+    safe = safe.replace(/&lt;a\s+href=([^\s&gt;]+)[^&gt;]*&gt;/gi, (match, urlCode) => {
+        // Strip out the parsed HTML entities added by textContent
+        const url = urlCode.replace(/&quot;/g, '').replace(/&#39;/g, '');
+        // Only allow http(s) links
+        if (url.startsWith('http')) {
+            return `<a href="${url}" target="_blank" rel="noopener noreferrer">`;
+        }
+        return '<a>';
+    });
+    safe = safe.replace(/&lt;\/a&gt;/gi, '</a>');
+    return safe;
+}
+
+window.toggleDocHelp = function (btn) {
+    const wrapper = btn.closest('.doc-item-wrapper');
+    const content = wrapper.querySelector('.doc-help-content');
+
+    if (content.classList.contains('open')) {
+        content.classList.remove('open');
+        btn.classList.remove('active');
+    } else {
+        content.classList.add('open');
+        btn.classList.add('active');
+    }
+};
 
 /** Escape all HTML for plain text content */
 function escapeHtml(text) {
@@ -152,7 +188,7 @@ async function loadDocuments() {
             currentData = cached.data;
             renderFromData(cached.data);
             // Show stale data warning
-            showStaleBanner(document.getElementById('results'), { cachedAt: cached.cachedAt, lang: currentLang, onRefresh: function() { location.reload(); } });
+            showStaleBanner(document.getElementById('results'), { cachedAt: cached.cachedAt, lang: currentLang, onRefresh: function () { location.reload(); } });
             document.getElementById('results').style.display = 'block';
             document.getElementById('lang-toggle').style.display = 'flex';
         } else {
@@ -247,10 +283,14 @@ function renderDocuments() {
 
             for (const doc of cat.docs) {
                 totalDocs++;
+
                 // Document names may contain <b> tags from SSOT — render as HTML
                 const docName = isHe
                     ? (doc.name_he || doc.issuer_name || 'מסמך')
                     : (doc.name_en || doc.issuer_name || doc.name_he || 'Document');
+
+                const helpText = isHe ? doc.help_he : doc.help_en;
+                const showHelp = !!helpText;
 
                 let badgeClass = '';
                 let badgeText = '';
@@ -267,12 +307,27 @@ function renderDocuments() {
                 }
 
                 const rowClass = doc.status === 'Received' ? 'doc-row doc-received' : 'doc-row';
+
+                html += `<div class="doc-item-wrapper">`;
                 html += `<div class="${rowClass}">`;
                 html += `<i data-lucide="file" class="icon-sm doc-icon"></i>`;
                 html += `<span class="doc-name">${sanitizeDocHtml(docName)}</span>`;
 
+                if (showHelp) {
+                    html += `<button class="help-toggle-btn" onclick="toggleDocHelp(this)" title="${isHe ? 'הנחיות קבלת מסמך' : 'Document Help'}">`;
+                    html += `<i data-lucide="circle-help" class="icon-sm"></i>`;
+                    html += `</button>`;
+                }
+
                 html += `<span class="${badgeClass}">${badgeText}</span>`;
-                html += `</div>`;
+                html += `</div>`; // end .doc-row
+
+                if (showHelp) {
+                    html += `<div class="doc-help-content">`;
+                    html += sanitizeHelpHtml(helpText);
+                    html += `</div>`;
+                }
+                html += `</div>`; // end .doc-item-wrapper
             }
 
             html += `</div>`;
