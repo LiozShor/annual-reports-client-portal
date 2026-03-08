@@ -94,7 +94,7 @@ const STATUS_LABELS = {
     'Required_Missing': 'חסר',
     'Received': 'התקבל',
     'Requires_Fix': 'נדרש תיקון',
-    'Waived': 'ויתור'
+    'Waived': 'אין צורך'
 };
 
 // Initialize — header values populated after API load (SEC-004: no PII in URL)
@@ -410,7 +410,7 @@ function getStatusBadge(status) {
         case 'Required_Missing':
             return { text: 'חסר', class: 'badge-danger' };
         case 'Waived':
-            return { text: 'ויתור', class: 'badge-neutral' };
+            return { text: 'אין צורך', class: 'badge-neutral' };
         case 'Requires_Fix':
             return { text: 'נדרש תיקון', class: 'badge-warning' };
         default:
