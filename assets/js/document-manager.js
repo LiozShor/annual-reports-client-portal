@@ -263,6 +263,8 @@ async function loadDocuments() {
         document.getElementById('loading').style.display = 'none';
         document.getElementById('content').style.display = 'block';
         setTimeout(initIcons, 50);
+        // Pre-fetch questionnaire in background so date shows in header before user clicks
+        loadQuestionnaireForReport();
     } catch (error) {
         cleanupEscalation();
         console.error('Document manager load failed');
