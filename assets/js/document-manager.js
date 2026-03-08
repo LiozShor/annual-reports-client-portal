@@ -1786,6 +1786,15 @@ async function loadQuestionnaireForReport() {
         }
 
         _questionnaireData = data.items[0];
+
+        // Update questionnaire label with fill date
+        const labelEl = document.getElementById('questionnaireLabel');
+        if (labelEl && _questionnaireData.createdTime) {
+            const fillDate = new Date(_questionnaireData.createdTime);
+            const formatted = fillDate.toLocaleDateString('he-IL', { year: 'numeric', month: '2-digit', day: '2-digit' });
+            labelEl.textContent = `השאלון השנתי - מולא ב-${formatted}`;
+        }
+
         _renderQuestionnaire(container);
     } catch (e) {
         container.innerHTML = `<p style="padding:var(--sp-4);color:var(--error-600);font-size:var(--text-sm);">שגיאה בטעינת השאלון</p>`;
