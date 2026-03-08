@@ -74,6 +74,10 @@
             <button class="tab-item" onclick="switchTab('reminders', event)">
                 <i data-lucide="bell" class="icon-sm"></i> תזכורות חודשיות
             </button>
+            <button class="tab-item" onclick="switchTab('questionnaires', event)">
+                <i data-lucide="file-text" class="icon-sm"></i> שאלונים
+                <span class="questionnaire-count-badge" id="questionnaireCountBadge" style="display:none;">0</span>
+            </button>
         </div>
 
         <div class="content">
@@ -626,6 +630,55 @@
                     </div>
                 </div>
             </div>
+            <!-- Questionnaires Tab -->
+            <div id="tab-questionnaires" class="tab-content">
+                <!-- Stats Bar -->
+                <div class="questionnaire-stats-bar">
+                    <div class="questionnaire-stat-item">
+                        <i data-lucide="file-check" class="icon-sm"></i>
+                        <span class="questionnaire-stat-value" id="questionnaire-stat-count">0</span>
+                        <span class="questionnaire-stat-label">שאלונים שהוגשו</span>
+                    </div>
+                    <div class="questionnaire-stat-item">
+                        <i data-lucide="calendar" class="icon-sm"></i>
+                        <span class="questionnaire-stat-label">שנת מס:</span>
+                        <select id="questionnaireYearFilter" onchange="loadQuestionnaires(false)">
+                            <option value="2025">2025</option>
+                            <option value="2024">2024</option>
+                            <option value="2023">2023</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Filter Bar -->
+                <div class="questionnaire-filter-bar">
+                    <div class="filter-group">
+                        <label><i data-lucide="search" class="icon-sm"></i></label>
+                        <input type="text" id="questionnaireSearchInput" placeholder="חיפוש לפי שם לקוח..." oninput="filterQuestionnaires()">
+                    </div>
+                </div>
+
+                <!-- Bulk Actions -->
+                <div class="questionnaire-bulk-actions" id="questionnaireBulkActions" style="display:none;" role="toolbar" aria-label="פעולות על שאלונים נבחרים">
+                    <span class="questionnaire-bulk-count"><span id="questionnaireSelectedCount">0</span> נבחרו</span>
+                    <button class="btn btn-sm btn-primary" onclick="printQuestionnaires()">
+                        <i data-lucide="printer" class="icon-sm"></i> הדפסה
+                    </button>
+                    <button class="btn btn-sm btn-ghost" onclick="resetQuestionnaireBulkSelection()">ביטול</button>
+                    <button class="btn btn-sm btn-ghost bulk-bar-close" onclick="resetQuestionnaireBulkSelection()" aria-label="סגור">
+                        <i data-lucide="x" class="icon-sm"></i>
+                    </button>
+                </div>
+
+                <!-- Table -->
+                <div id="questionnaireTableContainer">
+                    <div class="empty-state">
+                        <div class="empty-state-icon"><i data-lucide="file-text" class="icon-2xl"></i></div>
+                        <p>לחץ על הלשונית לטעינת שאלונים</p>
+                    </div>
+                </div>
+            </div>
+
         </div>
     </div>
 
