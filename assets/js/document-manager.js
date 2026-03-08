@@ -1787,11 +1787,11 @@ async function loadQuestionnaireForReport() {
 
         _questionnaireData = data.items[0];
 
-        // Update questionnaire label with fill date
+        // Update questionnaire label with submission date
         const labelEl = document.getElementById('questionnaireLabel');
-        if (labelEl && _questionnaireData.createdTime) {
-            const fillDate = new Date(_questionnaireData.createdTime);
-            const formatted = fillDate.toLocaleDateString('he-IL', { year: 'numeric', month: '2-digit', day: '2-digit' });
+        const submissionDate = _questionnaireData.client_info?.submission_date;
+        if (labelEl && submissionDate) {
+            const formatted = new Date(submissionDate).toLocaleDateString('he-IL', { year: 'numeric', month: '2-digit', day: '2-digit' });
             labelEl.textContent = `השאלון השנתי - הוגש ב-${formatted}`;
         }
 

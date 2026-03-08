@@ -1199,7 +1199,13 @@ body {
     }
 }
 
-/* Questionnaire collapsible — no height cap (content can be long) */
+/* Questionnaire collapsible — scrollable fixed-height component */
 #questionnaireSection .collapsible-content.open {
     max-height: none;
+}
+
+#questionnaireContent {
+    max-height: 420px;
+    overflow-y: auto;
+    scroll-behavior: smooth;
 }
