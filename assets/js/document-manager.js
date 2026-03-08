@@ -1602,6 +1602,11 @@ function approveAndSendToClient() {
                     if (!CURRENT_STAGE || CURRENT_STAGE.charAt(0) < '3') CURRENT_STAGE = '3-Collecting_Docs';
                     updateSentBadge();
                     showToast('רשימת המסמכים נשלחה ללקוח בהצלחה!', 'success');
+                    const sendBtn = document.getElementById('approveSendBtn');
+                    if (sendBtn) {
+                        sendBtn.disabled = true;
+                        sendBtn.title = 'המייל כבר נשלח ללקוח';
+                    }
                 } else {
                     showToast('שגיאה בשליחת המייל. נסה שנית.', 'error');
                 }
