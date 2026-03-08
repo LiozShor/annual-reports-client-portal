@@ -4188,9 +4188,17 @@ tr:hover .client-edit-link {
     text-decoration: underline;
 }
 
-/* Sticky actions column (RTL: sticks to left edge on horizontal scroll) */
-#questionnaireTableContainer th:last-child,
-#questionnaireTableContainer .qa-actions-cell {
+/* Sticky actions header (RTL: sticks to left edge on horizontal scroll) */
+#questionnaireTableContainer th:last-child {
+    position: sticky;
+    left: 0;
+    z-index: 3;
+    background: var(--gray-50);
+    box-shadow: -2px 0 4px rgba(0,0,0,0.04);
+}
+
+/* Sticky actions cell — horizontal only by default */
+#questionnaireTableContainer td.qa-actions-cell {
     position: sticky;
     left: 0;
     z-index: 2;
@@ -4198,8 +4206,13 @@ tr:hover .client-edit-link {
     box-shadow: -2px 0 4px rgba(0,0,0,0.04);
 }
 
-/* When row is sticky (detail expanded), actions must be sticky in BOTH axes */
-.qa-main-row-sticky .qa-actions-cell {
+/* Match hover background on sticky actions cell */
+#questionnaireTableContainer tr:hover td.qa-actions-cell {
+    background: var(--gray-50);
+}
+
+/* When row is sticky (detail expanded), also stick vertically */
+#questionnaireTableContainer .qa-main-row-sticky td.qa-actions-cell {
     top: 41px;
     z-index: 3;
 }
