@@ -5036,11 +5036,11 @@ async function loadQuestionnaires(silent = false) {
 
     try {
         const year = document.getElementById('questionnaireYearFilter')?.value || '2025';
-        const response = await fetchWithTimeout(`${API_BASE}/admin-questionnaires`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ token: authToken, year })
-        }, FETCH_TIMEOUTS.load);
+        const response = await fetchWithTimeout(
+            `${API_BASE}/admin-questionnaires?token=${encodeURIComponent(authToken)}&year=${encodeURIComponent(year)}`,
+            { method: 'GET' },
+            FETCH_TIMEOUTS.load
+        );
         const data = await response.json();
 
         if (!silent) hideLoading();
