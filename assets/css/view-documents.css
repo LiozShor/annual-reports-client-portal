@@ -142,18 +142,23 @@ body {
 }
 
 /* ==================== DOCUMENT ROWS ==================== */
+.doc-item-wrapper {
+    display: flex;
+    flex-direction: column;
+    border-bottom: 1px solid var(--gray-100);
+}
+
+.doc-item-wrapper:last-child {
+    border-bottom: none;
+}
+
 .doc-row {
     display: flex;
     align-items: center;
     gap: var(--sp-3);
     padding: var(--sp-3) var(--sp-5);
-    border-bottom: 1px solid var(--gray-100);
     font-size: var(--text-sm);
     line-height: 1.6;
-}
-
-.doc-row:last-child {
-    border-bottom: none;
 }
 
 .doc-row .doc-icon {
@@ -180,6 +185,63 @@ body {
 .doc-row.doc-received .doc-name {
     text-decoration: line-through;
     color: var(--gray-400);
+}
+
+/* ==================== DOCUMENT HELP ACCORDION ==================== */
+.help-toggle-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--sp-1);
+    background: transparent;
+    border: none;
+    color: var(--gray-400);
+    cursor: pointer;
+    border-radius: var(--radius-full);
+    transition: all var(--transition-fast);
+}
+
+.help-toggle-btn:hover {
+    color: var(--brand-600);
+    background: var(--brand-50);
+}
+
+.help-toggle-btn.active {
+    color: var(--brand-600);
+}
+
+.doc-help-content {
+    max-height: 0;
+    overflow: hidden;
+    padding: 0 var(--sp-5) 0 var(--sp-10); /* Indent matching doc name */
+    background: var(--gray-50);
+    font-size: var(--text-sm);
+    color: var(--gray-600);
+    transition: max-height 300ms ease-in-out, padding 200ms ease-in-out, margin 200ms ease-in-out;
+}
+
+.doc-help-content.open {
+    max-height: 800px;
+    padding: 0 var(--sp-5) var(--sp-4) var(--sp-10);
+}
+
+.doc-help-content p {
+    margin: 0 0 var(--sp-2) 0;
+}
+.doc-help-content p:last-child {
+    margin: 0;
+}
+
+.doc-help-content a {
+    color: var(--brand-600);
+    text-decoration: underline;
+}
+
+[dir="ltr"] .doc-help-content {
+    padding: 0 var(--sp-10) 0 var(--sp-5);
+}
+[dir="ltr"] .doc-help-content.open {
+    padding: 0 var(--sp-10) var(--sp-4) var(--sp-5);
 }
 
 /* ==================== PERSON HEADER ==================== */
