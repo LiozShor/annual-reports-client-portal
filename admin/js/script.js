@@ -4441,6 +4441,8 @@ function toggleArchiveMode() {
 
 function closeAllRowMenus() {
     document.querySelectorAll('.row-menu.open').forEach(m => m.classList.remove('open'));
+    const ctx = document.getElementById('clientContextMenu');
+    if (ctx) { ctx.style.display = 'none'; ctx.classList.remove('open'); }
 }
 
 function toggleRowMenu(btn, e) {
@@ -5016,7 +5018,7 @@ function clearRolloverPreview() {
 
 // Close row menus on click outside
 document.addEventListener('click', (e) => {
-    if (!e.target.closest('.row-menu') && !e.target.closest('.action-btn.overflow') && !e.target.closest('.header-more-wrapper')) {
+    if (!e.target.closest('.row-menu') && !e.target.closest('.action-btn.overflow') && !e.target.closest('.header-more-wrapper') && !e.target.closest('#clientContextMenu')) {
         closeAllRowMenus();
     }
 });
