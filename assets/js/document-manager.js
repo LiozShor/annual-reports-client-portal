@@ -1294,10 +1294,8 @@ async function confirmSubmit() {
         }, FETCH_TIMEOUTS.mutate);
 
         if (response.ok) {
-            document.getElementById('content').style.display = 'none';
-            document.getElementById('success-message').style.display = 'block';
-            window.scrollTo(0, 0);
-            if (typeof lucide !== 'undefined') lucide.createIcons();
+            showToast('השינויים נשמרו בהצלחה!', 'success');
+            loadDocuments();
         } else {
             throw new Error('Server error');
         }
