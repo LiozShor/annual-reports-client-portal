@@ -29,6 +29,14 @@ body {
     width: 90%;
 }
 
+@media (max-width: 480px) {
+    .login-box {
+        padding: var(--sp-5);
+        border-radius: var(--radius-lg);
+        width: 100%;
+    }
+}
+
 .login-icon {
     display: flex;
     justify-content: center;
