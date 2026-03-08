@@ -155,6 +155,8 @@ function switchTab(tabName, evt) {
         loadAIClassifications(aiReviewLoaded);
     } else if (tabName === 'reminders') {
         loadReminders(reminderLoaded);
+    } else if (tabName === 'questionnaires') {
+        loadQuestionnaires(questionnaireLoaded);
     }
 }
 
@@ -5021,3 +5023,457 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // Initialize
 checkAuth();
+
+
+// ==================== QUESTIONNAIRES TAB ====================
+
+let questionnairesData = [];
+let questionnaireLoaded = false;
+let questionnaireFilteredData = [];
+
+async function loadQuestionnaires(silent = false) {
+    if (!silent) showLoading('טוען שאלונים...');
+
+    try {
+        const year = document.getElementById('questionnaireYearFilter')?.value || '2025';
+        const response = await fetchWithTimeout(`${API_BASE}/admin-questionnaires`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ token: authToken, year })
+        }, FETCH_TIMEOUTS.load);
+        const data = await response.json();
+
+        if (!silent) hideLoading();
+
+        if (!data.ok) {
+            if (data.error === 'unauthorized') { logout(); return; }
+            throw new Error(data.error || 'שגיאה בטעינת השאלונים');
+        }
+
+        questionnairesData = data.items || [];
+        questionnaireLoaded = true;
+        updateQuestionnaireStats();
+        filterQuestionnaires();
+
+    } catch (error) {
+        if (!silent) hideLoading();
+        showModal('error', 'שגיאה בטעינת שאלונים', error.message || 'לא ניתן לטעון את השאלונים');
+    }
+}
+
+function updateQuestionnaireStats() {
+    const count = questionnairesData.length;
+    const el = document.getElementById('questionnaire-stat-count');
+    if (el) el.textContent = count;
+
+    const badge = document.getElementById('questionnaireCountBadge');
+    if (badge) {
+        badge.textContent = count;
+        badge.style.display = count > 0 ? '' : 'none';
+    }
+}
+
+function filterQuestionnaires() {
+    const search = (document.getElementById('questionnaireSearchInput')?.value || '').toLowerCase().trim();
+
+    questionnaireFilteredData = questionnairesData.filter(item => {
+        if (!search) return true;
+        const name = (item.client_info?.name || '').toLowerCase();
+        const spouse = (item.client_info?.spouse || '').toLowerCase();
+        return name.includes(search) || spouse.includes(search);
+    });
+
+    renderQuestionnairesTable(questionnaireFilteredData);
+}
+
+function renderQuestionnairesTable(items) {
+    const container = document.getElementById('questionnaireTableContainer');
+    if (!container) return;
+
+    if (!items || items.length === 0) {
+        container.innerHTML = `
+            <div class="empty-state">
+                <div class="empty-state-icon"><i data-lucide="file-text" class="icon-2xl"></i></div>
+                <p>${questionnairesData.length === 0 ? 'אין שאלונים שהוגשו לשנה זו' : 'לא נמצאו תוצאות לחיפוש'}</p>
+            </div>`;
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+        return;
+    }
+
+    let html = `
+        <table>
+            <thead>
+                <tr>
+                    <th style="width:36px;">
+                        <input type="checkbox" class="questionnaire-select-all" onchange="toggleQuestionnaireSelectAll(this)" title="בחר הכל">
+                    </th>
+                    <th>שם לקוח</th>
+                    <th>בן/בת זוג</th>
+                    <th>תאריך הגשה</th>
+                    <th>מספר שאלות</th>
+                    <th style="width:48px;"></th>
+                </tr>
+            </thead>
+            <tbody>`;
+
+    items.forEach(item => {
+        const id = item.report_record_id || '';
+        const name = item.client_info?.name || '—';
+        const spouse = item.client_info?.spouse || '—';
+        const date = formatDateDisplay(item.client_info?.submission_date || '');
+        const answersCount = (item.answers || []).length;
+        const hasClientQuestions = item.client_questions && item.client_questions !== '[]' && item.client_questions !== '';
+
+        html += `
+                <tr data-qa-id="${id}" class="qa-main-row">
+                    <td>
+                        <input type="checkbox" class="questionnaire-row-checkbox"
+                            data-qa-id="${id}"
+                            onchange="updateQuestionnaireSelectedCount()">
+                    </td>
+                    <td style="font-weight:600;">${escapeHtml(name)}</td>
+                    <td>${escapeHtml(spouse)}</td>
+                    <td>${date}</td>
+                    <td>
+                        <span style="font-size:var(--text-xs); color:var(--gray-500);">${answersCount} שאלות</span>
+                        ${hasClientQuestions ? '<span style="margin-right:6px;" title="יש שאלות לקוח">❓</span>' : ''}
+                    </td>
+                    <td style="text-align:center;">
+                        <button class="expand-toggle" id="toggle-${id}" onclick="toggleQuestionnaireDetail('${id}')" title="הצג/הסתר תשובות">
+                            <i data-lucide="chevron-left" class="icon-sm"></i>
+                        </button>
+                    </td>
+                </tr>
+                <tr class="qa-detail-row" id="detail-${id}" style="display:none;">
+                    <td colspan="6">
+                        <div class="qa-detail-content">
+                            ${buildQADetailHTML(item)}
+                        </div>
+                    </td>
+                </tr>`;
+    });
+
+    html += `</tbody></table>`;
+    container.innerHTML = html;
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function buildQADetailHTML(item) {
+    const info = item.client_info || {};
+    const answers = item.answers || [];
+    let clientQuestions = [];
+    try { clientQuestions = JSON.parse(item.client_questions || '[]'); } catch (e) { clientQuestions = []; }
+
+    let html = `
+        <div class="qa-summary-box">
+            <div class="qa-summary-field">
+                <span class="qa-summary-label">שם</span>
+                <span class="qa-summary-value">${escapeHtml(info.name || '—')}</span>
+            </div>
+            ${info.spouse ? `<div class="qa-summary-field">
+                <span class="qa-summary-label">בן/בת זוג</span>
+                <span class="qa-summary-value">${escapeHtml(info.spouse)}</span>
+            </div>` : ''}
+            <div class="qa-summary-field">
+                <span class="qa-summary-label">שנת מס</span>
+                <span class="qa-summary-value">${escapeHtml(info.year || '—')}</span>
+            </div>
+            <div class="qa-summary-field">
+                <span class="qa-summary-label">אימייל</span>
+                <span class="qa-summary-value">${escapeHtml(info.email || '—')}</span>
+            </div>
+            <div class="qa-summary-field">
+                <span class="qa-summary-label">תאריך הגשה</span>
+                <span class="qa-summary-value">${formatDateDisplay(info.submission_date || '')}</span>
+            </div>
+        </div>`;
+
+    if (answers.length === 0) {
+        html += `<p style="color:var(--gray-400); font-size:var(--text-sm);">אין תשובות להצגה</p>`;
+    } else {
+        html += `
+        <table class="qa-zebra-table" dir="rtl">
+            <thead>
+                <tr>
+                    <th class="qa-question-col">שאלה</th>
+                    <th class="qa-answer-col">תשובה</th>
+                </tr>
+            </thead>
+            <tbody>`;
+        answers.forEach(({ label, value }) => {
+            html += `
+                <tr>
+                    <td class="qa-question-col">${escapeHtml(label)}</td>
+                    <td class="qa-answer-col">${escapeHtml(String(value || ''))}</td>
+                </tr>`;
+        });
+        html += `</tbody></table>`;
+    }
+
+    // Client questions section (DL-110)
+    if (clientQuestions.length > 0) {
+        html += `
+        <div class="qa-client-questions">
+            <div class="qa-client-questions-title">
+                <i data-lucide="help-circle" class="icon-sm"></i> שאלות הלקוח (${clientQuestions.length})
+            </div>`;
+        clientQuestions.forEach(q => {
+            const text = typeof q === 'string' ? q : (q.text || q.question || JSON.stringify(q));
+            html += `<div class="qa-client-question-item">${escapeHtml(text)}</div>`;
+        });
+        html += `</div>`;
+    }
+
+    return html;
+}
+
+function toggleQuestionnaireDetail(id) {
+    const detailRow = document.getElementById(`detail-${id}`);
+    const toggleBtn = document.getElementById(`toggle-${id}`);
+    if (!detailRow) return;
+
+    const isVisible = detailRow.style.display !== 'none';
+
+    if (isVisible) {
+        detailRow.style.display = 'none';
+        toggleBtn?.classList.remove('expanded');
+    } else {
+        detailRow.style.display = '';
+        toggleBtn?.classList.add('expanded');
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+    }
+}
+
+function updateQuestionnaireSelectedCount() {
+    const checked = document.querySelectorAll('.questionnaire-row-checkbox:checked');
+    const count = checked.length;
+    const bar = document.getElementById('questionnaireBulkActions');
+    const countEl = document.getElementById('questionnaireSelectedCount');
+
+    if (countEl) countEl.textContent = count;
+
+    if (count > 0) {
+        bar?.classList.add('visible', 'floating-bulk-bar');
+    } else {
+        bar?.classList.remove('visible', 'floating-bulk-bar');
+    }
+}
+
+function toggleQuestionnaireSelectAll(masterCb) {
+    const checkboxes = document.querySelectorAll('.questionnaire-row-checkbox');
+    checkboxes.forEach(cb => { cb.checked = masterCb.checked; });
+    updateQuestionnaireSelectedCount();
+}
+
+function resetQuestionnaireBulkSelection() {
+    document.querySelectorAll('.questionnaire-row-checkbox, .questionnaire-select-all').forEach(cb => cb.checked = false);
+    updateQuestionnaireSelectedCount();
+}
+
+function printQuestionnaires() {
+    const checked = document.querySelectorAll('.questionnaire-row-checkbox:checked');
+    if (checked.length === 0) {
+        showAIToast('לא נבחרו שאלונים להדפסה', 'warning');
+        return;
+    }
+
+    const ids = Array.from(checked).map(cb => cb.getAttribute('data-qa-id'));
+    const selectedItems = questionnairesData.filter(item => ids.includes(item.report_record_id));
+
+    if (selectedItems.length === 0) {
+        showAIToast('לא נמצאו נתונים להדפסה', 'error');
+        return;
+    }
+
+    const printWindow = window.open('', '_blank', 'width=900,height=700');
+    if (!printWindow) {
+        showAIToast('לא ניתן לפתוח חלון הדפסה. אפשר חלונות קופצים.', 'error');
+        return;
+    }
+
+    let printHtml = `<!DOCTYPE html>
+<html dir="rtl" lang="he">
+<head>
+<meta charset="UTF-8">
+<title>שאלוני לקוחות — הדפסה</title>
+<style>
+  @page { margin: 15mm; size: A4; }
+  * { box-sizing: border-box; }
+  body {
+    font-family: 'Arial', 'Segoe UI', sans-serif;
+    font-size: 12pt;
+    color: #1f2937;
+    direction: rtl;
+    margin: 0;
+    padding: 0;
+  }
+  .client-page { page-break-before: always; }
+  .client-page:first-child { page-break-before: avoid; }
+  .client-header {
+    border-bottom: 3px solid #4f46e5;
+    padding-bottom: 10px;
+    margin-bottom: 16px;
+  }
+  .client-header h2 {
+    margin: 0 0 4px;
+    font-size: 18pt;
+    color: #1f2937;
+  }
+  .client-header .meta {
+    font-size: 10pt;
+    color: #6b7280;
+  }
+  .summary-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    background: #f9fafb;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    padding: 12px;
+    margin-bottom: 16px;
+  }
+  .summary-field { display: flex; flex-direction: column; gap: 2px; }
+  .summary-label { font-size: 8pt; font-weight: 700; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.05em; }
+  .summary-value { font-size: 11pt; font-weight: 600; color: #111827; }
+  .qa-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 16px;
+    font-size: 10pt;
+  }
+  .qa-table th {
+    background: #f3f4f6;
+    padding: 7px 10px;
+    font-weight: 700;
+    color: #374151;
+    border-bottom: 2px solid #d1d5db;
+    text-align: right;
+  }
+  .qa-table td {
+    padding: 6px 10px;
+    border-bottom: 1px solid #f3f4f6;
+    vertical-align: top;
+    text-align: right;
+  }
+  .qa-table tr:nth-child(even) td { background: #f9fafb; }
+  .qa-table .q-col { font-weight: 600; color: #374151; width: 40%; }
+  .qa-table .a-col { color: #4b5563; }
+  .client-questions {
+    background: #fffbeb;
+    border: 1px solid #fcd34d;
+    border-radius: 6px;
+    padding: 10px 12px;
+    margin-top: 12px;
+  }
+  .client-questions h4 {
+    margin: 0 0 8px;
+    font-size: 10pt;
+    color: #92400e;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .client-questions p {
+    margin: 4px 0;
+    font-size: 10pt;
+    color: #78350f;
+    padding: 4px 0;
+    border-bottom: 1px solid #fde68a;
+  }
+  .client-questions p:last-child { border-bottom: none; }
+  .footer {
+    margin-top: 12px;
+    font-size: 8pt;
+    color: #9ca3af;
+    border-top: 1px solid #e5e7eb;
+    padding-top: 8px;
+  }
+  @media print {
+    .client-page { page-break-before: always; }
+    .client-page:first-child { page-break-before: avoid; }
+  }
+</style>
+</head>
+<body>`;
+
+    selectedItems.forEach((item, idx) => {
+        const info = item.client_info || {};
+        const answers = item.answers || [];
+        let clientQuestions = [];
+        try { clientQuestions = JSON.parse(item.client_questions || '[]'); } catch (e) { clientQuestions = []; }
+
+        const date = formatDateDisplay(info.submission_date || '');
+        printHtml += `
+<div class="client-page">
+  <div class="client-header">
+    <h2>${escapeHtml(info.name || '—')}</h2>
+    <div class="meta">שנת מס ${escapeHtml(info.year || '—')} | הוגש: ${date} | ${escapeHtml(info.email || '—')}</div>
+  </div>
+  <div class="summary-grid">
+    <div class="summary-field">
+      <span class="summary-label">שם</span>
+      <span class="summary-value">${escapeHtml(info.name || '—')}</span>
+    </div>
+    ${info.spouse ? `<div class="summary-field">
+      <span class="summary-label">בן/בת זוג</span>
+      <span class="summary-value">${escapeHtml(info.spouse)}</span>
+    </div>` : ''}
+    <div class="summary-field">
+      <span class="summary-label">שנת מס</span>
+      <span class="summary-value">${escapeHtml(info.year || '—')}</span>
+    </div>
+    <div class="summary-field">
+      <span class="summary-label">תאריך הגשה</span>
+      <span class="summary-value">${date}</span>
+    </div>
+  </div>`;
+
+        if (answers.length > 0) {
+            printHtml += `
+  <table class="qa-table">
+    <thead>
+      <tr><th class="q-col">שאלה</th><th class="a-col">תשובה</th></tr>
+    </thead>
+    <tbody>`;
+            answers.forEach(({ label, value }) => {
+                printHtml += `
+      <tr>
+        <td class="q-col">${escapeHtml(label)}</td>
+        <td class="a-col">${escapeHtml(String(value || ''))}</td>
+      </tr>`;
+            });
+            printHtml += `</tbody></table>`;
+        }
+
+        if (clientQuestions.length > 0) {
+            printHtml += `<div class="client-questions"><h4>שאלות הלקוח</h4>`;
+            clientQuestions.forEach(q => {
+                const text = typeof q === 'string' ? q : (q.text || q.question || JSON.stringify(q));
+                printHtml += `<p>${escapeHtml(text)}</p>`;
+            });
+            printHtml += `</div>`;
+        }
+
+        printHtml += `
+  <div class="footer">הודפס מתוך מערכת ניהול דוחות שנתיים — משה אציץ רו"ח</div>
+</div>`;
+    });
+
+    printHtml += `</body></html>`;
+    printWindow.document.write(printHtml);
+    printWindow.document.close();
+    printWindow.focus();
+    setTimeout(() => printWindow.print(), 500);
+}
+
+// Helper: format date for display (questionnaire tab)
+function formatDateDisplay(dateStr) {
+    if (!dateStr) return '—';
+    try {
+        const d = new Date(dateStr);
+        if (isNaN(d.getTime())) return dateStr;
+        return d.toLocaleDateString('he-IL', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    } catch (e) {
+        return dateStr;
+    }
+}
