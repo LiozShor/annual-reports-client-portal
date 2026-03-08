@@ -2218,9 +2218,10 @@ function renderAICard(item) {
         // State A: Full match — green border, doc name + badge
         const templateLabel = AI_DOC_NAMES[item.matched_template_id] || item.matched_template_name || '';
         const docName = (item.matched_doc_name || '').replace(/<\/?b>/g, '');
+        const aiIssuer = item.issuer_name || '';
         const docDisplayName = templateLabel && docName && !docName.includes(templateLabel)
             ? `${templateLabel} – ${docName}`
-            : (docName || templateLabel);
+            : (docName || (templateLabel + (aiIssuer ? ` \u2013 ${aiIssuer}` : '')));
         classificationHtml = `
             <span class="ai-classification-type">
                 <span class="ai-confidence-prefix">🤖 AI חושב שזה:</span>
@@ -2325,9 +2326,10 @@ function renderAICard(item) {
         // State C: Fuzzy match — green border, doc name + badge
         const templateLabel = AI_DOC_NAMES[item.matched_template_id] || item.matched_template_name || '';
         const docName = (item.matched_doc_name || '').replace(/<\/?b>/g, '');
+        const aiIssuer = item.issuer_name || '';
         const docDisplayName = templateLabel && docName && !docName.includes(templateLabel)
             ? `${templateLabel} – ${docName}`
-            : (docName || templateLabel);
+            : (docName || (templateLabel + (aiIssuer ? ` \u2013 ${aiIssuer}` : '')));
         classificationHtml = `
             <span class="ai-classification-type">
                 <span class="ai-confidence-prefix">🤖 AI חושב שזה:</span>
