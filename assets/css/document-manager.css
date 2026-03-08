@@ -349,6 +349,14 @@ body {
     accent-color: var(--info-500) !important;
 }
 
+.doc-name-group {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    min-width: 0;
+    overflow: hidden;
+}
+
 .document-name {
     flex: 1;
     font-size: var(--text-sm);
