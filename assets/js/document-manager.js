@@ -62,6 +62,7 @@ let _noteOriginalValue = '';        // value when popover was opened (for cancel
 // Questions for client state
 let clientQuestions = [];           // current questions array [{id, text, answer}]
 let originalQuestionsJSON = '[]';   // snapshot for dirty checking
+let _skipQuestionsReload = false;   // set after save to avoid stale read-after-write
 
 // Variable name → Hebrew label mapping (UI only)
 const VAR_LABELS = {
@@ -233,12 +234,18 @@ async function loadDocuments() {
         apiCategories = data.categories_list || [];
 
         // Load client questions
-        try {
-            clientQuestions = JSON.parse(data.client_questions || '[]');
-            if (!Array.isArray(clientQuestions)) clientQuestions = [];
-        } catch (e) { clientQuestions = []; }
-        originalQuestionsJSON = JSON.stringify(clientQuestions);
-        renderQuestions();
+        // Skip if _skipQuestionsReload is set (post-save race: Airtable write may not be committed yet)
+        if (_skipQuestionsReload) {
+            _skipQuestionsReload = false;
+            // keep existing clientQuestions / originalQuestionsJSON — already updated by confirmSubmit
+        } else {
+            try {
+                clientQuestions = JSON.parse(data.client_questions || '[]');
+                if (!Array.isArray(clientQuestions)) clientQuestions = [];
+            } catch (e) { clientQuestions = []; }
+            originalQuestionsJSON = JSON.stringify(clientQuestions);
+            renderQuestions();
+        }
 
         // Reset all change tracking — fresh data means no pending changes
         markedForRemoval = new Set();
@@ -1386,6 +1393,12 @@ async function confirmSubmit() {
         }, FETCH_TIMEOUTS.mutate);
 
         if (response.ok) {
+            // Commit questions locally immediately — avoids stale read-after-write from Airtable
+            clientQuestions = clientQuestions.filter(q => q.text.trim());
+            originalQuestionsJSON = JSON.stringify(clientQuestions);
+            renderQuestions();
+            _skipQuestionsReload = true;
+
             showToast('השינויים נשמרו בהצלחה!', 'success');
             loadDocuments();
         } else {
