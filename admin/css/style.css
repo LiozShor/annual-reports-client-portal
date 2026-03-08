@@ -4167,6 +4167,15 @@ tr:hover .client-edit-link {
     cursor: pointer;
 }
 
+/* DL-122: Sticky client name row when detail is expanded */
+.qa-main-row-sticky td {
+    position: sticky;
+    top: 41px; /* below thead */
+    z-index: 1;
+    background: var(--white, #fff);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.06);
+}
+
 /* Clickable client name link */
 .qa-client-link {
     cursor: pointer;

@@ -5255,9 +5255,12 @@ function toggleQuestionnaireDetail(id) {
 
     const isVisible = detailRow.style.display !== 'none';
 
+    const mainRow = document.querySelector(`tr[data-qa-id="${id}"].qa-main-row`);
+
     if (isVisible) {
         detailRow.style.display = 'none';
         toggleBtn?.classList.remove('expanded');
+        mainRow?.classList.remove('qa-main-row-sticky');
     } else {
         // Close all other open detail rows (single-open accordion)
         document.querySelectorAll('.qa-detail-row').forEach(row => {
@@ -5265,10 +5268,12 @@ function toggleQuestionnaireDetail(id) {
                 row.style.display = 'none';
                 const rowId = row.id.replace('detail-', '');
                 document.getElementById(`toggle-${rowId}`)?.classList.remove('expanded');
+                document.querySelector(`tr[data-qa-id="${rowId}"].qa-main-row`)?.classList.remove('qa-main-row-sticky');
             }
         });
         detailRow.style.display = '';
         toggleBtn?.classList.add('expanded');
+        mainRow?.classList.add('qa-main-row-sticky');
         if (typeof lucide !== 'undefined') lucide.createIcons();
     }
 }
