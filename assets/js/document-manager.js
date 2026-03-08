@@ -10,6 +10,15 @@ let CLIENT_NAME = '';
 let SPOUSE_NAME = '';
 let YEAR = '';
 let CURRENT_STAGE = '';
+const STAGE_LABELS = {
+    '1-Send_Questionnaire':  'ממתין לשליחה',
+    '2-Waiting_For_Answers': 'טרם מילא שאלון',
+    '3-Collecting_Docs':     'מילא שאלון וחסרים מסמכים',
+    '4-Review':              'מוכן להכנה',
+    '5-Moshe_Review':        'מוכן לבדיקה של משה',
+    '6-Before_Signing':      'לפני חתימה של הלקוח',
+    '7-Completed':           'הוגש',
+};
 let DOCS_FIRST_SENT_AT = null;
 const API_BASE = 'https://liozshor.app.n8n.cloud/webhook';
 
@@ -187,7 +196,11 @@ async function loadDocuments() {
             const yearEl = document.getElementById('year');
             if (yearEl) yearEl.textContent = YEAR;
         }
-        if (data.stage) CURRENT_STAGE = data.stage;
+        if (data.stage) {
+            CURRENT_STAGE = data.stage;
+            const stageEl = document.getElementById('clientStage');
+            if (stageEl) stageEl.textContent = STAGE_LABELS[data.stage] || data.stage;
+        }
         DOCS_FIRST_SENT_AT = data.docs_first_sent_at || null;
         updateSentBadge();
 
