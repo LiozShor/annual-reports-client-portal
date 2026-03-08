@@ -238,6 +238,14 @@ async function loadDocuments() {
         originalQuestionsJSON = JSON.stringify(clientQuestions);
         renderQuestions();
 
+        // Reset all change tracking — fresh data means no pending changes
+        markedForRemoval = new Set();
+        docsToAdd = new Map();
+        markedForRestore = new Set();
+        statusChanges = new Map();
+        noteChanges = new Map();
+        nameChanges = new Map();
+
         initDocumentDropdown();
         displayDocuments();
         updateStats();
