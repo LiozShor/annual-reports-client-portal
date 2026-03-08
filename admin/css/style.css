@@ -4163,6 +4163,10 @@ tr:hover .client-edit-link {
     background: var(--gray-50);
 }
 
+.qa-row-clickable {
+    cursor: pointer;
+}
+
 /* Clickable client name link */
 .qa-client-link {
     cursor: pointer;
