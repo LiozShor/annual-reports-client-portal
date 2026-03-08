@@ -5279,15 +5279,17 @@ function renderQuestionnairesTable(items) {
                     <td>${stage ? `<span class="stage-badge ${stage.class}"><i data-lucide="${stage.icon}" class="icon-sm"></i> ${stage.label}</span>` : '—'}</td>
                     <td>${date}</td>
                     <td class="qa-actions-cell" onclick="event.stopPropagation();">
-                        <button class="action-btn view" onclick="navigateToDocManager('${id}')" title="מנהל מסמכים">
-                            <i data-lucide="folder-open" class="icon-sm"></i>
-                        </button>
-                        <button class="action-btn" style="background:var(--gray-100);color:var(--gray-600);" onclick="printSingleQuestionnaire('${id}')" title="הדפס שאלון">
-                            <i data-lucide="printer" class="icon-sm"></i>
-                        </button>
-                        <button class="expand-toggle" id="toggle-${id}" onclick="toggleQuestionnaireDetail('${id}')" title="הצג/הסתר תשובות">
-                            <i data-lucide="chevron-left" class="icon-sm"></i>
-                        </button>
+                        <div class="qa-actions-inner">
+                            <button class="action-btn view" onclick="navigateToDocManager('${id}')" title="מנהל מסמכים">
+                                <i data-lucide="folder-open" class="icon-sm"></i>
+                            </button>
+                            <button class="action-btn" style="background:var(--gray-100);color:var(--gray-600);" onclick="printSingleQuestionnaire('${id}')" title="הדפס שאלון">
+                                <i data-lucide="printer" class="icon-sm"></i>
+                            </button>
+                            <button class="expand-toggle" id="toggle-${id}" onclick="toggleQuestionnaireDetail('${id}')" title="הצג/הסתר תשובות">
+                                <i data-lucide="chevron-left" class="icon-sm"></i>
+                            </button>
+                        </div>
                     </td>
                 </tr>
                 <tr class="qa-detail-row" id="detail-${id}" style="display:none;">
