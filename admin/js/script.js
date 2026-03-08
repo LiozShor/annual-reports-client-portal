@@ -5031,11 +5031,26 @@ let questionnairesData = [];
 let questionnaireLoaded = false;
 let questionnaireFilteredData = [];
 
+function initQuestionnaireYearFilter() {
+    const sel = document.getElementById('questionnaireYearFilter');
+    if (!sel || sel.options.length > 1) return; // already populated
+    const currentYear = new Date().getFullYear();
+    sel.innerHTML = '';
+    for (let y = currentYear; y >= 2025; y--) {
+        const opt = document.createElement('option');
+        opt.value = String(y);
+        opt.textContent = String(y);
+        if (y === currentYear) opt.selected = true;
+        sel.appendChild(opt);
+    }
+}
+
 async function loadQuestionnaires(silent = false) {
+    initQuestionnaireYearFilter();
     if (!silent) showLoading('טוען שאלונים...');
 
     try {
-        const year = document.getElementById('questionnaireYearFilter')?.value || '2025';
+        const year = document.getElementById('questionnaireYearFilter')?.value || String(new Date().getFullYear());
         const response = await fetchWithTimeout(
             `${API_BASE}/admin-questionnaires?token=${encodeURIComponent(authToken)}&year=${encodeURIComponent(year)}`,
             { method: 'GET' },
@@ -5110,8 +5125,7 @@ function renderQuestionnairesTable(items) {
                     <th>שם לקוח</th>
                     <th>בן/בת זוג</th>
                     <th>תאריך הגשה</th>
-                    <th>מספר שאלות</th>
-                    <th style="width:48px;"></th>
+                    <th style="width:112px; text-align:center;">פעולות</th>
                 </tr>
             </thead>
             <tbody>`;
@@ -5121,8 +5135,6 @@ function renderQuestionnairesTable(items) {
         const name = item.client_info?.name || '—';
         const spouse = item.client_info?.spouse || '—';
         const date = formatDateDisplay(item.client_info?.submission_date || '');
-        const answersCount = (item.answers || []).length;
-        const hasClientQuestions = item.client_questions && item.client_questions !== '[]' && item.client_questions !== '';
 
         html += `
                 <tr data-qa-id="${id}" class="qa-main-row">
@@ -5131,21 +5143,23 @@ function renderQuestionnairesTable(items) {
                             data-qa-id="${id}"
                             onchange="updateQuestionnaireSelectedCount()">
                     </td>
-                    <td style="font-weight:600;">${escapeHtml(name)}</td>
+                    <td style="font-weight:600;"><span class="qa-client-link" onclick="toggleQuestionnaireDetail('${id}')">${escapeHtml(name)}</span></td>
                     <td>${escapeHtml(spouse)}</td>
                     <td>${date}</td>
-                    <td>
-                        <span style="font-size:var(--text-xs); color:var(--gray-500);">${answersCount} שאלות</span>
-                        ${hasClientQuestions ? '<span style="margin-right:6px;" title="יש שאלות לקוח">❓</span>' : ''}
-                    </td>
-                    <td style="text-align:center;">
+                    <td class="qa-actions-cell">
+                        <button class="action-btn view" onclick="navigateToDocManager('${id}')" title="מנהל מסמכים">
+                            <i data-lucide="folder-open" class="icon-sm"></i>
+                        </button>
+                        <button class="action-btn" style="background:var(--gray-100);color:var(--gray-600);" onclick="printSingleQuestionnaire('${id}')" title="הדפס שאלון">
+                            <i data-lucide="printer" class="icon-sm"></i>
+                        </button>
                         <button class="expand-toggle" id="toggle-${id}" onclick="toggleQuestionnaireDetail('${id}')" title="הצג/הסתר תשובות">
                             <i data-lucide="chevron-left" class="icon-sm"></i>
                         </button>
                     </td>
                 </tr>
                 <tr class="qa-detail-row" id="detail-${id}" style="display:none;">
-                    <td colspan="6">
+                    <td colspan="5">
                         <div class="qa-detail-content">
                             ${buildQADetailHTML(item)}
                         </div>
@@ -5154,7 +5168,7 @@ function renderQuestionnairesTable(items) {
     });
 
     html += `</tbody></table>`;
-    container.innerHTML = html;
+    container.innerHTML = `<div class="table-scroll-container" role="region" tabindex="0" aria-label="טבלת שאלונים">${html}</div>`;
     if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
@@ -5238,6 +5252,14 @@ function toggleQuestionnaireDetail(id) {
         detailRow.style.display = 'none';
         toggleBtn?.classList.remove('expanded');
     } else {
+        // Close all other open detail rows (single-open accordion)
+        document.querySelectorAll('.qa-detail-row').forEach(row => {
+            if (row.id !== `detail-${id}` && row.style.display !== 'none') {
+                row.style.display = 'none';
+                const rowId = row.id.replace('detail-', '');
+                document.getElementById(`toggle-${rowId}`)?.classList.remove('expanded');
+            }
+        });
         detailRow.style.display = '';
         toggleBtn?.classList.add('expanded');
         if (typeof lucide !== 'undefined') lucide.createIcons();
@@ -5270,27 +5292,7 @@ function resetQuestionnaireBulkSelection() {
     updateQuestionnaireSelectedCount();
 }
 
-function printQuestionnaires() {
-    const checked = document.querySelectorAll('.questionnaire-row-checkbox:checked');
-    if (checked.length === 0) {
-        showAIToast('לא נבחרו שאלונים להדפסה', 'warning');
-        return;
-    }
-
-    const ids = Array.from(checked).map(cb => cb.getAttribute('data-qa-id'));
-    const selectedItems = questionnairesData.filter(item => ids.includes(item.report_record_id));
-
-    if (selectedItems.length === 0) {
-        showAIToast('לא נמצאו נתונים להדפסה', 'error');
-        return;
-    }
-
-    const printWindow = window.open('', '_blank', 'width=900,height=700');
-    if (!printWindow) {
-        showAIToast('לא ניתן לפתוח חלון הדפסה. אפשר חלונות קופצים.', 'error');
-        return;
-    }
-
+function generateQuestionnairePrintHTML(items) {
     let printHtml = `<!DOCTYPE html>
 <html dir="rtl" lang="he">
 <head>
@@ -5396,7 +5398,7 @@ function printQuestionnaires() {
 </head>
 <body>`;
 
-    selectedItems.forEach((item, idx) => {
+    items.forEach((item) => {
         const info = item.client_info || {};
         const answers = item.answers || [];
         let clientQuestions = [];
@@ -5460,10 +5462,55 @@ function printQuestionnaires() {
     });
 
     printHtml += `</body></html>`;
-    printWindow.document.write(printHtml);
+    return printHtml;
+}
+
+function printQuestionnaires() {
+    const checked = document.querySelectorAll('.questionnaire-row-checkbox:checked');
+    if (checked.length === 0) {
+        showAIToast('לא נבחרו שאלונים להדפסה', 'warning');
+        return;
+    }
+
+    const ids = Array.from(checked).map(cb => cb.getAttribute('data-qa-id'));
+    const selectedItems = questionnairesData.filter(item => ids.includes(item.report_record_id));
+
+    if (selectedItems.length === 0) {
+        showAIToast('לא נמצאו נתונים להדפסה', 'error');
+        return;
+    }
+
+    const printWindow = window.open('', '_blank', 'width=900,height=700');
+    if (!printWindow) {
+        showAIToast('לא ניתן לפתוח חלון הדפסה. אפשר חלונות קופצים.', 'error');
+        return;
+    }
+
+    printWindow.document.write(generateQuestionnairePrintHTML(selectedItems));
     printWindow.document.close();
     printWindow.focus();
     setTimeout(() => printWindow.print(), 500);
+}
+
+function printSingleQuestionnaire(id) {
+    const item = questionnairesData.find(i => i.report_record_id === id);
+    if (!item) {
+        showAIToast('לא נמצאו נתונים להדפסה', 'error');
+        return;
+    }
+    const printWindow = window.open('', '_blank', 'width=900,height=700');
+    if (!printWindow) {
+        showAIToast('לא ניתן לפתוח חלון הדפסה. אפשר חלונות קופצים.', 'error');
+        return;
+    }
+    printWindow.document.write(generateQuestionnairePrintHTML([item]));
+    printWindow.document.close();
+    printWindow.focus();
+    setTimeout(() => printWindow.print(), 500);
+}
+
+function navigateToDocManager(reportId) {
+    window.location.href = `../document-manager.html?report_id=${encodeURIComponent(reportId)}`;
 }
 
 // Helper: format date for display (questionnaire tab)

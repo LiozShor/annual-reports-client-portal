@@ -4163,6 +4163,26 @@ tr:hover .client-edit-link {
     background: var(--gray-50);
 }
 
+/* Clickable client name link */
+.qa-client-link {
+    cursor: pointer;
+    color: var(--gray-800);
+    transition: color var(--transition-fast);
+}
+
+.qa-client-link:hover {
+    color: var(--brand-600);
+    text-decoration: underline;
+}
+
+/* Actions cell — 3 icon buttons in a row */
+.qa-actions-cell {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-1);
+    justify-content: center;
+}
+
 /* Expand toggle */
 .expand-toggle {
     cursor: pointer;
