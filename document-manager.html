@@ -291,6 +291,10 @@
     <!-- Note popover (singleton) -->
     <div id="notePopover" class="note-popover" style="display:none;">
         <textarea class="note-popover-textarea" id="notePopoverText" placeholder="הערת משרד..."></textarea>
+        <div class="note-popover-actions">
+            <button class="note-popover-cancel" onclick="cancelNotePopover()" title="בטל">✕</button>
+            <button class="note-popover-save" onclick="closeNotePopover()" title="שמור">✓</button>
+        </div>
     </div>
 
     <!-- Status dropdown -->

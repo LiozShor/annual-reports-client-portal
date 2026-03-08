@@ -57,6 +57,7 @@ let sendEmailOnSave = false;
 let currentDropdownDocId = null;    // currently open status dropdown target
 let activeStatusFilter = '';        // currently active status filter (empty = show all)
 let _activeNoteDocId = null;        // docId whose note popover is currently open
+let _noteOriginalValue = '';        // value when popover was opened (for cancel/discard)
 
 // Questions for client state
 let clientQuestions = [];           // current questions array [{id, text, answer}]
@@ -522,69 +523,51 @@ function closeStatusDropdown() {
 
 // ==================== NOTE POPOVER ====================
 
-function positionFloating(triggerEl, floatingEl, opts = {}) {
-    const gap = opts.gap ?? 6;
-    const pad = opts.padding ?? 8;
-    const rect = triggerEl.getBoundingClientRect();
-    const vw = window.innerWidth;
-    const vh = window.innerHeight;
-
-    const prevDisplay = floatingEl.style.display;
-    floatingEl.style.visibility = 'hidden';
-    floatingEl.style.display = 'block';
-    const floatRect = floatingEl.getBoundingClientRect();
-    const floatW = floatRect.width;
-    const floatH = floatRect.height;
-    floatingEl.style.visibility = '';
-    floatingEl.style.display = prevDisplay;
-
-    const spaceBelow = vh - rect.bottom - gap;
-    const spaceAbove = rect.top - gap;
-    const placeAbove = spaceBelow < floatH && spaceAbove > spaceBelow;
-
-    if (!placeAbove) {
-        floatingEl.style.top = (rect.bottom + gap) + 'px';
-        floatingEl.style.bottom = '';
-    } else {
-        floatingEl.style.top = '';
-        floatingEl.style.bottom = (vh - rect.top + gap) + 'px';
-    }
-
-    let rightPos = vw - rect.right;
-    rightPos = Math.max(pad, Math.min(rightPos, vw - floatW - pad));
-    floatingEl.style.right = rightPos + 'px';
-    floatingEl.style.left = 'auto';
-
-    const availableSpace = (!placeAbove ? spaceBelow : spaceAbove) - pad;
-    floatingEl.style.maxHeight = Math.max(availableSpace, 100) + 'px';
-    floatingEl.setAttribute('data-side', placeAbove ? 'top' : 'bottom');
-}
-
 function openNotePopover(event, docId) {
     event.stopPropagation();
     const popover = document.getElementById('notePopover');
     if (!popover) return;
 
-    // Close current popover if open for same doc — toggle off
-    if (_activeNoteDocId === docId) {
-        closeNotePopover();
-        return;
-    }
+    // Toggle off if same doc clicked again
+    if (_activeNoteDocId === docId) { closeNotePopover(); return; }
 
-    // Close any other open popover (saves its note)
+    // Save previous if any
     if (_activeNoteDocId) closeNotePopover();
 
     _activeNoteDocId = docId;
 
-    // Fill textarea with current note (pending change or original)
+    // Fill textarea
     const textarea = document.getElementById('notePopoverText');
     const doc = currentDocuments.find(d => d.id === docId);
     const currentNote = noteChanges.has(docId)
         ? noteChanges.get(docId)
         : (doc ? (doc.bookkeepers_notes || '') : '');
     textarea.value = currentNote;
+    _noteOriginalValue = currentNote;
 
-    positionFloating(event.currentTarget, popover);
+    // Position anchored to button using live viewport coords
+    const rect = event.currentTarget.getBoundingClientRect();
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    const POP_W = 280;
+    const POP_H = 140; // textarea + action bar
+    const GAP = 6;
+    const PAD = 8;
+
+    // Vertical: below button, flip above if not enough room
+    if (vh - rect.bottom - GAP >= POP_H) {
+        popover.style.top = (rect.bottom + GAP) + 'px';
+        popover.style.bottom = '';
+    } else {
+        popover.style.top = '';
+        popover.style.bottom = (vh - rect.top + GAP) + 'px';
+    }
+
+    // Horizontal: align right edge to button, clamped within viewport
+    const right = Math.max(PAD, Math.min(vw - rect.right, vw - POP_W - PAD));
+    popover.style.right = right + 'px';
+    popover.style.left = 'auto';
+
     popover.style.display = 'block';
     textarea.focus();
     textarea.setSelectionRange(textarea.value.length, textarea.value.length);
@@ -611,33 +594,45 @@ function closeNotePopover() {
         noteChanges.set(docId, newText);
     }
 
-    // Update note button icon
-    const btn = document.querySelector(`#doc-${docId} .note-btn`);
-    if (btn) {
-        const hasContent = newText.trim().length > 0;
-        const iconName = hasContent ? 'message-square-text' : 'message-square';
-        btn.innerHTML = `<i data-lucide="${iconName}" class="icon-sm"></i>`;
-        btn.classList.toggle('has-note', hasContent);
-        btn.classList.toggle('note-modified', noteChanges.has(docId));
-        if (typeof lucide !== 'undefined') lucide.createIcons();
-    }
+    _updateNoteBtn(docId, newText);
     updateStats();
 }
 
-// Click-outside + Escape to close note popover
+function cancelNotePopover() {
+    const popover = document.getElementById('notePopover');
+    if (!popover || !_activeNoteDocId) return;
+
+    _activeNoteDocId = null;
+    popover.style.display = 'none';
+    // Discard — noteChanges not modified; icon stays as it was
+}
+
+function _updateNoteBtn(docId, newText) {
+    const btn = document.querySelector(`#doc-${docId} .note-btn`);
+    if (!btn) return;
+    const hasContent = newText.trim().length > 0;
+    const iconName = hasContent ? 'message-square-text' : 'message-square';
+    btn.innerHTML = `<i data-lucide="${iconName}" class="icon-sm"></i>`;
+    btn.classList.toggle('has-note', hasContent);
+    btn.classList.toggle('note-modified', noteChanges.has(docId));
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+// Click-outside → save; Escape → discard; Scroll → save
 document.addEventListener('click', function(e) {
     if (!_activeNoteDocId) return;
     const popover = document.getElementById('notePopover');
-    if (popover && !popover.contains(e.target)) {
-        closeNotePopover();
-    }
+    if (popover && !popover.contains(e.target)) closeNotePopover();
 });
 
 document.addEventListener('keydown', function(e) {
-    if (e.key === 'Escape' && _activeNoteDocId) {
-        closeNotePopover();
-    }
+    if (!_activeNoteDocId) return;
+    if (e.key === 'Escape') cancelNotePopover();
 });
+
+document.addEventListener('scroll', function() {
+    if (_activeNoteDocId) closeNotePopover();
+}, true);
 
 // Inline document name editing
 function startNameEdit(docId) {

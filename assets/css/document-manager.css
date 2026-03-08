@@ -606,6 +606,43 @@ body {
     animation: slideDown 150ms ease;
 }
 
+.note-popover-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--sp-2);
+    margin-top: var(--sp-2);
+}
+
+.note-popover-save,
+.note-popover-cancel {
+    border: none;
+    cursor: pointer;
+    padding: 3px 10px;
+    border-radius: var(--radius-md);
+    font-size: var(--text-sm);
+    font-weight: 700;
+    transition: all var(--transition-fast);
+}
+
+.note-popover-save {
+    background: var(--success-100);
+    color: var(--success-700);
+}
+
+.note-popover-save:hover {
+    background: var(--success-200);
+}
+
+.note-popover-cancel {
+    background: var(--gray-100);
+    color: var(--gray-500);
+}
+
+.note-popover-cancel:hover {
+    background: var(--danger-50);
+    color: var(--danger-500);
+}
+
 .note-popover-textarea {
     width: 100%;
     min-height: 80px;
