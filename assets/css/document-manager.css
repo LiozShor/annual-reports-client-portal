@@ -1198,3 +1198,8 @@ body {
         padding: var(--sp-4);
     }
 }
+
+/* Questionnaire collapsible — no height cap (content can be long) */
+#questionnaireSection .collapsible-content.open {
+    max-height: none;
+}
