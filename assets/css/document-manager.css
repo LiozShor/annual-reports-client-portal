@@ -363,9 +363,6 @@ body {
     color: var(--gray-800);
     font-weight: 500;
     min-width: 0;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
 }
 
 .document-icon {
