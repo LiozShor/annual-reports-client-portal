@@ -138,11 +138,20 @@ document.getElementById('passwordInput').addEventListener('keypress', (e) => {
 
 // ==================== TABS ====================
 
+const TAB_DROPDOWN_TABS = { send: 'שליחת שאלונים', questionnaires: 'שאלונים שהתקבלו' };
+
 function switchTab(tabName, evt) {
     document.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'));
     document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
 
-    if (evt && evt.currentTarget) evt.currentTarget.classList.add('active');
+    if (tabName in TAB_DROPDOWN_TABS) {
+        // Activate the dropdown wrapper's tab button
+        const wrapperBtn = document.querySelector('.tab-dropdown-wrapper > .tab-item');
+        if (wrapperBtn) wrapperBtn.classList.add('active');
+        document.getElementById('tabDropdownLabel').textContent = TAB_DROPDOWN_TABS[tabName];
+    } else if (evt && evt.currentTarget) {
+        evt.currentTarget.classList.add('active');
+    }
     document.getElementById(`tab-${tabName}`).classList.add('active');
     if (typeof lucide !== 'undefined') lucide.createIcons();
 
@@ -158,6 +167,29 @@ function switchTab(tabName, evt) {
     } else if (tabName === 'questionnaires') {
         loadQuestionnaires(questionnaireLoaded);
     }
+}
+
+function toggleTabDropdown(event) {
+    event.stopPropagation();
+    const menu = document.getElementById('tabDropdownMenu');
+    const btn = event.currentTarget;
+    const wasOpen = menu.classList.contains('open');
+    closeAllRowMenus();
+    if (!wasOpen) {
+        positionFloating(btn, menu);
+        menu.classList.add('open');
+        btn.setAttribute('aria-expanded', 'true');
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+    }
+}
+
+function switchTabFromDropdown(tabName, event) {
+    event.stopPropagation();
+    const menu = document.getElementById('tabDropdownMenu');
+    menu.classList.remove('open');
+    const wrapperBtn = document.querySelector('.tab-dropdown-wrapper > .tab-item');
+    if (wrapperBtn) wrapperBtn.setAttribute('aria-expanded', 'false');
+    switchTab(tabName);
 }
 
 // ==================== DASHBOARD ====================
@@ -4443,6 +4475,13 @@ function closeAllRowMenus() {
     document.querySelectorAll('.row-menu.open').forEach(m => m.classList.remove('open'));
     const ctx = document.getElementById('clientContextMenu');
     if (ctx) { ctx.style.display = 'none'; ctx.classList.remove('open'); }
+    // Close tab dropdown
+    const tabMenu = document.getElementById('tabDropdownMenu');
+    if (tabMenu) {
+        tabMenu.classList.remove('open');
+        const tabBtn = document.querySelector('.tab-dropdown-wrapper > .tab-item');
+        if (tabBtn) tabBtn.setAttribute('aria-expanded', 'false');
+    }
 }
 
 function toggleRowMenu(btn, e) {

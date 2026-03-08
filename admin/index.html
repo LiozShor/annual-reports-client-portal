@@ -62,7 +62,15 @@
         <div class="tabs-nav">
             <button class="tab-item active" onclick="switchTab('dashboard', event)"><i data-lucide="bar-chart-3" class="icon-sm"></i> לוח בקרה</button>
             <button class="tab-item" onclick="switchTab('import', event)"><i data-lucide="upload" class="icon-sm"></i> הוספת לקוחות</button>
-            <button class="tab-item" onclick="switchTab('send', event)"><i data-lucide="mail" class="icon-sm"></i> שליחת שאלונים</button>
+            <div class="tab-dropdown-wrapper">
+                <button class="tab-item" onclick="toggleTabDropdown(event)" aria-haspopup="menu" aria-expanded="false">
+                    <i data-lucide="file-text" class="icon-sm"></i> <span id="tabDropdownLabel">שאלונים</span> <span class="tab-caret">▾</span>
+                </button>
+                <div class="tab-dropdown-menu" id="tabDropdownMenu">
+                    <button onclick="switchTabFromDropdown('send', event)"><i data-lucide="mail"></i> שליחת שאלונים</button>
+                    <button onclick="switchTabFromDropdown('questionnaires', event)"><i data-lucide="file-text"></i> שאלונים שהתקבלו</button>
+                </div>
+            </div>
             <button class="tab-item" onclick="switchTab('review', event)">
                 <i data-lucide="clipboard-check" class="icon-sm"></i> מוכנים להכנה
                 <span class="review-count-badge" id="reviewCountBadge" style="display:none;">0</span>
@@ -73,9 +81,6 @@
             </button>
             <button class="tab-item" onclick="switchTab('reminders', event)">
                 <i data-lucide="bell" class="icon-sm"></i> תזכורות חודשיות
-            </button>
-            <button class="tab-item" onclick="switchTab('questionnaires', event)">
-                <i data-lucide="file-text" class="icon-sm"></i> שאלונים
             </button>
         </div>
 
