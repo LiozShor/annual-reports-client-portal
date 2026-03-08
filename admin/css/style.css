@@ -4194,8 +4194,14 @@ tr:hover .client-edit-link {
     position: sticky;
     left: 0;
     z-index: 2;
-    background: inherit;
+    background: var(--white, #fff);
     box-shadow: -2px 0 4px rgba(0,0,0,0.04);
+}
+
+/* When row is sticky (detail expanded), actions must be sticky in BOTH axes */
+.qa-main-row-sticky .qa-actions-cell {
+    top: 41px;
+    z-index: 3;
 }
 
 /* Actions cell — 3 icon buttons in a row */
