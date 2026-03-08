@@ -315,7 +315,7 @@ function renderDocuments() {
 
                 if (showHelp) {
                     html += `<button class="help-toggle-btn" onclick="toggleDocHelp(this)" title="${isHe ? 'הנחיות קבלת מסמך' : 'Document Help'}">`;
-                    html += `<i data-lucide="circle-help" class="icon-sm"></i>`;
+                    html += `<span class="help-icon-text">?</span>`;
                     html += `</button>`;
                 }
 

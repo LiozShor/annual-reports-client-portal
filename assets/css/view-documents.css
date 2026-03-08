@@ -210,10 +210,26 @@ body {
     color: var(--brand-600);
 }
 
+.help-icon-text {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    border: 1.5px solid currentColor;
+    border-radius: 50%;
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 1;
+    font-family: inherit;
+    opacity: 0.9;
+}
+
 .doc-help-content {
     max-height: 0;
     overflow: hidden;
-    padding: 0 var(--sp-5) 0 var(--sp-10); /* Indent matching doc name */
+    padding: 0 var(--sp-5) 0 var(--sp-10);
+    /* Indent matching doc name */
     background: var(--gray-50);
     font-size: var(--text-sm);
     color: var(--gray-600);
@@ -228,6 +244,7 @@ body {
 .doc-help-content p {
     margin: 0 0 var(--sp-2) 0;
 }
+
 .doc-help-content p:last-child {
     margin: 0;
 }
@@ -240,6 +257,7 @@ body {
 [dir="ltr"] .doc-help-content {
     padding: 0 var(--sp-10) 0 var(--sp-5);
 }
+
 [dir="ltr"] .doc-help-content.open {
     padding: 0 var(--sp-10) var(--sp-4) var(--sp-5);
 }
