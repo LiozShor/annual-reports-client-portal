@@ -5034,13 +5034,13 @@ let questionnaireFilteredData = [];
 function initQuestionnaireYearFilter() {
     const sel = document.getElementById('questionnaireYearFilter');
     if (!sel || sel.options.length > 1) return; // already populated
-    const currentYear = new Date().getFullYear();
+    const latestTaxYear = new Date().getFullYear() - 1; // tax year lags by 1
     sel.innerHTML = '';
-    for (let y = currentYear; y >= 2025; y--) {
+    for (let y = latestTaxYear; y >= 2025; y--) {
         const opt = document.createElement('option');
         opt.value = String(y);
         opt.textContent = String(y);
-        if (y === currentYear) opt.selected = true;
+        if (y === latestTaxYear) opt.selected = true;
         sel.appendChild(opt);
     }
 }
@@ -5050,7 +5050,7 @@ async function loadQuestionnaires(silent = false) {
     if (!silent) showLoading('טוען שאלונים...');
 
     try {
-        const year = document.getElementById('questionnaireYearFilter')?.value || String(new Date().getFullYear());
+        const year = document.getElementById('questionnaireYearFilter')?.value || String(new Date().getFullYear() - 1);
         const response = await fetchWithTimeout(
             `${API_BASE}/admin-questionnaires?token=${encodeURIComponent(authToken)}&year=${encodeURIComponent(year)}`,
             { method: 'GET' },
