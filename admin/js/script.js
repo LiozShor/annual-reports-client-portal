@@ -1,6 +1,5 @@
-// Configuration
-const API_BASE = 'https://liozshor.app.n8n.cloud/webhook';
-const ADMIN_TOKEN_KEY = 'admin_token';
+// Configuration — API_BASE, ADMIN_TOKEN_KEY, STAGES, STAGE_NUM_TO_KEY
+// are loaded from shared/constants.js
 const SESSION_FLAG_KEY = 'admin_session_active';
 
 // State
@@ -10,20 +9,6 @@ let importData = [];
 let existingEmails = new Set();
 let reviewQueueData = [];
 let showArchivedMode = false;
-
-// ==================== SSOT CONSTANTS ====================
-
-const STAGES = {
-    '1-Send_Questionnaire':  { num: 1, label: 'ממתין לשליחה',           icon: 'clipboard-list', class: 'stage-1' },
-    '2-Waiting_For_Answers': { num: 2, label: 'טרם מילא שאלון',         icon: 'hourglass',      class: 'stage-2' },
-    '3-Collecting_Docs':     { num: 3, label: 'מילא שאלון וחסרים מסמכים', icon: 'folder-open',    class: 'stage-3' },
-    '4-Review':              { num: 4, label: 'מוכן להכנה',             icon: 'file-text',      class: 'stage-4' },
-    '5-Moshe_Review':        { num: 5, label: 'מוכן לבדיקה של משה',     icon: 'user-check',     class: 'stage-5' },
-    '6-Before_Signing':      { num: 6, label: 'לפני חתימה של הלקוח',    icon: 'pen-tool',       class: 'stage-6' },
-    '7-Completed':           { num: 7, label: 'הוגש',                  icon: 'circle-check',   class: 'stage-7' }
-};
-
-const STAGE_NUM_TO_KEY = Object.fromEntries(Object.entries(STAGES).map(([k, v]) => [v.num, k]));
 
 const SORT_CONFIG = {
     name:    { accessor: c => c.name || '',    type: 'string' },
@@ -56,7 +41,7 @@ async function login() {
     showLoading('מאמת...');
 
     try {
-        const response = await fetchWithTimeout(`${API_BASE}/admin-auth`, {
+        const response = await fetchWithTimeout(ENDPOINTS.ADMIN_AUTH, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ password })
@@ -113,7 +98,7 @@ async function checkAuth() {
 
     // New tab/window - verify token with API
     try {
-        const response = await fetchWithTimeout(`${API_BASE}/admin-verify`, { headers: { 'Authorization': `Bearer ${authToken}` } }, FETCH_TIMEOUTS.quick);
+        const response = await fetchWithTimeout(ENDPOINTS.ADMIN_VERIFY, { headers: { 'Authorization': `Bearer ${authToken}` } }, FETCH_TIMEOUTS.quick);
         const data = await response.json();
 
         if (data.ok) {
@@ -200,7 +185,7 @@ async function loadDashboard(silent = false) {
 
     try {
         const year = document.getElementById('yearFilter')?.value || '2025';
-        const response = await fetchWithTimeout(`${API_BASE}/admin-dashboard?year=${year}&_t=${Date.now()}`, { headers: { 'Authorization': `Bearer ${authToken}` } }, FETCH_TIMEOUTS.load);
+        const response = await fetchWithTimeout(`${ENDPOINTS.ADMIN_DASHBOARD}?year=${year}&_t=${Date.now()}`, { headers: { 'Authorization': `Bearer ${authToken}` } }, FETCH_TIMEOUTS.load);
         const data = await response.json();
 
         if (!silent) hideLoading();
@@ -605,7 +590,7 @@ async function executeStageChange(reportId, newStage) {
     recalculateStats();
 
     try {
-        const response = await fetchWithTimeout(`${API_BASE}/admin-change-stage`, {
+        const response = await fetchWithTimeout(ENDPOINTS.ADMIN_CHANGE_STAGE, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ token: authToken, report_id: reportId, target_stage: newStage })
@@ -717,7 +702,7 @@ function closeDocsPopover() {
 async function fetchDocsForPopover(reportId, clientName) {
     try {
         const response = await fetchWithTimeout(
-            `${API_BASE}/get-client-documents?report_id=${reportId}&mode=office`,
+            `${ENDPOINTS.GET_CLIENT_DOCUMENTS}?report_id=${reportId}&mode=office`,
             { headers: { 'Authorization': `Bearer ${authToken}` } },
             FETCH_TIMEOUTS.quick
         );
@@ -882,7 +867,7 @@ function refreshData() {
 async function loadAIReviewCount() {
     const badge = document.getElementById('aiReviewTabBadge');
     try {
-        const resp = await fetchWithTimeout(`${API_BASE}/get-pending-classifications`, { headers: { 'Authorization': `Bearer ${authToken}` } }, FETCH_TIMEOUTS.quick);
+        const resp = await fetchWithTimeout(`${ENDPOINTS.GET_PENDING_CLASSIFICATIONS}`, { headers: { 'Authorization': `Bearer ${authToken}` } }, FETCH_TIMEOUTS.quick);
         const data = await resp.json();
         badge.classList.remove('ai-badge-loading');
         if (data.ok && data.stats && data.stats.total_pending > 0) {
@@ -1015,7 +1000,7 @@ async function performServerImport(clients, year, successMessage, options) {
     showLoading(clients.length > 1 ? `מייבא ${clients.length} לקוחות...` : 'מוסיף לקוח...');
 
     try {
-        const response = await fetchWithTimeout(`${API_BASE}/admin-bulk-import`, {
+        const response = await fetchWithTimeout(ENDPOINTS.ADMIN_BULK_IMPORT, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -1148,7 +1133,7 @@ async function loadPendingClients(silent = false) {
 
     try {
         const year = document.getElementById('sendYearFilter').value;
-        const response = await fetchWithTimeout(`${API_BASE}/admin-pending?year=${year}`, { headers: { 'Authorization': `Bearer ${authToken}` } }, FETCH_TIMEOUTS.load);
+        const response = await fetchWithTimeout(`${ENDPOINTS.ADMIN_PENDING}?year=${year}`, { headers: { 'Authorization': `Bearer ${authToken}` } }, FETCH_TIMEOUTS.load);
         const data = await response.json();
 
         if (!silent) hideLoading();
@@ -1295,7 +1280,7 @@ async function sendQuestionnaires(reportIds) {
                 showLoading(`שולח שאלונים... (${progress}/${totalCount})`);
             }
 
-            const response = await fetchWithTimeout(`${API_BASE}/admin-send-questionnaires`, {
+            const response = await fetchWithTimeout(ENDPOINTS.ADMIN_SEND_QUESTIONNAIRES, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ token: authToken, report_ids: chunk })
@@ -1438,7 +1423,7 @@ async function markComplete(reportId, name) {
         showLoading('מעדכן...');
 
         try {
-            const response = await fetchWithTimeout(`${API_BASE}/admin-mark-complete`, {
+            const response = await fetchWithTimeout(ENDPOINTS.ADMIN_MARK_COMPLETE, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -1715,7 +1700,7 @@ const REJECTION_REASONS = {
 
 async function getDocPreviewUrl(itemId) {
     const response = await fetchWithTimeout(
-        `${API_BASE}/get-preview-url?itemId=${encodeURIComponent(itemId)}`,
+        `${ENDPOINTS.GET_PREVIEW_URL}?itemId=${encodeURIComponent(itemId)}`,
         { headers: { 'Authorization': `Bearer ${authToken}` } }, FETCH_TIMEOUTS.load
     );
     const data = await response.json();
@@ -1807,7 +1792,7 @@ async function loadAIClassifications(silent = false) {
     if (!silent) showLoading('טוען סיווגים...');
 
     try {
-        const response = await fetchWithTimeout(`${API_BASE}/get-pending-classifications`, { headers: { 'Authorization': `Bearer ${authToken}` } }, FETCH_TIMEOUTS.load);
+        const response = await fetchWithTimeout(`${ENDPOINTS.GET_PENDING_CLASSIFICATIONS}`, { headers: { 'Authorization': `Bearer ${authToken}` } }, FETCH_TIMEOUTS.load);
         const data = await response.json();
 
         if (!silent) hideLoading();
@@ -2624,7 +2609,7 @@ async function approveAIClassification(recordId) {
         setCardLoading(recordId, 'מאשר סיווג...');
 
         try {
-            const response = await fetchWithTimeout(`${API_BASE}/review-classification`, {
+            const response = await fetchWithTimeout(ENDPOINTS.REVIEW_CLASSIFICATION, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -2706,7 +2691,7 @@ async function executeReject(recordId, rejectionReason, notes) {
     setCardLoading(recordId, 'דוחה סיווג...');
 
     try {
-        const response = await fetchWithTimeout(`${API_BASE}/review-classification`, {
+        const response = await fetchWithTimeout(ENDPOINTS.REVIEW_CLASSIFICATION, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -2799,7 +2784,7 @@ async function submitAIReassign(recordId, templateId, docRecordId, loadingText, 
         if (newDocName) body.new_doc_name = newDocName;
         if (forceOverwrite) body.force_overwrite = true;
 
-        const response = await fetchWithTimeout(`${API_BASE}/review-classification`, {
+        const response = await fetchWithTimeout(ENDPOINTS.REVIEW_CLASSIFICATION, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(body)
@@ -3310,7 +3295,7 @@ async function sendBatchStatus(clientName) {
     const classificationIds = clientItems.map(i => i.id);
 
     try {
-        const response = await fetchWithTimeout(`${API_BASE}/send-batch-status`, {
+        const response = await fetchWithTimeout(ENDPOINTS.SEND_BATCH_STATUS, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -3348,7 +3333,7 @@ function dismissBatch(clientName) {
         const classificationIds = clientItems.map(i => i.id);
 
         try {
-            const response = await fetchWithTimeout(`${API_BASE}/send-batch-status`, {
+            const response = await fetchWithTimeout(ENDPOINTS.SEND_BATCH_STATUS, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -3432,7 +3417,7 @@ async function loadReminders(silent = false) {
     if (!silent) showLoading('טוען תזכורות...');
 
     try {
-        const response = await fetchWithTimeout(`${API_BASE}/admin-reminders`, {
+        const response = await fetchWithTimeout(ENDPOINTS.ADMIN_REMINDERS, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ token: authToken, action: 'list' })
@@ -3950,7 +3935,7 @@ async function executeReminderAction(action, reportIds, value, forceOverride) {
             const body = { token: authToken, action, report_ids: reportIds };
             if (reminderDefaultMax != null) body.default_max = reminderDefaultMax;
             if (forceOverride) body.force_override = true;
-            const response = await fetchWithTimeout(`${API_BASE}/admin-reminders`, {
+            const response = await fetchWithTimeout(ENDPOINTS.ADMIN_REMINDERS, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(body)
@@ -3985,7 +3970,7 @@ async function executeReminderAction(action, reportIds, value, forceOverride) {
         if (action === 'send_now' && reminderDefaultMax != null) body.default_max = reminderDefaultMax;
         if (forceOverride) body.force_override = true;
 
-        const response = await fetchWithTimeout(`${API_BASE}/admin-reminders`, {
+        const response = await fetchWithTimeout(ENDPOINTS.ADMIN_REMINDERS, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(body)
@@ -4062,7 +4047,7 @@ async function viewQuestionnaire(reportId) {
             showLoading('טוען שאלון...');
             const year = document.getElementById('questionnaireYearFilter')?.value || String(new Date().getFullYear() - 1);
             const response = await fetchWithTimeout(
-                `${API_BASE}/admin-questionnaires?token=${encodeURIComponent(authToken)}&year=${encodeURIComponent(year)}`,
+                `${ENDPOINTS.ADMIN_QUESTIONNAIRES}?token=${encodeURIComponent(authToken)}&year=${encodeURIComponent(year)}`,
                 { method: 'GET' },
                 FETCH_TIMEOUTS.load
             );
@@ -4233,7 +4218,7 @@ async function saveReminderSettings() {
 async function doSaveReminderSettings(maxVal) {
     showLoading('שומר הגדרות...');
     try {
-        const response = await fetchWithTimeout(`${API_BASE}/admin-reminders`, {
+        const response = await fetchWithTimeout(ENDPOINTS.ADMIN_REMINDERS, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -4354,7 +4339,7 @@ async function saveReportNotes(reportId, newText, cell) {
     client.notes = newText;
     restoreNotesCell(cell, client);
     try {
-        const response = await fetchWithTimeout(`${API_BASE}/admin-update-client`, {
+        const response = await fetchWithTimeout(ENDPOINTS.ADMIN_UPDATE_CLIENT, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ token: authToken, report_id: reportId, action: 'update-notes', notes: newText })
@@ -4400,7 +4385,7 @@ async function executeToggleActive(reportId, active) {
     filterClients();
 
     try {
-        const response = await fetchWithTimeout(`${API_BASE}/admin-toggle-active`, {
+        const response = await fetchWithTimeout(ENDPOINTS.ADMIN_TOGGLE_ACTIVE, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ token: authToken, report_id: reportId, active })
@@ -4440,7 +4425,7 @@ async function openClientDetailModal(reportId) {
 
     showLoading('טוען פרטי לקוח...');
     try {
-        const response = await fetchWithTimeout(`${API_BASE}/admin-update-client`, {
+        const response = await fetchWithTimeout(ENDPOINTS.ADMIN_UPDATE_CLIENT, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ token: authToken, report_id: reportId, action: 'get' })
@@ -4486,7 +4471,7 @@ async function saveClientDetails() {
     const doSave = async () => {
         showLoading('שומר פרטים...');
         try {
-            const response = await fetchWithTimeout(`${API_BASE}/admin-update-client`, {
+            const response = await fetchWithTimeout(ENDPOINTS.ADMIN_UPDATE_CLIENT, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ token: authToken, report_id: reportId, action: 'update', name, email, phone })
@@ -5045,7 +5030,7 @@ async function previewYearRollover() {
     showLoading('בודק לקוחות להעברה...');
 
     try {
-        const response = await fetchWithTimeout(`${API_BASE}/admin-year-rollover`, {
+        const response = await fetchWithTimeout(ENDPOINTS.ADMIN_YEAR_ROLLOVER, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -5097,7 +5082,7 @@ async function executeYearRollover() {
             showLoading(`מעביר ${count} לקוחות...`);
 
             try {
-                const response = await fetchWithTimeout(`${API_BASE}/admin-year-rollover`, {
+                const response = await fetchWithTimeout(ENDPOINTS.ADMIN_YEAR_ROLLOVER, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -5234,7 +5219,7 @@ async function loadQuestionnaires(silent = false) {
     try {
         const year = document.getElementById('questionnaireYearFilter')?.value || String(new Date().getFullYear() - 1);
         const response = await fetchWithTimeout(
-            `${API_BASE}/admin-questionnaires?token=${encodeURIComponent(authToken)}&year=${encodeURIComponent(year)}`,
+            `${ENDPOINTS.ADMIN_QUESTIONNAIRES}?token=${encodeURIComponent(authToken)}&year=${encodeURIComponent(year)}`,
             { method: 'GET' },
             FETCH_TIMEOUTS.load
         );

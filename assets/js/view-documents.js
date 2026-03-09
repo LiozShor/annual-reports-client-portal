@@ -24,16 +24,7 @@ function getCategoryIcon(emoji) {
     return CATEGORY_ICONS[emoji] || 'file-text';
 }
 
-/** Sanitize HTML for Document Title */
-function sanitizeDocHtml(html) {
-    if (!html) return '';
-    const el = document.createElement('div');
-    el.textContent = html;
-    let safe = el.innerHTML;
-    safe = safe.replace(/&lt;b&gt;/gi, '<b>').replace(/&lt;\/b&gt;/gi, '</b>');
-    safe = safe.replace(/&lt;strong&gt;/gi, '<strong>').replace(/&lt;\/strong&gt;/gi, '</strong>');
-    return safe;
-}
+// sanitizeDocHtml() loaded from shared/utils.js
 
 /** Sanitize HTML for Help Content */
 function sanitizeHelpHtml(html) {
@@ -85,7 +76,7 @@ const reportId = params.get('report_id');
 // Auth tokens — never exposed in the page URL
 // Client flow: token stored in sessionStorage by landing.js (or URL param for old links)
 // Admin flow: admin session token already in localStorage from admin login
-const ADMIN_TOKEN_KEY = 'admin_token';
+// ADMIN_TOKEN_KEY loaded from shared/constants.js
 const clientToken = sessionStorage.getItem('client_doc_token') || params.get('token') || '';
 const adminToken = localStorage.getItem(ADMIN_TOKEN_KEY) || '';
 
@@ -116,7 +107,7 @@ async function loadDocuments() {
         const tokenParam = clientToken
             ? `&token=${encodeURIComponent(clientToken)}`
             : adminToken ? `&admin_token=${encodeURIComponent(adminToken)}` : '';
-        const url = `https://liozshor.app.n8n.cloud/webhook/get-client-documents?report_id=${reportId}${tokenParam}`;
+        const url = `${ENDPOINTS.GET_CLIENT_DOCUMENTS}?report_id=${reportId}${tokenParam}`;
         const response = await fetchWithTimeout(url, {}, FETCH_TIMEOUTS.load);
 
         cancelEscalation();
