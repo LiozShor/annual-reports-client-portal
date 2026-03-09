@@ -1775,12 +1775,7 @@ function approveAndSendToClient() {
                     updateSentBadge();
                     setBtnState(sendBtn, 'success', 'נשלח!');
                     setTimeout(() => {
-                        if (sendBtn) {
-                            sendBtn.classList.remove('btn-success-flash');
-                            sendBtn.innerHTML = '✓ נשלח ללקוח';
-                            sendBtn.disabled = true;
-                            sendBtn.title = 'המייל כבר נשלח ללקוח';
-                        }
+                        setBtnState(sendBtn, 'idle');
                     }, 1500);
                 } else {
                     setBtnState(sendBtn, 'idle');
