@@ -29,7 +29,8 @@ const SORT_CONFIG = {
     name:    { accessor: c => c.name || '',    type: 'string' },
     stage:   { accessor: c => STAGES[c.stage]?.num || 0, type: 'number' },
     docs:    { accessor: c => c.docs_total > 0 ? c.docs_received / c.docs_total : 0, type: 'number' },
-    missing: { accessor: c => (c.docs_total || 0) - (c.docs_received || 0), type: 'number' }
+    missing: { accessor: c => (c.docs_total || 0) - (c.docs_received || 0), type: 'number' },
+    notes:   { accessor: c => c.notes || '', type: 'string' }
 };
 
 let currentSort = { column: null, direction: 'asc' };
@@ -290,6 +291,7 @@ function renderClientsTable(clients) {
                     <th><button class="th-sort-btn" onclick="toggleSort('stage')" aria-sort="${sortAttr('stage')}">שלב <span class="sort-arrows"><span class="sort-asc">▲</span><span class="sort-desc">▼</span></span></button></th>
                     <th><button class="th-sort-btn" onclick="toggleSort('docs')" aria-sort="${sortAttr('docs')}">מסמכים <span class="sort-arrows"><span class="sort-asc">▲</span><span class="sort-desc">▼</span></span></button></th>
                     <th><button class="th-sort-btn" onclick="toggleSort('missing')" aria-sort="${sortAttr('missing')}">חסרים <span class="sort-arrows"><span class="sort-asc">▲</span><span class="sort-desc">▼</span></span></button></th>
+                    <th><button class="th-sort-btn" onclick="toggleSort('notes')" aria-sort="${sortAttr('notes')}">הערות <span class="sort-arrows"><span class="sort-asc">▲</span><span class="sort-desc">▼</span></span></button></th>
                     <th>פעולות</th>
                 </tr>
             </thead>
@@ -350,6 +352,9 @@ function renderClientsTable(clients) {
                         ? '<span class="missing-count not-applicable">—</span>'
                         : `<span class="missing-count clickable-count ${missingCount > 0 ? 'has-missing' : 'all-done'}" onclick="toggleDocsPopover(event, '${rid}', '${cName}')" tabindex="0" role="button" title="לחץ לצפייה במסמכים">${missingCount > 0 ? missingCount : '✓'}</span>`
                     }
+                </td>
+                <td class="notes-cell" onclick="editReportNotes(event, '${rid}')" title="${escapeAttr(client.notes || '')}">
+                    <span class="notes-text">${escapeHtml((client.notes || '').substring(0, 60))}${(client.notes || '').length > 60 ? '…' : ''}</span>
                 </td>
                 <td>
                     ${client.stage === '1-Send_Questionnaire' ?
@@ -4290,6 +4295,62 @@ function resetClientMax(reportId) {
     executeReminderAction('set_max', [reportId], null);
 }
 
+// ==================== REPORT NOTES ====================
+
+function editReportNotes(event, reportId) {
+    event.stopPropagation();
+    const cell = event.currentTarget;
+    if (cell.querySelector('textarea')) return;
+    const client = clientsData.find(c => c.report_id === reportId);
+    if (!client) return;
+    const currentNotes = client.notes || '';
+    cell.innerHTML = `<textarea class="notes-editor">${escapeHtml(currentNotes)}</textarea>`;
+    const textarea = cell.querySelector('textarea');
+    textarea.focus();
+    textarea.style.height = textarea.scrollHeight + 'px';
+    textarea.addEventListener('input', () => {
+        textarea.style.height = 'auto';
+        textarea.style.height = textarea.scrollHeight + 'px';
+    });
+    textarea.addEventListener('blur', () => saveReportNotes(reportId, textarea.value, cell));
+    textarea.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') { e.preventDefault(); restoreNotesCell(cell, client); }
+    });
+    textarea.addEventListener('click', (e) => e.stopPropagation());
+}
+
+function restoreNotesCell(cell, client) {
+    const text = client.notes || '';
+    cell.title = text;
+    cell.innerHTML = `<span class="notes-text">${escapeHtml(text.substring(0, 60))}${text.length > 60 ? '…' : ''}</span>`;
+}
+
+async function saveReportNotes(reportId, newText, cell) {
+    const client = clientsData.find(c => c.report_id === reportId);
+    if (!client) return;
+    const oldText = client.notes || '';
+    if (newText === oldText) { restoreNotesCell(cell, client); return; }
+    client.notes = newText;
+    restoreNotesCell(cell, client);
+    try {
+        const response = await fetchWithTimeout(`${API_BASE}/admin-update-client`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ token: authToken, report_id: reportId, action: 'update-notes', notes: newText })
+        });
+        const result = await response.json();
+        if (result.ok) {
+            showAIToast('הערה נשמרה', 'success');
+        } else {
+            throw new Error(result.error || 'Failed');
+        }
+    } catch (err) {
+        client.notes = oldText;
+        restoreNotesCell(cell, client);
+        showAIToast('שגיאה בשמירת הערה', 'error');
+    }
+}
+
 // ==================== DEACTIVATE / ARCHIVE ====================
 
 function deactivateClient(reportId, clientName) {
@@ -5519,6 +5580,9 @@ function generateQuestionnairePrintHTML(items) {
   .cq-q { font-weight:600; color:#78350f; font-size:10pt; }
   .cq-a { color:#4b5563; font-size:10pt; margin-top:2px; padding-right:16px; }
   .cq-no-answer { color:#9ca3af; font-style:italic; }
+  .office-notes { margin-top:12px; border-right:3px solid #3b82f6; padding:8px 12px; background:#eff6ff; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+  .office-notes h4 { margin:0 0 8px; font-size:10pt; color:#1e40af; text-transform:uppercase; letter-spacing:0.05em; }
+  .office-notes .notes-content { color:#1f2937; font-size:10pt; white-space:pre-wrap; }
   .footer {
     margin-top: 12px;
     font-size: 8pt;
@@ -5598,6 +5662,12 @@ function generateQuestionnairePrintHTML(items) {
                 </div>`;
             });
             printHtml += `</div>`;
+        }
+
+        // Office notes
+        const reportClient = clientsData.find(c => c.report_id === item.report_record_id);
+        if (reportClient?.notes) {
+            printHtml += `<div class="office-notes"><h4>הערות משרד</h4><div class="notes-content">${escapeHtml(reportClient.notes)}</div></div>`;
         }
 
         printHtml += `

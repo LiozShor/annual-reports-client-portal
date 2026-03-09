@@ -1209,3 +1209,22 @@ body {
     overflow-y: auto;
     scroll-behavior: smooth;
 }
+
+/* Notes textarea */
+.notes-textarea {
+    width: 100%;
+    min-height: 60px;
+    padding: 8px 12px;
+    font-size: var(--text-sm);
+    font-family: inherit;
+    border: 1px solid var(--gray-200);
+    border-radius: 6px;
+    resize: vertical;
+    outline: none;
+    transition: border-color var(--transition-fast);
+    direction: rtl;
+}
+.notes-textarea:focus {
+    border-color: var(--brand-400);
+    box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.15);
+}

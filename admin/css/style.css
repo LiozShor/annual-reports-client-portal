@@ -4422,3 +4422,29 @@ tr:hover .client-edit-link {
     height: 16px;
     flex-shrink: 0;
 }
+
+/* ===== Notes Column ===== */
+.notes-cell {
+    max-width: 180px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    cursor: pointer;
+    font-size: var(--text-sm);
+    color: var(--gray-600);
+}
+.notes-cell:hover {
+    background: var(--gray-50);
+}
+.notes-editor {
+    width: 100%;
+    min-height: 48px;
+    padding: 6px 8px;
+    font-size: var(--text-sm);
+    font-family: inherit;
+    border: 1px solid var(--brand-300);
+    border-radius: 6px;
+    resize: vertical;
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.15);
+}

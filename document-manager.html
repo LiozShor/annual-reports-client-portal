@@ -168,6 +168,24 @@
                     </div>
                 </div>
 
+                <!-- Notes section -->
+                <div class="questions-section" id="notesSection">
+                    <button class="collapsible-trigger" id="notesTrigger"
+                        onclick="this.setAttribute('aria-expanded', this.getAttribute('aria-expanded')==='true'?'false':'true'); this.nextElementSibling.classList.toggle('open');"
+                        aria-expanded="false">
+                        <span class="flex items-center gap-2">
+                            <i data-lucide="sticky-note" class="icon-sm"></i>
+                            <span>הערות לדוח</span>
+                        </span>
+                        <i data-lucide="chevron-down" class="icon-sm"></i>
+                    </button>
+                    <div class="collapsible-content">
+                        <div style="padding: var(--sp-4);">
+                            <textarea id="reportNotesTextarea" class="notes-textarea" rows="3" placeholder="הוסף הערות לדוח..."></textarea>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Questionnaire section -->
                 <div class="questions-section" id="questionnaireSection">
                     <button class="collapsible-trigger" id="questionnaireTrigger"
