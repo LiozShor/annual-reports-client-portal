@@ -1053,7 +1053,14 @@ function updateStatusOverview() {
     const saveResetRow = document.getElementById('save-reset-row');
     const approveSendRow = document.getElementById('approve-send-row');
     if (saveResetRow) saveResetRow.style.display = hasChanges ? 'contents' : 'none';
-    if (approveSendRow) approveSendRow.style.display = hasChanges ? 'none' : '';
+    if (approveSendRow) {
+        approveSendRow.style.display = hasChanges ? 'none' : '';
+        // Reset send button to idle when row becomes visible again (after save-then-change cycle)
+        if (!hasChanges) {
+            const sendBtn = document.getElementById('approveSendBtn');
+            if (sendBtn) setBtnState(sendBtn, 'idle');
+        }
+    }
 }
 
 // Toggle status filter (click on status count box)
@@ -1775,7 +1782,12 @@ function approveAndSendToClient() {
                     updateSentBadge();
                     setBtnState(sendBtn, 'success', 'נשלח!');
                     setTimeout(() => {
-                        setBtnState(sendBtn, 'idle');
+                        if (sendBtn) {
+                            sendBtn.classList.remove('btn-success-flash');
+                            sendBtn.innerHTML = '✓ נשלח ללקוח';
+                            sendBtn.disabled = true;
+                            sendBtn.title = 'המייל כבר נשלח ללקוח';
+                        }
                     }, 1500);
                 } else {
                     setBtnState(sendBtn, 'idle');
