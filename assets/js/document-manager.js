@@ -169,6 +169,29 @@ function showToast(msg, type = 'info') {
     t._timer = setTimeout(() => { t.style.opacity = '0'; setTimeout(() => t.style.display = 'none', 300); }, 5000);
 }
 
+// Button inline loading/success states
+const _btnOriginals = new WeakMap();
+function setBtnState(btn, state, text) {
+    if (!btn) return;
+    if (!_btnOriginals.has(btn)) _btnOriginals.set(btn, btn.innerHTML);
+    if (state === 'loading') {
+        btn.disabled = true;
+        btn.classList.add('btn-loading');
+        btn.classList.remove('btn-success-flash');
+        btn.innerHTML = `<svg class="btn-spinner icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 2v4m0 12v4m-7.07-15.07 2.83 2.83m8.48 8.48 2.83 2.83M2 12h4m12 0h4M4.93 19.07l2.83-2.83m8.48-8.48 2.83-2.83"/></svg> ${text}`;
+    } else if (state === 'success') {
+        btn.disabled = true;
+        btn.classList.remove('btn-loading');
+        btn.classList.add('btn-success-flash');
+        btn.innerHTML = `✓ ${text}`;
+    } else { // idle
+        btn.disabled = false;
+        btn.classList.remove('btn-loading', 'btn-success-flash');
+        btn.innerHTML = _btnOriginals.get(btn) || btn.innerHTML;
+        if (typeof lucide !== 'undefined') lucide.createIcons({ nodes: [btn] });
+    }
+}
+
 // Load documents
 async function loadDocuments() {
     const loadingEl = document.getElementById('loading');
@@ -1293,6 +1316,9 @@ async function confirmSubmit() {
     _submitLocked = true;
     closeConfirmation();
 
+    const saveBtn = document.getElementById('saveChangesBtn');
+    setBtnState(saveBtn, 'loading', 'שומר שינויים...');
+
     const customDoc = document.getElementById('customDoc').value.trim();
     const notes = '';
 
@@ -1451,13 +1477,17 @@ async function confirmSubmit() {
             renderQuestions();
             _skipQuestionsReload = true;
 
-            showToast('השינויים נשמרו בהצלחה!', 'success');
-            loadDocuments();
+            setBtnState(saveBtn, 'success', 'נשמר!');
+            setTimeout(() => {
+                setBtnState(saveBtn, 'idle');
+                loadDocuments();
+            }, 1500);
         } else {
             throw new Error('Server error');
         }
     } catch (error) {
         console.error('Save operation failed');
+        setBtnState(saveBtn, 'idle');
         showAlert(getErrorMessage(error, 'he'), 'error');
     } finally {
         _submitLocked = false;
@@ -1732,9 +1762,10 @@ function approveAndSendToClient() {
     showConfirmDialog(
         message,
         async () => {
+            const sendBtn = document.getElementById('approveSendBtn');
+            setBtnState(sendBtn, 'loading', 'שולח ללקוח...');
             const token = generateApprovalToken(REPORT_ID, 'MOSHE_1710');
             const url = `${API_BASE}/approve-and-send?report_id=${REPORT_ID}&token=${token}&confirm=1&respond=json`;
-            showToast('שולח רשימת מסמכים...', 'info');
             try {
                 const res = await fetchWithTimeout(url, {}, FETCH_TIMEOUTS.mutate);
                 const data = await res.json();
@@ -1742,16 +1773,21 @@ function approveAndSendToClient() {
                     if (!DOCS_FIRST_SENT_AT) DOCS_FIRST_SENT_AT = new Date().toISOString();
                     if (!CURRENT_STAGE || CURRENT_STAGE.charAt(0) < '3') CURRENT_STAGE = '3-Collecting_Docs';
                     updateSentBadge();
-                    showToast('רשימת המסמכים נשלחה ללקוח בהצלחה!', 'success');
-                    const sendBtn = document.getElementById('approveSendBtn');
-                    if (sendBtn) {
-                        sendBtn.disabled = true;
-                        sendBtn.title = 'המייל כבר נשלח ללקוח';
-                    }
+                    setBtnState(sendBtn, 'success', 'נשלח!');
+                    setTimeout(() => {
+                        if (sendBtn) {
+                            sendBtn.classList.remove('btn-success-flash');
+                            sendBtn.innerHTML = '✓ נשלח ללקוח';
+                            sendBtn.disabled = true;
+                            sendBtn.title = 'המייל כבר נשלח ללקוח';
+                        }
+                    }, 1500);
                 } else {
+                    setBtnState(sendBtn, 'idle');
                     showToast('שגיאה בשליחת המייל. נסה שנית.', 'error');
                 }
             } catch (e) {
+                setBtnState(sendBtn, 'idle');
                 showToast('שגיאה בשליחת המייל. נסה שנית.', 'error');
             }
         },
