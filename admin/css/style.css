@@ -3507,7 +3507,7 @@ tr.reminder-loading td:last-child {
 }
 
 .doc-combobox-option {
-    padding: var(--sp-2) var(--sp-4);
+    padding: var(--sp-3) var(--sp-4);
     font-size: var(--text-sm);
     color: var(--gray-700);
     cursor: pointer;
@@ -3516,6 +3516,7 @@ tr.reminder-loading td:last-child {
     align-items: center;
     justify-content: space-between;
     gap: var(--sp-2);
+    border-bottom: 1px solid var(--gray-100);
 }
 
 .doc-combobox-option:hover {
