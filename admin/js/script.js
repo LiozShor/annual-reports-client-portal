@@ -1487,6 +1487,8 @@ function createDocCombobox(container, docs, { currentMatchId = null, onSelect = 
         groups[groups.length - 1].docs.push(doc);
     }
 
+    const getDisplayName = (doc) => doc.name_short || doc.name || doc.template_id || '';
+
     container.innerHTML = `
         <div class="doc-combobox">
             <input class="doc-combobox-input" placeholder="\ud83d\udd0d \u05d7\u05e4\u05e9 \u05de\u05e1\u05de\u05da..." autocomplete="off" />
@@ -1547,7 +1549,7 @@ function createDocCombobox(container, docs, { currentMatchId = null, onSelect = 
 
         for (const group of groups) {
             const filtered = group.docs.filter(d =>
-                !filter || matchesFilter(d.name, filter)
+                !filter || matchesFilter(d.name, filter) || matchesFilter(getDisplayName(d), filter)
             );
             if (filtered.length === 0) continue;
             hasResults = true;
@@ -1557,7 +1559,7 @@ function createDocCombobox(container, docs, { currentMatchId = null, onSelect = 
                 const isCurrent = currentMatchId && doc.template_id === currentMatchId;
                 const cls = isCurrent ? ' current-match' : '';
                 const badge = isCurrent ? `<span class="current-badge">\u25c0 \u05e0\u05d5\u05db\u05d7\u05d9</span>` : '';
-                html += `<div class="doc-combobox-option${cls}" data-value="${escapeAttr(doc.template_id)}" data-doc-id="${escapeAttr(doc.doc_record_id || '')}" data-name="${escapeAttr(doc.name || '')}">${escapeHtml(doc.name || '')}${badge}</div>`;
+                html += `<div class="doc-combobox-option${cls}" data-value="${escapeAttr(doc.template_id)}" data-doc-id="${escapeAttr(doc.doc_record_id || '')}" data-name="${escapeAttr(getDisplayName(doc))}">${renderDocLabel(getDisplayName(doc))}${badge}</div>`;
             }
         }
 
@@ -1662,7 +1664,7 @@ function createDocCombobox(container, docs, { currentMatchId = null, onSelect = 
             const doc = docs.find(d => d.template_id === val);
             if (doc) {
                 selectedValue = val;
-                input.value = doc.name || val;
+                input.value = getDisplayName(doc) || val;
                 input.classList.add('has-value');
                 combobox.dataset.selectedValue = val;
             }
