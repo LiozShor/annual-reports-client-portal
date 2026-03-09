@@ -4436,6 +4436,11 @@ tr:hover .client-edit-link {
 .notes-cell:hover {
     background: var(--gray-50);
 }
+.notes-text:empty::after {
+    content: '+ הערה';
+    color: var(--gray-300);
+    font-size: var(--text-xs, 11px);
+}
 .notes-editor {
     width: 100%;
     min-height: 48px;
