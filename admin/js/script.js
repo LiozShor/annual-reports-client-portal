@@ -2239,7 +2239,7 @@ function renderAICard(item) {
                 <i data-lucide="check" class="icon-sm"></i> נכון
             </button>
             <button class="btn btn-link btn-sm" onclick="showAIReassignModal('${escapeAttr(item.id)}')">
-                <i data-lucide="arrow-right-left" class="icon-sm"></i> שייך מחדש
+                <i data-lucide="arrow-right-left" class="icon-sm"></i> לא נכון, שייך מחדש
             </button>
             <button class="btn btn-outline-danger btn-sm" onclick="rejectAIClassification('${escapeAttr(item.id)}')">
                 <i data-lucide="x" class="icon-sm"></i> דחה
@@ -2342,7 +2342,7 @@ function renderAICard(item) {
                 <i data-lucide="check" class="icon-sm"></i> נכון
             </button>
             <button class="btn btn-link btn-sm" onclick="showAIReassignModal('${escapeAttr(item.id)}')">
-                <i data-lucide="arrow-right-left" class="icon-sm"></i> שייך מחדש
+                <i data-lucide="arrow-right-left" class="icon-sm"></i> לא נכון, שייך מחדש
             </button>
             <button class="btn btn-outline-danger btn-sm" onclick="rejectAIClassification('${escapeAttr(item.id)}')">
                 <i data-lucide="x" class="icon-sm"></i> דחה
@@ -2498,7 +2498,7 @@ function startReReview(recordId) {
                 <i data-lucide="check" class="icon-sm"></i> נכון
             </button>
             <button class="btn btn-link btn-sm" onclick="showAIReassignModal('${escapeAttr(recordId)}')">
-                <i data-lucide="arrow-right-left" class="icon-sm"></i> שייך מחדש
+                <i data-lucide="arrow-right-left" class="icon-sm"></i> לא נכון, שייך מחדש
             </button>
             <button class="btn btn-outline-danger btn-sm" onclick="rejectAIClassification('${escapeAttr(recordId)}')">
                 <i data-lucide="x" class="icon-sm"></i> דחה
@@ -2511,7 +2511,7 @@ function startReReview(recordId) {
         // unmatched or issuer-mismatch — show reject + reassign
         actionsHtml = `
             <button class="btn btn-link btn-sm" onclick="showAIReassignModal('${escapeAttr(recordId)}')">
-                <i data-lucide="arrow-right-left" class="icon-sm"></i> שייך מחדש
+                <i data-lucide="arrow-right-left" class="icon-sm"></i> לא נכון, שייך מחדש
             </button>
             <button class="btn btn-outline-danger btn-sm" onclick="rejectAIClassification('${escapeAttr(recordId)}')">
                 <i data-lucide="x" class="icon-sm"></i> דחה
