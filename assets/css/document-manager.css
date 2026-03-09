@@ -840,7 +840,31 @@ body {
     gap: var(--sp-3);
     justify-content: center;
     margin-top: var(--sp-5);
+    padding-bottom: var(--sp-5);
     flex-wrap: wrap;
+}
+
+/* ==================== BUTTON LOADING STATES ==================== */
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+.btn-loading {
+    opacity: 0.85;
+    pointer-events: none;
+}
+
+.btn-loading .btn-spinner {
+    animation: spin 0.8s linear infinite;
+    flex-shrink: 0;
+}
+
+.btn-success-flash {
+    background: var(--success-500) !important;
+    border-color: var(--success-500) !important;
+    color: white !important;
+    pointer-events: none;
+    transition: background 0.3s ease, border-color 0.3s ease;
 }
 
 /* ==================== NOT STARTED VIEW ==================== */
