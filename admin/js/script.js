@@ -4126,9 +4126,10 @@ function editReminderDate(reportId, cell) {
     if (!r) return;
     const currentDate = r.reminder_next_date || '';
 
-    const addDays = (days) => {
+    const addTime = (days, months = 0) => {
         const d = new Date();
-        d.setDate(d.getDate() + days);
+        if (months) d.setMonth(d.getMonth() + months);
+        if (days) d.setDate(d.getDate() + days);
         return d.toISOString().split('T')[0];
     };
 
@@ -4137,9 +4138,9 @@ function editReminderDate(reportId, cell) {
         <div class="date-editor-title">עריכת תאריך תזכורת</div>
         <input type="date" value="${currentDate}" class="date-editor-input" id="dateEditorInput">
         <div class="date-quick-picks">
-            <button class="date-quick-pick" data-date="${addDays(1)}">מחר</button>
-            <button class="date-quick-pick" data-date="${addDays(3)}">3 ימים</button>
-            <button class="date-quick-pick" data-date="${addDays(7)}">שבוע</button>
+            <button class="date-quick-pick" data-date="${addTime(7)}">שבוע</button>
+            <button class="date-quick-pick" data-date="${addTime(0, 1)}">חודש</button>
+            <button class="date-quick-pick" data-date="${addTime(0, 2)}">חודשיים</button>
         </div>
         <div class="date-editor-actions">
             <button class="btn btn-primary btn-sm" id="dateEditorSave">שמור</button>
