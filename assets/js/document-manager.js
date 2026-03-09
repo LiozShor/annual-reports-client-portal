@@ -20,6 +20,7 @@ const STAGE_LABELS = {
     '7-Completed':           'הוגש',
 };
 let DOCS_FIRST_SENT_AT = null;
+let REPORT_NOTES = '';
 const API_BASE = 'https://liozshor.app.n8n.cloud/webhook';
 
 // Admin auth token — required for this office-only page
@@ -207,6 +208,14 @@ async function loadDocuments() {
         DOCS_FIRST_SENT_AT = data.docs_first_sent_at || null;
         updateSentBadge();
 
+        // Report notes
+        REPORT_NOTES = data.notes || '';
+        const notesTextarea = document.getElementById('reportNotesTextarea');
+        if (notesTextarea) {
+            notesTextarea.value = REPORT_NOTES;
+            notesTextarea.addEventListener('blur', handleNotesSave);
+        }
+
         // Handle case where report is found but stage is 1 (Not Started)
         if (data.stage && (data.stage.startsWith('1') || data.stage.startsWith('2'))) {
             if ((!data.groups || data.document_count === 0) && data.stage.startsWith('1')) {
@@ -270,6 +279,30 @@ async function loadDocuments() {
         console.error('Document manager load failed');
         document.getElementById('loading').style.display = 'none';
         showAlert(getErrorMessage(error, 'he'), 'error');
+    }
+}
+
+// Save report notes on blur
+async function handleNotesSave() {
+    const textarea = document.getElementById('reportNotesTextarea');
+    if (!textarea) return;
+    const newText = textarea.value;
+    if (newText === REPORT_NOTES) return;
+    REPORT_NOTES = newText;
+    try {
+        const response = await fetchWithTimeout(`${API_BASE}/admin-update-client`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${ADMIN_TOKEN}` },
+            body: JSON.stringify({ token: ADMIN_TOKEN, report_id: REPORT_ID, action: 'update-notes', notes: newText })
+        });
+        const result = await response.json();
+        if (result.ok) {
+            showToast('הערה נשמרה', 'success');
+        } else {
+            throw new Error(result.error || 'Failed');
+        }
+    } catch (err) {
+        showToast('שגיאה בשמירת הערה', 'error');
     }
 }
 
@@ -1903,6 +1936,12 @@ function printQuestionnaireFromDocManager() {
         cqHtml += `</div>`;
     }
 
+    // Office notes
+    let notesHtml = '';
+    if (REPORT_NOTES) {
+        notesHtml = `<div class="office-notes"><h4>הערות משרד</h4><div class="notes-content">${escapeHtml(REPORT_NOTES)}</div></div>`;
+    }
+
     const html = `<!DOCTYPE html><html dir="rtl" lang="he"><head>
 <meta charset="UTF-8"><title>שאלון — ${escapeHtml(info.name || '')}</title>
 <style>
@@ -1922,6 +1961,9 @@ function printQuestionnaireFromDocManager() {
   .cq-q{font-weight:600;color:#78350f;font-size:10pt}
   .cq-a{color:#4b5563;font-size:10pt;margin-top:2px;padding-right:16px}
   .cq-no-answer{color:#9ca3af;font-style:italic}
+  .office-notes{margin-top:12px;border-right:3px solid #3b82f6;padding:8px 12px;background:#eff6ff;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .office-notes h4{margin:0 0 8px;font-size:10pt;color:#1e40af;text-transform:uppercase;letter-spacing:0.05em}
+  .office-notes .notes-content{color:#1f2937;font-size:10pt;white-space:pre-wrap}
   .footer{margin-top:12px;font-size:8pt;color:#9ca3af;border-top:1px solid #e5e7eb;padding-top:8px}
 </style></head><body>
 <div class="header">
@@ -1931,6 +1973,7 @@ function printQuestionnaireFromDocManager() {
 <table><thead><tr><th class="q-col">שאלה</th><th class="a-col">תשובה</th></tr></thead>
 <tbody>${rows}</tbody></table>
 ${cqHtml}
+${notesHtml}
 <div class="footer">הודפס מתוך מערכת ניהול דוחות שנתיים — משה אציץ רו"ח</div>
 </body></html>`;
 
