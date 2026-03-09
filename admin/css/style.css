@@ -3074,10 +3074,31 @@ tr.reminder-loading td:last-child {
 .reminder-date-cell {
     cursor: pointer;
     padding: 4px 10px;
+    position: relative;
 }
 
-.reminder-date-cell:hover {
-    filter: brightness(0.95);
+.reminder-date-cell.editable-date:hover {
+    background: var(--primary-50, #eff6ff);
+    border-radius: 6px;
+}
+
+.reminder-date-cell.editable-date .reminder-date {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.reminder-date-cell.editable-date .edit-pencil {
+    opacity: 0;
+    transition: opacity 0.15s;
+    width: 13px;
+    height: 13px;
+    color: var(--gray-400);
+    flex-shrink: 0;
+}
+
+.reminder-date-cell.editable-date:hover .edit-pencil {
+    opacity: 1;
 }
 
 .reminder-date-editor {
