@@ -1942,24 +1942,6 @@ function applyAIFilters() {
     renderAICards(filtered);
 }
 
-const AI_DOC_NAMES = {
-    T001:'אישור תושב', T002:'ספח תעודת זהות', T003:'מסמכי שינוי מצב משפחתי',
-    T101:'אישור ועדת השמה', T102:'אישור קצבת ילד נכה',
-    T201:'טופס 106', T202:'טופס 106 (בן/בת זוג)',
-    T301:'אישור קצבה ביטוח לאומי', T302:'אישור קצבה ביטוח לאומי (בן/בת זוג)',
-    T303:'אישור קצבת נכות', T304:'אישור דמי לידה',
-    T305:'אישור קצבת שאירים', T306:'אישור קצבת שאירים (בן/בת זוג)',
-    T401:'אישור משיכת ביטוח', T402:'אישור משיכת ביטוח (נוסף)',
-    T501:'אישור שנתי קופת גמל', T601:'טופס 867 (אישור ניכוי מס)',
-    T701:'דוח רווחי קריפטו', T801:'אישור זכייה',
-    T901:'חוזה שכירות (הכנסה)', T902:'חוזה שכירות (הוצאה)',
-    T1001:'רשימת מלאי', T1101:'אישור ניכוי מס הכנסה', T1102:'אישור ניכוי ביטוח לאומי',
-    T1201:'קבלות תרומה', T1301:'תעודת שחרור צבאי',
-    T1401:'קבלות הוצאות אבל', T1402:'מסמכי מוסד', T1403:'מסמכי פטור ממס',
-    T1501:'תעודת השכלה', T1601:'אסמכתאות הכנסה מחול', T1602:'דוח מס מחול',
-    T1701:'מסמכי הכנסה אחרת'
-};
-
 // Client/spouse template pairs — same document type, different person
 const RELATED_TEMPLATES = {
     T201: ['T201', 'T202'], T202: ['T201', 'T202'],
@@ -2150,11 +2132,11 @@ function renderAICards(items) {
             for (const group of catGroups) {
                 const tagsHtml = group.docs.map(d => {
                     const id = d.template_id || d.name || '';
-                    const label = d.name || AI_DOC_NAMES[id] || id;
+                    const label = d.name_short || d.name || id;
                     const isReceived = d.status === 'Received';
                     const tagClass = isReceived ? 'ai-doc-tag-received' : 'ai-missing-doc-tag';
                     const prefix = isReceived ? '&#x2713; ' : '';
-                    return `<span class="${tagClass}">${prefix}${escapeHtml(label)}</span>`;
+                    return `<span class="${tagClass}">${prefix}${renderDocLabel(label)}</span>`;
                 }).join('');
                 categoriesHtml += `
                     <div class="ai-missing-category">${escapeHtml(group.emoji)} ${escapeHtml(group.name)}</div>
@@ -2256,17 +2238,12 @@ function renderAICard(item) {
     let actionsHtml = '';
 
     if (state === 'full') {
-        // State A: Full match — green border, doc name + badge
-        const templateLabel = AI_DOC_NAMES[item.matched_template_id] || item.matched_template_name || '';
-        const docName = (item.matched_doc_name || '').replace(/<\/?b>/g, '');
-        const aiIssuer = item.issuer_name || '';
-        const docDisplayName = templateLabel && docName && !docName.includes(templateLabel)
-            ? `${templateLabel} – ${docName}`
-            : (docName || (templateLabel + (aiIssuer ? ` \u2013 ${aiIssuer}` : '')));
+        // State A: Full match — green border, short name from API
+        const docDisplayName = item.matched_short_name || item.matched_template_name || 'לא ידוע';
         classificationHtml = `
             <span class="ai-classification-type">
                 <span class="ai-confidence-prefix">🤖 AI חושב שזה:</span>
-                <span class="ai-template-match">${escapeHtml(docDisplayName)}</span>
+                <span class="ai-template-match">${renderDocLabel(docDisplayName)}</span>
             </span>
         `;
         const approveDisabled = item.is_unrequested;
@@ -2286,7 +2263,7 @@ function renderAICard(item) {
 
     } else if (state === 'issuer-mismatch') {
         // State B: Issuer mismatch — amber border, type + badge, issuer info, validation area
-        const templateName = AI_DOC_NAMES[item.matched_template_id] || item.matched_template_name || item.matched_template_id || '';
+        const templateName = item.matched_short_name || item.matched_template_name || item.matched_template_id || '';
         const aiIssuer = item.issuer_name || 'לא ידוע';
 
         // Filter same-type docs (including client/spouse pairs) from missing_docs
@@ -2297,14 +2274,14 @@ function renderAICard(item) {
         if (sameTypeDocs.length > 0) {
             // Card-style radio options
             const radiosHtml = sameTypeDocs.map(d => {
-                const docName = d.name || AI_DOC_NAMES[d.template_id] || d.template_id;
-                const docLabel = d.name_short || d.name_html || docName;
+                const docName = d.name_short || d.name || d.template_id;
+                const docLabel = d.name_short || d.name_html || d.name || d.template_id;
                 return `
                     <label class="ai-comparison-radio">
                         <input type="radio" name="compare_${escapeAttr(item.id)}"
                             data-template-id="${escapeAttr(d.template_id)}"
                             data-doc-record-id="${escapeAttr(d.doc_record_id || '')}"
-                            data-doc-name="${escapeAttr(docName)}"
+                            data-doc-name="${escapeAttr(docName.replace(/<\/?b>/g, ''))}"
                             onchange="handleComparisonRadio('${escapeAttr(item.id)}', this)">
                         <span>${renderDocLabel(docLabel)}</span>
                     </label>
@@ -2336,7 +2313,7 @@ function renderAICard(item) {
             // Edge case: no same-type docs in missing — fall back to full combobox
             comparisonHtml = `
                 <div class="ai-validation-area">
-                    <div class="ai-validation-title">⚠️ כל מסמכי ${escapeHtml(templateName)} כבר התקבלו</div>
+                    <div class="ai-validation-title">⚠️ כל מסמכי ${renderDocLabel(templateName)} כבר התקבלו</div>
                 </div>
             `;
             actionsHtml = `
@@ -2357,24 +2334,19 @@ function renderAICard(item) {
         classificationHtml = `
             <span class="ai-classification-type">
                 <span class="ai-confidence-prefix">🤖 AI חושב שזה:</span>
-                <span class="ai-template-match">${escapeHtml(templateName)}</span>
+                <span class="ai-template-match">${renderDocLabel(templateName)}</span>
             </span>
             <div class="ai-issuer-received">🤖 AI חושב שזה התקבל מ: <span class="ai-issuer-value">${escapeHtml(aiIssuer)}</span></div>
             ${comparisonHtml}
         `;
 
     } else if (state === 'fuzzy') {
-        // State C: Fuzzy match — green border, doc name + badge
-        const templateLabel = AI_DOC_NAMES[item.matched_template_id] || item.matched_template_name || '';
-        const docName = (item.matched_doc_name || '').replace(/<\/?b>/g, '');
-        const aiIssuer = item.issuer_name || '';
-        const docDisplayName = templateLabel && docName && !docName.includes(templateLabel)
-            ? `${templateLabel} – ${docName}`
-            : (docName || (templateLabel + (aiIssuer ? ` \u2013 ${aiIssuer}` : '')));
+        // State C: Fuzzy match — green border, short name from API
+        const docDisplayName = item.matched_short_name || item.matched_template_name || 'לא ידוע';
         classificationHtml = `
             <span class="ai-classification-type">
                 <span class="ai-confidence-prefix">🤖 AI חושב שזה:</span>
-                <span class="ai-template-match">${escapeHtml(docDisplayName)}</span>
+                <span class="ai-template-match">${renderDocLabel(docDisplayName)}</span>
             </span>
         `;
         const fuzzyApproveDisabled = item.is_unrequested;
@@ -2485,12 +2457,8 @@ function renderReviewedCard(item, reviewStatus) {
         } catch { /* ignore parse errors */ }
     }
 
-    // Classification info
-    const docName = item.matched_doc_name || item.attachment_name || '';
-    const templateLabel = AI_DOC_NAMES[item.matched_template_id] || item.matched_template_name || '';
-    const displayName = (templateLabel && docName && !docName.includes(templateLabel))
-        ? `${templateLabel} – ${docName.replace(/<\/?b>/g, '')}`
-        : (docName.replace(/<\/?b>/g, '') || templateLabel || 'לא ידוע');
+    // Classification info — use API-resolved short name
+    const displayName = item.matched_short_name || item.matched_template_name || 'לא ידוע';
 
     // Change Decision button — all reviewed cards can be re-reviewed (reassign safe via onedrive_item_id)
     const canChangeDecision = true;
@@ -2512,7 +2480,7 @@ function renderReviewedCard(item, reviewStatus) {
             <div class="ai-card-body">
                 <div class="ai-classification-result">
                     <div class="ai-classification-label">
-                        <span class="ai-template-match">${escapeHtml(displayName)}</span>
+                        <span class="ai-template-match">${renderDocLabel(displayName)}</span>
                     </div>
                 </div>
                 ${rejectionHtml}
@@ -2860,7 +2828,10 @@ async function submitAIReassign(recordId, templateId, docRecordId, loadingText, 
         if (reassignedItem && data.doc_title) {
             reassignedItem.matched_doc_name = data.doc_title;
             reassignedItem.matched_template_id = templateId;
-            reassignedItem.matched_template_name = AI_DOC_NAMES[templateId] || '';
+            // Derive short name from all_docs if API doesn't provide it
+            const matchedDoc = (reassignedItem.all_docs || []).find(d => d.template_id === templateId);
+            reassignedItem.matched_short_name = data.matched_short_name || (matchedDoc && matchedDoc.name_short) || data.doc_title || '';
+            reassignedItem.matched_template_name = reassignedItem.matched_short_name;
         }
         if (docRecordId) {
             updateClientDocState(reassignedItem?.client_name, docRecordId);
@@ -3050,12 +3021,11 @@ function updateClientDocState(clientName, docRecordId) {
         let categoriesHtml = '';
         for (const group of catGroups) {
             const tagsHtml = group.docs.map(d => {
-                const id = d.template_id || d.name || '';
-                const label = d.name || AI_DOC_NAMES[id] || id;
+                const label = d.name_short || d.name || d.template_id || '';
                 const isReceived = d.status === 'Received';
                 const tagClass = isReceived ? 'ai-doc-tag-received' : 'ai-missing-doc-tag';
                 const prefix = isReceived ? '&#x2713; ' : '';
-                return `<span class="${tagClass}">${prefix}${escapeHtml(label)}</span>`;
+                return `<span class="${tagClass}">${prefix}${renderDocLabel(label)}</span>`;
             }).join('');
             categoriesHtml += `
                 <div class="ai-missing-category">${escapeHtml(group.emoji)} ${escapeHtml(group.name)}</div>
@@ -3104,14 +3074,14 @@ function updateClientDocState(clientName, docRecordId) {
                 <div class="ai-validation-title">האם זה אחד מהבאים?</div>
                 <div class="ai-validation-options">
                     ${sameTypeDocs.map(d => {
-                        const docName = d.name || AI_DOC_NAMES[d.template_id] || d.template_id;
-                        const docLabel = d.name_short || d.name_html || docName;
+                        const docName = d.name_short || d.name || d.template_id;
+                        const docLabel = d.name_short || d.name_html || d.name || d.template_id;
                         return `
                             <label class="ai-comparison-radio">
                                 <input type="radio" name="compare_${escapeAttr(cardId)}"
                                     data-template-id="${escapeAttr(d.template_id)}"
                                     data-doc-record-id="${escapeAttr(d.doc_record_id || '')}"
-                                    data-doc-name="${escapeAttr(docName)}"
+                                    data-doc-name="${escapeAttr(docName.replace(/<\/?b>/g, ''))}"
                                     onchange="handleComparisonRadio('${escapeAttr(cardId)}', this)">
                                 <span>${renderDocLabel(docLabel)}</span>
                             </label>
@@ -3121,9 +3091,9 @@ function updateClientDocState(clientName, docRecordId) {
             `;
         } else {
             // All same-type docs received — show message
-            const templateName = AI_DOC_NAMES[cardItem.matched_template_id] || cardItem.matched_template_name || '';
+            const templateName = cardItem.matched_short_name || cardItem.matched_template_name || '';
             validationArea.innerHTML = `
-                <div class="ai-validation-title">⚠️ כל מסמכי ${escapeHtml(templateName)} כבר התקבלו</div>
+                <div class="ai-validation-title">⚠️ כל מסמכי ${renderDocLabel(templateName)} כבר התקבלו</div>
             `;
         }
     });
