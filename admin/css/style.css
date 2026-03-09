@@ -3101,30 +3101,73 @@ tr.reminder-loading td:last-child {
     opacity: 1;
 }
 
-.reminder-date-editor {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
+/* Date Editor Popover */
+.date-editor-popover {
+    width: 240px;
+    padding: var(--sp-4);
 }
 
-.reminder-date-input {
-    width: 130px;
-    padding: 2px 6px;
+.date-editor-popover .date-editor-title {
+    font-size: var(--text-sm);
+    font-weight: 700;
+    color: var(--text-secondary);
+    margin-bottom: var(--sp-3);
+}
+
+.date-editor-popover .date-editor-input {
+    width: 100%;
+    padding: 8px 10px;
     border: 1px solid var(--border);
-    border-radius: 6px;
-    font-size: 13px;
+    border-radius: 8px;
+    font-size: 14px;
     background: var(--surface-primary);
     outline: none;
-    box-shadow: 0 0 0 2px var(--primary-100);
     direction: ltr;
+    text-align: center;
+    transition: border-color 0.15s, box-shadow 0.15s;
 }
 
-.reminder-date-save,
-.reminder-date-cancel {
-    padding: 2px 6px !important;
-    font-size: 13px !important;
-    min-width: 0 !important;
-    line-height: 1;
+.date-editor-popover .date-editor-input:focus {
+    border-color: var(--primary-400);
+    box-shadow: 0 0 0 3px var(--primary-100);
+}
+
+.date-editor-popover .date-quick-picks {
+    display: flex;
+    gap: 6px;
+    margin-top: var(--sp-3);
+    flex-wrap: wrap;
+}
+
+.date-editor-popover .date-quick-pick {
+    flex: 1;
+    min-width: 0;
+    padding: 5px 4px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--surface-secondary);
+    font-size: 12px;
+    cursor: pointer;
+    text-align: center;
+    transition: background 0.15s, border-color 0.15s;
+    color: var(--text-primary);
+}
+
+.date-editor-popover .date-quick-pick:hover {
+    background: var(--primary-50, #eff6ff);
+    border-color: var(--primary-300);
+}
+
+.date-editor-popover .date-editor-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: var(--sp-3);
+}
+
+.date-editor-popover .date-editor-actions .btn {
+    flex: 1;
+    padding: 6px 0;
+    font-size: 13px;
 }
 
 .btn-link {

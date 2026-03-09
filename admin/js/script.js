@@ -4115,38 +4115,79 @@ function showReminderDatePicker(reportId, currentDate) {
 }
 
 function editReminderDate(reportId, cell) {
-    if (cell.querySelector('.reminder-date-editor')) return;
+    const popover = document.getElementById('reminderDatePopover');
+    // Toggle off if already open for this report
+    if (popover.style.display !== 'none' && popover.dataset.reportId === reportId) {
+        closeDatePopover();
+        return;
+    }
+
     const r = remindersData.find(x => x.report_id === reportId);
     if (!r) return;
     const currentDate = r.reminder_next_date || '';
 
-    cell.innerHTML = `<span class="reminder-date-editor">
-        <input type="date" value="${currentDate}" class="reminder-date-input">
-        <button class="btn btn-sm btn-primary reminder-date-save" title="שמור" aria-label="שמור">✓</button>
-        <button class="btn btn-sm btn-ghost reminder-date-cancel" title="ביטול" aria-label="בטל">✕</button>
-    </span>`;
-    const input = cell.querySelector('.reminder-date-input');
+    const addDays = (days) => {
+        const d = new Date();
+        d.setDate(d.getDate() + days);
+        return d.toISOString().split('T')[0];
+    };
+
+    popover.dataset.reportId = reportId;
+    popover.innerHTML = `
+        <div class="date-editor-title">עריכת תאריך תזכורת</div>
+        <input type="date" value="${currentDate}" class="date-editor-input" id="dateEditorInput">
+        <div class="date-quick-picks">
+            <button class="date-quick-pick" data-date="${addDays(1)}">מחר</button>
+            <button class="date-quick-pick" data-date="${addDays(3)}">3 ימים</button>
+            <button class="date-quick-pick" data-date="${addDays(7)}">שבוע</button>
+        </div>
+        <div class="date-editor-actions">
+            <button class="btn btn-primary btn-sm" id="dateEditorSave">שמור</button>
+            <button class="btn btn-ghost btn-sm" id="dateEditorCancel">ביטול</button>
+        </div>`;
+
+    positionFloating(cell, popover);
+    popover.style.display = 'block';
+
+    const input = popover.querySelector('#dateEditorInput');
     input.focus();
 
     const save = () => {
         const val = input.value;
-        if (val) executeReminderAction('change_date', [reportId], val);
-        else restoreDateCell(cell, r);
+        if (val) {
+            closeDatePopover();
+            executeReminderAction('change_date', [reportId], val);
+        }
     };
 
-    cell.querySelector('.reminder-date-save').addEventListener('click', (e) => { e.stopPropagation(); save(); });
-    cell.querySelector('.reminder-date-cancel').addEventListener('click', (e) => { e.stopPropagation(); restoreDateCell(cell, r); });
+    popover.querySelector('#dateEditorSave').addEventListener('click', (e) => { e.stopPropagation(); save(); });
+    popover.querySelector('#dateEditorCancel').addEventListener('click', (e) => { e.stopPropagation(); closeDatePopover(); });
+    popover.querySelectorAll('.date-quick-pick').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            input.value = btn.dataset.date;
+            save();
+        });
+    });
     input.addEventListener('keydown', (e) => {
         if (e.key === 'Enter') { e.preventDefault(); save(); }
-        if (e.key === 'Escape') { e.preventDefault(); restoreDateCell(cell, r); }
+        if (e.key === 'Escape') { e.preventDefault(); closeDatePopover(); }
+    });
+
+    requestAnimationFrame(() => {
+        document.addEventListener('click', handleDatePopoverOutsideClick);
     });
 }
 
-function restoreDateCell(cell, r) {
-    const nextDate = r.reminder_next_date ? formatDateHe(r.reminder_next_date) : '-';
-    const dateClass = r.reminder_next_date && r.reminder_next_date < new Date().toISOString().split('T')[0] ? 'reminder-date-overdue' : '';
-    cell.innerHTML = `<span class="reminder-date ${dateClass}">${nextDate}<i data-lucide="pencil" class="edit-pencil"></i></span>`;
-    if (typeof lucide !== 'undefined') lucide.createIcons({ attrs: { class: 'icon-sm' } });
+function handleDatePopoverOutsideClick(e) {
+    const popover = document.getElementById('reminderDatePopover');
+    if (popover && !popover.contains(e.target)) closeDatePopover();
+}
+
+function closeDatePopover() {
+    const popover = document.getElementById('reminderDatePopover');
+    if (popover) popover.style.display = 'none';
+    document.removeEventListener('click', handleDatePopoverOutsideClick);
 }
 
 // ==================== REMINDER SETTINGS MODAL ====================
