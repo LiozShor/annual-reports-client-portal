@@ -1488,6 +1488,7 @@ function createDocCombobox(container, docs, { currentMatchId = null, onSelect = 
     }
 
     const getDisplayName = (doc) => doc.name_short || doc.name || doc.template_id || '';
+    const getPlainName = (doc) => (getDisplayName(doc)).replace(/<\/?b>/g, '');
 
     container.innerHTML = `
         <div class="doc-combobox">
@@ -1559,7 +1560,7 @@ function createDocCombobox(container, docs, { currentMatchId = null, onSelect = 
                 const isCurrent = currentMatchId && doc.template_id === currentMatchId;
                 const cls = isCurrent ? ' current-match' : '';
                 const badge = isCurrent ? `<span class="current-badge">\u25c0 \u05e0\u05d5\u05db\u05d7\u05d9</span>` : '';
-                html += `<div class="doc-combobox-option${cls}" data-value="${escapeAttr(doc.template_id)}" data-doc-id="${escapeAttr(doc.doc_record_id || '')}" data-name="${escapeAttr(getDisplayName(doc))}">${renderDocLabel(getDisplayName(doc))}${badge}</div>`;
+                html += `<div class="doc-combobox-option${cls}" data-value="${escapeAttr(doc.template_id)}" data-doc-id="${escapeAttr(doc.doc_record_id || '')}" data-name="${escapeAttr(getPlainName(doc))}">${renderDocLabel(getDisplayName(doc))}${badge}</div>`;
             }
         }
 
@@ -2815,8 +2816,10 @@ async function submitAIReassign(recordId, templateId, docRecordId, loadingText, 
         if (reassignedItem && data.doc_title) {
             reassignedItem.matched_doc_name = data.doc_title;
             reassignedItem.matched_template_id = templateId;
-            // Derive short name from all_docs if API doesn't provide it
-            const matchedDoc = (reassignedItem.all_docs || []).find(d => d.template_id === templateId);
+            // Derive short name from all_docs if API doesn't provide it — match by doc_record_id for multi-instance types
+            const matchedDoc = docRecordId
+                ? (reassignedItem.all_docs || []).find(d => d.doc_record_id === docRecordId)
+                : (reassignedItem.all_docs || []).find(d => d.template_id === templateId);
             reassignedItem.matched_short_name = data.matched_short_name || (matchedDoc && matchedDoc.name_short) || data.doc_title || '';
             reassignedItem.matched_template_name = reassignedItem.matched_short_name;
         }
