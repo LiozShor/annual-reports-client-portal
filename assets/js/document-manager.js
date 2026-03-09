@@ -1127,7 +1127,7 @@ function openConfirmation() {
     const TXT_NO_CHANGES = "לא בוצעו שינויים. אנא בצע שינויים לפני השמירה.";
 
     const customDocRaw = (document.getElementById('customDoc')?.value ?? '').trim();
-    const notes = (document.getElementById('notes')?.value ?? '').trim();
+    const notes = '';
 
     const docsToRemove = currentDocuments
         .filter(doc => markedForRemoval.has(doc.id))
@@ -1294,7 +1294,7 @@ async function confirmSubmit() {
     closeConfirmation();
 
     const customDoc = document.getElementById('customDoc').value.trim();
-    const notes = document.getElementById('notes').value.trim();
+    const notes = '';
 
     const docsToRemoveObjs = currentDocuments.filter(doc => markedForRemoval.has(doc.id));
     const docsToRemoveIds = docsToRemoveObjs.map(d => d.id);
@@ -1479,7 +1479,6 @@ function resetForm() {
     docsToAdd.clear();
     sendEmailOnSave = false;
     document.getElementById('customDoc').value = '';
-    document.getElementById('notes').value = '';
     document.getElementById('detailInput').classList.remove('show');
     document.getElementById('docTypeSelect').value = '';
     pendingTemplate = null;
