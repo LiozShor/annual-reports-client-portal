@@ -18,8 +18,9 @@ if (window.location.search) {
 
 const FORM_HE = '1AkYKb';
 const FORM_EN = '1AkopM';
-const CHECK_ENDPOINT = 'https://liozshor.app.n8n.cloud/webhook/check-existing-submission';
-const RESET_ENDPOINT = 'https://liozshor.app.n8n.cloud/webhook/reset-submission';
+// Endpoints loaded from shared/endpoints.js
+const CHECK_ENDPOINT = ENDPOINTS.CHECK_EXISTING_SUBMISSION;
+const RESET_ENDPOINT = ENDPOINTS.RESET_SUBMISSION;
 
 // --- Localization ---
 // Base64 stored to avoid encoding issues in some editors
@@ -71,16 +72,7 @@ function reinitIcons() {
 
 // --- Logic ---
 
-// Stage rank (logic only, not displayed)
-const STAGE_ORDER = {
-    '1-Send_Questionnaire': 1,
-    '2-Waiting_For_Answers': 2,
-    '3-Collecting_Docs': 3,
-    '4-Review': 4,
-    '5-Moshe_Review': 5,
-    '6-Before_Signing': 6,
-    '7-Completed': 7
-};
+// STAGE_ORDER loaded from shared/constants.js
 
 function stageRank(s) {
     return STAGE_ORDER[s] || 0;

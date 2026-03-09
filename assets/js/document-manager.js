@@ -10,21 +10,14 @@ let CLIENT_NAME = '';
 let SPOUSE_NAME = '';
 let YEAR = '';
 let CURRENT_STAGE = '';
-const STAGE_LABELS = {
-    '1-Send_Questionnaire':  'ממתין לשליחה',
-    '2-Waiting_For_Answers': 'טרם מילא שאלון',
-    '3-Collecting_Docs':     'מילא שאלון וחסרים מסמכים',
-    '4-Review':              'מוכן להכנה',
-    '5-Moshe_Review':        'מוכן לבדיקה של משה',
-    '6-Before_Signing':      'לפני חתימה של הלקוח',
-    '7-Completed':           'הוגש',
-};
+// STAGE_LABELS, API_BASE, ADMIN_TOKEN_KEY loaded from shared/constants.js
+// sanitizeDocHtml() loaded from shared/utils.js
+// ENDPOINTS loaded from shared/endpoints.js
 let DOCS_FIRST_SENT_AT = null;
 let REPORT_NOTES = '';
-const API_BASE = 'https://liozshor.app.n8n.cloud/webhook';
 
 // Admin auth token — required for this office-only page
-const ADMIN_TOKEN = localStorage.getItem('admin_token') || '';
+const ADMIN_TOKEN = localStorage.getItem(ADMIN_TOKEN_KEY) || '';
 if (!ADMIN_TOKEN) {
     window.location.replace('admin/index.html');
 }
@@ -37,17 +30,6 @@ let docsToAdd = new Map(); // displayName → {template_id, category, name_en, p
 let pendingTemplate = null; // Template awaiting detail input
 let apiTemplates = [];      // Templates from Airtable (SSOT)
 let apiCategories = [];     // Categories from Airtable (SSOT)
-
-/** Sanitize HTML: allow only <b> and <strong> tags, escape everything else */
-function sanitizeDocHtml(html) {
-    if (!html) return '';
-    const el = document.createElement('div');
-    el.textContent = html;
-    let safe = el.innerHTML;
-    safe = safe.replace(/&lt;b&gt;/gi, '<b>').replace(/&lt;\/b&gt;/gi, '</b>');
-    safe = safe.replace(/&lt;strong&gt;/gi, '<strong>').replace(/&lt;\/strong&gt;/gi, '</strong>');
-    return safe;
-}
 
 // Enhanced operations state
 let markedForRestore = new Set();   // doc IDs to un-waive
@@ -199,7 +181,7 @@ async function loadDocuments() {
 
     try {
         const response = await retryWithBackoff(
-            () => fetchWithTimeout(`${API_BASE}/get-client-documents?report_id=${REPORT_ID}&mode=office`, {
+            () => fetchWithTimeout(`${ENDPOINTS.GET_CLIENT_DOCUMENTS}?report_id=${REPORT_ID}&mode=office`, {
                 headers: { 'Authorization': `Bearer ${ADMIN_TOKEN}` }
             }, FETCH_TIMEOUTS.load),
             { maxRetries: 1 }
@@ -313,7 +295,7 @@ async function handleNotesSave() {
     if (newText === REPORT_NOTES) return;
     REPORT_NOTES = newText;
     try {
-        const response = await fetchWithTimeout(`${API_BASE}/admin-update-client`, {
+        const response = await fetchWithTimeout(ENDPOINTS.ADMIN_UPDATE_CLIENT, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${ADMIN_TOKEN}` },
             body: JSON.stringify({ token: ADMIN_TOKEN, report_id: REPORT_ID, action: 'update-notes', notes: newText })
@@ -1468,7 +1450,7 @@ async function confirmSubmit() {
     };
 
     try {
-        const response = await fetchWithTimeout(`${API_BASE}/edit-documents`, {
+        const response = await fetchWithTimeout(ENDPOINTS.EDIT_DOCUMENTS, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -1571,7 +1553,7 @@ async function confirmSendQuestionnaire() {
     btn.disabled = true;
 
     try {
-        const response = await fetchWithTimeout(`${API_BASE}/admin-send-questionnaires`, {
+        const response = await fetchWithTimeout(ENDPOINTS.ADMIN_SEND_QUESTIONNAIRES, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -1772,7 +1754,7 @@ function approveAndSendToClient() {
             const sendBtn = document.getElementById('approveSendBtn');
             setBtnState(sendBtn, 'loading', 'שולח ללקוח...');
             const token = generateApprovalToken(REPORT_ID, 'MOSHE_1710');
-            const url = `${API_BASE}/approve-and-send?report_id=${REPORT_ID}&token=${token}&confirm=1&respond=json`;
+            const url = `${ENDPOINTS.APPROVE_AND_SEND}?report_id=${REPORT_ID}&token=${token}&confirm=1&respond=json`;
             try {
                 const res = await fetchWithTimeout(url, {}, FETCH_TIMEOUTS.mutate);
                 const data = await res.json();
@@ -1853,7 +1835,7 @@ async function loadQuestionnaireForReport() {
     container.innerHTML = '<div style="padding:var(--sp-4);color:var(--gray-500);font-size:var(--text-sm);">טוען שאלון...</div>';
 
     try {
-        const url = `${API_BASE}/admin-questionnaires?token=${encodeURIComponent(ADMIN_TOKEN)}&report_id=${encodeURIComponent(REPORT_ID)}`;
+        const url = `${ENDPOINTS.ADMIN_QUESTIONNAIRES}?token=${encodeURIComponent(ADMIN_TOKEN)}&report_id=${encodeURIComponent(REPORT_ID)}`;
         const resp = await fetchWithTimeout(url, { method: 'GET' }, 20000);
         const data = await resp.json();
 
