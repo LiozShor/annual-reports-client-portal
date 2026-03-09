@@ -2274,7 +2274,7 @@ function renderAICard(item) {
             <button class="btn btn-success btn-sm" ${approveDisabled
                 ? 'aria-disabled="true" title="לא ניתן לאשר מסמך שלא נדרש — יש לשייך מחדש או לדחות"'
                 : `onclick="approveAIClassification('${escapeAttr(item.id)}')"`}>
-                <i data-lucide="check" class="icon-sm"></i> אשר
+                <i data-lucide="check" class="icon-sm"></i> נכון
             </button>
             <button class="btn btn-link btn-sm" onclick="showAIReassignModal('${escapeAttr(item.id)}')">
                 <i data-lucide="arrow-right-left" class="icon-sm"></i> שייך מחדש
@@ -2382,7 +2382,7 @@ function renderAICard(item) {
             <button class="btn btn-success btn-sm" ${fuzzyApproveDisabled
                 ? 'aria-disabled="true" title="לא ניתן לאשר מסמך שלא נדרש — יש לשייך מחדש או לדחות"'
                 : `onclick="approveAIClassification('${escapeAttr(item.id)}')"`}>
-                <i data-lucide="check" class="icon-sm"></i> אשר
+                <i data-lucide="check" class="icon-sm"></i> נכון
             </button>
             <button class="btn btn-link btn-sm" onclick="showAIReassignModal('${escapeAttr(item.id)}')">
                 <i data-lucide="arrow-right-left" class="icon-sm"></i> שייך מחדש
@@ -2542,7 +2542,7 @@ function startReReview(recordId) {
             <button class="btn btn-success btn-sm" ${approveDisabled
                 ? 'aria-disabled="true" title="לא ניתן לאשר מסמך שלא נדרש — יש לשייך מחדש או לדחות"'
                 : `onclick="approveAIClassification('${escapeAttr(recordId)}')"`}>
-                <i data-lucide="check" class="icon-sm"></i> אשר
+                <i data-lucide="check" class="icon-sm"></i> נכון
             </button>
             <button class="btn btn-link btn-sm" onclick="showAIReassignModal('${escapeAttr(recordId)}')">
                 <i data-lucide="arrow-right-left" class="icon-sm"></i> שייך מחדש
@@ -2683,7 +2683,7 @@ async function approveAIClassification(recordId) {
             clearCardLoading(recordId);
             showModal('error', 'שגיאה', error.message);
         }
-    }, { confirmText: 'אשר', btnClass: 'btn-success' });
+    }, { confirmText: 'נכון', btnClass: 'btn-success' });
 }
 
 async function rejectAIClassification(recordId) {
