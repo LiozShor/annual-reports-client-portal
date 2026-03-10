@@ -9,6 +9,8 @@ let importData = [];
 let existingEmails = new Set();
 let reviewQueueData = [];
 let showArchivedMode = false;
+let dashboardLoaded = false;
+let pendingClientsLoaded = false;
 
 const SORT_CONFIG = {
     name:    { accessor: c => c.name || '',    type: 'string' },
@@ -141,11 +143,11 @@ function switchTab(tabName, evt) {
     document.getElementById(`tab-${tabName}`).classList.add('active');
     if (typeof lucide !== 'undefined') lucide.createIcons();
 
-    // Silent refresh on every tab switch
+    // Load data: skip fetch if already loaded (show cached), else fetch
     if (tabName === 'dashboard' || tabName === 'review') {
-        loadDashboard(true);
+        loadDashboard(dashboardLoaded);
     } else if (tabName === 'send') {
-        loadPendingClients(true);
+        loadPendingClients(pendingClientsLoaded);
     } else if (tabName === 'ai-review') {
         loadAIClassifications(aiReviewLoaded);
     } else if (tabName === 'reminders') {
@@ -181,6 +183,9 @@ function switchTabFromDropdown(tabName, event) {
 // ==================== DASHBOARD ====================
 
 async function loadDashboard(silent = false) {
+    // If already loaded and silent, skip API call — use cached data
+    if (silent && dashboardLoaded && clientsData.length > 0) return;
+
     if (!silent) showLoading('טוען נתונים...');
 
     try {
@@ -200,6 +205,7 @@ async function loadDashboard(silent = false) {
 
         // Store clients data
         clientsData = data.clients || [];
+        dashboardLoaded = true;
 
         // Update stats (recalculate client-side to exclude deactivated)
         recalculateStats();
@@ -230,14 +236,17 @@ async function loadDashboard(silent = false) {
         if (data.available_years && data.available_years.length > 0) {
             const yearChanged = updateYearDropdowns(data.available_years);
             if (yearChanged) {
+                dashboardLoaded = false; // year changed — invalidate cache
+                pendingClientsLoaded = false;
                 loadDashboard(true); // reload with the newest year
                 return;
             }
         }
 
-        // Load AI review badge count (async, non-blocking)
+        // Load AI review badge count + prefetch Send tab (async, non-blocking)
         loadAIReviewCount();
         loadReminderCount();
+        if (!pendingClientsLoaded) loadPendingClients(true);
     } catch (error) {
         if (!silent) hideLoading();
         console.error('Dashboard load failed');
@@ -1129,6 +1138,9 @@ async function _doManualAdd(name, email, phone, year) {
 let pendingClients = [];
 
 async function loadPendingClients(silent = false) {
+    // If already loaded and silent, skip API call — use cached data
+    if (silent && pendingClientsLoaded) return;
+
     if (!silent) showLoading('טוען לקוחות ממתינים...');
 
     try {
@@ -1141,6 +1153,7 @@ async function loadPendingClients(silent = false) {
         if (!data.ok) throw new Error(data.error);
 
         pendingClients = data.clients || [];
+        pendingClientsLoaded = true;
         renderPendingClients();
 
     } catch (error) {
