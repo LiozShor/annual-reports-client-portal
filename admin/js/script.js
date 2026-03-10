@@ -2245,7 +2245,7 @@ function renderAICard(item) {
                 <i data-lucide="arrow-right-left" class="icon-sm"></i> לא נכון, שייך מחדש
             </button>
             <button class="btn btn-outline-danger btn-sm" onclick="rejectAIClassification('${escapeAttr(item.id)}')">
-                <i data-lucide="x" class="icon-sm"></i> דחה
+                <i data-lucide="x" class="icon-sm"></i> מסמך לא רלוונטי
             </button>
         `;
 
@@ -2294,7 +2294,7 @@ function renderAICard(item) {
                     <i data-lucide="arrow-right-left" class="icon-sm"></i> לא מצאתי ברשימה
                 </button>
                 <button class="btn btn-outline-danger btn-sm" onclick="rejectAIClassification('${escapeAttr(item.id)}')">
-                    <i data-lucide="x" class="icon-sm"></i> דחה
+                    <i data-lucide="x" class="icon-sm"></i> מסמך לא רלוונטי
                 </button>
             `;
         } else {
@@ -2314,7 +2314,7 @@ function renderAICard(item) {
                     </button>
                 </div>
                 <button class="btn btn-outline-danger btn-sm" onclick="rejectAIClassification('${escapeAttr(item.id)}')">
-                    <i data-lucide="x" class="icon-sm"></i> דחה
+                    <i data-lucide="x" class="icon-sm"></i> מסמך לא רלוונטי
                 </button>
             `;
         }
@@ -2348,7 +2348,7 @@ function renderAICard(item) {
                 <i data-lucide="arrow-right-left" class="icon-sm"></i> לא נכון, שייך מחדש
             </button>
             <button class="btn btn-outline-danger btn-sm" onclick="rejectAIClassification('${escapeAttr(item.id)}')">
-                <i data-lucide="x" class="icon-sm"></i> דחה
+                <i data-lucide="x" class="icon-sm"></i> מסמך לא רלוונטי
             </button>
         `;
 
@@ -2371,7 +2371,7 @@ function renderAICard(item) {
                 </button>
             </div>
             <button class="btn btn-outline-danger btn-sm" onclick="rejectAIClassification('${escapeAttr(item.id)}')">
-                <i data-lucide="x" class="icon-sm"></i> דחה
+                <i data-lucide="x" class="icon-sm"></i> מסמך לא רלוונטי
             </button>
         `;
     }
@@ -2504,7 +2504,7 @@ function startReReview(recordId) {
                 <i data-lucide="arrow-right-left" class="icon-sm"></i> לא נכון, שייך מחדש
             </button>
             <button class="btn btn-outline-danger btn-sm" onclick="rejectAIClassification('${escapeAttr(recordId)}')">
-                <i data-lucide="x" class="icon-sm"></i> דחה
+                <i data-lucide="x" class="icon-sm"></i> מסמך לא רלוונטי
             </button>
             <button class="btn btn-ghost btn-sm" onclick="cancelReReview('${escapeAttr(recordId)}')">
                 ביטול
@@ -2517,7 +2517,7 @@ function startReReview(recordId) {
                 <i data-lucide="arrow-right-left" class="icon-sm"></i> לא נכון, שייך מחדש
             </button>
             <button class="btn btn-outline-danger btn-sm" onclick="rejectAIClassification('${escapeAttr(recordId)}')">
-                <i data-lucide="x" class="icon-sm"></i> דחה
+                <i data-lucide="x" class="icon-sm"></i> מסמך לא רלוונטי
             </button>
             <button class="btn btn-ghost btn-sm" onclick="cancelReReview('${escapeAttr(recordId)}')">
                 ביטול
@@ -2665,7 +2665,7 @@ function showRejectNotesPanel(recordId) {
             </select>
             <textarea class="ai-reject-notes-text" placeholder="הערות נוספות (אופציונלי)" rows="2"></textarea>
             <div class="ai-reject-notes-actions">
-                <button class="btn btn-danger btn-sm ai-reject-confirm-btn" disabled>דחה</button>
+                <button class="btn btn-danger btn-sm ai-reject-confirm-btn" disabled>מסמך לא רלוונטי</button>
                 <button class="btn btn-ghost btn-sm ai-reject-cancel-btn">ביטול</button>
             </div>
         </div>
