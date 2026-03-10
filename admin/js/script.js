@@ -1818,11 +1818,12 @@ async function loadAIClassifications(silent = false) {
         updateAIStats(data.stats || {});
         applyAIFilters();
 
-        // Update tab badge — show only pending (needing admin action)
+        // Update tab badge — show unique client count (not doc count)
         const badge = document.getElementById('aiReviewTabBadge');
-        const pendingCount = data.stats?.pending_review || data.stats?.total_pending || 0;
-        if (pendingCount > 0) {
-            badge.textContent = pendingCount;
+        const pendingForBadge = (data.items || []).filter(i => (i.review_status || 'pending') === 'pending');
+        const uniqueClients = new Set(pendingForBadge.map(i => i.client_id).filter(Boolean)).size;
+        if (uniqueClients > 0) {
+            badge.textContent = uniqueClients;
             badge.style.display = 'inline-flex';
         } else {
             badge.style.display = 'none';
@@ -3122,13 +3123,15 @@ function recalcAIStats() {
         }
     }
 
-    // Update tab badge — show only pending count
+    // Update tab badge — show unique client count (not doc count)
     const badge = document.getElementById('aiReviewTabBadge');
-    if (pendingCount > 0) {
-        badge.textContent = pendingCount;
+    const uniqueClientsPending = new Set(pendingItems.map(i => i.client_id).filter(Boolean)).size;
+    const uniqueClientsReviewed = new Set(reviewedItems.map(i => i.client_id).filter(Boolean)).size;
+    if (uniqueClientsPending > 0) {
+        badge.textContent = uniqueClientsPending;
         badge.style.display = 'inline-flex';
-    } else if (reviewedUnsent > 0) {
-        badge.textContent = reviewedUnsent;
+    } else if (uniqueClientsReviewed > 0) {
+        badge.textContent = uniqueClientsReviewed;
         badge.style.display = 'inline-flex';
     } else {
         badge.style.display = 'none';
