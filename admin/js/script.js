@@ -1933,7 +1933,7 @@ function applyAIFilters() {
 // Client/spouse template pairs — same document type, different person
 const RELATED_TEMPLATES = {
     T201: ['T201', 'T202'], T202: ['T201', 'T202'],
-    T301: ['T301', 'T302'], T302: ['T301', 'T302'],
+    T302: ['T302'],
     T305: ['T305', 'T306'], T306: ['T305', 'T306'],
 };
 
