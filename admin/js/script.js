@@ -1916,8 +1916,8 @@ function updateAIStats(stats) {
 
 function applyAIFilters() {
     const searchText = (document.getElementById('aiSearchInput').value || '').trim().toLowerCase();
-    const confidenceFilter = document.getElementById('aiConfidenceFilter').value;
-    const typeFilter = document.getElementById('aiTypeFilter').value;
+    const confidenceFilter = document.getElementById('aiConfidenceFilter')?.value || '';
+    const typeFilter = document.getElementById('aiTypeFilter')?.value || '';
     const reviewStatusFilter = document.getElementById('aiReviewStatusFilter')?.value || '';
 
     let filtered = aiClassificationsData.filter(item => item.client_is_active !== false);
