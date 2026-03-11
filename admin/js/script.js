@@ -1727,7 +1727,7 @@ async function getDocPreviewUrl(itemId) {
     );
     const data = await response.json();
     if (!data.ok) throw new Error(data.error || 'Failed to get preview URL');
-    return data.previewUrl;
+    return { previewUrl: data.previewUrl, downloadUrl: data.downloadUrl || null };
 }
 
 function resetPreviewPanel() {
@@ -1738,11 +1738,13 @@ function resetPreviewPanel() {
     const error = document.getElementById('previewError');
     const iframe = document.getElementById('previewIframe');
     const header = document.getElementById('previewHeaderBar');
+    const download = document.getElementById('previewDownload');
     if (placeholder) placeholder.style.display = '';
     if (loading) loading.style.display = 'none';
     if (error) error.style.display = 'none';
     if (iframe) { iframe.style.display = 'none'; iframe.src = 'about:blank'; }
     if (header) header.style.display = 'none';
+    if (download) { download.style.display = 'none'; download.href = '#'; }
 }
 
 async function loadDocPreview(recordId) {
@@ -1763,6 +1765,7 @@ async function loadDocPreview(recordId) {
     const header = document.getElementById('previewHeaderBar');
     const fileName = document.getElementById('previewFileName');
     const openTab = document.getElementById('previewOpenTab');
+    const downloadBtn = document.getElementById('previewDownload');
 
     // Mark active card
     document.querySelectorAll('.ai-review-card.preview-active').forEach(c => c.classList.remove('preview-active'));
@@ -1787,6 +1790,7 @@ async function loadDocPreview(recordId) {
     iframe.src = 'about:blank';
     iframe.style.display = 'none';
     loading.style.display = '';
+    downloadBtn.style.display = 'none';
 
     // Update header
     fileName.textContent = item.attachment_name || 'מסמך';
@@ -1795,12 +1799,16 @@ async function loadDocPreview(recordId) {
     header.style.display = '';
 
     try {
-        const previewUrl = await getDocPreviewUrl(item.onedrive_item_id);
+        const { previewUrl, downloadUrl } = await getDocPreviewUrl(item.onedrive_item_id);
         // Verify still the active card (user might have clicked another)
         if (activePreviewItemId !== recordId) return;
         loading.style.display = 'none';
         iframe.src = previewUrl;
         iframe.style.display = '';
+        if (downloadUrl) {
+            downloadBtn.href = downloadUrl;
+            downloadBtn.style.display = '';
+        }
     } catch (err) {
         console.error('Preview load failed');
         if (activePreviewItemId !== recordId) return;
