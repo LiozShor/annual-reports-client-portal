@@ -1490,7 +1490,6 @@ tr:hover .client-view-link {
     box-shadow: var(--shadow-sm);
     margin-bottom: var(--sp-3);
     transition: all var(--transition-base);
-    overflow: hidden;
     max-width: 600px;
     margin-inline: auto;
 }
@@ -2180,10 +2179,6 @@ tr:hover .client-view-link {
 .ai-review-master {
     min-height: 0;
     min-width: 0;
-    max-height: calc(100vh - 100px);
-    overflow-y: auto;
-    position: sticky;
-    top: 80px;
 }
 
 .ai-review-master .ai-review-card {
