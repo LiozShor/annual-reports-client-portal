@@ -557,35 +557,10 @@
                 </div>
 
                 <!-- Filter Bar -->
-                <div class="ai-filter-bar">
-                    <div class="filter-group">
+                <div class="ai-filter-bar" style="padding: 8px 12px;">
+                    <div class="filter-group" style="max-width: 260px;">
                         <label><i data-lucide="search" class="icon-sm"></i></label>
-                        <input type="text" id="aiSearchInput" placeholder="חיפוש לפי שם לקוח..." oninput="applyAIFilters()">
-                    </div>
-                    <div class="filter-group">
-                        <label><i data-lucide="gauge" class="icon-sm"></i> ביטחון:</label>
-                        <select id="aiConfidenceFilter" onchange="applyAIFilters()">
-                            <option value="">הכל</option>
-                            <option value="high">גבוה (85%+)</option>
-                            <option value="medium">בינוני (50-84%)</option>
-                            <option value="low">נמוך (&lt;50%)</option>
-                        </select>
-                    </div>
-                    <div class="filter-group">
-                        <label><i data-lucide="filter" class="icon-sm"></i> סוג:</label>
-                        <select id="aiTypeFilter" onchange="applyAIFilters()">
-                            <option value="">הכל</option>
-                            <option value="matched">זוהו</option>
-                            <option value="unmatched">לא זוהו</option>
-                        </select>
-                    </div>
-                    <div class="filter-group">
-                        <label><i data-lucide="list-checks" class="icon-sm"></i> סטטוס:</label>
-                        <select id="aiReviewStatusFilter" onchange="applyAIFilters()">
-                            <option value="">הכל</option>
-                            <option value="pending">ממתין לסקירה</option>
-                            <option value="reviewed">נסקר (ממתין לשליחה)</option>
-                        </select>
+                        <input type="text" id="aiSearchInput" placeholder="חיפוש לפי שם לקוח..." oninput="applyAIFilters()" style="padding: 6px 10px; font-size: 13px;">
                     </div>
                 </div>
 
