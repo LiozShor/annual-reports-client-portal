@@ -879,9 +879,15 @@ async function loadAIReviewCount() {
         const resp = await fetchWithTimeout(`${ENDPOINTS.GET_PENDING_CLASSIFICATIONS}`, { headers: { 'Authorization': `Bearer ${authToken}` } }, FETCH_TIMEOUTS.quick);
         const data = await resp.json();
         badge.classList.remove('ai-badge-loading');
-        if (data.ok && data.stats && data.stats.total_pending > 0) {
-            badge.textContent = data.stats.total_pending;
-            badge.style.display = 'inline-flex';
+        if (data.ok && data.items) {
+            const pending = data.items.filter(i => (i.review_status || 'pending') === 'pending');
+            const uniqueClients = new Set(pending.map(i => i.client_id).filter(Boolean)).size;
+            if (uniqueClients > 0) {
+                badge.textContent = uniqueClients;
+                badge.style.display = 'inline-flex';
+            } else {
+                badge.style.display = 'none';
+            }
         } else {
             badge.style.display = 'none';
         }
