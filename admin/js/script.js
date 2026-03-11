@@ -1781,9 +1781,10 @@ async function loadDocPreview(recordId) {
         return;
     }
 
-    // Show loading
+    // Show loading — clear old iframe to prevent flash of previous doc
     placeholder.style.display = 'none';
     error.style.display = 'none';
+    iframe.src = 'about:blank';
     iframe.style.display = 'none';
     loading.style.display = '';
 
