@@ -1378,7 +1378,6 @@ tr:hover .client-view-link {
 .ai-accordion {
     margin-bottom: var(--sp-4);
     border-radius: var(--radius-lg);
-    overflow: hidden;
     box-shadow: var(--shadow-xs);
     animation: aiSlideUp 300ms ease-out;
 }
@@ -1480,6 +1479,8 @@ tr:hover .client-view-link {
 
 .ai-accordion-content {
     padding: var(--sp-4) var(--sp-5);
+    max-height: 60vh;
+    overflow-y: auto;
 }
 
 /* Review Cards */
