@@ -2179,6 +2179,11 @@ tr:hover .client-view-link {
 
 .ai-review-master {
     min-height: 0;
+    min-width: 0;
+    max-height: calc(100vh - 100px);
+    overflow-y: auto;
+    position: sticky;
+    top: 80px;
 }
 
 .ai-review-master .ai-review-card {
