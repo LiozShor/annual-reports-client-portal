@@ -986,12 +986,11 @@ function updateStatusOverview() {
     overview.style.display = 'block';
 
     // Count each status (use effective status accounting for pending changes)
-    let received = 0, missing = 0, fix = 0, waived = 0;
+    let received = 0, missing = 0, waived = 0;
     for (const doc of currentDocuments) {
         const effectiveStatus = statusChanges.get(doc.id) || doc.status;
         switch (effectiveStatus) {
             case 'Received': received++; break;
-            case 'Requires_Fix': fix++; break;
             case 'Waived': waived++; break;
             default: missing++; break;
         }
@@ -1001,23 +1000,20 @@ function updateStatusOverview() {
     document.getElementById('countTotal').textContent = total;
     document.getElementById('countReceived').textContent = received;
     document.getElementById('countMissing').textContent = missing;
-    document.getElementById('countFix').textContent = fix;
     document.getElementById('countWaived').textContent = waived;
 
     // Update progress bar segments
     const pctReceived = (received / total) * 100;
-    const pctFix = (fix / total) * 100;
     const pctMissing = (missing / total) * 100;
     const pctWaived = (waived / total) * 100;
 
     document.getElementById('segReceived').style.width = pctReceived + '%';
-    document.getElementById('segFix').style.width = pctFix + '%';
     document.getElementById('segMissing').style.width = pctMissing + '%';
     document.getElementById('segWaived').style.width = pctWaived + '%';
 
-    // Green glow when 100% complete (all received or waived, none missing/fix)
+    // Green glow when 100% complete (all received or waived, none missing)
     const progressBar = document.getElementById('progressBarStacked');
-    progressBar.classList.toggle('complete', missing === 0 && fix === 0 && received > 0);
+    progressBar.classList.toggle('complete', missing === 0 && received > 0);
 
     // Summary text: "X מתוך Y (Z%)"
     const activeTotal = total - waived;
@@ -1085,9 +1081,9 @@ function applyStatusFilter() {
         if (!doc) return;
 
         const effectiveStatus = statusChanges.get(doc.id) || doc.status;
-        // Normalize: anything not Received/Requires_Fix/Waived is treated as Required_Missing
+        // Normalize: anything not Received/Waived is treated as Required_Missing (including Requires_Fix)
         let normalizedStatus = effectiveStatus;
-        if (normalizedStatus !== 'Received' && normalizedStatus !== 'Requires_Fix' && normalizedStatus !== 'Waived') {
+        if (normalizedStatus !== 'Received' && normalizedStatus !== 'Waived') {
             normalizedStatus = 'Required_Missing';
         }
 
@@ -1778,11 +1774,13 @@ function updateSentBadge() {
     const stageNum = parseInt((CURRENT_STAGE || '').charAt(0), 10);
     if (DOCS_FIRST_SENT_AT) {
         const date = new Date(DOCS_FIRST_SENT_AT).toLocaleDateString('he-IL');
-        el.innerHTML = `<span class="badge badge-success">נשלח ללקוח ${date}</span>`;
+        el.innerHTML = `<i data-lucide="send" class="icon-sm"></i><span class="text-muted text-sm">נשלח ללקוח:</span><strong>${date}</strong>`;
         el.style.display = '';
+        lucide.createIcons({ nodes: [el] });
     } else if (stageNum >= 3) {
-        el.innerHTML = `<span class="badge badge-neutral">טרם נשלח ללקוח</span>`;
+        el.innerHTML = `<i data-lucide="send" class="icon-sm"></i><span class="text-muted text-sm">טרם נשלח ללקוח</span>`;
         el.style.display = '';
+        lucide.createIcons({ nodes: [el] });
     } else {
         el.style.display = 'none';
     }
