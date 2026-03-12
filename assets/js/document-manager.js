@@ -694,7 +694,6 @@ function startNameEdit(docId) {
         <div class="name-edit-row">
             <div style="flex:1;">
                 <input type="text" class="name-edit-input" id="nameinput-${docId}" dir="auto">
-                <div class="name-preview" id="namepreview-${docId}" dir="auto"></div>
             </div>
             <div class="name-edit-actions">
                 <button type="button" class="name-edit-save" onclick="saveNameEdit('${docId}')" title="שמור">
@@ -711,7 +710,6 @@ function startNameEdit(docId) {
     if (input) {
         // Set value programmatically — avoids HTML attribute quote-escaping issue with בע"מ etc.
         input.value = inputVal;
-        document.getElementById(`namepreview-${docId}`).innerHTML = sanitizeDocHtml(markdownToHtml(inputVal));
         input.focus();
         // Place cursor at end (left side in RTL) so חברת בע"מ** is visible, not scrolled out
         const len = inputVal.length;
@@ -719,10 +717,6 @@ function startNameEdit(docId) {
         input.addEventListener('keydown', (e) => {
             if (e.key === 'Enter') { e.preventDefault(); saveNameEdit(docId); }
             if (e.key === 'Escape') { e.preventDefault(); cancelNameEdit(docId); }
-        });
-        input.addEventListener('input', () => {
-            const preview = document.getElementById(`namepreview-${docId}`);
-            if (preview) preview.innerHTML = sanitizeDocHtml(markdownToHtml(input.value));
         });
     }
 
