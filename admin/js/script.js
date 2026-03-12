@@ -1996,6 +1996,8 @@ function renderAICards(items) {
 
     if (!items || items.length === 0) {
         container.innerHTML = '';
+        const sb = document.getElementById('aiSummaryBar');
+        if (sb) sb.style.display = 'none';
 
         if (aiClassificationsData.length === 0) {
             container.style.display = 'none';
@@ -2023,6 +2025,20 @@ function renderAICards(items) {
         const clientName = item.client_name || 'לא ידוע';
         if (!groups[clientName]) groups[clientName] = [];
         groups[clientName].push(item);
+    }
+
+    // Update summary bar
+    const totalPending = items.filter(i => (i.review_status || 'pending') === 'pending').length;
+    const clientsWithPending = Object.entries(groups).filter(([, ci]) => ci.some(i => (i.review_status || 'pending') === 'pending')).length;
+    const summaryBar = document.getElementById('aiSummaryBar');
+    const summaryText = document.getElementById('aiSummaryText');
+    if (summaryBar && summaryText) {
+        if (totalPending > 0) {
+            summaryText.textContent = `${totalPending} מסמכים ממתינים לבדיקה · ${clientsWithPending} לקוחות`;
+            summaryBar.style.display = 'block';
+        } else {
+            summaryBar.style.display = 'none';
+        }
     }
 
     let html = '';
@@ -2054,13 +2070,13 @@ function renderAICards(items) {
 
         const allReviewed = pendingCount === 0 && reviewedCount > 0;
 
-        // Build accordion stat badges (only show if count > 0)
+        // Build accordion stat badge — single pending count or ready-to-send
         let badgesHtml = '';
-        if (identifiedCount > 0) badgesHtml += `<span class="ai-accordion-stat-badge badge-matched">${identifiedCount} זוהו</span>`;
-        if (mismatchCount > 0) badgesHtml += `<span class="ai-accordion-stat-badge badge-mismatch">${mismatchCount} מנפיק שונה</span>`;
-        if (unmatchedCount > 0) badgesHtml += `<span class="ai-accordion-stat-badge badge-unmatched">${unmatchedCount} לא זוהו</span>`;
-        // DL-086: Ready-to-send badge when all items reviewed
-        if (allReviewed) badgesHtml += `<span class="ai-accordion-stat-badge badge-ready-send">מוכן לשליחה</span>`;
+        if (allReviewed) {
+            badgesHtml = `<span class="ai-accordion-stat-badge badge-ready-send">מוכן לשליחה</span>`;
+        } else if (pendingCount > 0) {
+            badgesHtml = `<span class="ai-accordion-stat-badge badge-matched">${pendingCount} מסמכים ממתינים</span>`;
+        }
 
         html += `
             <div class="ai-accordion" data-client="${escapeHtml(clientName)}">
