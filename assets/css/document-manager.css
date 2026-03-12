@@ -493,15 +493,7 @@ body {
     color: var(--gray-600);
 }
 
-.name-preview {
-    font-size: 0.8rem;
-    color: var(--color-text-muted);
-    margin-top: 4px;
-    padding: 2px 4px;
-    border-radius: 4px;
-    background: var(--color-surface-2);
-    min-height: 1.2em;
-}
+
 
 /* ==================== STATUS BADGES ==================== */
 .badge.clickable {
