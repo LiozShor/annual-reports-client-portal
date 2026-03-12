@@ -88,14 +88,13 @@ body {
 }
 
 .progress-segment-received { background: var(--success-500); }
-.progress-segment-fix { background: var(--warning-500); }
 .progress-segment-missing { background: var(--danger-500); }
 .progress-segment-waived { background: var(--gray-300); }
 
 /* Count boxes */
 .status-count-boxes {
     display: grid;
-    grid-template-columns: repeat(5, 1fr);
+    grid-template-columns: repeat(4, 1fr);
     gap: var(--sp-3);
 }
 
@@ -155,11 +154,6 @@ body {
 .status-count-missing {
     background: var(--danger-50);
     color: var(--danger-700);
-}
-
-.status-count-fix {
-    background: var(--warning-50);
-    color: var(--warning-700);
 }
 
 .status-count-waived {
