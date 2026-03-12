@@ -927,6 +927,18 @@ function handleFileSelect(event) {
     if (file) processFile(file);
 }
 
+function downloadImportTemplate() {
+    const csvContent = 'name,email,phone\nמשה כהן,moshe@example.com,050-1234567\nשרה לוי,sara@example.com,';
+    const BOM = '\uFEFF';
+    const blob = new Blob([BOM + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'import-template.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+}
+
 function processFile(file) {
     showLoading('קורא קובץ...');
 
