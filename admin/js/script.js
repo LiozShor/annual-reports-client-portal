@@ -3509,10 +3509,9 @@ async function loadReminderCount() {
 function updateReminderStats(stats) {
     document.getElementById('reminder-stat-scheduled').textContent = stats.scheduled || 0;
     document.getElementById('reminder-stat-due').textContent = stats.due_this_week || 0;
-    document.getElementById('reminder-stat-suppressed').textContent = stats.suppressed || 0;
-    document.getElementById('reminder-stat-exhausted').textContent = stats.exhausted || 0;
+    document.getElementById('reminder-stat-suppressed').textContent = (stats.suppressed || 0) + (stats.exhausted || 0);
     // Apply active state for current filter
-    const cardMap = { scheduled: 'reminder-stat-scheduled', due_this_week: 'reminder-stat-due', suppressed: 'reminder-stat-suppressed', exhausted: 'reminder-stat-exhausted' };
+    const cardMap = { scheduled: 'reminder-stat-scheduled', due_this_week: 'reminder-stat-due', suppressed: 'reminder-stat-suppressed' };
     document.querySelectorAll('.reminder-stat-item').forEach(card => {
         card.classList.remove('reminder-stat-active');
         card.setAttribute('aria-pressed', 'false');
@@ -3533,8 +3532,8 @@ function isExhausted(r) {
 }
 
 function getReminderStatus(r) {
-    if (r.reminder_suppress === 'forever') return { label: 'ללא תזכורות', class: 'reminder-status-suppressed', key: 'suppressed' };
-    if (isExhausted(r)) return { label: 'מוצה', class: 'reminder-status-exhausted', key: 'exhausted' };
+    if (r.reminder_suppress === 'forever') return { label: 'מושתק', class: 'reminder-status-suppressed', key: 'suppressed' };
+    if (isExhausted(r)) return { label: 'מושתק', class: 'reminder-status-suppressed', key: 'suppressed' };
     return { label: 'פעיל', class: 'reminder-status-active', key: 'active' };
 }
 
@@ -3548,7 +3547,7 @@ function toggleCardFilter(key) {
         card.setAttribute('aria-pressed', 'false');
     });
     if (activeCardFilter) {
-        const cardMap = { scheduled: 'reminder-stat-scheduled', due_this_week: 'reminder-stat-due', suppressed: 'reminder-stat-suppressed', exhausted: 'reminder-stat-exhausted' };
+        const cardMap = { scheduled: 'reminder-stat-scheduled', due_this_week: 'reminder-stat-due', suppressed: 'reminder-stat-suppressed' };
         const activeCard = document.querySelector(`.${cardMap[activeCardFilter]}`);
         if (activeCard) {
             activeCard.classList.add('reminder-stat-active');
