@@ -254,9 +254,16 @@
                                     onchange="handleFileSelect(event)">
                             </div>
 
-                            <div class="import-options">
-                                <h4><i data-lucide="list-checks" class="icon-sm"></i> פורמט נדרש:</h4>
-                                <p>קובץ Excel עם שתי עמודות:</p>
+                            <div class="import-options" style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+                                <button class="btn btn-secondary btn-sm" onclick="document.getElementById('formatHelp').style.display = document.getElementById('formatHelp').style.display === 'none' ? 'block' : 'none'">
+                                    <i data-lucide="help-circle" class="icon-sm"></i> פורמט נדרש
+                                </button>
+                                <button class="btn btn-secondary btn-sm" onclick="downloadImportTemplate()">
+                                    <i data-lucide="download" class="icon-sm"></i> הורד קובץ לדוגמה
+                                </button>
+                            </div>
+                            <div id="formatHelp" class="import-options" style="display:none;">
+                                <p>קובץ Excel עם שלוש עמודות:</p>
                                 <table class="table mt-3">
                                     <thead>
                                         <tr>
