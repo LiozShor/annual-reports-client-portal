@@ -1888,42 +1888,7 @@ async function loadAIClassifications(silent = false) {
 }
 
 function updateAIStats(stats) {
-    // DL-086: pending_review = items needing admin action, reviewed_unsent = reviewed but not emailed
-    const pendingReview = stats.pending_review || stats.total_pending || 0;
-    const reviewedUnsent = stats.reviewed_unsent || 0;
-
-    document.getElementById('ai-stat-pending').textContent = pendingReview;
-    document.getElementById('ai-stat-matched').textContent = stats.matched || 0;
-    document.getElementById('ai-stat-unmatched').textContent = stats.unmatched || 0;
-
-    // Repurpose 4th stat: show "reviewed unsent" when available, else issuer mismatch
-    const mismatchCount = aiClassificationsData.filter(i =>
-        i.matched_template_id && i.issuer_match_quality === 'mismatch' && (i.review_status || 'pending') === 'pending'
-    ).length;
-    const highConfEl = document.getElementById('ai-stat-high-confidence');
-    const highConfItem = highConfEl.closest('.ai-stat-item');
-
-    if (reviewedUnsent > 0) {
-        highConfEl.textContent = reviewedUnsent;
-        if (highConfItem) {
-            const label = highConfItem.querySelector('.ai-stat-label');
-            if (label) label.textContent = 'נסקרו (ממתין)';
-            highConfItem.classList.remove('ai-stat-high-conf', 'ai-stat-mismatch');
-            highConfItem.classList.add('ai-stat-reviewed-unsent');
-            const icon = highConfItem.querySelector('.icon-sm');
-            if (icon) icon.setAttribute('data-lucide', 'mail-check');
-        }
-    } else {
-        highConfEl.textContent = mismatchCount;
-        if (highConfItem) {
-            const label = highConfItem.querySelector('.ai-stat-label');
-            if (label) label.textContent = 'מנפיק שונה';
-            highConfItem.classList.remove('ai-stat-high-conf');
-            highConfItem.classList.add('ai-stat-mismatch');
-            const icon = highConfItem.querySelector('.icon-sm');
-            if (icon) icon.setAttribute('data-lucide', 'alert-triangle');
-        }
-    }
+    // Stats bar removed — no-op, kept for compatibility
 }
 
 function applyAIFilters() {
@@ -3143,25 +3108,6 @@ function recalcAIStats() {
         i.matched_template_id && i.issuer_match_quality === 'mismatch'
     ).length;
 
-    document.getElementById('ai-stat-pending').textContent = pendingCount;
-    document.getElementById('ai-stat-matched').textContent = matched;
-    document.getElementById('ai-stat-unmatched').textContent = unmatched;
-
-    const highConfEl = document.getElementById('ai-stat-high-confidence');
-    const highConfItem = highConfEl.closest('.ai-stat-item');
-    if (reviewedUnsent > 0) {
-        highConfEl.textContent = reviewedUnsent;
-        if (highConfItem) {
-            const label = highConfItem.querySelector('.ai-stat-label');
-            if (label) label.textContent = 'נסקרו (ממתין)';
-        }
-    } else {
-        highConfEl.textContent = mismatchCount;
-        if (highConfItem) {
-            const label = highConfItem.querySelector('.ai-stat-label');
-            if (label) label.textContent = 'מנפיק שונה';
-        }
-    }
 
     // Update tab badge — show unique client count (not doc count)
     const badge = document.getElementById('aiReviewTabBadge');
