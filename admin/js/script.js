@@ -3597,7 +3597,8 @@ function renderRemindersTable(typeA, typeB) {
 
     // Preserve accordion open state across re-renders
     const openSections = new Set();
-    container.querySelectorAll('.reminder-section.open').forEach((el, i) => openSections.add(i));
+    const allSections = container.querySelectorAll('.reminder-section');
+    allSections.forEach((el, i) => { if (el.classList.contains('open')) openSections.add(i); });
 
     if (totalItems === 0) {
         container.innerHTML = `
