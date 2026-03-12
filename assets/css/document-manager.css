@@ -682,34 +682,73 @@ body {
     outline-offset: 2px;
 }
 
-/* ==================== ADD SECTION ==================== */
-.add-section {
+/* ==================== CARD SECTION (collapsible cards) ==================== */
+.card-section {
     background: white;
-    border: 2px solid var(--brand-200);
+    border: 1px solid var(--gray-200);
     border-radius: var(--radius-lg);
     padding: 0;
-    margin: var(--sp-5) var(--sp-6);
+    margin: var(--sp-3) var(--sp-6);
     overflow: hidden;
 }
 
-.add-section > .collapsible-trigger {
-    background: var(--brand-50);
+.card-section > .collapsible-trigger {
     padding: var(--sp-4) var(--sp-6);
-    font-size: var(--text-base);
-    font-weight: 700;
-    color: var(--brand-700);
-    border-bottom: 1px solid var(--brand-100);
+    font-size: var(--text-sm);
+    font-weight: 600;
+    color: var(--gray-700);
+    border-bottom: 1px solid var(--gray-200);
 }
 
-.add-section > .collapsible-trigger:hover {
+.card-section > .collapsible-trigger:hover {
+    background: var(--gray-50);
+}
+
+.card-section > .collapsible-content {
+    padding: 0;
+}
+
+.card-section > .collapsible-content.open {
+    padding: 0;
+}
+
+/* Warning variant — Questions for Client */
+.card-section--warning {
+    background: var(--warning-50);
+    border-color: var(--warning-200);
+    border-inline-start: 3px solid var(--warning-500);
+}
+
+.card-section--warning > .collapsible-trigger {
+    color: var(--warning-700);
+    border-bottom-color: var(--warning-100);
+}
+
+.card-section--warning > .collapsible-trigger:hover {
+    background: var(--warning-100);
+}
+
+/* Brand variant — Add Documents */
+.card-section--brand {
+    background: var(--brand-50);
+    border-color: var(--brand-200);
+    border-inline-start: 3px solid var(--brand-500);
+}
+
+.card-section--brand > .collapsible-trigger {
+    color: var(--brand-700);
+    border-bottom-color: var(--brand-100);
+}
+
+.card-section--brand > .collapsible-trigger:hover {
     background: var(--brand-100);
 }
 
-.add-section > .collapsible-content {
+.card-section--brand > .collapsible-content {
     padding: 0 var(--sp-6);
 }
 
-.add-section > .collapsible-content.open {
+.card-section--brand > .collapsible-content.open {
     padding: 0 var(--sp-6) var(--sp-6);
 }
 
@@ -987,36 +1026,7 @@ body {
     display: flex;
 }
 
-/* ==================== QUESTIONS SECTION ==================== */
-.questions-section {
-    background: white;
-    border: 2px solid var(--warning-200);
-    border-radius: var(--radius-lg);
-    padding: 0;
-    margin: var(--sp-5) var(--sp-6);
-    overflow: hidden;
-}
-
-.questions-section > .collapsible-trigger {
-    background: var(--warning-50);
-    padding: var(--sp-4) var(--sp-6);
-    font-size: var(--text-base);
-    font-weight: 700;
-    color: var(--warning-700);
-    border-bottom: 1px solid var(--warning-100);
-}
-
-.questions-section > .collapsible-trigger:hover {
-    background: var(--warning-100);
-}
-
-.questions-section > .collapsible-content {
-    padding: 0;
-}
-
-.questions-section > .collapsible-content.open {
-    padding: 0;
-}
+/* (questions-section replaced by card-section — see ADD SECTION block above) */
 
 .questions-container {
     padding: var(--sp-4) var(--sp-6) var(--sp-6);
@@ -1199,9 +1209,8 @@ body {
         padding: var(--sp-4);
     }
 
-    .add-section {
-        margin: var(--sp-4);
-        padding: var(--sp-4);
+    .card-section {
+        margin: var(--sp-3) var(--sp-4);
     }
 
     .status-overview {
