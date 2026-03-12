@@ -1977,7 +1977,7 @@ function printQuestionnaireFromDocManager() {
 <tbody>${rows}</tbody></table>
 ${cqHtml}
 ${notesHtml}
-<div class="footer">הודפס מתוך מערכת ניהול דוחות שנתיים — משה אציץ רו"ח</div>
+<div class="footer">הודפס מתוך מערכת ניהול דוחות שנתיים — Client Name רו"ח</div>
 </body></html>`;
 
     printWindow.document.write(html);

@@ -5725,7 +5725,7 @@ function generateQuestionnairePrintHTML(items) {
         }
 
         printHtml += `
-  <div class="footer">הודפס מתוך מערכת ניהול דוחות שנתיים — משה אציץ רו"ח</div>
+  <div class="footer">הודפס מתוך מערכת ניהול דוחות שנתיים — Client Name רו"ח</div>
 </div>`;
     });
 
