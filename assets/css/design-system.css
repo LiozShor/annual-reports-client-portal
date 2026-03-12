@@ -839,11 +839,13 @@ textarea {
     background: var(--gray-50);
 }
 
-.collapsible-trigger .icon {
+.collapsible-trigger .icon,
+.collapsible-trigger .icon-sm {
     transition: transform var(--transition-base);
 }
 
-.collapsible-trigger[aria-expanded="true"] .icon {
+.collapsible-trigger[aria-expanded="true"] .icon,
+.collapsible-trigger[aria-expanded="true"] .icon-sm {
     transform: rotate(180deg);
 }
 

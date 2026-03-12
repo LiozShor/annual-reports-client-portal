@@ -164,7 +164,7 @@
                 </div>
 
                 <!-- Questionnaire section -->
-                <div class="questions-section" id="questionnaireSection">
+                <div class="card-section" id="questionnaireSection">
                     <button class="collapsible-trigger" id="questionnaireTrigger"
                         onclick="this.setAttribute('aria-expanded', this.getAttribute('aria-expanded')==='true'?'false':'true'); this.nextElementSibling.classList.toggle('open'); loadQuestionnaireForReport();"
                         aria-expanded="false">
@@ -188,7 +188,7 @@
                 <div id="existingDocs" class="document-list"></div>
 
                 <!-- Questions for client section -->
-                <div class="questions-section">
+                <div class="card-section card-section--warning">
                     <button class="collapsible-trigger" onclick="this.setAttribute('aria-expanded', this.getAttribute('aria-expanded')==='true'?'false':'true'); this.nextElementSibling.classList.toggle('open')" aria-expanded="false">
                         <span class="flex items-center gap-2">
                             <i data-lucide="message-circle" class="icon-sm"></i>
@@ -203,7 +203,7 @@
                 </div>
 
                 <!-- Notes section -->
-                <div class="questions-section" id="notesSection">
+                <div class="card-section" id="notesSection">
                     <button class="collapsible-trigger" id="notesTrigger"
                         onclick="this.setAttribute('aria-expanded', this.getAttribute('aria-expanded')==='true'?'false':'true'); this.nextElementSibling.classList.toggle('open');"
                         aria-expanded="false">
@@ -221,13 +221,13 @@
                 </div>
 
                 <!-- Add documents section -->
-                <div class="add-section">
+                <div class="card-section card-section--brand">
                     <button class="collapsible-trigger" onclick="this.setAttribute('aria-expanded', this.getAttribute('aria-expanded')==='true'?'false':'true'); this.nextElementSibling.classList.toggle('open')" aria-expanded="false">
                         <span class="flex items-center gap-2">
                             <i data-lucide="plus" class="icon-sm"></i>
                             הוספת מסמכים
                         </span>
-                        <i data-lucide="chevron-down" class="icon"></i>
+                        <i data-lucide="chevron-down" class="icon-sm"></i>
                     </button>
                     <div class="collapsible-content">
                     <p class="text-sm text-muted mb-4" style="margin-top: var(--sp-4);">בחר מסמכים מהרשימה או הוסף מסמך מותאם אישית</p>
