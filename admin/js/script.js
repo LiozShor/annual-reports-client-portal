@@ -318,9 +318,6 @@ function renderClientsTable(clients) {
                         <a class="client-edit-link" href="javascript:void(0)" onclick="event.stopPropagation(); openClientDetailModal('${rid}')" title="עריכת פרטים">
                             <i data-lucide="pencil" class="icon-xs"></i>
                         </a>
-                        <a class="client-view-link" href="javascript:void(0)" onclick="event.stopPropagation(); viewClient('${rid}')" title="צפייה כלקוח">
-                            <i data-lucide="external-link" class="icon-xs"></i>
-                        </a>
                     </div>
                 </td>
                 <td>
@@ -360,6 +357,7 @@ function renderClientsTable(clients) {
                     <div class="row-overflow-dropdown">
                         <button class="action-btn overflow" onclick="toggleRowMenu(this, event)" title="פעולות נוספות">⋮</button>
                         <div class="row-menu">
+                            <button onclick="viewClient('${rid}'); closeAllRowMenus();"><i data-lucide="external-link"></i> צפייה כלקוח</button>
                             ${stageNum >= 3 ?
                 `<button onclick="viewQuestionnaire('${rid}'); closeAllRowMenus();"><i data-lucide="file-text"></i> צפה בשאלון</button>` : ''}
                             ${isActive ?
