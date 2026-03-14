@@ -969,6 +969,7 @@ function processImportData(data) {
         const row = data[i];
         const name = String(row.name || row['שם'] || '').trim();
         const email = String(row.email || row['אימייל'] || row['מייל'] || '').trim().toLowerCase();
+        const phone = String(row.phone || row['טלפון'] || row['נייד'] || '').trim();
 
         let status = 'valid';
         let statusText = 'תקין';
@@ -989,7 +990,7 @@ function processImportData(data) {
             validCount++;
         }
 
-        importData.push({ name, email, status, statusText });
+        importData.push({ name, email, phone, status, statusText });
     }
 
     // Update preview stats
