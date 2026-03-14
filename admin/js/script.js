@@ -4429,9 +4429,13 @@ async function openClientDetailModal(reportId) {
     document.getElementById('clientDetailName').value = '';
     document.getElementById('clientDetailEmail').value = '';
     document.getElementById('clientDetailPhone').value = '';
+
+    // Show modal with loading state
+    document.getElementById('clientDetailLoading').style.display = '';
+    document.getElementById('clientDetailFields').style.display = 'none';
+    document.getElementById('clientDetailSavingOverlay').style.display = 'none';
     document.getElementById('clientDetailModal').classList.add('show');
 
-    showLoading('טוען פרטי לקוח...');
     try {
         const response = await fetchWithTimeout(ENDPOINTS.ADMIN_UPDATE_CLIENT, {
             method: 'POST',
@@ -4439,15 +4443,17 @@ async function openClientDetailModal(reportId) {
             body: JSON.stringify({ token: authToken, report_id: reportId, action: 'get' })
         }, FETCH_TIMEOUTS.load);
         const data = await response.json();
-        hideLoading();
 
         if (!data.ok) throw new Error(data.error || 'שגיאה בטעינה');
 
         document.getElementById('clientDetailName').value = data.client.name || '';
         document.getElementById('clientDetailEmail').value = data.client.email || '';
         document.getElementById('clientDetailPhone').value = data.client.phone || '';
+
+        // Swap loading → fields
+        document.getElementById('clientDetailLoading').style.display = 'none';
+        document.getElementById('clientDetailFields').style.display = '';
     } catch (error) {
-        hideLoading();
         closeClientDetailModal();
         showAIToast('שגיאה בטעינת פרטי לקוח: ' + error.message, 'danger');
     }
@@ -4477,7 +4483,7 @@ async function saveClientDetails() {
     }
 
     const doSave = async () => {
-        showLoading('שומר פרטים...');
+        document.getElementById('clientDetailSavingOverlay').style.display = '';
         try {
             const response = await fetchWithTimeout(ENDPOINTS.ADMIN_UPDATE_CLIENT, {
                 method: 'POST',
@@ -4485,7 +4491,6 @@ async function saveClientDetails() {
                 body: JSON.stringify({ token: authToken, report_id: reportId, action: 'update', name, email, phone })
             }, FETCH_TIMEOUTS.mutate);
             const data = await response.json();
-            hideLoading();
 
             if (!data.ok) throw new Error(data.error || 'שגיאה בשמירה');
 
@@ -4501,7 +4506,7 @@ async function saveClientDetails() {
             closeClientDetailModal();
             showAIToast('פרטי הלקוח עודכנו בהצלחה', 'success');
         } catch (error) {
-            hideLoading();
+            document.getElementById('clientDetailSavingOverlay').style.display = 'none';
             showAIToast('שגיאה בשמירה: ' + error.message, 'danger');
         }
     };
