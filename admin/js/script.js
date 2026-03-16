@@ -3965,6 +3965,7 @@ async function executeReminderAction(action, reportIds, value, forceOverride) {
             hideLoading();
             showAIToast('שגיאה בשליחת תזכורות', 'danger');
         }
+        cancelReminderSelection();
         loadReminders(true);
         return;
     }
@@ -4013,6 +4014,7 @@ async function executeReminderAction(action, reportIds, value, forceOverride) {
             set_max: 'מקסימום עודכן'
         };
         showAIToast(actionLabels[action] || 'עודכן בהצלחה', 'success');
+        cancelReminderSelection();
         loadReminders(true);
     } catch (error) {
         if (isBulk) hideLoading();
