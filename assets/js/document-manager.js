@@ -1883,7 +1883,7 @@ function approveAndSendToClient() {
                 const data = await res.json();
                 if (data.ok) {
                     if (!DOCS_FIRST_SENT_AT) DOCS_FIRST_SENT_AT = new Date().toISOString();
-                    if (!CURRENT_STAGE || CURRENT_STAGE.charAt(0) < '3') CURRENT_STAGE = '3-Collecting_Docs';
+                    CURRENT_STAGE = data.stage || '3-Collecting_Docs';
                     updateSentBadge();
                     setBtnState(sendBtn, 'success', 'נשלח!');
                     setTimeout(() => {
