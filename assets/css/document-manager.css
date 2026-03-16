@@ -590,6 +590,15 @@ body {
     margin-top: var(--sp-1);
 }
 
+.company-swap-section .doc-combobox-dropdown {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    left: 0;
+    width: auto;
+    margin-top: 4px;
+}
+
 /* ==================== STATUS BADGES ==================== */
 .badge.clickable {
     cursor: pointer;
