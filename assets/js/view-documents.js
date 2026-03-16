@@ -281,7 +281,8 @@ function renderDocuments() {
                     : (doc.name_en || doc.issuer_name || doc.name_he || 'Document');
 
                 const helpTextRaw = isHe ? doc.help_he : doc.help_en;
-                const helpText = helpTextRaw ? helpTextRaw.replace(/\{year\}/g, year) : '';
+                const reportYear = currentData.report?.year || '';
+                const helpText = helpTextRaw ? helpTextRaw.replace(/\{year\}/g, reportYear) : '';
                 const showHelp = !!helpText;
 
                 let badgeClass = '';
