@@ -105,7 +105,7 @@ async function checkExistingSubmission() {
         fullName = data.client_name || '';
         email = data.client_email || '';
 
-        const stage = data.stage || '1-Send_Questionnaire';
+        const stage = data.stage || 'Send_Questionnaire';
         const docCount = Number(data.document_count || 0);
         const hasDocs = docCount > 0;
         const rank = stageRank(stage);

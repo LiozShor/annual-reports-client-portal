@@ -328,7 +328,7 @@ function renderClientsTable(clients) {
                     </span>
                 </td>
                 <td>
-                    ${stageNum <= 2
+                    ${stageNum <= 3
                         ? '<span class="missing-count not-applicable">—</span>'
                         : `<div class="docs-progress-cell clickable-docs" onclick="toggleDocsPopover(event, '${rid}', '${cName}')" tabindex="0" role="button" title="לחץ לצפייה במסמכים">
                         <span class="docs-count">${docsReceived}/${docsTotal}</span>
@@ -339,7 +339,7 @@ function renderClientsTable(clients) {
                     }
                 </td>
                 <td>
-                    ${stageNum <= 2
+                    ${stageNum <= 3
                         ? '<span class="missing-count not-applicable">—</span>'
                         : `<span class="missing-count clickable-count ${missingCount > 0 ? 'has-missing' : 'all-done'}" onclick="toggleDocsPopover(event, '${rid}', '${cName}')" tabindex="0" role="button" title="לחץ לצפייה במסמכים">${missingCount > 0 ? missingCount : '✓'}</span>`
                     }
@@ -348,10 +348,10 @@ function renderClientsTable(clients) {
                     <span class="notes-text">${escapeHtml((client.notes || '').substring(0, 60))}${(client.notes || '').length > 60 ? '…' : ''}</span>
                 </td>
                 <td>
-                    ${client.stage === '1-Send_Questionnaire' ?
+                    ${client.stage === 'Send_Questionnaire' ?
                 `<button class="action-btn send" onclick="sendSingle('${rid}')" title="שלח שאלון"><i data-lucide="send" class="icon-sm"></i></button>` :
                 ''}
-                    ${(client.stage === '2-Waiting_For_Answers' || client.stage === '3-Collecting_Docs') ?
+                    ${(client.stage === 'Waiting_For_Answers' || client.stage === 'Collecting_Docs') ?
                 `<button class="action-btn reminder-set-btn" onclick="sendDashboardReminder('${rid}', '${cName}')" title="שלח תזכורת"><i data-lucide="bell-ring" class="icon-sm"></i></button>` :
                 ''}
                     <div class="row-overflow-dropdown">
@@ -633,7 +633,7 @@ function updateClientStageInPlace(reportId, newStage) {
 }
 
 function recalculateStats() {
-    const counts = { total: 0, stage1: 0, stage2: 0, stage3: 0, stage4: 0, stage5: 0, stage6: 0, stage7: 0 };
+    const counts = { total: 0, stage1: 0, stage2: 0, stage3: 0, stage4: 0, stage5: 0, stage6: 0, stage7: 0, stage8: 0 };
 
     for (const client of clientsData) {
         if (client.is_active === false) continue; // Skip deactivated clients in stats
@@ -650,6 +650,7 @@ function recalculateStats() {
     document.getElementById('stat-stage5').textContent = counts.stage5;
     document.getElementById('stat-stage6').textContent = counts.stage6;
     document.getElementById('stat-stage7').textContent = counts.stage7;
+    document.getElementById('stat-stage8').textContent = counts.stage8;
 }
 
 // Close dropdowns/popovers on Escape; Enter on clickable counts triggers click
@@ -3552,9 +3553,9 @@ function filterReminders() {
         return da.localeCompare(db);
     };
 
-    // Split into Type A (stage 2) and Type B (stage 3)
-    const typeA = filtered.filter(r => r.stage === '2-Waiting_For_Answers').sort(sortFn);
-    const typeB = filtered.filter(r => r.stage === '3-Collecting_Docs').sort(sortFn);
+    // Split into Type A (stage 2) and Type B (stage 4)
+    const typeA = filtered.filter(r => r.stage === 'Waiting_For_Answers').sort(sortFn);
+    const typeB = filtered.filter(r => r.stage === 'Collecting_Docs').sort(sortFn);
 
     renderRemindersTable(typeA, typeB);
 }
@@ -4607,10 +4608,10 @@ function openClientContextMenu(e) {
 
     const stageNum = STAGES[stage]?.num || 0;
     if (isActive) {
-        if (stage === '1-Send_Questionnaire') {
+        if (stage === 'Send_Questionnaire') {
             items += `<button onclick="sendSingle('${rid}'); closeAllRowMenus();"><i data-lucide="send"></i> שלח שאלון</button>`;
         }
-        if (stage === '2-Waiting_For_Answers' || stage === '3-Collecting_Docs') {
+        if (stage === 'Waiting_For_Answers' || stage === 'Collecting_Docs') {
             items += `<button onclick="sendDashboardReminder('${rid}', '${cName}'); closeAllRowMenus();"><i data-lucide="bell-ring"></i> שלח תזכורת</button>`;
         }
         if (stageNum >= 3) {
@@ -4682,7 +4683,7 @@ function updateClientSelectedCount() {
     let allStage1 = true;
     checked.forEach(cb => {
         const tr = cb.closest('tr');
-        if (tr && tr.dataset.stage !== '1-Send_Questionnaire') allStage1 = false;
+        if (tr && tr.dataset.stage !== 'Send_Questionnaire') allStage1 = false;
     });
     sendBtn.style.display = allStage1 ? '' : 'none';
 

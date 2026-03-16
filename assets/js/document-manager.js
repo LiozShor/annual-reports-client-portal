@@ -222,9 +222,10 @@ async function loadDocuments() {
             notesTextarea.addEventListener('blur', handleNotesSave);
         }
 
-        // Handle case where report is found but stage is 1 (Not Started)
-        if (data.stage && (data.stage.startsWith('1') || data.stage.startsWith('2'))) {
-            if ((!data.groups || data.document_count === 0) && data.stage.startsWith('1')) {
+        // Handle case where report is found but stage is early (no docs yet)
+        const stageRank = STAGE_ORDER[data.stage] || 0;
+        if (stageRank <= 2) {
+            if ((!data.groups || data.document_count === 0) && stageRank <= 1) {
                 document.getElementById('loading').style.display = 'none';
                 document.getElementById('not-started-view').style.display = 'block';
                 setTimeout(initIcons, 50);
@@ -1922,7 +1923,7 @@ function approveAndSendToClient() {
                 const data = await res.json();
                 if (data.ok) {
                     if (!DOCS_FIRST_SENT_AT) DOCS_FIRST_SENT_AT = new Date().toISOString();
-                    CURRENT_STAGE = data.stage || '3-Collecting_Docs';
+                    CURRENT_STAGE = data.stage || 'Collecting_Docs';
                     updateSentBadge();
                     setBtnState(sendBtn, 'success', 'נשלח!');
                     setTimeout(() => {
