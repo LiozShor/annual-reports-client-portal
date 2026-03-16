@@ -591,11 +591,7 @@ body {
 }
 
 .company-swap-section .doc-combobox-dropdown {
-    position: absolute;
-    top: 100%;
-    right: 0;
-    left: 0;
-    width: auto;
+    position: fixed;
     margin-top: 4px;
 }
 

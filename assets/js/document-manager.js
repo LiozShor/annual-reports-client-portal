@@ -841,12 +841,26 @@ function startCompanyEdit(docId, doc) {
         }
     }
 
+    function positionDropdown() {
+        const rect = companyInput.getBoundingClientRect();
+        dropdown.style.top = (rect.bottom + 4) + 'px';
+        dropdown.style.right = (window.innerWidth - rect.right) + 'px';
+        dropdown.style.left = rect.left + 'px';
+        dropdown.style.width = Math.max(rect.width, 280) + 'px';
+    }
+
+    // Reposition on scroll so dropdown follows the input
+    const scrollContainer = companyInput.closest('.doc-list') || window;
+    const onScroll = () => { if (comboOpen) positionDropdown(); };
+    scrollContainer.addEventListener('scroll', onScroll);
+
     toggle.addEventListener('click', () => {
         comboOpen = !comboOpen;
         combo.style.display = comboOpen ? '' : 'none';
         toggle.textContent = comboOpen ? 'החלף חברה ▲' : 'החלף חברה ▼';
         if (comboOpen) {
             renderOptions('');
+            positionDropdown();
             combo.classList.add('open');
             companyInput.focus();
         } else {
@@ -854,9 +868,9 @@ function startCompanyEdit(docId, doc) {
         }
     });
 
-    companyInput.addEventListener('input', () => { renderOptions(companyInput.value); });
+    companyInput.addEventListener('input', () => { renderOptions(companyInput.value); positionDropdown(); });
     companyInput.addEventListener('focus', () => {
-        if (comboOpen) { renderOptions(companyInput.value); combo.classList.add('open'); }
+        if (comboOpen) { renderOptions(companyInput.value); positionDropdown(); combo.classList.add('open'); }
     });
 
     dropdown.addEventListener('click', (e) => {
