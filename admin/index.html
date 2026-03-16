@@ -504,12 +504,19 @@
                     <span class="reminder-bulk-muted-warning" id="reminderBulkMutedWarning" style="display:none;" onclick="deselectMutedClients()" title="לחץ להסיר מושתקים מהבחירה">
                         <i data-lucide="bell-off" class="icon-sm"></i> <span id="reminderBulkMutedCount"></span> מושתקים — לחץ להסיר
                     </span>
-                    <button class="btn btn-sm btn-primary" onclick="reminderBulkAction('send_now')">
-                        <i data-lucide="send" class="icon-sm"></i> שלח עכשיו
-                    </button>
-                    <button class="btn btn-sm btn-ghost-warning" onclick="reminderBulkAction('suppress_forever')">
-                        <i data-lucide="bell-off" class="icon-sm"></i> ללא תזכורות
-                    </button>
+                    <span id="reminderBulkActiveActions">
+                        <button class="btn btn-sm btn-primary" onclick="reminderBulkAction('send_now')">
+                            <i data-lucide="send" class="icon-sm"></i> שלח עכשיו
+                        </button>
+                        <button class="btn btn-sm btn-ghost-warning" onclick="reminderBulkAction('suppress_forever')">
+                            <i data-lucide="bell-off" class="icon-sm"></i> ללא תזכורות
+                        </button>
+                    </span>
+                    <span id="reminderBulkMutedActions" style="display:none;">
+                        <button class="btn btn-sm btn-primary" onclick="reminderBulkAction('unsuppress')">
+                            <i data-lucide="bell" class="icon-sm"></i> הפעל מחדש
+                        </button>
+                    </span>
                     <button class="btn btn-sm btn-ghost" onclick="cancelReminderSelection()">ביטול</button>
                     <button class="btn btn-sm btn-ghost bulk-bar-close" onclick="cancelReminderSelection()" aria-label="סגור">
                         <i data-lucide="x" class="icon-sm"></i>
