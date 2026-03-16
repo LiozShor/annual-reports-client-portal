@@ -863,13 +863,18 @@ function startCompanyEdit(docId, doc) {
         const opt = e.target.closest('.doc-combobox-option');
         if (!opt) return;
         const companyName = opt.dataset.company;
-        // Replace the **bold** portion in the text input with the new company name
+        // Replace the LAST **bold** portion in the text input (company name is always last bold)
         const nameInput = document.getElementById(`nameinput-${docId}`);
         if (nameInput) {
             const val = nameInput.value;
-            const boldRegex = /\*\*(.+?)\*\*/;
-            if (boldRegex.test(val)) {
-                nameInput.value = val.replace(boldRegex, `**${companyName}**`);
+            const lastBoldIdx = val.lastIndexOf('**');
+            if (lastBoldIdx > -1) {
+                // Find the opening ** that pairs with the last closing **
+                const beforeLast = val.substring(0, lastBoldIdx);
+                const openIdx = beforeLast.lastIndexOf('**');
+                if (openIdx > -1) {
+                    nameInput.value = val.substring(0, openIdx) + `**${companyName}**` + val.substring(lastBoldIdx + 2);
+                }
             }
         }
         // Collapse the dropdown after selection
