@@ -1777,6 +1777,10 @@ function renderQuestions() {
 
     // Auto-resize existing textareas
     container.querySelectorAll('textarea').forEach(ta => autoResizeTextarea(ta));
+
+    // Re-render questionnaire section so client questions stay in sync
+    const qContent = document.getElementById('questionnaireContent');
+    if (qContent && _questionnaireData) _renderQuestionnaire(qContent);
 }
 
 function autoResizeTextarea(el) {
