@@ -5621,6 +5621,7 @@ function generateQuestionnairePrintHTML(items) {
     items.forEach((item) => {
         const info = item.client_info || {};
         const answers = item.answers || [];
+        const printAnswers = answers.filter(a => a.value && a.value !== '✗ לא');
         let clientQuestions = [];
         try {
             const rawCQ = item.client_questions || item.raw_answers?.client_questions || '[]';
@@ -5654,14 +5655,14 @@ function generateQuestionnairePrintHTML(items) {
     </div>
   </div>`;
 
-        if (answers.length > 0) {
+        if (printAnswers.length > 0) {
             printHtml += `
   <table class="qa-table">
     <thead>
       <tr><th class="q-col">שאלה</th><th class="a-col">תשובה</th></tr>
     </thead>
     <tbody>`;
-            answers.forEach(({ label, value }) => {
+            printAnswers.forEach(({ label, value }) => {
                 printHtml += `
       <tr>
         <td class="q-col">${escapeHtml(label)}</td>

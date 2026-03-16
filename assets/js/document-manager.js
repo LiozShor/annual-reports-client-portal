@@ -1910,9 +1910,10 @@ function printQuestionnaireFromDocManager() {
     const qa = _questionnaireData;
     const info = qa.client_info || {};
     const answers = qa.answers || [];
+    const printAnswers = answers.filter(a => a.value && a.value !== '✗ לא');
     const date = info.submission_date ? new Date(info.submission_date).toLocaleDateString('he-IL', { day:'2-digit', month:'2-digit', year:'numeric' }) : '—';
 
-    let rows = answers.map((a, i) => `<tr>
+    let rows = printAnswers.map((a, i) => `<tr>
         <td class="q-col">${escapeHtml(a.label)}</td>
         <td class="a-col">${escapeHtml(String(a.value || ''))}</td>
     </tr>`).join('');
