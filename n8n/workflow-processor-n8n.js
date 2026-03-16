@@ -186,6 +186,15 @@ function extractSystemFields(tallyData) {
     }
   }
 
+  // Extract phone from first visible phone field
+  let client_phone = "";
+  for (const f of fields) {
+    if (f.type === 'PHONE_NUMBER' && f.value) {
+      client_phone = f.value;
+      break;
+    }
+  }
+
   const display_name = spouse_name ? `${client_name} ובן/בת זוג` : client_name;
 
   return {
@@ -197,6 +206,7 @@ function extractSystemFields(tallyData) {
     spouse_name: norm(spouse_name),
     display_name: norm(display_name),
     client_email: norm(client_email),
+    client_phone: norm(client_phone),
     form_language: formLanguage,
     formName: eventData.formName || "",
     createdAt: eventData.createdAt || new Date().toISOString()

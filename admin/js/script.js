@@ -926,7 +926,7 @@ function handleFileSelect(event) {
 }
 
 function downloadImportTemplate() {
-    const csvContent = 'name,email,phone\nמשה כהן,moshe@example.com,050-1234567\nשרה לוי,sara@example.com,';
+    const csvContent = 'name,email\nמשה כהן,moshe@example.com\nשרה לוי,sara@example.com';
     const BOM = '\uFEFF';
     const blob = new Blob([BOM + csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
@@ -969,7 +969,6 @@ function processImportData(data) {
         const row = data[i];
         const name = String(row.name || row['שם'] || '').trim();
         const email = String(row.email || row['אימייל'] || row['מייל'] || '').trim().toLowerCase();
-        const phone = String(row.phone || row['טלפון'] || row['נייד'] || '').trim();
 
         let status = 'valid';
         let statusText = 'תקין';
@@ -990,7 +989,7 @@ function processImportData(data) {
             validCount++;
         }
 
-        importData.push({ name, email, phone, status, statusText });
+        importData.push({ name, email, status, statusText });
     }
 
     // Update preview stats
@@ -1066,7 +1065,7 @@ async function startImport() {
     const year = document.getElementById('importYear').value;
 
     const success = await performServerImport(
-        validClients.map(c => ({ name: c.name, email: c.email, phone: c.phone || '' })),
+        validClients.map(c => ({ name: c.name, email: c.email })),
         year,
         'הלקוחות נוספו בהצלחה למערכת.'
     );
@@ -1102,7 +1101,6 @@ function setAddMode(mode) {
 async function addManualClient() {
     const name = document.getElementById('manualName').value.trim();
     const email = document.getElementById('manualEmail').value.trim().toLowerCase();
-    const phone = (document.getElementById('manualPhone')?.value || '').trim();
     const year = document.getElementById('manualYear').value;
 
     if (!name || !email) {
@@ -1119,12 +1117,12 @@ async function addManualClient() {
         return;
     }
 
-    await _doManualAdd(name, email, phone, year);
+    await _doManualAdd(name, email, year);
 }
 
-async function _doManualAdd(name, email, phone, year) {
+async function _doManualAdd(name, email, year) {
     const data = await performServerImport(
-        [{ name, email, phone }],
+        [{ name, email }],
         year,
         null,
         { suppressModal: true }
@@ -1133,8 +1131,6 @@ async function _doManualAdd(name, email, phone, year) {
     if (data) {
         document.getElementById('manualName').value = '';
         document.getElementById('manualEmail').value = '';
-        const phoneEl = document.getElementById('manualPhone');
-        if (phoneEl) phoneEl.value = '';
 
         const reportId = data.report_ids?.[0];
         if (reportId) {
