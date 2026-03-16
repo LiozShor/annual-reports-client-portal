@@ -36,7 +36,7 @@ function sanitizeHelpHtml(html) {
     safe = safe.replace(/&lt;strong&gt;/gi, '<strong>').replace(/&lt;\/strong&gt;/gi, '</strong>');
     safe = safe.replace(/&lt;i&gt;/gi, '<i>').replace(/&lt;\/i&gt;/gi, '</i>');
     safe = safe.replace(/&lt;br\s*\/?&gt;/gi, '<br>');
-    safe = safe.replace(/&lt;a\s+href=&quot;(https?:\/\/[^&]*)&quot;(?:\s[^&]*?)?&gt;/gi, (match, url) => {
+    safe = safe.replace(/&lt;a\s+href="(https?:\/\/[^"]*)"[^&]*&gt;/gi, (match, url) => {
         return `<a href="${url}" target="_blank" rel="noopener noreferrer">`;
     });
     safe = safe.replace(/&lt;\/a&gt;/gi, '</a>');
