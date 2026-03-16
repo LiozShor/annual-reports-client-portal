@@ -306,7 +306,32 @@ function renderDocuments() {
 
                 const helpTextRaw = isHe ? doc.help_he : doc.help_en;
                 const reportYear = currentData.report?.year || '';
-                const helpText = helpTextRaw ? helpTextRaw.replace(/\{year\}/g, reportYear) : '';
+                let helpText = helpTextRaw ? helpTextRaw.replace(/\{year\}/g, reportYear) : '';
+
+                // Replace company placeholders for insurance/pension docs
+                if (helpText && (helpText.includes('{company_name}') || helpText.includes('{company_url}'))) {
+                    const companyLinks = currentData.company_links || {};
+                    // Find matching company by checking if any company name appears in the doc title
+                    const docTitle = doc.name_he || doc.issuer_name || '';
+                    let matchedCompany = '';
+                    let matchedUrl = '';
+                    for (const [name, url] of Object.entries(companyLinks)) {
+                        if (docTitle.includes(name)) {
+                            matchedCompany = name;
+                            matchedUrl = url;
+                            break;
+                        }
+                    }
+                    if (matchedUrl) {
+                        helpText = helpText.replace(/\{company_name\}/g, matchedCompany);
+                        helpText = helpText.replace(/\{company_url\}/g, matchedUrl);
+                    } else {
+                        // Graceful fallback: remove link placeholder entirely
+                        helpText = helpText.replace(/<a href="\{company_url\}"[^>]*>\{company_name\}<\/a>/g, '');
+                        helpText = helpText.replace(/\{company_name\}/g, '');
+                        helpText = helpText.replace(/\{company_url\}/g, '#');
+                    }
+                }
                 const showHelp = !!helpText;
 
                 let badgeClass = '';

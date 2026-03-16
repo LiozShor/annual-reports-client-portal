@@ -30,6 +30,7 @@ let docsToAdd = new Map(); // displayName → {template_id, category, name_en, p
 let pendingTemplate = null; // Template awaiting detail input
 let apiTemplates = [];      // Templates from Airtable (SSOT)
 let apiCategories = [];     // Categories from Airtable (SSOT)
+let companyLinksMap = {};   // name_he → url from company_links table
 
 // Enhanced operations state
 let markedForRestore = new Set();   // doc IDs to un-waive
@@ -246,6 +247,7 @@ async function loadDocuments() {
         // Store templates and categories from API (SSOT)
         apiTemplates = data.templates || [];
         apiCategories = data.categories_list || [];
+        companyLinksMap = data.company_links || {};
 
         // Load client questions
         // Skip if _skipQuestionsReload is set (post-save race: Airtable write may not be committed yet)
@@ -683,12 +685,24 @@ document.addEventListener('scroll', function() {
     if (_activeNoteDocId) closeNotePopover();
 }, true);
 
+// Templates with company-specific issuer names (insurance/pension)
+const COMPANY_TEMPLATES = ['T501', 'T401', 'T301'];
+
 // Inline document name editing
 function startNameEdit(docId) {
     const nameEl = document.getElementById(`docname-${docId}`);
     if (!nameEl) return;
 
-    const currentName = nameChanges.get(docId) || currentDocuments.find(d => d.id === docId)?.name || '';
+    const doc = currentDocuments.find(d => d.id === docId);
+    if (!doc) return;
+
+    // For company-specific templates, show company combobox
+    if (COMPANY_TEMPLATES.includes(doc.type) && Object.keys(companyLinksMap).length > 0) {
+        startCompanyEdit(docId, doc);
+        return;
+    }
+
+    const currentName = nameChanges.get(docId) || doc.name || '';
     const inputVal = htmlToMarkdown(currentName);
     nameEl.innerHTML = `
         <div class="name-edit-row">
@@ -728,6 +742,138 @@ function startNameEdit(docId) {
     // Hide pencil button while editing
     const pencilBtn = document.querySelector(`#doc-${docId} .name-edit-btn`);
     if (pencilBtn) pencilBtn.style.display = 'none';
+}
+
+// Company combobox edit for insurance/pension docs
+function startCompanyEdit(docId, doc) {
+    const nameEl = document.getElementById(`docname-${docId}`);
+    if (!nameEl) return;
+
+    // Extract current company name from the bold part of the doc name
+    const currentName = nameChanges.get(docId) || doc.name || '';
+    const boldMatch = currentName.match(/<b>([^<]+)<\/b>/);
+    const currentCompany = boldMatch ? boldMatch[1] : '';
+
+    // Get unique Hebrew company names from the map (filter out EN names and aliases)
+    const companies = Object.keys(companyLinksMap).filter(name => /[\u0590-\u05FF]/.test(name));
+
+    nameEl.innerHTML = `
+        <div class="name-edit-row">
+            <div class="doc-combobox" id="company-combo-${docId}" style="flex:1;">
+                <input class="doc-combobox-input" id="company-input-${docId}"
+                    placeholder="חפש חברה..." dir="rtl" autocomplete="off">
+                <div class="doc-combobox-dropdown" id="company-dropdown-${docId}"></div>
+            </div>
+            <div class="name-edit-actions">
+                <button type="button" class="name-edit-cancel" onclick="cancelNameEdit('${docId}')" title="ביטול">
+                    <i data-lucide="x" class="icon-xs"></i>
+                </button>
+            </div>
+        </div>`;
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+
+    const group = nameEl.closest('.doc-name-group');
+    if (group) { group.style.flex = '1'; group.style.maxWidth = 'none'; }
+    nameEl.style.flex = '1';
+
+    const pencilBtn = document.querySelector(`#doc-${docId} .name-edit-btn`);
+    if (pencilBtn) pencilBtn.style.display = 'none';
+
+    const input = document.getElementById(`company-input-${docId}`);
+    const dropdown = document.getElementById(`company-dropdown-${docId}`);
+    const combo = document.getElementById(`company-combo-${docId}`);
+    if (!input || !dropdown || !combo) return;
+
+    input.value = currentCompany;
+
+    function renderOptions(filter) {
+        const q = (filter || '').trim().toLowerCase();
+        const filtered = q ? companies.filter(c => c.includes(q)) : companies;
+        if (filtered.length === 0) {
+            dropdown.innerHTML = '<div class="doc-combobox-empty">לא נמצאו תוצאות</div>';
+        } else {
+            dropdown.innerHTML = filtered.map(c =>
+                `<div class="doc-combobox-option${c === currentCompany ? ' current-match' : ''}"
+                      data-company="${escapeHtml(c)}">${escapeHtml(c)}</div>`
+            ).join('');
+        }
+    }
+
+    function positionDropdown() {
+        const rect = input.getBoundingClientRect();
+        dropdown.style.top = (rect.bottom + 4) + 'px';
+        dropdown.style.right = (window.innerWidth - rect.right) + 'px';
+        dropdown.style.left = 'auto';
+        dropdown.style.width = Math.max(rect.width, 280) + 'px';
+    }
+
+    function openDropdown() {
+        renderOptions(input.value);
+        positionDropdown();
+        combo.classList.add('open');
+    }
+
+    function closeDropdown() {
+        combo.classList.remove('open');
+    }
+
+    function selectCompany(companyName) {
+        // Replace bold company name in doc title
+        const docName = nameChanges.get(docId) || doc.name || '';
+        let newName;
+        if (docName.includes('<b>') && docName.includes('</b>')) {
+            newName = docName.replace(/<b>[^<]+<\/b>/, `<b>${companyName}</b>`);
+        } else {
+            newName = docName; // fallback: keep as-is
+        }
+
+        if (newName !== doc.name) {
+            nameChanges.set(docId, newName);
+        } else {
+            nameChanges.delete(docId);
+        }
+
+        closeDropdown();
+
+        // Revert to text display
+        nameEl.style.flex = '';
+        nameEl.innerHTML = sanitizeDocHtml(newName);
+        const grp = nameEl.closest('.doc-name-group');
+        if (grp) { grp.style.flex = ''; grp.style.maxWidth = ''; }
+
+        const btn = document.querySelector(`#doc-${docId} .name-edit-btn`);
+        if (btn) btn.style.display = '';
+
+        const docEl = document.getElementById(`doc-${docId}`);
+        if (docEl) docEl.classList.toggle('name-changed', nameChanges.has(docId));
+        updateStats();
+    }
+
+    // Event handlers
+    input.addEventListener('input', () => { renderOptions(input.value); positionDropdown(); });
+    input.addEventListener('focus', openDropdown);
+    input.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') { e.preventDefault(); cancelNameEdit(docId); }
+    });
+
+    dropdown.addEventListener('click', (e) => {
+        const opt = e.target.closest('.doc-combobox-option');
+        if (opt) selectCompany(opt.dataset.company);
+    });
+
+    // Close on outside click
+    setTimeout(() => {
+        function onOutsideClick(e) {
+            if (!combo.contains(e.target)) {
+                closeDropdown();
+                document.removeEventListener('click', onOutsideClick);
+            }
+        }
+        document.addEventListener('click', onOutsideClick);
+    }, 0);
+
+    input.focus();
+    openDropdown();
 }
 
 function saveNameEdit(docId) {
