@@ -65,21 +65,26 @@ window.toggleDocHelp = function (btn) {
 };
 
 /** Hover open/close for help content (skip if pinned via click) */
-document.addEventListener('mouseenter', function (e) {
+document.addEventListener('mouseover', function (e) {
+    if (!e.target || !e.target.closest) return;
     const wrapper = e.target.closest('.doc-item-wrapper');
-    if (!wrapper) return;
+    if (!wrapper || wrapper._hoverOpen) return;
     const content = wrapper.querySelector('.doc-help-content');
     if (!content || content.classList.contains('pinned')) return;
+    wrapper._hoverOpen = true;
     content.classList.add('open');
-}, true);
+});
 
-document.addEventListener('mouseleave', function (e) {
+document.addEventListener('mouseout', function (e) {
+    if (!e.target || !e.target.closest) return;
     const wrapper = e.target.closest('.doc-item-wrapper');
     if (!wrapper) return;
+    if (wrapper.contains(e.relatedTarget)) return;
     const content = wrapper.querySelector('.doc-help-content');
     if (!content || content.classList.contains('pinned')) return;
+    wrapper._hoverOpen = false;
     content.classList.remove('open');
-}, true);
+});
 
 /** Escape all HTML for plain text content */
 function escapeHtml(text) {
