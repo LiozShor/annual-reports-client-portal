@@ -745,33 +745,72 @@ function startNameEdit(docId) {
 }
 
 // Company combobox edit for insurance/pension docs
+// Shows full doc name as editable text + company quick-swap dropdown below
 function startCompanyEdit(docId, doc) {
     const nameEl = document.getElementById(`docname-${docId}`);
     if (!nameEl) return;
 
-    // Extract current company name from the bold part of the doc name
     const currentName = nameChanges.get(docId) || doc.name || '';
-    const boldMatch = currentName.match(/<b>([^<]+)<\/b>/);
-    const currentCompany = boldMatch ? boldMatch[1] : '';
+    const inputVal = htmlToMarkdown(currentName);
 
-    // Get unique Hebrew company names from the map (filter out EN names and aliases)
-    const companies = Object.keys(companyLinksMap).filter(name => /[\u0590-\u05FF]/.test(name));
+    // Build company entries: one per Hebrew name, with aliases for search
+    // companyLinksMap: {name → url} where multiple names can map to same URL
+    const urlToNames = {};
+    for (const [name, url] of Object.entries(companyLinksMap)) {
+        if (!urlToNames[url]) urlToNames[url] = [];
+        urlToNames[url].push(name);
+    }
+    // Each Hebrew name is a selectable option; search also matches sibling aliases (EN names etc.)
+    const companyEntries = [];
+    for (const [url, names] of Object.entries(urlToNames)) {
+        const heNames = names.filter(n => /[\u0590-\u05FF]/.test(n));
+        // Show each Hebrew name as its own option, searchable by all aliases for same URL
+        for (const heName of heNames) {
+            companyEntries.push({ display: heName, aliases: names, url });
+        }
+        // If no Hebrew names at all, show first name as fallback
+        if (heNames.length === 0) {
+            companyEntries.push({ display: names[0], aliases: names, url });
+        }
+    }
 
     nameEl.innerHTML = `
         <div class="name-edit-row">
-            <div class="doc-combobox" id="company-combo-${docId}" style="flex:1;">
-                <input class="doc-combobox-input" id="company-input-${docId}"
-                    placeholder="חפש חברה..." dir="rtl" autocomplete="off">
-                <div class="doc-combobox-dropdown" id="company-dropdown-${docId}"></div>
+            <div style="flex:1;">
+                <input type="text" class="name-edit-input" id="nameinput-${docId}" dir="auto">
             </div>
             <div class="name-edit-actions">
+                <button type="button" class="name-edit-save" onclick="saveNameEdit('${docId}')" title="שמור">
+                    <i data-lucide="check" class="icon-xs"></i>
+                </button>
                 <button type="button" class="name-edit-cancel" onclick="cancelNameEdit('${docId}')" title="ביטול">
                     <i data-lucide="x" class="icon-xs"></i>
                 </button>
             </div>
+        </div>
+        <div class="company-swap-section" id="company-swap-${docId}">
+            <a href="javascript:void(0)" class="company-swap-toggle" id="company-toggle-${docId}">החלף חברה ▼</a>
+            <div class="doc-combobox" id="company-combo-${docId}" style="display:none;">
+                <input class="doc-combobox-input" id="company-input-${docId}"
+                    placeholder="חפש חברה..." dir="rtl" autocomplete="off">
+                <div class="doc-combobox-dropdown" id="company-dropdown-${docId}"></div>
+            </div>
         </div>`;
     if (typeof lucide !== 'undefined') lucide.createIcons();
 
+    const input = document.getElementById(`nameinput-${docId}`);
+    if (input) {
+        input.value = inputVal;
+        input.focus();
+        const len = inputVal.length;
+        input.setSelectionRange(len, len);
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') { e.preventDefault(); saveNameEdit(docId); }
+            if (e.key === 'Escape') { e.preventDefault(); cancelNameEdit(docId); }
+        });
+    }
+
+    // Expand group for full width
     const group = nameEl.closest('.doc-name-group');
     if (group) { group.style.flex = '1'; group.style.maxWidth = 'none'; }
     nameEl.style.flex = '1';
@@ -779,101 +818,87 @@ function startCompanyEdit(docId, doc) {
     const pencilBtn = document.querySelector(`#doc-${docId} .name-edit-btn`);
     if (pencilBtn) pencilBtn.style.display = 'none';
 
-    const input = document.getElementById(`company-input-${docId}`);
-    const dropdown = document.getElementById(`company-dropdown-${docId}`);
+    // Company quick-swap dropdown
+    const toggle = document.getElementById(`company-toggle-${docId}`);
     const combo = document.getElementById(`company-combo-${docId}`);
-    if (!input || !dropdown || !combo) return;
+    const companyInput = document.getElementById(`company-input-${docId}`);
+    const dropdown = document.getElementById(`company-dropdown-${docId}`);
+    if (!toggle || !combo || !companyInput || !dropdown) return;
 
-    input.value = currentCompany;
+    let comboOpen = false;
 
     function renderOptions(filter) {
         const q = (filter || '').trim().toLowerCase();
-        const filtered = q ? companies.filter(c => c.includes(q)) : companies;
+        const filtered = q
+            ? companyEntries.filter(e => e.display.includes(q) || e.aliases.some(a => a.toLowerCase().includes(q)))
+            : companyEntries;
         if (filtered.length === 0) {
             dropdown.innerHTML = '<div class="doc-combobox-empty">לא נמצאו תוצאות</div>';
         } else {
-            dropdown.innerHTML = filtered.map(c =>
-                `<div class="doc-combobox-option${c === currentCompany ? ' current-match' : ''}"
-                      data-company="${escapeHtml(c)}">${escapeHtml(c)}</div>`
+            dropdown.innerHTML = filtered.map(e =>
+                `<div class="doc-combobox-option" data-company="${escapeHtml(e.display)}">${escapeHtml(e.display)}</div>`
             ).join('');
         }
     }
 
     function positionDropdown() {
-        const rect = input.getBoundingClientRect();
+        const rect = companyInput.getBoundingClientRect();
         dropdown.style.top = (rect.bottom + 4) + 'px';
         dropdown.style.right = (window.innerWidth - rect.right) + 'px';
         dropdown.style.left = 'auto';
         dropdown.style.width = Math.max(rect.width, 280) + 'px';
     }
 
-    function openDropdown() {
-        renderOptions(input.value);
-        positionDropdown();
-        combo.classList.add('open');
-    }
-
-    function closeDropdown() {
-        combo.classList.remove('open');
-    }
-
-    function selectCompany(companyName) {
-        // Replace bold company name in doc title
-        const docName = nameChanges.get(docId) || doc.name || '';
-        let newName;
-        if (docName.includes('<b>') && docName.includes('</b>')) {
-            newName = docName.replace(/<b>[^<]+<\/b>/, `<b>${companyName}</b>`);
+    toggle.addEventListener('click', () => {
+        comboOpen = !comboOpen;
+        combo.style.display = comboOpen ? '' : 'none';
+        toggle.textContent = comboOpen ? 'החלף חברה ▲' : 'החלף חברה ▼';
+        if (comboOpen) {
+            renderOptions('');
+            positionDropdown();
+            combo.classList.add('open');
+            companyInput.focus();
         } else {
-            newName = docName; // fallback: keep as-is
+            combo.classList.remove('open');
         }
+    });
 
-        if (newName !== doc.name) {
-            nameChanges.set(docId, newName);
-        } else {
-            nameChanges.delete(docId);
-        }
-
-        closeDropdown();
-
-        // Revert to text display
-        nameEl.style.flex = '';
-        nameEl.innerHTML = sanitizeDocHtml(newName);
-        const grp = nameEl.closest('.doc-name-group');
-        if (grp) { grp.style.flex = ''; grp.style.maxWidth = ''; }
-
-        const btn = document.querySelector(`#doc-${docId} .name-edit-btn`);
-        if (btn) btn.style.display = '';
-
-        const docEl = document.getElementById(`doc-${docId}`);
-        if (docEl) docEl.classList.toggle('name-changed', nameChanges.has(docId));
-        updateStats();
-    }
-
-    // Event handlers
-    input.addEventListener('input', () => { renderOptions(input.value); positionDropdown(); });
-    input.addEventListener('focus', openDropdown);
-    input.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape') { e.preventDefault(); cancelNameEdit(docId); }
+    companyInput.addEventListener('input', () => { renderOptions(companyInput.value); positionDropdown(); });
+    companyInput.addEventListener('focus', () => {
+        if (comboOpen) { renderOptions(companyInput.value); positionDropdown(); combo.classList.add('open'); }
     });
 
     dropdown.addEventListener('click', (e) => {
         const opt = e.target.closest('.doc-combobox-option');
-        if (opt) selectCompany(opt.dataset.company);
+        if (!opt) return;
+        const companyName = opt.dataset.company;
+        // Replace the **bold** portion in the text input with the new company name
+        const nameInput = document.getElementById(`nameinput-${docId}`);
+        if (nameInput) {
+            const val = nameInput.value;
+            const boldRegex = /\*\*(.+?)\*\*/;
+            if (boldRegex.test(val)) {
+                nameInput.value = val.replace(boldRegex, `**${companyName}**`);
+            }
+        }
+        // Collapse the dropdown after selection
+        comboOpen = false;
+        combo.style.display = 'none';
+        toggle.textContent = 'החלף חברה ▼';
+        combo.classList.remove('open');
+        if (nameInput) nameInput.focus();
     });
 
-    // Close on outside click
+    // Close dropdown on outside click
     setTimeout(() => {
         function onOutsideClick(e) {
-            if (!combo.contains(e.target)) {
-                closeDropdown();
-                document.removeEventListener('click', onOutsideClick);
+            if (!combo.contains(e.target) && e.target !== toggle) {
+                combo.classList.remove('open');
             }
         }
         document.addEventListener('click', onOutsideClick);
+        // Clean up when editing ends (cancel/save will replace innerHTML)
     }, 0);
-
-    input.focus();
-    openDropdown();
 }
 
 function saveNameEdit(docId) {
