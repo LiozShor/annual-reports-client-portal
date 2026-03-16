@@ -569,6 +569,27 @@ body {
     font-size: var(--text-sm);
 }
 
+/* ==================== COMPANY SWAP TOGGLE ==================== */
+.company-swap-section {
+    margin-top: var(--sp-1);
+}
+
+.company-swap-toggle {
+    font-size: var(--text-xs);
+    color: var(--brand-600, #4F46E5);
+    text-decoration: none;
+    cursor: pointer;
+    user-select: none;
+}
+
+.company-swap-toggle:hover {
+    text-decoration: underline;
+}
+
+.company-swap-section .doc-combobox {
+    margin-top: var(--sp-1);
+}
+
 /* ==================== STATUS BADGES ==================== */
 .badge.clickable {
     cursor: pointer;
