@@ -2064,18 +2064,13 @@ function printQuestionnaireFromDocManager() {
         <td class="a-col">${escapeHtml(String(a.value || ''))}</td>
     </tr>`).join('');
 
-    // Client questions for print (DL-122)
-    let clientQuestions = [];
-    try {
-        const rawCQ = qa.client_questions || qa.raw_answers?.client_questions || '[]';
-        clientQuestions = typeof rawCQ === 'string' ? JSON.parse(rawCQ) : rawCQ;
-        if (!Array.isArray(clientQuestions)) clientQuestions = [];
-    } catch (e) { clientQuestions = []; }
+    // Client questions for print — use module-level clientQuestions (always up-to-date)
+    const printCQ = clientQuestions.filter(q => q.text && q.text.trim());
 
     let cqHtml = '';
-    if (clientQuestions.length > 0) {
+    if (printCQ.length > 0) {
         cqHtml += `<div class="client-questions"><h4>שאלות הלקוח</h4>`;
-        clientQuestions.forEach((q, idx) => {
+        printCQ.forEach((q, idx) => {
             const text = typeof q === 'string' ? q : (q.text || q.question || JSON.stringify(q));
             const answer = (typeof q === 'object' && q.answer) ? q.answer.trim() : '';
             cqHtml += `<div class="cq-item">
