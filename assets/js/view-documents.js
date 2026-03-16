@@ -55,12 +55,31 @@ window.toggleDocHelp = function (btn) {
 
     if (content.classList.contains('open')) {
         content.classList.remove('open');
+        content.classList.remove('pinned');
         btn.classList.remove('active');
     } else {
         content.classList.add('open');
+        content.classList.add('pinned');
         btn.classList.add('active');
     }
 };
+
+/** Hover open/close for help content (skip if pinned via click) */
+document.addEventListener('mouseenter', function (e) {
+    const wrapper = e.target.closest('.doc-item-wrapper');
+    if (!wrapper) return;
+    const content = wrapper.querySelector('.doc-help-content');
+    if (!content || content.classList.contains('pinned')) return;
+    content.classList.add('open');
+}, true);
+
+document.addEventListener('mouseleave', function (e) {
+    const wrapper = e.target.closest('.doc-item-wrapper');
+    if (!wrapper) return;
+    const content = wrapper.querySelector('.doc-help-content');
+    if (!content || content.classList.contains('pinned')) return;
+    content.classList.remove('open');
+}, true);
 
 /** Escape all HTML for plain text content */
 function escapeHtml(text) {
