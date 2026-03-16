@@ -2112,7 +2112,7 @@ function printQuestionnaireFromDocManager() {
 </style></head><body>
 <div class="header">
   <h2>${escapeHtml(info.name || '—')}</h2>
-  <div class="meta">שנת מס ${escapeHtml(info.year || '—')} | הוגש: ${date} | ${escapeHtml(info.email || '—')}</div>
+  <div class="meta">שנת מס ${escapeHtml(info.year || '—')} | הוגש: ${date} | ${escapeHtml(info.email || '—')}${info.phone ? ` | ${escapeHtml(info.phone)}` : ''}</div>
 </div>
 <table><thead><tr><th class="q-col">שאלה</th><th class="a-col">תשובה</th></tr></thead>
 <tbody>${rows}</tbody></table>

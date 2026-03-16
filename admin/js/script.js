@@ -5419,6 +5419,10 @@ function buildQADetailHTML(item) {
                 <span class="qa-summary-label">אימייל</span>
                 <span class="qa-summary-value">${escapeHtml(info.email || '—')}</span>
             </div>
+            ${info.phone ? `<div class="qa-summary-field">
+                <span class="qa-summary-label">טלפון</span>
+                <span class="qa-summary-value">${escapeHtml(info.phone)}</span>
+            </div>` : ''}
             <div class="qa-summary-field">
                 <span class="qa-summary-label">תאריך הגשה</span>
                 <span class="qa-summary-value">${formatDateDisplay(info.submission_date || '')}</span>
@@ -5638,7 +5642,7 @@ function generateQuestionnairePrintHTML(items) {
 <div class="client-page">
   <div class="client-header">
     <h2>${escapeHtml(info.name || '—')}</h2>
-    <div class="meta">שנת מס ${escapeHtml(info.year || '—')} | הוגש: ${date} | ${escapeHtml(info.email || '—')}</div>
+    <div class="meta">שנת מס ${escapeHtml(info.year || '—')} | הוגש: ${date} | ${escapeHtml(info.email || '—')}${info.phone ? ` | ${escapeHtml(info.phone)}` : ''}</div>
   </div>
   <div class="summary-grid">
     <div class="summary-field">
@@ -5653,6 +5657,10 @@ function generateQuestionnairePrintHTML(items) {
       <span class="summary-label">שנת מס</span>
       <span class="summary-value">${escapeHtml(info.year || '—')}</span>
     </div>
+    ${info.phone ? `<div class="summary-field">
+      <span class="summary-label">טלפון</span>
+      <span class="summary-value">${escapeHtml(info.phone)}</span>
+    </div>` : ''}
     <div class="summary-field">
       <span class="summary-label">תאריך הגשה</span>
       <span class="summary-value">${date}</span>
