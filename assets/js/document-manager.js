@@ -2014,18 +2014,13 @@ function _renderQuestionnaire(container) {
 
     html += `</tbody></table>`;
 
-    // Client questions section (DL-122)
-    let clientQuestions = [];
-    try {
-        const rawCQ = qa.client_questions || qa.raw_answers?.client_questions || '[]';
-        clientQuestions = typeof rawCQ === 'string' ? JSON.parse(rawCQ) : rawCQ;
-        if (!Array.isArray(clientQuestions)) clientQuestions = [];
-    } catch (e) { clientQuestions = []; }
+    // Client questions section — use module-level clientQuestions (always up-to-date)
+    const displayCQ = clientQuestions.filter(q => q.text && q.text.trim());
 
-    if (clientQuestions.length > 0) {
+    if (displayCQ.length > 0) {
         html += `<div style="margin-top:var(--sp-3);background:#fffbeb;border:1px solid #fcd34d;border-radius:var(--radius-md);padding:var(--sp-3) var(--sp-4);">
-            <div style="font-size:var(--text-xs);font-weight:700;color:#92400e;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:var(--sp-2);">שאלות הלקוח (${clientQuestions.length})</div>`;
-        clientQuestions.forEach((q, idx) => {
+            <div style="font-size:var(--text-xs);font-weight:700;color:#92400e;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:var(--sp-2);">שאלות הלקוח (${displayCQ.length})</div>`;
+        displayCQ.forEach((q, idx) => {
             const text = typeof q === 'string' ? q : (q.text || q.question || JSON.stringify(q));
             const answer = (typeof q === 'object' && q.answer) ? q.answer.trim() : '';
             const answered = !!answer;
