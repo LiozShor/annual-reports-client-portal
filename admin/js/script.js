@@ -3790,13 +3790,18 @@ function updateReminderSelectedCount() {
         const r = remindersData.find(x => x.report_id === id);
         return r && r.reminder_suppress === 'forever';
     }).length;
+    const allMuted = count > 0 && mutedCount === count;
     const mutedWarning = document.getElementById('reminderBulkMutedWarning');
-    if (mutedCount > 0) {
+    const activeActions = document.getElementById('reminderBulkActiveActions');
+    const mutedActions = document.getElementById('reminderBulkMutedActions');
+    if (mutedCount > 0 && !allMuted) {
         document.getElementById('reminderBulkMutedCount').textContent = mutedCount;
         mutedWarning.style.display = '';
     } else {
         mutedWarning.style.display = 'none';
     }
+    if (activeActions) activeActions.style.display = allMuted ? 'none' : '';
+    if (mutedActions) mutedActions.style.display = allMuted ? '' : 'none';
 
     const rbar = document.getElementById('reminderBulkActions');
     if (count > 0) {
@@ -3818,6 +3823,7 @@ function deselectMutedClients() {
 }
 
 function reminderAction(action, reportId) {
+    document.querySelectorAll('.suppress-menu.open').forEach(m => m.classList.remove('open'));
     if (action === 'send_now') {
         const r = remindersData.find(x => x.report_id === reportId);
         if (r && isExhausted(r)) {
