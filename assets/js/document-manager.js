@@ -1693,6 +1693,36 @@ function resetForm() {
     showAlert('הטופס אופס בהצלחה', 'success');
 }
 
+// Add custom document from the text input
+function addCustomDoc() {
+    const input = document.getElementById('customDoc');
+    const name = input.value.trim();
+
+    if (!name) {
+        showAlert('יש להזין שם מסמך', 'error');
+        return;
+    }
+
+    if (docsToAdd.has(name)) {
+        showAlert('מסמך זה כבר נמצא ברשימה', 'error');
+        return;
+    }
+
+    // Check against existing docs
+    if (currentDocuments.some(d => d.name === name)) {
+        showAlert('מסמך זה כבר קיים ברשימת המסמכים', 'error');
+        return;
+    }
+
+    docsToAdd.set(name, { custom: true });
+    updateSelectedDocs();
+    updateStats();
+
+    input.value = '';
+    document.getElementById('customDocWarning').style.display = 'none';
+    showAlert(`מסמך "${name}" נוסף בהצלחה`, 'success');
+}
+
 // Check if custom document is a duplicate
 function checkCustomDocDuplicate() {
     const customDoc = document.getElementById('customDoc').value.trim();
