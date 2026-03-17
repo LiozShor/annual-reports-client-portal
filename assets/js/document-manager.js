@@ -200,6 +200,8 @@ async function loadDocuments() {
             SPOUSE_NAME = data.spouse_name;
             const spouseEl = document.getElementById('spouseName');
             if (spouseEl) spouseEl.textContent = SPOUSE_NAME;
+            const spouseToggle = document.getElementById('spouseDocToggle');
+            if (spouseToggle) spouseToggle.style.display = '';
         }
         if (data.year) {
             YEAR = data.year;
@@ -979,6 +981,12 @@ function markdownToHtml(str) {
     return (str || '').replace(/\*\*(.+?)\*\*/g, '<b>$1</b>');
 }
 
+// Check if the spouse-doc checkbox is checked
+function isSpouseDocMode() {
+    const cb = document.getElementById('spouseDocCheckbox');
+    return cb && cb.checked;
+}
+
 // Build metadata object for a template with collected variable values
 function buildDocMeta(tpl, collectedValues) {
     let nameHe = tpl.name_he;
@@ -987,8 +995,8 @@ function buildDocMeta(tpl, collectedValues) {
         nameHe = nameHe.replace(new RegExp(`\\{${key}\\}`, 'g'), val);
         nameEn = nameEn.replace(new RegExp(`\\{${key}\\}`, 'g'), val);
     }
-    // Determine person based on scope
-    const person = (tpl.scope === 'SPOUSE') ? 'spouse' : 'client';
+    // Determine person based on checkbox override or template scope
+    const person = isSpouseDocMode() ? 'spouse' : (tpl.scope === 'SPOUSE') ? 'spouse' : 'client';
     // Build issuer_key from user-provided variable values (exclude auto-filled year/spouse_name)
     const autoVars = ['year', 'spouse_name'];
     const issuerParts = Object.entries(collectedValues)
@@ -1118,11 +1126,12 @@ function updateSelectedDocs() {
 
     container.className = 'selected-docs';
 
-    container.innerHTML = Array.from(docsToAdd.keys()).map(doc => {
+    container.innerHTML = Array.from(docsToAdd.entries()).map(([doc, meta]) => {
         const safeArg = encodeURIComponent(doc);
+        const personLabel = (meta && meta.person === 'spouse') ? ' <span class="text-muted text-xs">(בן/בת זוג)</span>' : '';
         return `
             <div class="doc-tag">
-                <span>${escapeHtml(doc)}</span>
+                <span>${escapeHtml(doc)}${personLabel}</span>
                 <button onclick="removeSelectedDoc('${safeArg}')"
                         type="button"
                         aria-label="remove">&times;</button>
@@ -1377,7 +1386,9 @@ function openConfirmation() {
         summary += `<h4 class="text-success"><i data-lucide="plus-circle" class="icon-sm" style="display:inline;vertical-align:middle;"></i> מסמכים שיתווספו (${uniqueDocsToAdd.length}):</h4>`;
         summary += '<ul class="changes-list">';
         uniqueDocsToAdd.forEach(doc => {
-            summary += `<li class="change-add">${escapeHtml(doc)}</li>`;
+            const meta = docsToAdd.get(doc);
+            const personTag = (meta && meta.person === 'spouse') ? ' <span class="text-muted text-xs">(בן/בת זוג)</span>' : '';
+            summary += `<li class="change-add">${escapeHtml(doc)}${personTag}</li>`;
         });
         summary += '</ul>';
     }
@@ -1526,7 +1537,7 @@ async function confirmSubmit() {
                 issuer_name_en: name,
                 template_id: 'general_doc',
                 category: 'general',
-                person: 'client',
+                person: meta?.person || 'client',
                 issuer_key: name
             };
         });
@@ -1714,7 +1725,7 @@ function addCustomDoc() {
         return;
     }
 
-    docsToAdd.set(name, { custom: true });
+    docsToAdd.set(name, { custom: true, person: isSpouseDocMode() ? 'spouse' : 'client' });
     updateSelectedDocs();
     updateStats();
 
