@@ -172,7 +172,8 @@ async function loadDocuments() {
         const email = data.support_email || 'reports@moshe-atsits.co.il';
         document.getElementById('email-display').textContent = email;
         document.getElementById('email-display-en').textContent = email;
-        document.getElementById('email-button').href = `mailto:${email}?subject=${encodeURIComponent(`מסמכים לדוח שנתי ${year} - ${displayName}`)}`;
+        const filingLabel = data.report?.filing_type_label_he || '\u05d3\u05d5\u05d7 \u05e9\u05e0\u05ea\u05d9';
+        document.getElementById('email-button').href = `mailto:${email}?subject=${encodeURIComponent(`\u05de\u05e1\u05de\u05db\u05d9\u05dd \u05dc${filingLabel} ${year} - ${displayName}`)}`;
 
         // Set default language based on questionnaire language
         currentLang = sourceLanguage || 'he';
@@ -231,7 +232,8 @@ function renderFromData(data) {
     const email = data.support_email || 'reports@moshe-atsits.co.il';
     document.getElementById('email-display').textContent = email;
     document.getElementById('email-display-en').textContent = email;
-    document.getElementById('email-button').href = `mailto:${email}?subject=${encodeURIComponent(`מסמכים לדוח שנתי ${year} - ${displayName}`)}`;
+    const filingLabel2 = data.report?.filing_type_label_he || '\u05d3\u05d5\u05d7 \u05e9\u05e0\u05ea\u05d9';
+    document.getElementById('email-button').href = `mailto:${email}?subject=${encodeURIComponent(`\u05de\u05e1\u05de\u05db\u05d9\u05dd \u05dc${filingLabel2} ${year} - ${displayName}`)}`;
 
     currentLang = sourceLanguage || 'he';
     switchLanguage(currentLang);
