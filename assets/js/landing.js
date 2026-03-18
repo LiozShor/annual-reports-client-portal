@@ -16,8 +16,12 @@ if (window.location.search) {
     history.replaceState(null, '', window.location.pathname);
 }
 
+// Default form IDs — overridden by API response when available
 const FORM_HE = '1AkYKb';
 const FORM_EN = '1AkopM';
+// API-driven form IDs (populated in checkExistingSubmission)
+let formIdHe = FORM_HE;
+let formIdEn = FORM_EN;
 // Endpoints loaded from shared/endpoints.js
 const CHECK_ENDPOINT = ENDPOINTS.CHECK_EXISTING_SUBMISSION;
 const RESET_ENDPOINT = ENDPOINTS.RESET_SUBMISSION;
@@ -104,6 +108,10 @@ async function checkExistingSubmission() {
         year = data.year || '';
         fullName = data.client_name || '';
         email = data.client_email || '';
+
+        // API-driven form IDs (filing_type layer)
+        formIdHe = data.form_id_he || FORM_HE;
+        formIdEn = data.form_id_en || FORM_EN;
 
         const stage = data.stage || 'Send_Questionnaire';
         const docCount = Number(data.document_count || 0);
@@ -289,7 +297,7 @@ async function resetAndContinue() {
 }
 
 function goToForm(lang) {
-    const formId = lang === 'he' ? FORM_HE : FORM_EN;
+    const formId = lang === 'he' ? formIdHe : formIdEn;
     const qs = new URLSearchParams({
         report_record_id: reportId,
         client_id: clientId,
