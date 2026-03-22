@@ -483,6 +483,10 @@ textarea {
 .toast-warning { background: var(--warning-700); }
 
 /* ==================== SKELETON LOADING ==================== */
+.skeleton-loader {
+    padding: var(--sp-4) 0;
+}
+
 .skeleton {
     background: linear-gradient(90deg, var(--gray-100) 25%, var(--gray-200) 50%, var(--gray-100) 75%);
     background-size: 200% 100%;
@@ -507,6 +511,28 @@ textarea {
 
 .skeleton-block {
     height: 80px;
+}
+
+.skeleton-row {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-3);
+    padding: var(--sp-3) var(--sp-4);
+    border-bottom: 1px solid var(--gray-100);
+}
+.skeleton-row .skeleton { flex-shrink: 0; }
+
+.skeleton-card {
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--gray-200);
+    padding: var(--sp-4);
+    margin-bottom: var(--sp-4);
+}
+
+.skeleton-progress {
+    height: 8px;
+    border-radius: var(--radius-full);
+    margin: var(--sp-3) 0;
 }
 
 /* ==================== PROGRESS BAR ==================== */
