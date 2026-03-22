@@ -52,9 +52,37 @@
 
             <div class="content">
                 <div class="loading" id="loading">
-                    <div class="spinner"></div>
-                    <p id="loading-text-he">טוען את רשימת המסמכים...</p>
-                    <p id="loading-text-en" class="hidden">Loading document list...</p>
+                    <p id="loading-text-he" class="hidden"></p>
+                    <p id="loading-text-en" class="hidden"></p>
+                    <div class="skeleton-loader">
+                        <div class="skeleton skeleton-progress" style="width:100%;max-width:400px;margin:0 auto var(--sp-6)"></div>
+                        <div class="skeleton skeleton-text-lg" style="width:40%;margin-bottom:var(--sp-4)"></div>
+                        <div class="skeleton-row">
+                            <div class="skeleton" style="width:20px;height:20px;border-radius:50%"></div>
+                            <div class="skeleton skeleton-text" style="width:60%;margin:0"></div>
+                            <div class="skeleton skeleton-text" style="width:80px;margin:0"></div>
+                        </div>
+                        <div class="skeleton-row">
+                            <div class="skeleton" style="width:20px;height:20px;border-radius:50%"></div>
+                            <div class="skeleton skeleton-text" style="width:50%;margin:0"></div>
+                            <div class="skeleton skeleton-text" style="width:80px;margin:0"></div>
+                        </div>
+                        <div class="skeleton-row">
+                            <div class="skeleton" style="width:20px;height:20px;border-radius:50%"></div>
+                            <div class="skeleton skeleton-text" style="width:70%;margin:0"></div>
+                            <div class="skeleton skeleton-text" style="width:80px;margin:0"></div>
+                        </div>
+                        <div class="skeleton-row">
+                            <div class="skeleton" style="width:20px;height:20px;border-radius:50%"></div>
+                            <div class="skeleton skeleton-text" style="width:45%;margin:0"></div>
+                            <div class="skeleton skeleton-text" style="width:80px;margin:0"></div>
+                        </div>
+                        <div class="skeleton-row">
+                            <div class="skeleton" style="width:20px;height:20px;border-radius:50%"></div>
+                            <div class="skeleton skeleton-text" style="width:55%;margin:0"></div>
+                            <div class="skeleton skeleton-text" style="width:80px;margin:0"></div>
+                        </div>
+                    </div>
                 </div>
 
                 <div id="error" class="error-state" style="display: none;" role="alert" aria-live="assertive"></div>
