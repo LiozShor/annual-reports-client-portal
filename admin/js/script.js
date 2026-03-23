@@ -43,6 +43,7 @@ async function login() {
     showLoading('מאמת...');
 
     try {
+        const _t0 = performance.now();
         const response = await fetchWithTimeout(ENDPOINTS.ADMIN_AUTH, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -50,6 +51,7 @@ async function login() {
         }, FETCH_TIMEOUTS.quick);
 
         const data = await response.json();
+        console.log(`⚡ admin-auth: ${Math.round(performance.now() - _t0)}ms`);
         hideLoading();
 
         if (data.ok && data.token) {
@@ -100,8 +102,10 @@ async function checkAuth() {
 
     // New tab/window - verify token with API
     try {
+        const _t0 = performance.now();
         const response = await fetchWithTimeout(ENDPOINTS.ADMIN_VERIFY, { headers: { 'Authorization': `Bearer ${authToken}` } }, FETCH_TIMEOUTS.quick);
         const data = await response.json();
+        console.log(`⚡ admin-verify: ${Math.round(performance.now() - _t0)}ms`);
 
         if (data.ok) {
             sessionStorage.setItem(SESSION_FLAG_KEY, 'true');
