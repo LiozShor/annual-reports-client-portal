@@ -5,15 +5,17 @@
    Migration: Endpoints are being migrated from n8n Cloud to
    Cloudflare Workers for lower latency (DL-169).
    To switch an endpoint to the Worker, change its base URL:
-     const CF_BASE = 'https://annual-reports-api.moshe-atsits.workers.dev/webhook';
+     const CF_BASE = 'https://annual-reports-api.liozshor1.workers.dev/webhook';
    Then replace API_BASE with CF_BASE for that endpoint.
    Keep non-migrated endpoints on API_BASE (n8n).
    =========================================== */
 
+const CF_BASE = 'https://annual-reports-api.liozshor1.workers.dev/webhook';
+
 const ENDPOINTS = {
-    // --- Auth ---
-    ADMIN_AUTH:                `${API_BASE}/admin-auth`,
-    ADMIN_VERIFY:              `${API_BASE}/admin-verify`,
+    // --- Auth (migrated to Cloudflare Workers — DL-169) ---
+    ADMIN_AUTH:                `${CF_BASE}/admin-auth`,
+    ADMIN_VERIFY:              `${CF_BASE}/admin-verify`,
 
     // --- Dashboard ---
     ADMIN_DASHBOARD:           `${API_BASE}/admin-dashboard`,
