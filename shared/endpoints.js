@@ -1,6 +1,13 @@
 /* ===========================================
    SHARED ENDPOINTS — Centralized Webhook URLs
    Depends on: shared/constants.js (API_BASE)
+
+   Migration: Endpoints are being migrated from n8n Cloud to
+   Cloudflare Workers for lower latency (DL-169).
+   To switch an endpoint to the Worker, change its base URL:
+     const CF_BASE = 'https://annual-reports-api.moshe-atsits.workers.dev/webhook';
+   Then replace API_BASE with CF_BASE for that endpoint.
+   Keep non-migrated endpoints on API_BASE (n8n).
    =========================================== */
 
 const ENDPOINTS = {
