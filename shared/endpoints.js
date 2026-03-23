@@ -43,9 +43,9 @@ const ENDPOINTS = {
     APPROVE_AND_SEND:          `${API_BASE}/approve-and-send`,
     GET_PREVIEW_URL:           `${CF_BASE}/get-preview-url`,
 
-    // --- Classification ---
-    GET_PENDING_CLASSIFICATIONS: `${API_BASE}/get-pending-classifications`,
-    REVIEW_CLASSIFICATION:     `${API_BASE}/review-classification`,
+    // --- Classification (migrated to Cloudflare Workers — DL-173) ---
+    GET_PENDING_CLASSIFICATIONS: `${CF_BASE}/get-pending-classifications`,
+    REVIEW_CLASSIFICATION:     `${CF_BASE}/review-classification`,
 
     // --- Notifications ---
     SEND_BATCH_STATUS:         `${API_BASE}/send-batch-status`,
