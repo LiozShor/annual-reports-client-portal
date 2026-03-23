@@ -37,9 +37,9 @@ const ENDPOINTS = {
     CHECK_EXISTING_SUBMISSION: `${CF_BASE}/check-existing-submission`,
     RESET_SUBMISSION:          `${CF_BASE}/reset-submission`,
 
-    // --- Documents (get-client-documents + get-preview-url migrated — DL-172) ---
+    // --- Documents (migrated — DL-172, DL-174) ---
     GET_CLIENT_DOCUMENTS:      `${CF_BASE}/get-client-documents`,
-    EDIT_DOCUMENTS:            `${API_BASE}/edit-documents`,
+    EDIT_DOCUMENTS:            `${CF_BASE}/edit-documents`,
     APPROVE_AND_SEND:          `${API_BASE}/approve-and-send`,
     GET_PREVIEW_URL:           `${CF_BASE}/get-preview-url`,
 
@@ -47,7 +47,7 @@ const ENDPOINTS = {
     GET_PENDING_CLASSIFICATIONS: `${CF_BASE}/get-pending-classifications`,
     REVIEW_CLASSIFICATION:     `${CF_BASE}/review-classification`,
 
-    // --- Notifications ---
-    SEND_BATCH_STATUS:         `${API_BASE}/send-batch-status`,
-    ADMIN_REMINDERS:           `${API_BASE}/admin-reminders`
+    // --- Notifications (migrated to Cloudflare Workers — DL-174, hybrid) ---
+    SEND_BATCH_STATUS:         `${CF_BASE}/send-batch-status`,
+    ADMIN_REMINDERS:           `${CF_BASE}/admin-reminders`
 };
