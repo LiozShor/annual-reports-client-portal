@@ -17,9 +17,9 @@ const ENDPOINTS = {
     ADMIN_AUTH:                `${CF_BASE}/admin-auth`,
     ADMIN_VERIFY:              `${CF_BASE}/admin-verify`,
 
-    // --- Dashboard ---
-    ADMIN_DASHBOARD:           `${API_BASE}/admin-dashboard`,
-    ADMIN_PENDING:             `${API_BASE}/admin-pending`,
+    // --- Dashboard (migrated to Cloudflare Workers — DL-170) ---
+    ADMIN_DASHBOARD:           `${CF_BASE}/admin-dashboard`,
+    ADMIN_PENDING:             `${CF_BASE}/admin-pending`,
 
     // --- Client management ---
     ADMIN_UPDATE_CLIENT:       `${API_BASE}/admin-update-client`,
@@ -33,8 +33,8 @@ const ENDPOINTS = {
 
     // --- Questionnaires ---
     ADMIN_SEND_QUESTIONNAIRES: `${API_BASE}/admin-send-questionnaires`,
-    ADMIN_QUESTIONNAIRES:      `${API_BASE}/admin-questionnaires`,
-    CHECK_EXISTING_SUBMISSION: `${API_BASE}/check-existing-submission`,
+    ADMIN_QUESTIONNAIRES:      `${CF_BASE}/admin-questionnaires`,
+    CHECK_EXISTING_SUBMISSION: `${CF_BASE}/check-existing-submission`,
     RESET_SUBMISSION:          `${API_BASE}/reset-submission`,
 
     // --- Documents ---
