@@ -37,11 +37,11 @@ const ENDPOINTS = {
     CHECK_EXISTING_SUBMISSION: `${CF_BASE}/check-existing-submission`,
     RESET_SUBMISSION:          `${CF_BASE}/reset-submission`,
 
-    // --- Documents ---
-    GET_CLIENT_DOCUMENTS:      `${API_BASE}/get-client-documents`,
+    // --- Documents (get-client-documents + get-preview-url migrated — DL-172) ---
+    GET_CLIENT_DOCUMENTS:      `${CF_BASE}/get-client-documents`,
     EDIT_DOCUMENTS:            `${API_BASE}/edit-documents`,
     APPROVE_AND_SEND:          `${API_BASE}/approve-and-send`,
-    GET_PREVIEW_URL:           `${API_BASE}/get-preview-url`,
+    GET_PREVIEW_URL:           `${CF_BASE}/get-preview-url`,
 
     // --- Classification ---
     GET_PENDING_CLASSIFICATIONS: `${API_BASE}/get-pending-classifications`,
