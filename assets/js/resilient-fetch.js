@@ -34,7 +34,15 @@ async function fetchWithTimeout(url, options = {}, timeoutMs = FETCH_TIMEOUTS.lo
         options = { ...options, signal };
     }
 
-    return fetch(url, options);
+    const _t0 = performance.now();
+    const response = await fetch(url, options);
+    const ms = Math.round(performance.now() - _t0);
+
+    // Extract endpoint name from URL for logging (last path segment)
+    const endpoint = url.split('/webhook/')[1]?.split('?')[0] || url.split('/').pop()?.split('?')[0] || url;
+    console.log(`⚡ ${endpoint}: ${ms}ms`);
+
+    return response;
 }
 
 // --- Retry With Backoff ---
