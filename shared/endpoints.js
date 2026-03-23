@@ -21,21 +21,21 @@ const ENDPOINTS = {
     ADMIN_DASHBOARD:           `${CF_BASE}/admin-dashboard`,
     ADMIN_PENDING:             `${CF_BASE}/admin-pending`,
 
-    // --- Client management ---
-    ADMIN_UPDATE_CLIENT:       `${API_BASE}/admin-update-client`,
-    ADMIN_TOGGLE_ACTIVE:       `${API_BASE}/admin-toggle-active`,
-    ADMIN_BULK_IMPORT:         `${API_BASE}/admin-bulk-import`,
+    // --- Client management (migrated to Cloudflare Workers — DL-171) ---
+    ADMIN_UPDATE_CLIENT:       `${CF_BASE}/admin-update-client`,
+    ADMIN_TOGGLE_ACTIVE:       `${CF_BASE}/admin-toggle-active`,
+    ADMIN_BULK_IMPORT:         `${CF_BASE}/admin-bulk-import`,
 
-    // --- Stage & workflow ---
-    ADMIN_CHANGE_STAGE:        `${API_BASE}/admin-change-stage`,
-    ADMIN_MARK_COMPLETE:       `${API_BASE}/admin-mark-complete`,
-    ADMIN_YEAR_ROLLOVER:       `${API_BASE}/admin-year-rollover`,
+    // --- Stage & workflow (migrated to Cloudflare Workers — DL-171) ---
+    ADMIN_CHANGE_STAGE:        `${CF_BASE}/admin-change-stage`,
+    ADMIN_MARK_COMPLETE:       `${CF_BASE}/admin-mark-complete`,
+    ADMIN_YEAR_ROLLOVER:       `${CF_BASE}/admin-year-rollover`,
 
     // --- Questionnaires ---
     ADMIN_SEND_QUESTIONNAIRES: `${API_BASE}/admin-send-questionnaires`,
     ADMIN_QUESTIONNAIRES:      `${CF_BASE}/admin-questionnaires`,
     CHECK_EXISTING_SUBMISSION: `${CF_BASE}/check-existing-submission`,
-    RESET_SUBMISSION:          `${API_BASE}/reset-submission`,
+    RESET_SUBMISSION:          `${CF_BASE}/reset-submission`,
 
     // --- Documents ---
     GET_CLIENT_DOCUMENTS:      `${API_BASE}/get-client-documents`,
