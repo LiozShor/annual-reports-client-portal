@@ -4047,11 +4047,14 @@ async function executeReminderAction(action, reportIds, value, forceOverride) {
         if (data.warning) {
             if (isBulk) hideLoading();
             else clearRowLoading(reportIds[0]);
-            showConfirmDialog(
-                data.warning + '\n\nלשלוח בכל זאת?',
-                () => executeReminderAction('send_now', data.report_ids || reportIds, null, true),
-                'שלח בכל זאת'
-            );
+            // Use innerHTML for formatted warning (contains <b> and <br>)
+            const msgEl = document.getElementById('confirmDialogMessage');
+            msgEl.innerHTML = data.warning + '<br><br>לשלוח בכל זאת?';
+            _confirmCallback = () => executeReminderAction('send_now', data.report_ids || reportIds, null, true);
+            const btn = document.getElementById('confirmDialogBtn');
+            btn.textContent = 'שלח בכל זאת';
+            btn.className = 'btn btn-primary';
+            document.getElementById('confirmDialog').classList.add('show');
             return;
         }
 
