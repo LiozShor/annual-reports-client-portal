@@ -32,7 +32,7 @@ const ENDPOINTS = {
     ADMIN_YEAR_ROLLOVER:       `${CF_BASE}/admin-year-rollover`,
 
     // --- Questionnaires ---
-    ADMIN_SEND_QUESTIONNAIRES: `${API_BASE}/admin-send-questionnaires`,
+    ADMIN_SEND_QUESTIONNAIRES: `${CF_BASE}/admin-send-questionnaires`,
     ADMIN_QUESTIONNAIRES:      `${CF_BASE}/admin-questionnaires`,
     CHECK_EXISTING_SUBMISSION: `${CF_BASE}/check-existing-submission`,
     RESET_SUBMISSION:          `${CF_BASE}/reset-submission`,
@@ -40,7 +40,7 @@ const ENDPOINTS = {
     // --- Documents (migrated — DL-172, DL-174) ---
     GET_CLIENT_DOCUMENTS:      `${CF_BASE}/get-client-documents`,
     EDIT_DOCUMENTS:            `${CF_BASE}/edit-documents`,
-    APPROVE_AND_SEND:          `${API_BASE}/approve-and-send`,
+    APPROVE_AND_SEND:          `${CF_BASE}/approve-and-send`,
     GET_PREVIEW_URL:           `${CF_BASE}/get-preview-url`,
 
     // --- Classification (migrated to Cloudflare Workers — DL-173) ---
