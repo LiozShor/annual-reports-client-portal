@@ -101,6 +101,18 @@
             }
         },
         {
+            name: 'change_reminder_date',
+            description: 'שנה את תאריך התזכורת הבאה של לקוח.',
+            input_schema: {
+                type: 'object',
+                properties: {
+                    report_id: { type: 'string' },
+                    new_date: { type: 'string', description: 'תאריך חדש בפורמט YYYY-MM-DD' }
+                },
+                required: ['report_id', 'new_date']
+            }
+        },
+        {
             name: 'send_feedback',
             description: 'שלח הודעה/משוב לצוות הפיתוח.',
             input_schema: {
@@ -453,7 +465,12 @@
 
             case 'suppress_reminder':
                 url = ENDPOINTS.ADMIN_REMINDERS;
-                body = { token: authToken, action: 'update', report_ids: [input.report_id], suppress: input.suppress ? 'forever' : null };
+                body = { token: authToken, action: input.suppress ? 'suppress_forever' : 'unsuppress', report_ids: [input.report_id] };
+                break;
+
+            case 'change_reminder_date':
+                url = ENDPOINTS.ADMIN_REMINDERS;
+                body = { token: authToken, action: 'change_date', report_ids: [input.report_id], value: input.new_date };
                 break;
 
             case 'send_questionnaire':
@@ -506,6 +523,7 @@
                     break;
                 case 'send_reminder':
                 case 'suppress_reminder':
+                case 'change_reminder_date':
                     await loadReminders(true);
                     break;
             }
@@ -658,6 +676,8 @@
                     : `הפעלת תזכורות ל${clientName}`;
             case 'send_questionnaire':
                 return `שליחת שאלון ל${clientName}`;
+            case 'change_reminder_date':
+                return `שינוי תאריך תזכורת של ${clientName} ל-${input.new_date}`;
             case 'get_client_documents':
                 return `שליפת מסמכים של ${clientName}`;
             case 'send_feedback':
