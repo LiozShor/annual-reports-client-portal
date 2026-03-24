@@ -61,6 +61,7 @@ async function login() {
             document.getElementById('loginScreen').style.display = 'none';
             document.getElementById('app').classList.add('visible');
             loadDashboard();
+            startBackgroundRefresh();
             if (typeof lucide !== 'undefined') lucide.createIcons();
         } else {
             document.getElementById('loginError').style.display = 'block';
@@ -73,6 +74,7 @@ async function login() {
 }
 
 function logout() {
+    stopBackgroundRefresh();
     localStorage.removeItem(ADMIN_TOKEN_KEY);
     sessionStorage.removeItem(SESSION_FLAG_KEY);
     authToken = '';
@@ -96,6 +98,7 @@ async function checkAuth() {
         document.getElementById('loginScreen').style.display = 'none';
         document.getElementById('app').classList.add('visible');
         loadDashboard();
+        startBackgroundRefresh();
         if (typeof lucide !== 'undefined') lucide.createIcons();
         return;
     }
@@ -112,6 +115,7 @@ async function checkAuth() {
             document.getElementById('loginScreen').style.display = 'none';
             document.getElementById('app').classList.add('visible');
             loadDashboard();
+            startBackgroundRefresh();
             if (typeof lucide !== 'undefined') lucide.createIcons();
         } else {
             localStorage.removeItem(ADMIN_TOKEN_KEY);
@@ -249,10 +253,12 @@ async function loadDashboard(silent = false) {
             }
         }
 
-        // Load AI review badge count + prefetch Send tab (async, non-blocking)
+        // Load AI review badge count + prefetch other tabs (async, non-blocking) — DL-175
         loadAIReviewCount();
         loadReminderCount();
         if (!pendingClientsLoaded) loadPendingClients(true);
+        if (!questionnaireLoaded) loadQuestionnaires(true);
+        if (!reminderLoaded) loadReminders(true);
     } catch (error) {
         if (!silent) hideLoading();
         console.error('Dashboard load failed');
@@ -878,6 +884,43 @@ function refreshData() {
         loadDashboard();
     }
 }
+
+// ==================== BACKGROUND REFRESH (DL-175) ====================
+
+let bgRefreshInterval = null;
+
+function startBackgroundRefresh() {
+    if (bgRefreshInterval) return;
+    bgRefreshInterval = setInterval(() => {
+        const activeTab = document.querySelector('.tab-content.active')?.id?.replace('tab-', '');
+        if (activeTab === 'dashboard' || activeTab === 'review') loadDashboard(true);
+        else if (activeTab === 'send') loadPendingClients(true);
+        else if (activeTab === 'ai-review') { aiReviewLoaded = false; loadAIClassifications(true); }
+        else if (activeTab === 'reminders') { reminderLoaded = false; loadReminders(true); }
+        else if (activeTab === 'questionnaires') { questionnaireLoaded = false; loadQuestionnaires(true); }
+    }, 60_000);
+}
+
+function stopBackgroundRefresh() {
+    clearInterval(bgRefreshInterval);
+    bgRefreshInterval = null;
+}
+
+document.addEventListener('visibilitychange', () => {
+    if (!authToken) return; // Not logged in
+    if (document.hidden) {
+        stopBackgroundRefresh();
+    } else {
+        // Silently refresh active tab on return, then restart interval
+        const activeTab = document.querySelector('.tab-content.active')?.id?.replace('tab-', '');
+        if (activeTab === 'dashboard' || activeTab === 'review') { dashboardLoaded = false; loadDashboard(true); }
+        else if (activeTab === 'send') { pendingClientsLoaded = false; loadPendingClients(true); }
+        else if (activeTab === 'ai-review') { aiReviewLoaded = false; loadAIClassifications(true); }
+        else if (activeTab === 'reminders') { reminderLoaded = false; loadReminders(true); }
+        else if (activeTab === 'questionnaires') { questionnaireLoaded = false; loadQuestionnaires(true); }
+        startBackgroundRefresh();
+    }
+});
 
 // Load AI review pending count for tab badge
 async function loadAIReviewCount() {
@@ -1838,6 +1881,9 @@ async function loadDocPreview(recordId) {
 }
 
 async function loadAIClassifications(silent = false) {
+    // Skip fetch if cached and silent (prefetch or tab switch)
+    if (silent && aiReviewLoaded) return;
+
     if (!silent) showLoading('טוען סיווגים...');
 
     try {
@@ -3430,6 +3476,9 @@ let reminderDefaultMax = null; // null = unlimited
 let activeCardFilter = 'scheduled';
 
 async function loadReminders(silent = false) {
+    // Skip fetch if cached and silent (prefetch or tab switch)
+    if (silent && reminderLoaded) return;
+
     if (!silent) showLoading('טוען תזכורות...');
 
     try {
@@ -5249,6 +5298,9 @@ function initQuestionnaireYearFilter() {
 
 async function loadQuestionnaires(silent = false) {
     initQuestionnaireYearFilter();
+    // Skip fetch if cached and silent (prefetch or tab switch)
+    if (silent && questionnaireLoaded) return;
+
     if (!silent) showLoading('טוען שאלונים...');
 
     try {
