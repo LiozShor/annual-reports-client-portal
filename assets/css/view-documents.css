@@ -154,7 +154,7 @@ body {
 
 .doc-row {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     gap: var(--sp-3);
     padding: var(--sp-3) var(--sp-5);
     font-size: var(--text-sm);
@@ -164,6 +164,7 @@ body {
 .doc-row .doc-icon {
     color: var(--gray-400);
     flex-shrink: 0;
+    margin-top: 3px;
 }
 
 .doc-row .doc-name {
@@ -179,6 +180,7 @@ body {
 
 .doc-row .badge {
     flex-shrink: 0;
+    margin-top: 2px;
 }
 
 
@@ -193,6 +195,7 @@ body {
     align-items: center;
     justify-content: center;
     padding: var(--sp-1);
+    margin-top: 1px;
     background: transparent;
     border: none;
     color: var(--gray-400);
