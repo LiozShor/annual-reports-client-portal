@@ -3895,17 +3895,7 @@ function reminderAction(action, reportId) {
             );
             return;
         }
-        if (r && r.last_reminder_sent_at) {
-            const hoursSince = (Date.now() - new Date(r.last_reminder_sent_at).getTime()) / 3600000;
-            if (hoursSince < 24) {
-                const hoursAgo = Math.floor(hoursSince);
-                const msg = hoursAgo < 1
-                    ? 'תזכורת נשלחה לפני פחות משעה. לשלוח שוב?'
-                    : `תזכורת נשלחה לפני ${hoursAgo} שעות. לשלוח שוב?`;
-                showConfirmDialog(msg, () => executeReminderAction(action, [reportId]), 'שלח בכל זאת');
-                return;
-            }
-        }
+        // 24h recency check moved to Worker — returns warning server-side
     }
     if (action === 'send_now') {
         const r = remindersData.find(x => x.report_id === reportId);
@@ -3952,14 +3942,8 @@ function reminderBulkAction(action) {
     if (reportIds.length === 0) return;
 
     if (action === 'send_now') {
-        const recentIds = reportIds.filter(id => {
-            const r = remindersData.find(x => x.report_id === id);
-            return r && r.last_reminder_sent_at && (Date.now() - new Date(r.last_reminder_sent_at).getTime()) < 86400000;
-        });
-        const msg = recentIds.length > 0
-            ? `לשלוח תזכורת ל-${reportIds.length} לקוחות? (${recentIds.length} כבר קיבלו תזכורת היום)`
-            : `לשלוח תזכורת ל-${reportIds.length} לקוחות?`;
-        showConfirmDialog(msg, () => executeReminderAction(action, reportIds), 'שלח');
+        // 24h recency + pending classification checks handled server-side by Worker
+        showConfirmDialog(`לשלוח תזכורת ל-${reportIds.length} לקוחות?`, () => executeReminderAction(action, reportIds), 'שלח');
         return;
     }
     if (action === 'suppress_forever') {
