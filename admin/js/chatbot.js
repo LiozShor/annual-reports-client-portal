@@ -77,6 +77,17 @@
                 },
                 required: ['report_id', 'suppress']
             }
+        },
+        {
+            name: 'send_questionnaire',
+            description: 'שלח שאלון ללקוח באימייל.',
+            input_schema: {
+                type: 'object',
+                properties: {
+                    report_id: { type: 'string' }
+                },
+                required: ['report_id']
+            }
         }
     ];
 
@@ -335,6 +346,14 @@
             }
         }
 
+        // Questionnaire only for Send_Questionnaire stage
+        if (toolName === 'send_questionnaire' && input.report_id && Array.isArray(clientsData)) {
+            const client = clientsData.find(c => c.report_id === input.report_id);
+            if (client && client.stage !== 'Send_Questionnaire') {
+                return `לא ניתן לשלוח שאלון — הלקוח בשלב ${STAGE_LABELS[client.stage] || client.stage}`;
+            }
+        }
+
         return null; // valid
     }
 
@@ -365,6 +384,11 @@
                 body = { token: authToken, action: 'update', report_ids: [input.report_id], suppress: input.suppress ? 'forever' : null };
                 break;
 
+            case 'send_questionnaire':
+                url = ENDPOINTS.ADMIN_SEND_QUESTIONNAIRES;
+                body = { token: authToken, report_ids: [input.report_id] };
+                break;
+
             default:
                 throw new Error(`כלי לא מוכר: ${toolName}`);
         }
@@ -393,6 +417,7 @@
             switch (toolName) {
                 case 'move_to_stage':
                 case 'add_note':
+                case 'send_questionnaire':
                     await loadDashboard(true);
                     break;
                 case 'send_reminder':
@@ -547,6 +572,8 @@
                 return input.suppress
                     ? `השהיית תזכורות ל${clientName}`
                     : `הפעלת תזכורות ל${clientName}`;
+            case 'send_questionnaire':
+                return `שליחת שאלון ל${clientName}`;
             default:
                 return `${toolName}: ${JSON.stringify(input)}`;
         }
