@@ -4061,8 +4061,13 @@ async function executeReminderAction(action, reportIds, value, forceOverride) {
         if (!data.ok) throw new Error(data.message || data.error || 'שגיאה לא ידועה');
 
         if (data.warning) {
-            showModal('warning', 'מסמכים ממתינים לסיווג', data.warning);
-            loadReminders(true);
+            if (isBulk) hideLoading();
+            else clearRowLoading(reportIds[0]);
+            showConfirmDialog(
+                data.warning + '\n\nלשלוח בכל זאת?',
+                () => executeReminderAction('send_now', data.report_ids || reportIds, null, true),
+                'שלח בכל זאת'
+            );
             return;
         }
 
