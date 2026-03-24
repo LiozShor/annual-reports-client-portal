@@ -88,8 +88,34 @@
                 },
                 required: ['report_id']
             }
+        },
+        {
+            name: 'get_client_documents',
+            description: 'שלוף רשימת מסמכים של לקוח.',
+            input_schema: {
+                type: 'object',
+                properties: {
+                    report_id: { type: 'string' }
+                },
+                required: ['report_id']
+            }
+        },
+        {
+            name: 'send_feedback',
+            description: 'שלח הודעה/משוב לצוות הפיתוח.',
+            input_schema: {
+                type: 'object',
+                properties: {
+                    subject: { type: 'string' },
+                    message: { type: 'string' }
+                },
+                required: ['subject', 'message']
+            }
         }
     ];
+
+    // Read-only tools that don't require user approval
+    const AUTO_APPROVE_TOOLS = new Set(['get_client_documents']);
 
     // ==================== 4. buildChatContext() ====================
 
@@ -288,12 +314,28 @@
 
         if (validCalls.length === 0) return results;
 
+        // Auto-approve read-only tools (execute immediately, no approval card)
+        const autoApproved = validCalls.filter(tc => AUTO_APPROVE_TOOLS.has(tc.name));
+        const needsApproval = validCalls.filter(tc => !AUTO_APPROVE_TOOLS.has(tc.name));
+
+        for (const tc of autoApproved) {
+            try {
+                const execResult = await executeToolCall(tc.name, tc.input);
+                await refreshAfterAction(tc.name);
+                results.push({ type: 'tool_result', tool_use_id: tc.id, content: JSON.stringify(execResult) });
+            } catch (err) {
+                results.push({ type: 'tool_result', tool_use_id: tc.id, content: `שגיאה: ${err.message}`, is_error: true });
+            }
+        }
+
+        if (needsApproval.length === 0) return results;
+
         // Show approval UI and wait for decisions
         let decisions;
-        if (validCalls.length > BATCH_THRESHOLD) {
-            decisions = await showBatchApproval(validCalls);
+        if (needsApproval.length > BATCH_THRESHOLD) {
+            decisions = await showBatchApproval(needsApproval);
         } else {
-            decisions = await showIndividualApproval(validCalls);
+            decisions = await showIndividualApproval(needsApproval);
         }
 
         // Execute approved calls and collect results
@@ -357,6 +399,36 @@
         return null; // valid
     }
 
+    // Fetch document details for a client (GET endpoint, Bearer auth)
+    async function fetchClientDocuments(reportId) {
+        const resp = await fetchWithTimeout(
+            `${ENDPOINTS.GET_CLIENT_DOCUMENTS}?report_id=${reportId}&mode=office`,
+            { headers: { 'Authorization': `Bearer ${authToken}` } },
+            FETCH_TIMEOUTS.load
+        );
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        const data = await resp.json();
+        if (!data.ok) throw new Error(data.error || 'Failed to fetch documents');
+
+        // Flatten and summarize: extract doc name + status from groups[].categories[].docs[]
+        const docs = [];
+        for (const group of (data.groups || [])) {
+            for (const cat of (group.categories || [])) {
+                for (const doc of (cat.docs || [])) {
+                    docs.push({
+                        name: doc.title || doc.name || 'ללא שם',
+                        status: doc.status || 'Required_Missing',
+                        person: group.person_label || group.person_label_he || ''
+                    });
+                }
+            }
+        }
+        const received = docs.filter(d => d.status === 'Received').length;
+        const missing = docs.filter(d => d.status === 'Required_Missing').length;
+        const needsFix = docs.filter(d => d.status === 'Requires_Fix').length;
+        return { documents: docs, summary: { total: docs.length, received, missing, needs_fix: needsFix } };
+    }
+
     // ==================== 8. executeToolCall() ====================
 
     async function executeToolCall(toolName, input) {
@@ -389,6 +461,14 @@
                 body = { token: authToken, report_ids: [input.report_id] };
                 break;
 
+            case 'get_client_documents':
+                return await fetchClientDocuments(input.report_id);
+
+            case 'send_feedback':
+                url = ENDPOINTS.ADMIN_SEND_FEEDBACK;
+                body = { token: authToken, subject: input.subject, message: input.message };
+                break;
+
             default:
                 throw new Error(`כלי לא מוכר: ${toolName}`);
         }
@@ -418,7 +498,11 @@
                 case 'move_to_stage':
                 case 'add_note':
                 case 'send_questionnaire':
+                case 'send_feedback':
                     await loadDashboard(true);
+                    break;
+                case 'get_client_documents':
+                    // Read-only, no refresh needed
                     break;
                 case 'send_reminder':
                 case 'suppress_reminder':
@@ -574,6 +658,10 @@
                     : `הפעלת תזכורות ל${clientName}`;
             case 'send_questionnaire':
                 return `שליחת שאלון ל${clientName}`;
+            case 'get_client_documents':
+                return `שליפת מסמכים של ${clientName}`;
+            case 'send_feedback':
+                return `שליחת משוב: ${input.subject}`;
             default:
                 return `${toolName}: ${JSON.stringify(input)}`;
         }
