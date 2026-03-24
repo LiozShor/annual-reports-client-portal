@@ -125,11 +125,15 @@ async function loadDocuments() {
     const cancelEscalation = startLoadingEscalation(loadingEl, { lang: currentLang });
 
     try {
-        const tokenParam = clientToken
-            ? `&token=${encodeURIComponent(clientToken)}`
-            : adminToken ? `&admin_token=${encodeURIComponent(adminToken)}` : '';
-        const url = `${ENDPOINTS.GET_CLIENT_DOCUMENTS}?report_id=${reportId}${tokenParam}`;
-        const response = await fetchWithTimeout(url, {}, FETCH_TIMEOUTS.load);
+        let url, fetchOptions = {};
+        if (adminToken) {
+            url = `${ENDPOINTS.GET_CLIENT_DOCUMENTS}?report_id=${reportId}&mode=office`;
+            fetchOptions = { headers: { 'Authorization': `Bearer ${adminToken}` } };
+        } else {
+            const tokenParam = clientToken ? `&token=${encodeURIComponent(clientToken)}` : '';
+            url = `${ENDPOINTS.GET_CLIENT_DOCUMENTS}?report_id=${reportId}${tokenParam}`;
+        }
+        const response = await fetchWithTimeout(url, fetchOptions, FETCH_TIMEOUTS.load);
 
         cancelEscalation();
 
