@@ -284,7 +284,7 @@ function renderDocuments() {
     for (const group of currentData.groups) {
         // Person header (only if multiple groups = married couple)
         if (currentData.groups.length > 1) {
-            const label = isHe ? group.person_label_he : group.person_label_en;
+            const label = isHe ? (group.person_label_he || group.person_label) : (group.person_label_en || group.person_label);
             html += `<div class="person-header"><i data-lucide="user" class="icon"></i>${label}</div>`;
         }
 
