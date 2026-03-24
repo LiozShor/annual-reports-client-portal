@@ -4323,22 +4323,58 @@ function editClientMax(reportId, cell) {
     const currentMax = r.reminder_max;
 
     cell.innerHTML = `<span class="reminder-max-editor">
-        <input type="number" min="1" max="999" placeholder="ללא הגבלה" value="${currentMax != null ? currentMax : ''}" class="reminder-max-input">
-        <button class="btn btn-sm btn-primary reminder-max-save" title="שמור">✓</button>
-        <button class="btn btn-sm btn-ghost reminder-max-cancel" title="ביטול">✕</button>
+        <input type="number" min="1" max="999" placeholder="∞" value="${currentMax != null ? currentMax : ''}" class="reminder-max-input">
+        <button class="reminder-max-save" title="שמור">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+        </button>
+        <button class="reminder-max-cancel" title="ביטול">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
     </span>`;
     const input = cell.querySelector('.reminder-max-input');
     input.focus();
     input.select();
 
-    const save = () => {
+    const save = async () => {
         const val = input.value.trim();
-        if (val === '') {
-            resetClientMax(reportId);
-        } else {
+        const saveBtn = cell.querySelector('.reminder-max-save');
+        const cancelBtn = cell.querySelector('.reminder-max-cancel');
+
+        // Determine new value
+        let newMax = null;
+        if (val !== '') {
             const num = parseInt(val);
-            if (num > 0) saveClientMax(reportId, num);
-            else restoreMaxCell(cell, r, reportId);
+            if (!(num > 0)) { restoreMaxCell(cell, r, reportId); return; }
+            newMax = num;
+        }
+
+        // Show saving state inline
+        input.disabled = true;
+        saveBtn.disabled = true;
+        cancelBtn.style.display = 'none';
+        saveBtn.innerHTML = '<span class="reminder-max-spinner"></span>';
+
+        try {
+            const body = { token: authToken, action: 'set_max', report_ids: [reportId], value: newMax };
+            const response = await fetchWithTimeout(ENDPOINTS.ADMIN_REMINDERS, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body)
+            }, FETCH_TIMEOUTS.mutate);
+            const data = await response.json();
+            if (!data.ok) throw new Error(data.message || data.error || 'שגיאה');
+
+            // Update local data optimistically
+            r.reminder_max = newMax;
+            restoreMaxCell(cell, r, reportId);
+            showAIToast('מקסימום עודכן', 'success');
+
+            // Silent background refresh for stats
+            if (data.items) { remindersData = data.items; }
+            if (data.stats) { updateReminderStats(data.stats); }
+        } catch (error) {
+            restoreMaxCell(cell, r, reportId);
+            showAIToast(error.message || 'שגיאה בעדכון', 'error');
         }
     };
 
@@ -4367,11 +4403,38 @@ function restoreMaxCell(cell, r, reportId) {
 }
 
 function saveClientMax(reportId, maxValue) {
+    // Legacy — inline save now handled directly in editClientMax
     executeReminderAction('set_max', [reportId], maxValue);
 }
 
-function resetClientMax(reportId) {
-    executeReminderAction('set_max', [reportId], null);
+async function resetClientMax(reportId) {
+    const r = remindersData.find(x => x.report_id === reportId);
+    const cell = document.getElementById(`max-cell-${reportId}`);
+    if (!r || !cell) { executeReminderAction('set_max', [reportId], null); return; }
+
+    // Show inline spinner on the reset button
+    const resetBtn = cell.querySelector('.reminder-reset-btn');
+    if (resetBtn) { resetBtn.innerHTML = '<span class="reminder-max-spinner"></span>'; resetBtn.disabled = true; }
+
+    try {
+        const body = { token: authToken, action: 'set_max', report_ids: [reportId], value: null };
+        const response = await fetchWithTimeout(ENDPOINTS.ADMIN_REMINDERS, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body)
+        }, FETCH_TIMEOUTS.mutate);
+        const data = await response.json();
+        if (!data.ok) throw new Error(data.message || data.error || 'שגיאה');
+
+        r.reminder_max = null;
+        restoreMaxCell(cell, r, reportId);
+        showAIToast('אופס לברירת מחדל', 'success');
+        if (data.items) { remindersData = data.items; }
+        if (data.stats) { updateReminderStats(data.stats); }
+    } catch (error) {
+        restoreMaxCell(cell, r, reportId);
+        showAIToast(error.message || 'שגיאה באיפוס', 'error');
+    }
 }
 
 // ==================== REPORT NOTES ====================
