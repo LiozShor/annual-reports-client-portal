@@ -53,4 +53,5 @@ const ENDPOINTS = {
 
     // --- Chat (DL-179) ---
     ADMIN_CHAT:                `${CF_BASE}/admin-chat`,
+    ADMIN_SEND_FEEDBACK:       `${CF_BASE}/admin-send-feedback`,
 };
