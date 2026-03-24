@@ -3111,10 +3111,50 @@ tr.reminder-loading td:last-child {
 
 .reminder-max-save,
 .reminder-max-cancel {
-    padding: 2px 6px !important;
-    font-size: 13px !important;
-    min-width: 0 !important;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    padding: 0;
+    border: 1px solid var(--border-primary);
+    border-radius: var(--radius-md);
+    background: var(--surface-primary);
+    cursor: pointer;
+    transition: all 0.15s ease;
+    color: var(--text-secondary);
     line-height: 1;
+}
+
+.reminder-max-save {
+    color: var(--success-600, #16a34a);
+    border-color: var(--success-200, #bbf7d0);
+    background: var(--success-50, #f0fdf4);
+}
+
+.reminder-max-save:hover {
+    background: var(--success-100, #dcfce7);
+    border-color: var(--success-400, #4ade80);
+}
+
+.reminder-max-cancel:hover {
+    background: var(--surface-secondary);
+    border-color: var(--border-secondary);
+}
+
+.reminder-max-save:disabled {
+    opacity: 0.6;
+    cursor: default;
+}
+
+.reminder-max-spinner {
+    display: inline-block;
+    width: 14px;
+    height: 14px;
+    border: 2px solid var(--success-200, #bbf7d0);
+    border-top-color: var(--success-600, #16a34a);
+    border-radius: 50%;
+    animation: spin 0.6s linear infinite;
 }
 
 /* Reminder Date Cell — Clickable Inline Edit */
