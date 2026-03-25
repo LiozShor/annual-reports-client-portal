@@ -153,6 +153,28 @@ body {
 .stat-card.stage-7 { border-inline-start-color: #C2410C; }
 .stat-card.stage-8 { border-inline-start-color: var(--success-500); }
 
+/* Stage 3 attention bounce — only applied via JS when count > 0 */
+@keyframes stage3-bounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+
+.stat-card.stage-3.needs-attention {
+  animation: stage3-bounce 2s ease-in-out infinite;
+}
+
+.stat-card.stage-3.needs-attention .stat-number {
+  color: #D97706;
+  font-weight: 800;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stat-card.stage-3.needs-attention {
+    animation: none;
+    box-shadow: 0 0 0 2px #F59E0B;
+  }
+}
+
 .stat-card.active {
     box-shadow: var(--shadow-md);
     border-inline-start-width: 4px;

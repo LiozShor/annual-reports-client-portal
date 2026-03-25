@@ -665,6 +665,12 @@ function recalculateStats() {
     document.getElementById('stat-stage6').textContent = counts.stage6;
     document.getElementById('stat-stage7').textContent = counts.stage7;
     document.getElementById('stat-stage8').textContent = counts.stage8;
+
+    // Stage 3 attention: toggle .needs-attention based on count
+    const stage3Card = document.querySelector('.stat-card.stage-3');
+    if (stage3Card) {
+        stage3Card.classList.toggle('needs-attention', counts.stage3 > 0);
+    }
 }
 
 // Close dropdowns/popovers on Escape; Enter on clickable counts triggers click
