@@ -567,7 +567,7 @@
         // <client>name|report_id</client> → clickable link
         // Since we escaped HTML, the tags are now &lt;client&gt;...&lt;/client&gt;
         // Validate report_id format (Airtable IDs: rec + 14 alphanumeric chars) to prevent XSS
-        html = html.replace(/&lt;client&gt;(.+?)[|\\,\s]+\s*(rec[A-Za-z0-9]{14})&lt;\/client&gt;/g, (_, name, id) => {
+        html = html.replace(/&lt;client&gt;(.+?)(?:::|[|\\,]|\s+)(rec[A-Za-z0-9]{14})&lt;\/client&gt;/g, (_, name, id) => {
             return `<a class="client-link" data-report-id="${id}" tabindex="0">${escapeHtml2(name.trim())}</a>`;
         });
 
