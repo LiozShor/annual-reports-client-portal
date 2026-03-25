@@ -589,7 +589,7 @@
             const headers = parseRow(header);
             const rows = body.trim().split('\n').map(parseRow);
 
-            let table = '<div dir="ltr"><table class="table"><thead><tr>';
+            let table = '<div dir="rtl"><table class="table"><thead><tr>';
             headers.forEach(h => { table += `<th>${h}</th>`; });
             table += '</tr></thead><tbody>';
             rows.forEach(row => {
