@@ -324,8 +324,9 @@ function renderDocuments() {
                     const docTitle = doc.name_he || doc.issuer_name || '';
                     let matchedCompany = '';
                     let matchedUrl = '';
+                    const docTitleLower = docTitle.toLowerCase();
                     for (const [name, url] of Object.entries(companyLinks)) {
-                        if (docTitle.includes(name)) {
+                        if (docTitleLower.includes(name.toLowerCase())) {
                             matchedCompany = name;
                             matchedUrl = url;
                             break;
