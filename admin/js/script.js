@@ -978,7 +978,7 @@ function handleFileSelect(event) {
 }
 
 function downloadImportTemplate() {
-    const csvContent = 'name,email\nמשה כהן,moshe@example.com\nשרה לוי,sara@example.com';
+    const csvContent = 'name,email,cc_email\nמשה כהן,moshe@example.com,sara@example.com\nשרה לוי,sara@example.com,';
     const BOM = '\uFEFF';
     const blob = new Blob([BOM + csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
@@ -1021,6 +1021,7 @@ function processImportData(data) {
         const row = data[i];
         const name = String(row.name || row['שם'] || '').trim();
         const email = String(row.email || row['אימייל'] || row['מייל'] || '').trim().toLowerCase();
+        const cc_email = String(row.cc_email || row['אימייל בן/בת זוג'] || '').trim().toLowerCase();
 
         let status = 'valid';
         let statusText = 'תקין';
@@ -1041,7 +1042,7 @@ function processImportData(data) {
             validCount++;
         }
 
-        importData.push({ name, email, status, statusText });
+        importData.push({ name, email, cc_email, status, statusText });
     }
 
     // Update preview stats
@@ -1058,6 +1059,7 @@ function processImportData(data) {
             <td>${idx + 1}</td>
             <td>${escapeHtml(row.name) || '<em style="color:#999">חסר</em>'}</td>
             <td>${escapeHtml(row.email) || '<em style="color:#999">חסר</em>'}</td>
+            <td>${escapeHtml(row.cc_email) || ''}</td>
             <td><span class="status-badge ${row.status}">${row.statusText}</span></td>
         </tr>
     `).join('');
@@ -1119,7 +1121,7 @@ async function startImport() {
     const year = document.getElementById('importYear').value;
 
     const success = await performServerImport(
-        validClients.map(c => ({ name: c.name, email: c.email })),
+        validClients.map(c => ({ name: c.name, email: c.email, cc_email: c.cc_email || '' })),
         year,
         'הלקוחות נוספו בהצלחה למערכת.'
     );
@@ -1155,6 +1157,7 @@ function setAddMode(mode) {
 async function addManualClient() {
     const name = document.getElementById('manualName').value.trim();
     const email = document.getElementById('manualEmail').value.trim().toLowerCase();
+    const cc_email = document.getElementById('manualCcEmail').value.trim().toLowerCase();
     const year = document.getElementById('manualYear').value;
 
     if (!name || !email) {
@@ -1171,12 +1174,12 @@ async function addManualClient() {
         return;
     }
 
-    await _doManualAdd(name, email, year);
+    await _doManualAdd(name, email, cc_email, year);
 }
 
-async function _doManualAdd(name, email, year) {
+async function _doManualAdd(name, email, cc_email, year) {
     const data = await performServerImport(
-        [{ name, email }],
+        [{ name, email, cc_email }],
         year,
         null,
         { suppressModal: true }
@@ -1185,6 +1188,7 @@ async function _doManualAdd(name, email, year) {
     if (data) {
         document.getElementById('manualName').value = '';
         document.getElementById('manualEmail').value = '';
+        document.getElementById('manualCcEmail').value = '';
 
         const reportId = data.report_ids?.[0];
         if (reportId) {
@@ -4550,6 +4554,7 @@ async function openClientDetailModal(reportId) {
     document.getElementById('clientDetailReportId').value = reportId;
     document.getElementById('clientDetailName').value = '';
     document.getElementById('clientDetailEmail').value = '';
+    document.getElementById('clientDetailCcEmail').value = '';
     document.getElementById('clientDetailPhone').value = '';
 
     // Show modal with loading state
@@ -4572,6 +4577,7 @@ async function openClientDetailModal(reportId) {
 
         document.getElementById('clientDetailName').value = data.client.name || '';
         document.getElementById('clientDetailEmail').value = data.client.email || '';
+        document.getElementById('clientDetailCcEmail').value = data.client.cc_email || '';
         document.getElementById('clientDetailPhone').value = data.client.phone || '';
 
         // Swap loading → fields
@@ -4588,6 +4594,7 @@ function closeClientDetailModal() {
     document.getElementById('clientDetailReportId').value = '';
     document.getElementById('clientDetailName').value = '';
     document.getElementById('clientDetailEmail').value = '';
+    document.getElementById('clientDetailCcEmail').value = '';
     document.getElementById('clientDetailPhone').value = '';
 }
 
@@ -4595,6 +4602,7 @@ async function saveClientDetails() {
     const reportId = document.getElementById('clientDetailReportId').value;
     const name = document.getElementById('clientDetailName').value.trim();
     const email = document.getElementById('clientDetailEmail').value.trim().toLowerCase();
+    const cc_email = document.getElementById('clientDetailCcEmail').value.trim().toLowerCase();
     const phone = document.getElementById('clientDetailPhone').value.trim();
 
     if (!name) {
@@ -4613,7 +4621,7 @@ async function saveClientDetails() {
             const response = await fetchWithTimeout(ENDPOINTS.ADMIN_UPDATE_CLIENT, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ token: authToken, report_id: reportId, action: 'update', name, email, phone })
+                body: JSON.stringify({ token: authToken, report_id: reportId, action: 'update', name, email, cc_email, phone })
             }, FETCH_TIMEOUTS.mutate);
             const data = await response.json();
             console.log(`⚡ admin-update-client (save): ${Math.round(performance.now() - _t0)}ms`);
@@ -4625,6 +4633,7 @@ async function saveClientDetails() {
             if (client) {
                 client.name = name;
                 client.email = email;
+                client.cc_email = cc_email;
                 client.phone = phone;
                 filterClients();
             }
