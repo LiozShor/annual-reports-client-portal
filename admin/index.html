@@ -271,6 +271,11 @@
                                     <input type="text" id="manualEmail" placeholder="israel@example.com">
                                 </div>
                                 <div class="form-field">
+                                    <label class="form-label">אימייל בן/בת זוג (לא חובה):</label>
+                                    <input type="text" id="manualCcEmail" placeholder="spouse@example.com">
+                                    <span class="form-help">יקבל/תקבל עותק של השאלון</span>
+                                </div>
+                                <div class="form-field">
                                     <label class="form-label">שנת דוח:</label>
                                     <select id="manualYear">
                                     </select>
@@ -303,22 +308,25 @@
                                 </button>
                             </div>
                             <div id="formatHelp" class="import-options" style="display:none;">
-                                <p>קובץ Excel עם שתי עמודות:</p>
+                                <p>קובץ Excel עם העמודות הבאות (<code>cc_email</code> לא חובה):</p>
                                 <table class="table mt-3">
                                     <thead>
                                         <tr>
                                             <th>name</th>
                                             <th>email</th>
+                                            <th>cc_email</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         <tr>
                                             <td>משה כהן</td>
                                             <td>moshe@example.com</td>
+                                            <td>sara@example.com</td>
                                         </tr>
                                         <tr>
                                             <td>שרה לוי</td>
                                             <td>sara@example.com</td>
+                                            <td></td>
                                         </tr>
                                     </tbody>
                                 </table>
@@ -364,6 +372,7 @@
                                                 <th>#</th>
                                                 <th>שם</th>
                                                 <th>אימייל</th>
+                                                <th>אימייל בן/בת זוג</th>
                                                 <th>סטטוס</th>
                                             </tr>
                                         </thead>
@@ -802,6 +811,11 @@
                     <div class="form-field">
                         <label class="form-label">אימייל:</label>
                         <input type="text" id="clientDetailEmail" placeholder="israel@example.com">
+                    </div>
+                    <div class="form-field">
+                        <label class="form-label">אימייל בן/בת זוג (לא חובה):</label>
+                        <input type="text" id="clientDetailCcEmail" placeholder="spouse@example.com">
+                        <span class="form-help">יקבל/תקבל עותק של השאלון</span>
                     </div>
                     <div class="form-field">
                         <label class="form-label">טלפון:</label>
