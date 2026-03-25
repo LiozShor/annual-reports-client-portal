@@ -135,7 +135,7 @@ body {
     text-align: center;
     box-shadow: var(--shadow-sm);
     border-inline-start: 3px solid var(--brand-500);
-    transition: all var(--transition-base);
+    transition: box-shadow var(--transition-base), border-color var(--transition-base), background var(--transition-base);
     cursor: pointer;
     position: relative;
 }
@@ -154,16 +154,13 @@ body {
 .stat-card.stage-8 { border-inline-start-color: var(--success-500); }
 
 /* Stage 3 attention bounce — only applied via JS when count > 0 */
-@keyframes stage3-shake {
-  0%, 100% { transform: translate(0, 0); }
-  20% { transform: translate(-1.5px, -1px); }
-  40% { transform: translate(1.5px, 1px); }
-  60% { transform: translate(-1px, 1px); }
-  80% { transform: translate(1px, -1px); }
+@keyframes stage3-bounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
 }
 
 .stat-card.stage-3.needs-attention {
-  animation: stage3-shake 1.2s ease-in-out infinite;
+  animation: stage3-bounce 2s ease-in-out infinite;
 }
 
 .stat-card.stage-3.needs-attention .stat-number {
