@@ -126,10 +126,12 @@ async function loadDocuments() {
 
     try {
         let url, fetchOptions = {};
-        if (adminToken) {
+        if (adminToken && !clientToken) {
+            // Office mode only when admin is viewing (no client token present)
             url = `${ENDPOINTS.GET_CLIENT_DOCUMENTS}?report_id=${reportId}&mode=office`;
             fetchOptions = { headers: { 'Authorization': `Bearer ${adminToken}` } };
         } else {
+            // Client mode — always use client token when available (server filters waived docs)
             const tokenParam = clientToken ? `&token=${encodeURIComponent(clientToken)}` : '';
             url = `${ENDPOINTS.GET_CLIENT_DOCUMENTS}?report_id=${reportId}${tokenParam}`;
         }
@@ -296,10 +298,14 @@ function renderDocuments() {
             html += `<div class="category-header">`;
             html += `<i data-lucide="${iconName}" class="icon"></i>`;
             html += `<span>${catName}</span>`;
-            html += `<span class="doc-count">${cat.docs.length}</span>`;
+            const activeDocs = cat.docs.filter(d => { const s = (d.status || '').toLowerCase(); return s !== 'waived' && s !== 'removed'; });
+            html += `<span class="doc-count">${activeDocs.length}</span>`;
             html += `</div>`;
 
             for (const doc of cat.docs) {
+                // Safety net: skip waived/removed docs even if server didn't filter
+                const docStatus = (doc.status || '').toLowerCase();
+                if (docStatus === 'waived' || docStatus === 'removed') continue;
                 totalDocs++;
 
                 // Document names may contain <b> tags from SSOT — render as HTML
