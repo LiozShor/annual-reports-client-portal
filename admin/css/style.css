@@ -3876,120 +3876,6 @@ tr.reminder-loading td:last-child {
     justify-content: flex-start;
 }
 
-/* ==================== BATCH COMPLETE MODAL ==================== */
-
-.batch-complete-modal .ai-modal-panel {
-    max-width: 480px;
-}
-
-.batch-summary-stats {
-    display: flex;
-    gap: var(--sp-4);
-    justify-content: center;
-    margin-bottom: var(--sp-4);
-}
-
-.batch-summary-stat {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    padding: var(--sp-3) var(--sp-5);
-    border-radius: var(--radius-lg);
-    min-width: 80px;
-}
-
-.batch-summary-stat.batch-approved {
-    background: var(--success-50, #f0fdf4);
-}
-
-.batch-summary-stat.batch-rejected {
-    background: var(--warning-50, #fffbeb);
-}
-
-.batch-stat-number {
-    font-size: var(--text-2xl);
-    font-weight: 700;
-    line-height: 1.2;
-}
-
-.batch-approved .batch-stat-number {
-    color: var(--success-600, #059669);
-}
-
-.batch-rejected .batch-stat-number {
-    color: var(--warning-600, #d97706);
-}
-
-.batch-stat-label {
-    font-size: var(--text-xs);
-    color: var(--gray-500);
-    margin-top: var(--sp-1);
-}
-
-.batch-items-list {
-    max-height: 300px;
-    overflow-y: auto;
-}
-
-.batch-section {
-    margin-bottom: var(--sp-3);
-}
-
-.batch-section-title {
-    font-size: var(--text-sm);
-    font-weight: 600;
-    color: var(--gray-600);
-    margin-bottom: var(--sp-2);
-    padding-bottom: var(--sp-1);
-    border-bottom: 1px solid var(--gray-200);
-}
-
-.batch-item {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: baseline;
-    gap: var(--sp-2);
-    padding: var(--sp-1) var(--sp-2);
-    font-size: var(--text-sm);
-    border-radius: var(--radius-sm);
-}
-
-.batch-item-rejected {
-    background: var(--danger-50, #fef2f2);
-}
-
-.batch-item-approved {
-    background: var(--success-50, #f0fdf4);
-}
-
-.batch-item-name {
-    color: var(--gray-700);
-}
-
-.batch-item-reason {
-    font-size: var(--text-xs);
-    color: var(--danger-600, #dc2626);
-    background: var(--danger-100, #fee2e2);
-    padding: 1px var(--sp-2);
-    border-radius: var(--radius-full);
-}
-
-.batch-item-notes {
-    width: 100%;
-    font-size: var(--text-xs);
-    color: var(--gray-500);
-    font-style: normal;
-}
-
-/* Spinning loader for batch send button */
-@keyframes spin {
-    to { transform: rotate(360deg); }
-}
-
-.spinning {
-    animation: spin 1s linear infinite;
-}
-
 /* ==================== DL-086: REVIEWED CARD STATES ==================== */
 
 /* Reviewed card backgrounds */
@@ -4065,49 +3951,6 @@ tr.reminder-loading td:last-child {
     color: var(--gray-700);
     border-color: var(--gray-400);
     background: var(--gray-50);
-}
-
-/* ==================== DL-086: BATCH ACTION BAR ==================== */
-
-.batch-action-bar {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: var(--sp-3);
-    padding: var(--sp-3) var(--sp-4);
-    margin-bottom: var(--sp-3);
-    background: var(--success-50, #f0fdf4);
-    border: 1px solid var(--success-200, #bbf7d0);
-    border-radius: var(--radius-lg);
-    direction: rtl;
-}
-
-.batch-action-bar-text {
-    font-size: var(--text-sm);
-    font-weight: 600;
-    color: var(--success-800, #166534);
-    display: flex;
-    align-items: center;
-    gap: var(--sp-2);
-}
-
-.batch-action-bar-buttons {
-    display: flex;
-    gap: var(--sp-2);
-    flex-shrink: 0;
-}
-
-/* ==================== DL-086: READY-TO-SEND BADGE ==================== */
-
-.ai-accordion-stat-badge.badge-ready-send {
-    background: var(--info-100, #dbeafe);
-    color: var(--info-700, #1d4ed8);
-    animation: readySendPulse 2s ease-in-out infinite;
-}
-
-@keyframes readySendPulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.7; }
 }
 
 /* ==================== DOCS POPOVER ==================== */
@@ -4278,14 +4121,6 @@ tr:hover .copy-email-btn {
         width: calc(100vw - 40px);
     }
 
-    .batch-complete-modal .ai-modal-panel {
-        max-width: 95%;
-    }
-
-    .batch-summary-stats {
-        flex-direction: column;
-        align-items: center;
-    }
 }
 
 /* ==================== CLIENT EDIT LINK ==================== */

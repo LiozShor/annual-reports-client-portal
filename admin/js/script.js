@@ -1775,9 +1775,6 @@ let aiCurrentReassignId = null;
 let aiReviewLoaded = false;
 let activePreviewItemId = null;
 
-// Batch review tracker — keyed by client name
-let batchReviewTracker = {};
-
 const REJECTION_REASONS = {
     image_quality: 'איכות תמונה ירודה',
     wrong_document: 'מסמך לא נכון',
@@ -1911,9 +1908,6 @@ async function loadAIClassifications(silent = false) {
         aiClassificationsData = data.items || [];
         aiReviewLoaded = true;
         resetPreviewPanel();
-
-        // DL-086: Reconstruct batchReviewTracker from reviewed-unsent items
-        reconstructBatchTracker();
 
         updateAIStats(data.stats || {});
         applyAIFilters();
@@ -2128,13 +2122,9 @@ function renderAICards(items) {
             }
         }
 
-        const allReviewed = pendingCount === 0 && reviewedCount > 0;
-
-        // Build accordion stat badge — single pending count or ready-to-send
+        // Build accordion stat badge
         let badgesHtml = '';
-        if (allReviewed) {
-            badgesHtml = `<span class="ai-accordion-stat-badge badge-ready-send">מוכן לשליחה</span>`;
-        } else if (pendingCount > 0) {
+        if (pendingCount > 0) {
             badgesHtml = `<span class="ai-accordion-stat-badge badge-matched">${pendingCount} מסמכים ממתינים</span>`;
         }
 
@@ -2157,25 +2147,6 @@ function renderAICards(items) {
         const emailBody = clientItems.find(i => i.email_body_text)?.email_body_text;
         if (emailBody) {
             html += `<div class="ai-email-body" dir="auto"><span class="ai-email-body-label">💬 הודעת הלקוח:</span><span class="ai-email-body-text">${escapeHtml(emailBody).replace(/\n{3,}/g, '\n\n')}</span></div>`;
-        }
-
-        // DL-086: Batch action bar when all items are reviewed
-        if (allReviewed) {
-            html += `
-                    <div class="batch-action-bar" data-client="${escapeAttr(clientName)}">
-                        <div class="batch-action-bar-text">
-                            הסקירה הושלמה — ${approvedCount} אושרו${rejectedCount > 0 ? ` · ${rejectedCount} דורשים תיקון` : ''}
-                        </div>
-                        <div class="batch-action-bar-buttons">
-                            <button class="btn btn-primary btn-sm" onclick="sendBatchStatus('${escapeOnclick(clientName)}')">
-                                <i data-lucide="send" class="icon-sm"></i> שלח עדכון ללקוח
-                            </button>
-                            <button class="btn btn-ghost btn-sm" onclick="dismissBatch('${escapeOnclick(clientName)}')">
-                                ללא עדכון
-                            </button>
-                        </div>
-                    </div>
-            `;
         }
 
         // Document status overview — grouped by category, collapsible
@@ -2715,7 +2686,6 @@ async function approveAIClassification(recordId) {
 
             if (!data.ok) throw new Error(formatAIResponseError(data));
 
-            trackReviewAction(recordId, 'approve', data);
             const approvedItem = aiClassificationsData.find(i => i.id === recordId);
             if (approvedItem?.matched_doc_record_id) {
                 updateClientDocState(approvedItem.client_name, approvedItem.matched_doc_record_id);
@@ -2798,7 +2768,6 @@ async function executeReject(recordId, rejectionReason, notes) {
 
         if (!data.ok) throw new Error(formatAIResponseError(data));
 
-        trackReviewAction(recordId, 'reject', data, rejectionReason, notes);
         // DL-086: Store notes on the item for reviewed card display
         const rejItem = aiClassificationsData.find(i => i.id === recordId);
         if (rejItem) rejItem.notes = JSON.stringify({ reason: rejectionReason, text: notes });
@@ -2898,7 +2867,6 @@ async function submitAIReassign(recordId, templateId, docRecordId, loadingText, 
 
         if (!data.ok) throw new Error(formatAIResponseError(data));
 
-        trackReviewAction(recordId, 'reassign', data);
         const reassignedItem = aiClassificationsData.find(i => i.id === recordId);
         // Update local item with reassigned doc info from API response
         if (reassignedItem && data.doc_title) {
@@ -2960,48 +2928,6 @@ function transitionCardToReviewed(recordId, newReviewStatus, responseData) {
         card.replaceWith(newCard);
     }
 
-    // Check if all items for this client are now reviewed → show batch action bar
-    const clientName = item?.client_name;
-    if (clientName) {
-        const clientItems = aiClassificationsData.filter(i => i.client_name === clientName);
-        const allReviewed = clientItems.every(i => (i.review_status || 'pending') !== 'pending');
-
-        if (allReviewed) {
-            const accordion = document.querySelector(`.ai-accordion[data-client="${CSS.escape(clientName)}"]`);
-            if (accordion) {
-                // Add batch action bar if not already present
-                const existingBar = accordion.querySelector('.batch-action-bar');
-                if (!existingBar) {
-                    const approvedCount = clientItems.filter(i => i.review_status !== 'rejected').length;
-                    const rejectedCount = clientItems.filter(i => i.review_status === 'rejected').length;
-                    const barHtml = `
-                        <div class="batch-action-bar" data-client="${escapeAttr(clientName)}">
-                            <div class="batch-action-bar-text">
-                                הסקירה הושלמה — ${approvedCount} אושרו${rejectedCount > 0 ? ` · ${rejectedCount} דורשים תיקון` : ''}
-                            </div>
-                            <div class="batch-action-bar-buttons">
-                                <button class="btn btn-primary btn-sm" onclick="sendBatchStatus('${escapeOnclick(clientName)}')">
-                                    <i data-lucide="send" class="icon-sm"></i> שלח עדכון ללקוח
-                                </button>
-                                <button class="btn btn-ghost btn-sm" onclick="dismissBatch('${escapeOnclick(clientName)}')">
-                                    ללא עדכון
-                                </button>
-                            </div>
-                        </div>
-                    `;
-                    const body = accordion.querySelector('.ai-accordion-body');
-                    if (body) body.insertAdjacentHTML('afterbegin', barHtml);
-                }
-
-                // Add ready-to-send badge to accordion header
-                const statsDiv = accordion.querySelector('.ai-accordion-stats');
-                if (statsDiv && !statsDiv.querySelector('.badge-ready-send')) {
-                    statsDiv.insertAdjacentHTML('beforeend', '<span class="ai-accordion-stat-badge badge-ready-send">מוכן לשליחה</span>');
-                }
-            }
-        }
-    }
-
     recalcAIStats();
     if (typeof lucide !== 'undefined') lucide.createIcons();
 }
@@ -3023,12 +2949,7 @@ function animateAndRemoveAI(recordId) {
             document.querySelectorAll('.ai-accordion').forEach(accordion => {
                 const cards = accordion.querySelectorAll('.ai-review-card');
                 if (cards.length === 0) {
-                    const clientName = accordion.dataset.client;
                     accordion.remove();
-                    // Trigger batch-complete modal if tracker has entries
-                    if (clientName && batchReviewTracker[clientName] && batchReviewTracker[clientName].items.length > 0) {
-                        setTimeout(() => showBatchCompleteModal(clientName, batchReviewTracker[clientName]), 100);
-                    }
                 }
             });
 
@@ -3287,205 +3208,6 @@ function showAIToast(message, type, action) {
         toast._dismissTimer = setTimeout(() => {
             toast.classList.remove('show');
         }, 3000);
-    }
-}
-
-// ==================== BATCH REVIEW TRACKER ====================
-
-function trackReviewAction(recordId, action, responseData, rejectionReason, notes) {
-    const item = aiClassificationsData.find(i => i.id === recordId);
-    const clientName = item?.client_name || responseData?.client_name || 'unknown';
-
-    if (!batchReviewTracker[clientName]) {
-        batchReviewTracker[clientName] = { reportRecordId: null, items: [] };
-    }
-
-    if (responseData?.report_record_id) {
-        batchReviewTracker[clientName].reportRecordId = responseData.report_record_id;
-    }
-
-    // DL-086: Replace existing entry for this record (re-review case)
-    const existingIdx = batchReviewTracker[clientName].items.findIndex(i => i.recordId === recordId);
-    const entry = {
-        recordId,
-        action,
-        docName: responseData?.doc_title || item?.matched_doc_name || item?.attachment_name || '',
-        originalFileName: item?.attachment_name || '',
-        rejectionReason: rejectionReason || null,
-        notes: notes || null
-    };
-    if (existingIdx >= 0) {
-        batchReviewTracker[clientName].items[existingIdx] = entry;
-    } else {
-        batchReviewTracker[clientName].items.push(entry);
-    }
-}
-
-// DL-086: Reconstruct batch tracker from API data on load (for reviewed-unsent items)
-function reconstructBatchTracker() {
-    batchReviewTracker = {};
-    for (const item of aiClassificationsData) {
-        const rs = item.review_status || 'pending';
-        if (rs === 'pending') continue;
-
-        const clientName = item.client_name || 'unknown';
-        if (!batchReviewTracker[clientName]) {
-            batchReviewTracker[clientName] = { reportRecordId: item.report_record_id || null, items: [] };
-        }
-        if (item.report_record_id) {
-            batchReviewTracker[clientName].reportRecordId = item.report_record_id;
-        }
-
-        let rejectionReason = null;
-        let notesText = null;
-        if (rs === 'rejected' && item.notes) {
-            try {
-                const parsed = typeof item.notes === 'string' ? JSON.parse(item.notes) : item.notes;
-                rejectionReason = parsed.reason || null;
-                notesText = parsed.text || null;
-            } catch { /* ignore */ }
-        }
-
-        const actionMap = { approved: 'approve', rejected: 'reject', reassigned: 'reassign' };
-        batchReviewTracker[clientName].items.push({
-            recordId: item.id,
-            action: actionMap[rs] || rs,
-            docName: item.matched_doc_name || item.attachment_name || '',
-            originalFileName: item.attachment_name || '',
-            rejectionReason,
-            notes: notesText
-        });
-    }
-}
-
-// DL-086: Updated sendBatchStatus — builds payload from aiClassificationsData
-async function sendBatchStatus(clientName) {
-    const trackerData = batchReviewTracker[clientName];
-    if (!trackerData) return;
-
-    // Find the send button in the batch action bar
-    const accordion = document.querySelector(`.ai-accordion[data-client="${CSS.escape(clientName)}"]`);
-    const bar = accordion?.querySelector('.batch-action-bar');
-    const btn = bar?.querySelector('.btn-primary');
-    if (btn) {
-        btn.disabled = true;
-        btn.innerHTML = '<i data-lucide="loader" class="icon-sm spinning"></i> שולח...';
-        if (typeof lucide !== 'undefined') lucide.createIcons();
-    }
-
-    // Collect classification_ids from the reviewed items
-    const clientItems = aiClassificationsData.filter(i => i.client_name === clientName && (i.review_status || 'pending') !== 'pending');
-    const classificationIds = clientItems.map(i => i.id);
-
-    try {
-        const response = await fetchWithTimeout(ENDPOINTS.SEND_BATCH_STATUS, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                token: authToken,
-                action: 'send',
-                report_key: trackerData.reportRecordId,
-                client_name: clientName,
-                classification_ids: classificationIds,
-                items: trackerData.items
-            })
-        }, FETCH_TIMEOUTS.mutate);
-
-        const data = await response.json();
-        if (!data.ok) throw new Error(data.error || 'שגיאה בשליחת העדכון');
-
-        // Remove sent items from data and DOM
-        removeReviewedCards(clientName);
-        showAIToast(`עדכון נשלח ל${clientName}`, 'success');
-        delete batchReviewTracker[clientName];
-    } catch (error) {
-        if (btn) {
-            btn.disabled = false;
-            btn.innerHTML = '<i data-lucide="send" class="icon-sm"></i> שלח עדכון ללקוח';
-            if (typeof lucide !== 'undefined') lucide.createIcons();
-        }
-        showModal('error', 'שגיאה', error.message);
-    }
-}
-
-// DL-086: Dismiss batch — clear without sending email
-function dismissBatch(clientName) {
-    showConfirmDialog('לדלג על שליחת עדכון ללקוח?', async () => {
-        const trackerData = batchReviewTracker[clientName];
-        const clientItems = aiClassificationsData.filter(i => i.client_name === clientName && (i.review_status || 'pending') !== 'pending');
-        const classificationIds = clientItems.map(i => i.id);
-
-        try {
-            const response = await fetchWithTimeout(ENDPOINTS.SEND_BATCH_STATUS, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    token: authToken,
-                    action: 'dismiss',
-                    report_key: trackerData?.reportRecordId || null,
-                    client_name: clientName,
-                    classification_ids: classificationIds,
-                    items: []
-                })
-            }, FETCH_TIMEOUTS.mutate);
-
-            const data = await response.json();
-            if (!data.ok) throw new Error(data.error || 'שגיאה');
-
-            removeReviewedCards(clientName);
-            showAIToast('הסקירה הושלמה (ללא עדכון ללקוח)', 'success');
-            delete batchReviewTracker[clientName];
-        } catch (error) {
-            showModal('error', 'שגיאה', error.message);
-        }
-    }, 'אישור', false);
-}
-
-// DL-086: Remove reviewed cards for a client after send/dismiss
-function removeReviewedCards(clientName) {
-    // Remove reviewed items from data
-    aiClassificationsData = aiClassificationsData.filter(i =>
-        !(i.client_name === clientName && (i.review_status || 'pending') !== 'pending')
-    );
-
-    // Animate removal
-    const accordion = document.querySelector(`.ai-accordion[data-client="${CSS.escape(clientName)}"]`);
-    if (accordion) {
-        const reviewedCards = accordion.querySelectorAll('.ai-review-card[data-review-status]');
-        reviewedCards.forEach(card => {
-            card.style.maxHeight = card.offsetHeight + 'px';
-            card.offsetHeight; // eslint-disable-line no-unused-expressions
-            card.classList.add('removing');
-        });
-
-        // Remove batch action bar
-        const bar = accordion.querySelector('.batch-action-bar');
-        if (bar) bar.remove();
-
-        // Remove ready-to-send badge
-        const readyBadge = accordion.querySelector('.badge-ready-send');
-        if (readyBadge) readyBadge.remove();
-
-        setTimeout(() => {
-            reviewedCards.forEach(card => card.remove());
-
-            // If no cards left, remove accordion
-            const remainingCards = accordion.querySelectorAll('.ai-review-card');
-            if (remainingCards.length === 0) {
-                accordion.remove();
-            }
-
-            // Check if everything is empty
-            if (aiClassificationsData.length === 0) {
-                document.getElementById('aiCardsContainer').style.display = 'none';
-                document.getElementById('aiEmptyState').style.display = 'block';
-                if (typeof lucide !== 'undefined') lucide.createIcons();
-            }
-
-            recalcAIStats();
-        }, 350);
-    } else {
-        recalcAIStats();
     }
 }
 
