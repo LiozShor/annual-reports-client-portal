@@ -40,6 +40,7 @@ const ENDPOINTS = {
     // --- Documents (migrated — DL-172, DL-174) ---
     GET_CLIENT_DOCUMENTS:      `${CF_BASE}/get-client-documents`,
     EDIT_DOCUMENTS:            `${CF_BASE}/edit-documents`,
+    UPLOAD_DOCUMENT:           `${CF_BASE}/upload-document`,
     APPROVE_AND_SEND:          `${CF_BASE}/approve-and-send`,
     GET_PREVIEW_URL:           `${CF_BASE}/get-preview-url`,
 

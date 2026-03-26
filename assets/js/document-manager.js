@@ -39,6 +39,7 @@ let noteChanges = new Map();        // docId → noteText
 let nameChanges = new Map();        // docId → newName
 let sendEmailOnSave = false;
 let currentDropdownDocId = null;    // currently open status dropdown target
+let _uploadTargetDocId = null;      // docId for pending file upload (DL-198)
 let activeStatusFilter = '';        // currently active status filter (empty = show all)
 let _activeNoteDocId = null;        // docId whose note popover is currently open
 let _noteOriginalValue = '';        // value when popover was opened (for cancel/discard)
@@ -430,6 +431,8 @@ function displayDocuments() {
                                 : `<span class="file-action-btn action-hidden"><i data-lucide="download" class="icon-sm"></i></span>
                                    <span class="file-action-btn action-hidden"><i data-lucide="external-link" class="icon-sm"></i></span>`
                             }
+                            ${!isWaived ? `<button type="button" class="file-action-btn upload-btn" id="upload-btn-${doc.id}"
+                                onclick="triggerUpload('${doc.id}')" title="העלה קובץ" aria-label="העלה קובץ"><i data-lucide="upload" class="icon-sm"></i></button>` : ''}
                         </div>
                         <button type="button" class="delete-toggle${isWaived ? ' action-hidden' : ''} ${!isWaived && markedForRemoval.has(doc.id) ? 'active' : ''}"
                             ${!isWaived ? `onclick="toggleRemoval('${doc.id}')" id="delete-btn-${doc.id}"` : ''}
@@ -2219,4 +2222,104 @@ ${notesHtml}
     printWindow.document.close();
     printWindow.focus();
     setTimeout(() => printWindow.print(), 500);
+}
+
+// ===================== FILE UPLOAD PER ROW (DL-198) =====================
+
+const UPLOAD_MAX_SIZE = 10 * 1024 * 1024; // 10 MB
+const UPLOAD_ALLOWED_EXT = new Set(['pdf','jpg','jpeg','png','heic','tif','tiff','xlsx','docx','xls','doc']);
+
+function triggerUpload(docId) {
+    _uploadTargetDocId = docId;
+    const input = document.getElementById('uploadFileInput');
+    input.value = ''; // reset so same file can be re-selected
+    input.click();
+}
+
+function handleFileSelected(event) {
+    const file = event.target.files?.[0];
+    if (!file || !_uploadTargetDocId) return;
+
+    const ext = (file.name.split('.').pop() || '').toLowerCase();
+    if (!UPLOAD_ALLOWED_EXT.has(ext)) {
+        showToast(`סוג קובץ .${ext} לא נתמך`, 'error');
+        return;
+    }
+    if (file.size > UPLOAD_MAX_SIZE) {
+        showToast('הקובץ גדול מדי (מקסימום 10MB)', 'error');
+        return;
+    }
+
+    uploadFile(_uploadTargetDocId, file);
+}
+
+async function uploadFile(docId, file) {
+    const btn = document.getElementById(`upload-btn-${docId}`);
+    if (btn) {
+        btn.classList.add('uploading');
+        btn.disabled = true;
+        btn.innerHTML = '<i data-lucide="loader-2" class="icon-sm spin"></i>';
+        lucide.createIcons({ nodes: [btn] });
+    }
+
+    try {
+        const formData = new FormData();
+        formData.append('doc_id', docId);
+        formData.append('report_id', REPORT_ID);
+        formData.append('file', file);
+
+        const response = await fetchWithTimeout(ENDPOINTS.UPLOAD_DOCUMENT, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${ADMIN_TOKEN}` },
+            body: formData,
+        }, FETCH_TIMEOUTS.mutate);
+
+        const data = await response.json();
+        if (!data.ok) throw new Error(data.error || 'Upload failed');
+
+        onUploadSuccess(docId, data);
+    } catch (err) {
+        onUploadError(docId, err);
+    }
+}
+
+function onUploadSuccess(docId, result) {
+    // Update the doc in currentDocuments so re-render shows links
+    const doc = currentDocuments.find(d => d.id === docId);
+    if (doc) {
+        doc.file_url = result.file_url;
+        doc.download_url = result.download_url || '';
+        doc.onedrive_item_id = result.onedrive_item_id;
+        doc.status = 'Received';
+        // Clear any pending status change for this doc
+        statusChanges.delete(docId);
+    }
+
+    // Brief success indicator
+    const btn = document.getElementById(`upload-btn-${docId}`);
+    if (btn) {
+        btn.classList.remove('uploading');
+        btn.classList.add('upload-success');
+        btn.innerHTML = '<i data-lucide="check" class="icon-sm"></i>';
+        lucide.createIcons({ nodes: [btn] });
+    }
+
+    showToast('הקובץ הועלה בהצלחה', 'success');
+
+    // Re-render after brief delay so user sees the checkmark
+    setTimeout(() => displayDocuments(currentGroups), 600);
+}
+
+function onUploadError(docId, error) {
+    const btn = document.getElementById(`upload-btn-${docId}`);
+    if (btn) {
+        btn.classList.remove('uploading');
+        btn.classList.add('upload-error');
+        btn.disabled = false;
+        btn.innerHTML = '<i data-lucide="upload" class="icon-sm"></i>';
+        btn.title = `שגיאה: ${error.message || 'העלאה נכשלה'} — לחץ לנסות שנית`;
+        lucide.createIcons({ nodes: [btn] });
+    }
+
+    showToast(`שגיאה בהעלאה: ${error.message || 'נכשל'}`, 'error');
 }
