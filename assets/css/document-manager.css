@@ -340,6 +340,21 @@ body {
     color: var(--gray-400);
 }
 
+.file-clear-warning {
+    color: #D97706;
+    font-size: 0.75rem;
+    font-weight: 600;
+    margin-inline-start: 8px;
+    align-items: center;
+    gap: 3px;
+    white-space: nowrap;
+}
+.file-clear-warning-summary {
+    color: #D97706;
+    font-weight: 600;
+    font-size: 0.85em;
+}
+
 .document-item.waived-item {
     opacity: 0.5;
 }
