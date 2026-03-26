@@ -2410,6 +2410,8 @@ tr:hover .client-view-link {
 .reminder-stat-item.reminder-stat-suppressed .icon-sm { color: var(--gray-400); }
 .reminder-stat-item.reminder-stat-exhausted { border-inline-start: 3px solid var(--danger-500); }
 .reminder-stat-item.reminder-stat-exhausted .icon-sm { color: var(--danger-500); }
+.reminder-stat-item.reminder-stat-pending { border-inline-start: 3px solid var(--warning-500); }
+.reminder-stat-item.reminder-stat-pending .icon-sm { color: var(--warning-500); }
 
 /* Active card filter states */
 .reminder-stat-item.reminder-stat-active.reminder-stat-scheduled {
@@ -2430,6 +2432,11 @@ tr:hover .client-view-link {
 .reminder-stat-item.reminder-stat-active.reminder-stat-exhausted {
     background: color-mix(in srgb, var(--danger-500) 8%, white);
     border: 2px solid var(--danger-500);
+    border-inline-start-width: 3px;
+}
+.reminder-stat-item.reminder-stat-active.reminder-stat-pending {
+    background: color-mix(in srgb, var(--warning-500) 8%, white);
+    border: 2px solid var(--warning-500);
     border-inline-start-width: 3px;
 }
 
@@ -2666,6 +2673,11 @@ tr.reminder-row-suppressed td:nth-child(7) {
 
 .reminder-bulk-muted-warning:hover {
     background: var(--warning-100);
+}
+
+.reminder-status-pending {
+    background: var(--warning-100);
+    color: var(--warning-700);
 }
 
 .reminder-status-exhausted {
