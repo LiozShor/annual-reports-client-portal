@@ -24,7 +24,7 @@ let formIdHe = FORM_HE;
 let formIdEn = FORM_EN;
 // Endpoints loaded from shared/endpoints.js
 const CHECK_ENDPOINT = ENDPOINTS.CHECK_EXISTING_SUBMISSION;
-const RESET_ENDPOINT = ENDPOINTS.RESET_SUBMISSION;
+
 
 // --- Localization ---
 // Base64 stored to avoid encoding issues in some editors
@@ -40,14 +40,10 @@ const HE_B64 = {
 
     // Buttons
     btn_view_docs: "16bXpNeUINeR157Xodee15vXmdedINeU16DXk9eo16nXmded",
-    btn_reset: "157Xl9enINeV15TXqteX15wg157XlNeU16rXl9ec15Q=",
 
     ready_title: "4pyFINee15XXm9efINec15TXqteX15nXnD8=",
     choose_language: "15HXl9eoINeQ16og15TXqdek15Qg15TXnteV16LXk9ek16og16LXnNeZ15o6",
-    reset_loading: "157XkNek16Eg16DXqteV16DXmdedLi4u",
-    reset_done: "4pyFINeU16DXqteV16DXmdedINeQ15XXpNeh15U=",
     err_loading: "16nXkteZ15DXlCDXkdeY16LXmdeg16og15TXoNeq15XXoNeZ150=",
-    err_reset: "16nXkteZ15DXlCDXkdeQ15nXpNeV16Eg15TXoNeq15XXoNeZ150=",
     err_missing_params: "16TXqNee15jXqNeZ150g15fXodeo15nXnSDXkden15nXqdeV16g="
 };
 
@@ -172,12 +168,6 @@ function showExistingProcessOptions({ docCount, hasDocs }) {
                 </div>
             </button>
 
-            <button class="btn btn-outline-danger" id="resetBtn" onclick="confirmReset()">
-                <div class="bilingual">
-                    <span>${t('btn_reset')}</span>
-                    <span class="en text-sm">Delete & Start Over</span>
-                </div>
-            </button>
         </div>
     `;
     reinitIcons();
@@ -214,87 +204,6 @@ function viewDocuments() {
     window.location.href = `view-documents.html?report_id=${reportId}`;
 }
 
-function confirmReset() {
-    const modal = document.getElementById('resetModal');
-    modal.classList.add('show');
-    reinitIcons();
-}
-
-function closeResetModal() {
-    document.getElementById('resetModal').classList.remove('show');
-}
-
-// Close modal on backdrop click
-document.getElementById('resetModal')?.addEventListener('click', (e) => {
-    if (e.target === e.currentTarget) closeResetModal();
-});
-
-// --- Double-submit lock for reset ---
-let _resetLocked = false;
-
-async function resetAndContinue() {
-    if (_resetLocked) return;
-    _resetLocked = true;
-
-    // Disable the confirm button in modal
-    const confirmBtn = document.querySelector('#resetModal .btn-primary, #resetModal .btn-outline-danger');
-    if (confirmBtn) confirmBtn.disabled = true;
-
-    closeResetModal();
-
-    const content = document.getElementById('content');
-    content.innerHTML = `
-        <div class="loading">
-            <div class="spinner"></div>
-            <p>${t('reset_loading')}</p>
-        </div>
-    `;
-
-    const cancelEscalation = startLoadingEscalation(content.querySelector('.loading'));
-
-    try {
-        const res = await fetchWithTimeout(RESET_ENDPOINT, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ report_id: reportId, token }),
-            cache: 'no-store'
-        }, FETCH_TIMEOUTS.mutate);
-        cancelEscalation();
-
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-
-        content.innerHTML = `
-            <div class="alert-box bilingual">
-                <div class="ready-icon-wrapper">
-                    ${lucideIcon('circle-check', 'icon-lg')}
-                </div>
-                <div class="alert-title" style="color: var(--success-700)">${t('reset_done')}</div>
-                <p class="alert-text">${t('choose_language')}</p>
-            </div>
-
-            <div class="lang-grid">
-                <div class="lang-card" onclick="goToForm('he')" role="button" tabindex="0" onkeydown="if(event.key==='Enter')goToForm('he')">
-                    <img src="https://flagcdn.com/w40/il.png" alt="Israel" class="lang-flag">
-                    <span class="lang-name">עברית</span>
-                </div>
-                <div class="lang-card" onclick="goToForm('en')" role="button" tabindex="0" onkeydown="if(event.key==='Enter')goToForm('en')">
-                    <img src="https://flagcdn.com/w40/gb.png" alt="UK" class="lang-flag">
-                    <span class="lang-name">English</span>
-                </div>
-            </div>
-        `;
-        reinitIcons();
-    } catch (error) {
-        cancelEscalation();
-        showErrorWithRetry(content, error, {
-            lang: 'he',
-            onRetry: function () { _resetLocked = false; resetAndContinue(); }
-        });
-    } finally {
-        _resetLocked = false;
-        if (confirmBtn) confirmBtn.disabled = false;
-    }
-}
 
 function goToForm(lang) {
     const formId = lang === 'he' ? formIdHe : formIdEn;
