@@ -198,10 +198,8 @@ async function loadDashboard(silent = false) {
 
     try {
         const year = document.getElementById('yearFilter')?.value || '2025';
-        const _t0 = performance.now();
         const response = await fetchWithTimeout(`${ENDPOINTS.ADMIN_DASHBOARD}?year=${year}&_t=${Date.now()}`, { headers: { 'Authorization': `Bearer ${authToken}` } }, FETCH_TIMEOUTS.load);
         const data = await response.json();
-        console.log(`⚡ admin-dashboard: ${Math.round(performance.now() - _t0)}ms`);
 
         if (!silent) hideLoading();
 
