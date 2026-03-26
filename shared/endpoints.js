@@ -48,7 +48,6 @@ const ENDPOINTS = {
     REVIEW_CLASSIFICATION:     `${CF_BASE}/review-classification`,
 
     // --- Notifications (migrated to Cloudflare Workers — DL-174, hybrid) ---
-    SEND_BATCH_STATUS:         `${CF_BASE}/send-batch-status`,
     ADMIN_REMINDERS:           `${CF_BASE}/admin-reminders`,
 
     // --- Chat (DL-179) ---
