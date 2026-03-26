@@ -456,6 +456,10 @@ function displayDocuments() {
                             }
                             ${!isWaived ? `<button type="button" class="file-action-btn upload-btn" id="upload-btn-${doc.id}"
                                 onclick="triggerUpload('${doc.id}')" title="העלה קובץ" aria-label="העלה קובץ"><i data-lucide="upload" class="icon-sm"></i></button>` : ''}
+                            <span id="file-clear-warning-${doc.id}" class="file-clear-warning"
+                                style="display:${doc.file_url && effectiveStatus === 'Required_Missing' && doc.status !== 'Required_Missing' ? 'inline-flex' : 'none'}">
+                                <i data-lucide="triangle-alert" class="icon-xs"></i> קישור הקובץ יימחק
+                            </span>
                         </div>
                         <button type="button" class="delete-toggle${isWaived ? ' action-hidden' : ''} ${!isWaived && markedForRemoval.has(doc.id) ? 'active' : ''}"
                             ${!isWaived ? `onclick="toggleRemoval('${doc.id}')" id="delete-btn-${doc.id}"` : ''}
@@ -536,6 +540,13 @@ function toggleRestore(id) {
         item.classList.remove('marked-for-restore');
     }
 
+    // DL-205: Show/hide file-clear warning for restored docs with files
+    const doc = currentDocuments.find(d => d.id === id);
+    const warningEl = document.getElementById(`file-clear-warning-${id}`);
+    if (warningEl && doc) {
+        warningEl.style.display = (checkbox.checked && doc.file_url) ? 'inline-flex' : 'none';
+    }
+
     updateStats();
 }
 
@@ -593,6 +604,13 @@ function updateDocStatusVisual(docId) {
     if (item) {
         item.classList.toggle('status-changed', statusChanges.has(docId));
         item.classList.toggle('status-received', effectiveStatus === 'Received' && !item.classList.contains('waived-item'));
+    }
+
+    // DL-205: Toggle file-clear warning
+    const warningEl = document.getElementById(`file-clear-warning-${docId}`);
+    if (warningEl) {
+        const willClear = doc.file_url && effectiveStatus === 'Required_Missing' && doc.status !== 'Required_Missing';
+        warningEl.style.display = willClear ? 'inline-flex' : 'none';
     }
 }
 
@@ -1449,7 +1467,8 @@ function openConfirmation() {
         summary += `<h4 class="text-brand"><i data-lucide="refresh-cw" class="icon-sm" style="display:inline;vertical-align:middle;"></i> מסמכים שישוחזרו (${restoreDocs.length}):</h4>`;
         summary += '<ul class="changes-list">';
         restoreDocs.forEach(doc => {
-            summary += `<li class="change-restore">${stripHtml(doc.name)}</li>`;
+            const fileClearNote = doc.file_url ? ' <span class="file-clear-warning-summary">⚠ קישור הקובץ יימחק</span>' : '';
+            summary += `<li class="change-restore">${stripHtml(doc.name)}${fileClearNote}</li>`;
         });
         summary += '</ul>';
     }
@@ -1484,7 +1503,8 @@ function openConfirmation() {
             const doc = currentDocuments.find(d => d.id === docId);
             if (doc) {
                 const toLabel = STATUS_LABELS[newStatus] || newStatus;
-                summary += `<li class="change-status">${stripHtml(doc.name)} — שונה ל: ${toLabel}</li>`;
+                const fileClearNote = (newStatus === 'Required_Missing' && doc.file_url && doc.status !== 'Required_Missing') ? ' <span class="file-clear-warning-summary">⚠ קישור הקובץ יימחק</span>' : '';
+                summary += `<li class="change-status">${stripHtml(doc.name)} — שונה ל: ${toLabel}${fileClearNote}</li>`;
             }
         });
         summary += '</ul>';
