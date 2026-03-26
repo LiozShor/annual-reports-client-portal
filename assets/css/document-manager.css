@@ -898,6 +898,10 @@ body {
     padding: 0;
 }
 
+.add-docs-content.open {
+    padding: 0 var(--sp-6) var(--sp-6);
+}
+
 /* Warning variant — Questions for Client */
 .card-section--warning {
     background: var(--warning-50);
