@@ -1733,8 +1733,10 @@ body {
 
 /* ==================== STICKY ACTION BAR ==================== */
 .sticky-action-bar {
-    position: sticky;
+    position: fixed;
     top: 0;
+    left: 0;
+    right: 0;
     z-index: 100;
     background: white;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
@@ -1764,6 +1766,8 @@ body {
     align-items: center;
     gap: var(--sp-3);
     padding: var(--sp-2) var(--sp-6);
+    max-width: 960px;
+    margin: 0 auto;
 }
 
 .sticky-summary {
