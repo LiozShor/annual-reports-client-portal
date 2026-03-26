@@ -2031,6 +2031,7 @@ document.addEventListener('click', function (e) {
 
 let _questionnaireData = null;
 let _questionnaireFetched = false;
+let _hideNoAnswers = true;
 
 async function loadQuestionnaireForReport() {
     if (_questionnaireFetched) return; // already loaded (or in progress)
@@ -2069,7 +2070,10 @@ async function loadQuestionnaireForReport() {
 
 function _renderQuestionnaire(container) {
     const qa = _questionnaireData;
-    const answers = qa.answers || [];
+    const allAnswers = qa.answers || [];
+    const answers = _hideNoAnswers
+        ? allAnswers.filter(a => a.value && a.value !== '✗ לא')
+        : allAnswers;
 
     if (!answers.length) {
         container.innerHTML = '<p style="padding:var(--sp-4);color:var(--gray-400);font-size:var(--text-sm);">אין תשובות בשאלון</p>';
@@ -2119,6 +2123,19 @@ function _renderQuestionnaire(container) {
     }
 
     container.innerHTML = html;
+}
+
+function toggleHideNoAnswers() {
+    _hideNoAnswers = !_hideNoAnswers;
+    const btn = document.getElementById('toggleNoAnswersBtn');
+    if (btn) {
+        btn.innerHTML = _hideNoAnswers
+            ? '<i data-lucide="eye" class="icon-sm"></i> הצג תשובות לא'
+            : '<i data-lucide="eye-off" class="icon-sm"></i> הסתר תשובות לא';
+        if (window.lucide) lucide.createIcons({ nodes: [btn] });
+    }
+    const container = document.getElementById('questionnaireContent');
+    if (container && _questionnaireData) _renderQuestionnaire(container);
 }
 
 function printQuestionnaireFromDocManager() {
