@@ -373,6 +373,11 @@
         </div>
     </div>
 
+    <!-- Hidden file input for per-row upload (DL-198) -->
+    <input type="file" id="uploadFileInput"
+           accept=".pdf,.jpg,.jpeg,.png,.heic,.tif,.tiff,.xlsx,.docx,.xls,.doc"
+           style="display:none" onchange="handleFileSelected(event)">
+
     <!-- Status dropdown -->
     <div id="statusDropdown" class="status-dropdown" style="display:none;">
         <div class="dropdown-option" data-status="Required_Missing" onclick="setDocStatus('Required_Missing')">

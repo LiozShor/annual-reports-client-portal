@@ -782,6 +782,37 @@ body {
     outline-offset: 2px;
 }
 
+/* ==================== UPLOAD BUTTON (DL-198) ==================== */
+.upload-btn {
+    color: var(--brand-500);
+}
+
+.upload-btn:hover {
+    background: var(--brand-50);
+    color: var(--brand-700);
+}
+
+.upload-btn.uploading {
+    pointer-events: none;
+    opacity: 0.7;
+}
+
+.upload-btn.upload-success {
+    color: var(--success-600, #16a34a);
+}
+
+.upload-btn.upload-error {
+    color: var(--danger-600, #dc2626);
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+.spin {
+    animation: spin 1s linear infinite;
+}
+
 /* ==================== CARD SECTION (collapsible cards) ==================== */
 .card-section {
     background: white;
