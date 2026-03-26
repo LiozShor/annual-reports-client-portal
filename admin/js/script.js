@@ -1486,12 +1486,12 @@ function renderReviewTable(queue) {
                     </div>
                 </td>
                 <td>${client.year}</td>
-                <td><span class="docs-count clickable-count" onclick="toggleDocsPopover(event, '${escapeAttr(client.report_id)}', '${escapeAttr(client.name)}')" tabindex="0" role="button" title="לחץ לצפייה במסמכים">${client.docs_received}/${client.docs_total}</span></td>
+                <td><span class="docs-count clickable-count" onclick="toggleDocsPopover(event, '${escapeOnclick(client.report_id)}', '${escapeOnclick(client.name)}')" tabindex="0" role="button" title="לחץ לצפייה במסמכים">${client.docs_received}/${client.docs_total}</span></td>
                 <td>${dateStr}</td>
                 <td><span class="waiting-badge ${waitingClass}">${waitingText}</span></td>
                 <td>
                     <button class="action-btn view" onclick="viewClient('${escapeAttr(client.report_id)}')" title="צפה בתיק"><i data-lucide="eye" class="icon-sm"></i></button>
-                    <button class="action-btn complete" onclick="markComplete('${escapeAttr(client.report_id)}', '${escapeAttr(client.name)}')" title="סמן כהושלם"><i data-lucide="circle-check" class="icon-sm"></i></button>
+                    <button class="action-btn complete" onclick="markComplete('${escapeOnclick(client.report_id)}', '${escapeOnclick(client.name)}')" title="סמן כהושלם"><i data-lucide="circle-check" class="icon-sm"></i></button>
                 </td>
             </tr>
         `;
@@ -2167,10 +2167,10 @@ function renderAICards(items) {
                             הסקירה הושלמה — ${approvedCount} אושרו${rejectedCount > 0 ? ` · ${rejectedCount} דורשים תיקון` : ''}
                         </div>
                         <div class="batch-action-bar-buttons">
-                            <button class="btn btn-primary btn-sm" onclick="sendBatchStatus('${escapeAttr(clientName)}')">
+                            <button class="btn btn-primary btn-sm" onclick="sendBatchStatus('${escapeOnclick(clientName)}')">
                                 <i data-lucide="send" class="icon-sm"></i> שלח עדכון ללקוח
                             </button>
-                            <button class="btn btn-ghost btn-sm" onclick="dismissBatch('${escapeAttr(clientName)}')">
+                            <button class="btn btn-ghost btn-sm" onclick="dismissBatch('${escapeOnclick(clientName)}')">
                                 ללא עדכון
                             </button>
                         </div>
@@ -2980,10 +2980,10 @@ function transitionCardToReviewed(recordId, newReviewStatus, responseData) {
                                 הסקירה הושלמה — ${approvedCount} אושרו${rejectedCount > 0 ? ` · ${rejectedCount} דורשים תיקון` : ''}
                             </div>
                             <div class="batch-action-bar-buttons">
-                                <button class="btn btn-primary btn-sm" onclick="sendBatchStatus('${escapeAttr(clientName)}')">
+                                <button class="btn btn-primary btn-sm" onclick="sendBatchStatus('${escapeOnclick(clientName)}')">
                                     <i data-lucide="send" class="icon-sm"></i> שלח עדכון ללקוח
                                 </button>
-                                <button class="btn btn-ghost btn-sm" onclick="dismissBatch('${escapeAttr(clientName)}')">
+                                <button class="btn btn-ghost btn-sm" onclick="dismissBatch('${escapeOnclick(clientName)}')">
                                     ללא עדכון
                                 </button>
                             </div>
@@ -3231,6 +3231,13 @@ function formatAIDate(dateStr) {
 function escapeAttr(text) {
     if (typeof text !== 'string') text = String(text || '');
     return text.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/'/g, '&#39;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+// Escape for use inside JS string literals within inline onclick handlers
+// First escapes for JS (backslash + single quote), then for HTML attribute context
+function escapeOnclick(text) {
+    if (typeof text !== 'string') text = String(text || '');
+    return text.replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
 function showAIToast(message, type, action) {
@@ -3755,7 +3762,7 @@ function buildReminderTable(items, showDocs) {
                 ${showDocs ? `
                 <td>
                     ${docsTotal > 0 ? `
-                        <div class="docs-progress-cell clickable-docs" onclick="toggleDocsPopover(event, '${escapeAttr(r.report_id)}', '${escapeAttr(r.name)}')" tabindex="0" role="button" title="לחץ לצפייה במסמכים">
+                        <div class="docs-progress-cell clickable-docs" onclick="toggleDocsPopover(event, '${escapeOnclick(r.report_id)}', '${escapeOnclick(r.name)}')" tabindex="0" role="button" title="לחץ לצפייה במסמכים">
                             <span class="docs-count">${docsReceived}/${docsTotal}</span>
                             <div class="progress-bar"><div class="progress-fill" style="width: ${progressPercent}%"></div></div>
                         </div>
@@ -3774,7 +3781,7 @@ function buildReminderTable(items, showDocs) {
                         <div class="suppress-menu status-menu">
                             ${isSuppressed
                                 ? `<button onclick="reminderAction('unsuppress', '${escapeAttr(r.report_id)}')">פעיל</button>`
-                                : `<button class="danger" onclick="confirmSuppress('suppress_forever', '${escapeAttr(r.report_id)}', '${escapeAttr(r.name)}')">ללא תזכורות</button>`
+                                : `<button class="danger" onclick="confirmSuppress('suppress_forever', '${escapeOnclick(r.report_id)}', '${escapeOnclick(r.name)}')">ללא תזכורות</button>`
                             }
                         </div>
                     </div>
