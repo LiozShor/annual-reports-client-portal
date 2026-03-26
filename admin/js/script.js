@@ -2155,6 +2155,12 @@ function renderAICards(items) {
                 <div class="ai-accordion-body">
         `;
 
+        // DL-188: Email body preview — show once per client accordion
+        const emailBody = clientItems.find(i => i.email_body_text)?.email_body_text;
+        if (emailBody) {
+            html += `<div class="ai-email-body" dir="auto"><span class="ai-email-body-label">💬 הודעת הלקוח:</span><span class="ai-email-body-text">${escapeHtml(emailBody).replace(/\n{3,}/g, '\n\n')}</span></div>`;
+        }
+
         // DL-086: Batch action bar when all items are reviewed
         if (allReviewed) {
             html += `
@@ -2478,7 +2484,6 @@ function renderAICard(item) {
                         ${classificationHtml}
                     </div>
                 </div>
-                ${item.email_body_text ? `<div class="ai-email-body" dir="auto"><span class="ai-email-body-label">💬 הודעת הלקוח:</span><span class="ai-email-body-text">${escapeHtml(item.email_body_text).replace(/\n{3,}/g, '\n\n')}</span></div>` : ''}
             </div>
             <div class="ai-card-actions">
                 ${actionsHtml}
@@ -2557,7 +2562,6 @@ function renderReviewedCard(item, reviewStatus) {
                     </div>
                 </div>
                 ${rejectionHtml}
-                ${item.email_body_text ? `<div class="ai-email-body" dir="auto"><span class="ai-email-body-label">💬 הודעת הלקוח:</span><span class="ai-email-body-text">${escapeHtml(item.email_body_text).replace(/\n{3,}/g, '\n\n')}</span></div>` : ''}
             </div>
             <div class="ai-card-actions">
                 ${actionsHtml}
