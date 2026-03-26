@@ -2271,7 +2271,7 @@ function showUploadConfirmDialog(docId, file) {
         <div class="modal-panel">
             <div class="modal-panel-body" style="padding-top:24px;">
                 <p style="margin-bottom:12px;"><strong>העלאת קובץ</strong></p>
-                <p style="margin-bottom:4px;">מסמך: <strong>${escapeHtml(docName)}</strong></p>
+                <p style="margin-bottom:4px;">מסמך: ${sanitizeDocHtml(docName)}</p>
                 <p style="margin-bottom:16px; color:var(--gray-500); font-size:var(--text-sm);">${escapeHtml(file.name)} (${sizeMB}MB)</p>
                 <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
                     <input type="checkbox" id="_uploadOneDriveCheck" checked>
