@@ -146,6 +146,17 @@
 
             <!-- Main content -->
             <div id="content" style="display:none;">
+                <!-- Sticky Action Bar -->
+                <div id="stickyActionBar" class="sticky-action-bar" style="display:none;">
+                    <div class="sticky-progress-bar">
+                        <div class="sticky-progress-fill" id="stickyProgressFill"></div>
+                    </div>
+                    <div class="sticky-bar-content">
+                        <span id="stickySummary" class="sticky-summary"></span>
+                        <span id="stickyChanges" class="sticky-changes"></span>
+                        <div class="sticky-bar-actions" id="stickyBarActions"></div>
+                    </div>
+                </div>
                 <!-- Status Overview -->
                 <div id="statusOverview" class="status-overview" style="display:none;">
                     <div class="status-overview-header">
@@ -176,6 +187,14 @@
                         </div>
                     </div>
 
+                    <!-- Filter active bar -->
+                    <div id="filterActiveBar" class="filter-active-bar" style="display:none;">
+                        <span id="filterStatusText" class="text-sm"></span>
+                        <button class="filter-clear-btn" onclick="clearStatusFilter()">
+                            <i data-lucide="x" class="icon-sm"></i> הצג הכל
+                        </button>
+                    </div>
+
                     <!-- Edit session pills (shown only when changes pending) -->
                     <div id="editSessionBar" class="edit-session-bar" style="display:none;">
                         <div class="edit-session-divider"></div>
@@ -184,15 +203,15 @@
                                 <i data-lucide="file-text" class="icon-sm"></i>
                                 <strong id="totalDocs">0</strong> נדרשים
                             </span>
-                            <span class="stat-pill stat-pill-danger">
+                            <span class="stat-pill stat-pill-danger" onclick="scrollToPill('removal')" style="cursor:pointer" title="גלול למסמך הבא המסומן להסרה">
                                 <i data-lucide="circle-x" class="icon-sm"></i>
                                 <strong id="markedDocs">0</strong> להסרה
                             </span>
-                            <span class="stat-pill stat-pill-success">
+                            <span class="stat-pill stat-pill-success" onclick="scrollToPill('added')" style="cursor:pointer" title="גלול למסמך הבא שנוסף">
                                 <i data-lucide="plus" class="icon-sm"></i>
                                 <strong id="addedDocs">0</strong> להוספה
                             </span>
-                            <span class="stat-pill stat-pill-info">
+                            <span class="stat-pill stat-pill-info" onclick="scrollToPill('restore')" style="cursor:pointer" title="גלול למסמך הבא המסומן לשחזור">
                                 <i data-lucide="refresh-cw" class="icon-sm"></i>
                                 <strong id="restoredDocs">0</strong> לשחזור
                             </span>
@@ -200,85 +219,8 @@
                     </div>
                 </div>
 
-                <!-- Questionnaire section -->
-                <div class="card-section" id="questionnaireSection">
-                    <button class="collapsible-trigger" id="questionnaireTrigger"
-                        onclick="this.setAttribute('aria-expanded', this.getAttribute('aria-expanded')==='true'?'false':'true'); this.nextElementSibling.classList.toggle('open'); loadQuestionnaireForReport();"
-                        aria-expanded="false">
-                        <span class="flex items-center gap-2">
-                            <i data-lucide="file-text" class="icon-sm"></i>
-                            <span id="questionnaireLabel">השאלון השנתי</span>
-                        </span>
-                        <i data-lucide="chevron-down" class="icon-sm"></i>
-                    </button>
-                    <div class="collapsible-content">
-                        <div style="display:flex; justify-content:flex-end; gap: var(--sp-2); padding: var(--sp-3) var(--sp-4) 0;">
-                            <button id="toggleNoAnswersBtn" class="btn btn-sm btn-ghost" onclick="toggleHideNoAnswers()">
-                                <i data-lucide="eye" class="icon-sm"></i> הצג תשובות לא
-                            </button>
-                            <button class="btn btn-sm btn-ghost" onclick="printQuestionnaireFromDocManager()">
-                                <i data-lucide="printer" class="icon-sm"></i> הדפסה
-                            </button>
-                        </div>
-                        <div id="questionnaireContent" style="padding: 0 var(--sp-4) var(--sp-4);"></div>
-                    </div>
-                </div>
-
-                <!-- Document list -->
-                <div id="existingDocs" class="document-list"></div>
-
-                <!-- Questions for client section -->
-                <div class="card-section card-section--warning">
-                    <button class="collapsible-trigger" onclick="this.setAttribute('aria-expanded', this.getAttribute('aria-expanded')==='true'?'false':'true'); this.nextElementSibling.classList.toggle('open')" aria-expanded="false">
-                        <span class="flex items-center gap-2">
-                            <i data-lucide="message-circle" class="icon-sm"></i>
-                            שאלות ללקוח
-                            <span id="questionsCount" class="badge badge-neutral" style="display:none;">0</span>
-                        </span>
-                        <i data-lucide="chevron-down" class="icon-sm"></i>
-                    </button>
-                    <div class="collapsible-content">
-                        <div id="questionsContainer" class="questions-container"></div>
-                    </div>
-                </div>
-
-                <!-- Notes section -->
-                <div class="card-section" id="notesSection">
-                    <button class="collapsible-trigger" id="notesTrigger"
-                        onclick="this.setAttribute('aria-expanded', this.getAttribute('aria-expanded')==='true'?'false':'true'); this.nextElementSibling.classList.toggle('open');"
-                        aria-expanded="false">
-                        <span class="flex items-center gap-2">
-                            <i data-lucide="sticky-note" class="icon-sm"></i>
-                            <span>הערות לדוח</span>
-                        </span>
-                        <i data-lucide="chevron-down" class="icon-sm"></i>
-                    </button>
-                    <div class="collapsible-content">
-                        <div style="padding: var(--sp-4);">
-                            <textarea id="reportNotesTextarea" class="notes-textarea" rows="3" placeholder="הוסף הערות לדוח..."></textarea>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Client communications timeline -->
-                <div class="card-section card-section--info" id="clientNotesSection">
-                    <button class="collapsible-trigger" id="clientNotesTrigger"
-                        onclick="this.setAttribute('aria-expanded', this.getAttribute('aria-expanded')==='true'?'false':'true'); this.nextElementSibling.classList.toggle('open');"
-                        aria-expanded="false">
-                        <span class="flex items-center gap-2">
-                            <i data-lucide="mail" class="icon-sm"></i>
-                            <span>הודעות הלקוח</span>
-                            <span id="clientNotesCount" class="badge badge-info" style="display:none;">0</span>
-                        </span>
-                        <i data-lucide="chevron-down" class="icon-sm"></i>
-                    </button>
-                    <div class="collapsible-content">
-                        <div id="clientNotesTimeline" class="client-notes-timeline"></div>
-                    </div>
-                </div>
-
                 <!-- Add documents section -->
-                <div class="card-section card-section--brand">
+                <div class="card-section">
                     <button class="collapsible-trigger" onclick="this.setAttribute('aria-expanded', this.getAttribute('aria-expanded')==='true'?'false':'true'); this.nextElementSibling.classList.toggle('open')" aria-expanded="false">
                         <span class="flex items-center gap-2">
                             <i data-lucide="plus" class="icon-sm"></i>
@@ -286,7 +228,7 @@
                         </span>
                         <i data-lucide="chevron-down" class="icon-sm"></i>
                     </button>
-                    <div class="collapsible-content">
+                    <div class="collapsible-content" style="padding: 0 var(--sp-6) var(--sp-6)">
                     <p class="text-sm text-muted mb-4" style="margin-top: var(--sp-4);">בחר מסמכים מהרשימה או הוסף מסמך מותאם אישית</p>
 
                     <div id="spouseDocToggle" class="form-group mb-4" style="display:none;">
@@ -332,6 +274,93 @@
 
                     </div><!-- /.collapsible-content -->
                 </div>
+
+                <!-- Document list -->
+                <div id="existingDocs" class="document-list"></div>
+
+                <!-- Questions for client section -->
+                <div class="card-section" id="questionsSection">
+                    <button class="collapsible-trigger" onclick="this.setAttribute('aria-expanded', this.getAttribute('aria-expanded')==='true'?'false':'true'); this.nextElementSibling.classList.toggle('open')" aria-expanded="false">
+                        <span class="flex items-center gap-2">
+                            <i data-lucide="message-circle" class="icon-sm"></i>
+                            שאלות ללקוח
+                            <span id="questionsCount" class="badge badge-neutral" style="display:none;">0</span>
+                        </span>
+                        <i data-lucide="chevron-down" class="icon-sm"></i>
+                    </button>
+                    <div class="collapsible-content">
+                        <div id="questionsContainer" class="questions-container"></div>
+                    </div>
+                </div>
+
+                <!-- Secondary zone: questionnaire, notes, client communications -->
+                <div class="secondary-zone">
+                    <div class="secondary-zone-header">
+                        <i data-lucide="info" class="icon-sm"></i>
+                        <span>מידע נוסף</span>
+                    </div>
+
+                    <!-- Questionnaire section -->
+                    <div class="card-section" id="questionnaireSection">
+                        <button class="collapsible-trigger" id="questionnaireTrigger"
+                            onclick="this.setAttribute('aria-expanded', this.getAttribute('aria-expanded')==='true'?'false':'true'); this.nextElementSibling.classList.toggle('open'); loadQuestionnaireForReport();"
+                            aria-expanded="false">
+                            <span class="flex items-center gap-2">
+                                <i data-lucide="file-text" class="icon-sm"></i>
+                                <span id="questionnaireLabel">השאלון השנתי</span>
+                            </span>
+                            <i data-lucide="chevron-down" class="icon-sm"></i>
+                        </button>
+                        <div class="collapsible-content">
+                            <div style="display:flex; justify-content:flex-end; gap: var(--sp-2); padding: var(--sp-3) var(--sp-4) 0;">
+                                <button id="toggleNoAnswersBtn" class="btn btn-sm btn-ghost" onclick="toggleHideNoAnswers()">
+                                    <i data-lucide="eye" class="icon-sm"></i> הצג תשובות לא
+                                </button>
+                                <button class="btn btn-sm btn-ghost" onclick="printQuestionnaireFromDocManager()">
+                                    <i data-lucide="printer" class="icon-sm"></i> הדפסה
+                                </button>
+                            </div>
+                            <div id="questionnaireContent" style="padding: 0 var(--sp-4) var(--sp-4);"></div>
+                        </div>
+                    </div>
+
+                    <!-- Notes section -->
+                    <div class="card-section" id="notesSection">
+                        <button class="collapsible-trigger" id="notesTrigger"
+                            onclick="this.setAttribute('aria-expanded', this.getAttribute('aria-expanded')==='true'?'false':'true'); this.nextElementSibling.classList.toggle('open');"
+                            aria-expanded="false">
+                            <span class="flex items-center gap-2">
+                                <i data-lucide="sticky-note" class="icon-sm"></i>
+                                <span>הערות לדוח</span>
+                            </span>
+                            <i data-lucide="chevron-down" class="icon-sm"></i>
+                        </button>
+                        <div class="collapsible-content">
+                            <div style="padding: var(--sp-4);">
+                                <textarea id="reportNotesTextarea" class="notes-textarea" rows="3" placeholder="הוסף הערות לדוח..."></textarea>
+                                <span id="notesSaveIndicator" class="save-indicator"></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Client communications timeline -->
+                    <div class="card-section" id="clientNotesSection">
+                        <button class="collapsible-trigger" id="clientNotesTrigger"
+                            onclick="this.setAttribute('aria-expanded', this.getAttribute('aria-expanded')==='true'?'false':'true'); this.nextElementSibling.classList.toggle('open');"
+                            aria-expanded="false">
+                            <span class="flex items-center gap-2">
+                                <i data-lucide="mail" class="icon-sm"></i>
+                                <span>הודעות הלקוח</span>
+                                <span id="clientNotesCount" class="badge badge-info" style="display:none;">0</span>
+                            </span>
+                            <i data-lucide="chevron-down" class="icon-sm"></i>
+                        </button>
+                        <div class="collapsible-content">
+                            <div id="clientNotesTimeline" class="client-notes-timeline"></div>
+                        </div>
+                    </div>
+
+                </div><!-- /.secondary-zone -->
 
                 <div class="actions-row">
                     <div id="save-reset-row" style="display:none;">

@@ -161,6 +161,43 @@ body {
     color: var(--gray-500);
 }
 
+/* Filter active bar */
+.filter-active-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--sp-3);
+    margin-top: var(--sp-3);
+    padding: var(--sp-2) var(--sp-4);
+    background: var(--brand-50);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--brand-100);
+    font-size: var(--text-sm);
+    color: var(--brand-700);
+    animation: slideDown 200ms ease;
+}
+
+.filter-clear-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--sp-1);
+    padding: var(--sp-1) var(--sp-3);
+    border: 1px solid var(--brand-200);
+    border-radius: var(--radius-md);
+    background: white;
+    color: var(--brand-600);
+    font-size: var(--text-xs);
+    font-weight: 600;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    white-space: nowrap;
+}
+
+.filter-clear-btn:hover {
+    background: var(--brand-100);
+    border-color: var(--brand-300);
+}
+
 /* Edit session bar */
 .edit-session-bar {
     margin-top: var(--sp-4);
@@ -203,6 +240,24 @@ body {
 .stat-pill-info {
     background: var(--info-50);
     color: var(--info-700);
+}
+
+/* Clickable pill hover */
+.stat-pill[onclick]:hover {
+    filter: brightness(0.92);
+    transform: translateY(-1px);
+    transition: all var(--transition-fast);
+}
+
+/* Pulse highlight for scroll-to targets */
+@keyframes pulseHighlight {
+    0% { box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.5); }
+    50% { box-shadow: 0 0 0 6px rgba(99, 102, 241, 0.15); }
+    100% { box-shadow: 0 0 0 0 rgba(99, 102, 241, 0); }
+}
+
+.pulse-highlight {
+    animation: pulseHighlight 0.75s ease-out 2;
 }
 
 /* ==================== INSTRUCTIONS ==================== */
@@ -883,6 +938,35 @@ body {
     padding: 0 var(--sp-6) var(--sp-6);
 }
 
+/* Secondary zone — groups questionnaire, notes, client communications */
+.secondary-zone {
+    background: var(--gray-50);
+    border-radius: var(--radius-lg);
+    padding: var(--sp-4);
+    margin: var(--sp-3) var(--sp-6);
+}
+
+.secondary-zone .card-section {
+    margin: var(--sp-3) 0;
+    background: white;
+}
+
+.secondary-zone .card-section:first-of-type {
+    margin-top: 0;
+}
+
+.secondary-zone-header {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
+    font-size: var(--text-xs);
+    font-weight: 600;
+    color: var(--gray-400);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: var(--sp-3);
+}
+
 .section-title {
     display: flex;
     align-items: center;
@@ -1441,6 +1525,17 @@ body {
     scroll-behavior: smooth;
 }
 
+.questionnaire-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--sp-3);
+    padding: var(--sp-8) var(--sp-4);
+    color: var(--gray-500);
+    font-size: var(--text-sm);
+}
+
 /* Notes textarea */
 .notes-textarea {
     width: 100%;
@@ -1617,4 +1712,93 @@ body {
     direction: rtl;
     resize: vertical;
     min-height: 36px;
+}
+
+/* Notes auto-save indicator */
+.save-indicator {
+    display: block;
+    font-size: var(--text-xs);
+    margin-top: var(--sp-1);
+    min-height: 1.2em;
+    transition: opacity 0.3s ease;
+}
+
+.save-indicator--success {
+    color: var(--success-600);
+}
+
+.save-indicator--error {
+    color: var(--danger-600);
+}
+
+/* ==================== STICKY ACTION BAR ==================== */
+.sticky-action-bar {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: white;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    border-bottom: 1px solid var(--gray-200);
+    animation: stickySlideDown 200ms ease;
+}
+
+@keyframes stickySlideDown {
+    from { transform: translateY(-100%); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+
+.sticky-progress-bar {
+    height: 4px;
+    background: var(--gray-200);
+    width: 100%;
+}
+
+.sticky-progress-fill {
+    height: 100%;
+    background: var(--success-500);
+    transition: width var(--transition-slow);
+}
+
+.sticky-bar-content {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-3);
+    padding: var(--sp-2) var(--sp-6);
+}
+
+.sticky-summary {
+    font-size: var(--text-sm);
+    font-weight: 600;
+    color: var(--gray-700);
+    white-space: nowrap;
+}
+
+.sticky-changes {
+    font-size: var(--text-xs);
+    color: var(--gray-500);
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.sticky-bar-actions {
+    display: flex;
+    gap: var(--sp-2);
+    flex-shrink: 0;
+}
+
+.sticky-bar-actions .btn {
+    padding: var(--sp-1) var(--sp-3);
+    font-size: var(--text-xs);
+}
+
+@media (max-width: 640px) {
+    .sticky-bar-content {
+        padding: var(--sp-2) var(--sp-3);
+    }
+    .sticky-changes {
+        display: none;
+    }
 }
