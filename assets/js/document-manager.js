@@ -15,6 +15,7 @@ let CURRENT_STAGE = '';
 // ENDPOINTS loaded from shared/endpoints.js
 let DOCS_FIRST_SENT_AT = null;
 let REPORT_NOTES = '';
+let CLIENT_NOTES = []; // Parsed JSON array of client communication entries
 
 // Admin auth token — required for this office-only page
 const ADMIN_TOKEN = localStorage.getItem(ADMIN_TOKEN_KEY) || '';
@@ -224,6 +225,13 @@ async function loadDocuments() {
             notesTextarea.value = REPORT_NOTES;
             notesTextarea.addEventListener('blur', handleNotesSave);
         }
+
+        // Client communication notes
+        try {
+            CLIENT_NOTES = JSON.parse(data.client_notes || '[]');
+            if (!Array.isArray(CLIENT_NOTES)) CLIENT_NOTES = [];
+        } catch (e) { CLIENT_NOTES = []; }
+        renderClientNotes();
 
         // Handle case where report is found but stage is early (no docs yet)
         const stageRank = STAGE_ORDER[data.stage] || 0;
@@ -2322,4 +2330,168 @@ function onUploadError(docId, error) {
     }
 
     showToast(`שגיאה בהעלאה: ${error.message || 'נכשל'}`, 'error');
+}
+
+// ==================== CLIENT COMMUNICATION NOTES ====================
+
+function renderClientNotes() {
+    const container = document.getElementById('clientNotesTimeline');
+    const countBadge = document.getElementById('clientNotesCount');
+    if (!container) return;
+
+    // Update badge count
+    if (countBadge) {
+        if (CLIENT_NOTES.length > 0) {
+            countBadge.textContent = CLIENT_NOTES.length;
+            countBadge.style.display = '';
+        } else {
+            countBadge.style.display = 'none';
+        }
+    }
+
+    // Sort newest first
+    const sorted = [...CLIENT_NOTES].sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+
+    let html = '';
+
+    // Add note bar
+    html += `<div class="cn-add-bar">
+        <textarea id="cnNewNote" placeholder="הוסף הערה..." rows="1"></textarea>
+        <button class="btn btn-sm btn-secondary" onclick="addClientNote()">
+            <i data-lucide="plus" class="icon-sm"></i> הוסף
+        </button>
+    </div>`;
+
+    if (sorted.length === 0) {
+        html += '<div class="cn-empty">אין הודעות מהלקוח</div>';
+    } else {
+        for (const entry of sorted) {
+            const isEmail = entry.source === 'email';
+            const iconClass = isEmail ? 'cn-icon--email' : 'cn-icon--manual';
+            const iconName = isEmail ? 'mail' : 'pencil';
+            const dateStr = entry.date || '';
+            const senderStr = entry.sender_email ? ` · ${escapeHtml(entry.sender_email)}` : '';
+            const snippetHtml = entry.raw_snippet
+                ? `<div class="cn-snippet">${escapeHtml(entry.raw_snippet)}</div>`
+                : '';
+
+            html += `<div class="cn-entry" data-cn-id="${escapeAttr(entry.id)}">
+                <div class="cn-icon ${iconClass}">
+                    <i data-lucide="${iconName}" class="icon-sm"></i>
+                </div>
+                <div class="cn-body">
+                    <div class="cn-meta">
+                        <span>${escapeHtml(dateStr)}</span>${senderStr}
+                    </div>
+                    <div class="cn-summary">${escapeHtml(entry.summary)}</div>
+                    ${snippetHtml}
+                </div>
+                <div class="cn-actions">
+                    <button onclick="editClientNote('${escapeAttr(entry.id)}')" title="ערוך">
+                        <i data-lucide="pencil" class="icon-sm"></i>
+                    </button>
+                    <button class="cn-delete" onclick="deleteClientNote('${escapeAttr(entry.id)}')" title="מחק">
+                        <i data-lucide="trash-2" class="icon-sm"></i>
+                    </button>
+                </div>
+            </div>`;
+        }
+    }
+
+    container.innerHTML = html;
+    if (typeof lucide !== 'undefined') lucide.createIcons({ nameAttr: 'data-lucide', attrs: {} });
+}
+
+async function saveClientNotes() {
+    try {
+        const response = await fetchWithTimeout(ENDPOINTS.ADMIN_UPDATE_CLIENT, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${ADMIN_TOKEN}` },
+            body: JSON.stringify({
+                token: ADMIN_TOKEN,
+                report_id: REPORT_ID,
+                action: 'update-client-notes',
+                client_notes: JSON.stringify(CLIENT_NOTES)
+            })
+        });
+        const result = await response.json();
+        if (!result.ok) throw new Error(result.error || 'Failed');
+        return true;
+    } catch (err) {
+        showToast('שגיאה בשמירת הודעות', 'error');
+        return false;
+    }
+}
+
+function addClientNote() {
+    const textarea = document.getElementById('cnNewNote');
+    if (!textarea) return;
+    const text = textarea.value.trim();
+    if (!text) return;
+
+    const entry = {
+        id: 'cn_' + Date.now(),
+        date: new Date().toISOString().split('T')[0],
+        summary: text,
+        source: 'manual',
+        message_id: null,
+        sender_email: null,
+        raw_snippet: null
+    };
+    CLIENT_NOTES.push(entry);
+    renderClientNotes();
+    saveClientNotes().then(ok => {
+        if (ok) showToast('הערה נוספה', 'success');
+    });
+}
+
+function editClientNote(id) {
+    const entry = CLIENT_NOTES.find(e => e.id === id);
+    if (!entry) return;
+
+    const entryEl = document.querySelector(`.cn-entry[data-cn-id="${id}"]`);
+    if (!entryEl) return;
+
+    const summaryEl = entryEl.querySelector('.cn-summary');
+    if (!summaryEl) return;
+
+    const original = entry.summary;
+    summaryEl.innerHTML = `<textarea class="cn-edit-textarea" rows="2">${escapeHtml(original)}</textarea>`;
+    const editTextarea = summaryEl.querySelector('.cn-edit-textarea');
+    editTextarea.focus();
+
+    const finishEdit = () => {
+        const newText = editTextarea.value.trim();
+        if (newText && newText !== original) {
+            entry.summary = newText;
+            saveClientNotes().then(ok => {
+                if (ok) showToast('הערה עודכנה', 'success');
+                renderClientNotes();
+            });
+        } else {
+            renderClientNotes();
+        }
+    };
+
+    editTextarea.addEventListener('blur', finishEdit);
+    editTextarea.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            editTextarea.blur();
+        }
+        if (e.key === 'Escape') {
+            editTextarea.value = original;
+            editTextarea.blur();
+        }
+    });
+}
+
+function deleteClientNote(id) {
+    showConfirmDialog('למחוק הערה זו?', () => {
+        CLIENT_NOTES = CLIENT_NOTES.filter(e => e.id !== id);
+        renderClientNotes();
+        saveClientNotes().then(ok => {
+            if (ok) showToast('הערה נמחקה', 'success');
+        });
+    }, 'מחק', true);
 }
