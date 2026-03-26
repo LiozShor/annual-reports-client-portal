@@ -291,6 +291,7 @@ async function loadDocuments() {
         document.getElementById('loading').style.display = 'none';
         document.getElementById('content').style.display = 'block';
         setTimeout(initIcons, 50);
+        initStickyBar();
         // Pre-fetch questionnaire in background so date shows in header before user clicks
         loadQuestionnaireForReport();
     } catch (error) {
@@ -316,12 +317,26 @@ async function handleNotesSave() {
         });
         const result = await response.json();
         if (result.ok) {
-            showToast('הערה נשמרה', 'success');
+            showNotesSaveIndicator('success');
         } else {
             throw new Error(result.error || 'Failed');
         }
     } catch (err) {
-        showToast('שגיאה בשמירת הערה', 'error');
+        showNotesSaveIndicator('error');
+    }
+}
+
+function showNotesSaveIndicator(type) {
+    const indicator = document.getElementById('notesSaveIndicator');
+    if (!indicator) return;
+    indicator.className = 'save-indicator save-indicator--' + type;
+    indicator.textContent = type === 'success' ? '✓ נשמר' : '✕ שגיאה בשמירה';
+    if (type === 'success') {
+        clearTimeout(indicator._fadeTimer);
+        indicator._fadeTimer = setTimeout(() => {
+            indicator.className = 'save-indicator';
+            indicator.textContent = '';
+        }, 2000);
     }
 }
 
@@ -1158,6 +1173,39 @@ function removeSelectedDoc(encodedDoc) {
     updateStats();
 }
 
+// Scroll to next document matching a pill category, cycling through matches
+const _pillScrollIndex = { removal: 0, added: 0, restore: 0 };
+
+function scrollToPill(category) {
+    const classMap = {
+        removal: 'marked-for-removal',
+        added: 'doc-tag',
+        restore: 'marked-for-restore'
+    };
+
+    let matches;
+    if (category === 'added') {
+        // Added docs are in the selectedDocs container, not in the document list
+        matches = document.querySelectorAll('#selectedDocs .doc-tag');
+    } else {
+        matches = document.querySelectorAll(`.document-item.${classMap[category]}`);
+    }
+
+    if (matches.length === 0) return;
+
+    // Cycle through matches
+    let idx = _pillScrollIndex[category] || 0;
+    if (idx >= matches.length) idx = 0;
+    _pillScrollIndex[category] = idx + 1;
+
+    const target = matches[idx];
+    target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+    // Pulse animation
+    target.classList.add('pulse-highlight');
+    setTimeout(() => target.classList.remove('pulse-highlight'), 1500);
+}
+
 // Update statistics
 function updateStats() {
     const activeDocs = currentDocuments.filter(d => d.status !== 'Waived');
@@ -1235,6 +1283,8 @@ function updateStatusOverview() {
             if (sendBtn) setBtnState(sendBtn, 'idle');
         }
     }
+
+    updateStickyBar();
 }
 
 // Toggle status filter (click on status count box)
@@ -1259,7 +1309,29 @@ function toggleStatusFilter(status) {
         if (activeBox) activeBox.classList.add('active');
     }
 
+    // Update filter active bar
+    const filterBar = document.getElementById('filterActiveBar');
+    if (filterBar) {
+        if (activeStatusFilter) {
+            const STATUS_FILTER_LABELS = {
+                'Received': 'התקבל',
+                'Required_Missing': 'חסר',
+                'Waived': 'אין צורך'
+            };
+            document.getElementById('filterStatusText').textContent =
+                `מסונן לפי: ${STATUS_FILTER_LABELS[activeStatusFilter] || activeStatusFilter}`;
+            filterBar.style.display = '';
+        } else {
+            filterBar.style.display = 'none';
+        }
+        lucide.createIcons();
+    }
+
     applyStatusFilter();
+}
+
+function clearStatusFilter() {
+    toggleStatusFilter('');
 }
 
 // Apply status filter — show/hide document wrappers based on active filter
@@ -1707,6 +1779,8 @@ function resetForm() {
     boxes.forEach(box => box.classList.remove('active'));
     const totalBox = document.querySelector('.status-count-box[data-status=""]');
     if (totalBox) totalBox.classList.add('active');
+    const filterBar = document.getElementById('filterActiveBar');
+    if (filterBar) filterBar.style.display = 'none';
 
     // Re-render documents to clear all visual states
     displayDocuments();
@@ -1818,6 +1892,13 @@ function renderQuestions() {
     if (badge) {
         badge.textContent = activeCount;
         badge.style.display = activeCount > 0 ? 'inline-flex' : 'none';
+    }
+
+    // Toggle warning styling based on unanswered questions
+    const questionsCard = document.getElementById('questionsSection');
+    if (questionsCard) {
+        const unanswered = clientQuestions.filter(q => q.text.trim() && !q.answer?.trim()).length;
+        questionsCard.classList.toggle('card-section--warning', unanswered > 0);
     }
 
     if (clientQuestions.length === 0) {
@@ -1959,9 +2040,22 @@ function approveAndSendToClient() {
     const sentDate = DOCS_FIRST_SENT_AT
         ? new Date(DOCS_FIRST_SENT_AT).toLocaleDateString('he-IL')
         : null;
-    const message = sentDate
+
+    // Build descriptive message with document counts
+    const total = currentDocuments.length;
+    const received = currentDocuments.filter(d => (statusChanges.get(d.id) || d.status) === 'Received').length;
+    const waived = currentDocuments.filter(d => (statusChanges.get(d.id) || d.status) === 'Waived').length;
+    const missing = total - received - waived;
+    const unansweredQ = clientQuestions.filter(q => q.text.trim() && !q.answer?.trim()).length;
+
+    let message = sentDate
         ? `הרשימה נשלחה ב-${sentDate}. לשלוח שוב ל-${CLIENT_NAME}?`
         : `שלח רשימת מסמכים ל-${CLIENT_NAME}?`;
+    message += ` — ${received} התקבלו · ${missing} חסרים · ${total - waived} סה"כ`;
+    if (unansweredQ > 0) {
+        message += ` — ${unansweredQ} שאלות ללא מענה`;
+    }
+
     showConfirmDialog(
         message,
         async () => {
@@ -2050,7 +2144,7 @@ async function loadQuestionnaireForReport() {
 
     const container = document.getElementById('questionnaireContent');
     if (!container) return;
-    container.innerHTML = '<div style="padding:var(--sp-4);color:var(--gray-500);font-size:var(--text-sm);">טוען שאלון...</div>';
+    container.innerHTML = '<div class="questionnaire-loading"><div class="spinner"></div><span>טוען שאלון...</span></div>';
 
     try {
         const url = `${ENDPOINTS.ADMIN_QUESTIONNAIRES}?token=${encodeURIComponent(ADMIN_TOKEN)}&report_id=${encodeURIComponent(REPORT_ID)}`;
@@ -2074,7 +2168,13 @@ async function loadQuestionnaireForReport() {
 
         _renderQuestionnaire(container);
     } catch (e) {
-        container.innerHTML = `<p style="padding:var(--sp-4);color:var(--error-600);font-size:var(--text-sm);">שגיאה בטעינת השאלון</p>`;
+        container.innerHTML = `<div class="questionnaire-loading questionnaire-error">
+    <p style="color:var(--error-600);font-size:var(--text-sm);">שגיאה בטעינת השאלון</p>
+    <button class="btn btn-ghost btn-sm" onclick="_questionnaireFetched = false; loadQuestionnaireForReport();">
+        <i data-lucide="refresh-cw" class="icon-sm"></i> נסה שנית
+    </button>
+</div>`;
+        if (typeof lucide !== 'undefined') lucide.createIcons();
         _questionnaireFetched = false; // allow retry
     }
 }
@@ -2526,4 +2626,87 @@ function deleteClientNote(id) {
             if (ok) showToast('הערה נמחקה', 'success');
         });
     }, 'מחק', true);
+}
+
+// ==================== STICKY ACTION BAR ====================
+
+function initStickyBar() {
+    const statusOverview = document.getElementById('statusOverview');
+    const stickyBar = document.getElementById('stickyActionBar');
+    if (!statusOverview || !stickyBar) return;
+
+    const observer = new IntersectionObserver((entries) => {
+        const entry = entries[0];
+        // Show sticky bar only when statusOverview is scrolled out of view AND it's displayed
+        if (!entry.isIntersecting && statusOverview.style.display !== 'none') {
+            stickyBar.style.display = '';
+            updateStickyBar();
+        } else {
+            stickyBar.style.display = 'none';
+        }
+    }, { threshold: 0 });
+
+    observer.observe(statusOverview);
+}
+
+function updateStickyBar() {
+    const stickyBar = document.getElementById('stickyActionBar');
+    if (!stickyBar || stickyBar.style.display === 'none') return;
+
+    const total = currentDocuments.length;
+    if (total === 0) return;
+
+    // Count statuses
+    let received = 0, missing = 0, waived = 0;
+    for (const doc of currentDocuments) {
+        const effectiveStatus = statusChanges.get(doc.id) || doc.status;
+        switch (effectiveStatus) {
+            case 'Received': received++; break;
+            case 'Waived': waived++; break;
+            default: missing++; break;
+        }
+    }
+
+    // Progress fill
+    const activeTotal = total - waived;
+    const pct = activeTotal > 0 ? Math.round((received / activeTotal) * 100) : 0;
+    document.getElementById('stickyProgressFill').style.width = pct + '%';
+
+    // Summary
+    document.getElementById('stickySummary').textContent = `${received}/${activeTotal} (${pct}%)`;
+
+    // Changes summary
+    const hasChanges = markedForRemoval.size > 0 || docsToAdd.size > 0 ||
+        markedForRestore.size > 0 || statusChanges.size > 0 || noteChanges.size > 0 || nameChanges.size > 0 ||
+        questionsAreDirty();
+
+    const changesEl = document.getElementById('stickyChanges');
+    if (hasChanges) {
+        const parts = [];
+        if (markedForRemoval.size > 0) parts.push(`${markedForRemoval.size} להסרה`);
+        if (docsToAdd.size > 0) parts.push(`${docsToAdd.size} להוספה`);
+        if (markedForRestore.size > 0) parts.push(`${markedForRestore.size} לשחזור`);
+        if (statusChanges.size > 0) parts.push(`${statusChanges.size} שינויי סטטוס`);
+        if (noteChanges.size > 0) parts.push(`${noteChanges.size} הערות`);
+        if (nameChanges.size > 0) parts.push(`${nameChanges.size} שינויי שם`);
+        changesEl.textContent = parts.join(' · ');
+    } else {
+        changesEl.textContent = '';
+    }
+
+    // Action buttons — same logic as bottom actions row
+    const actionsEl = document.getElementById('stickyBarActions');
+    if (hasChanges) {
+        actionsEl.innerHTML = `
+            <button class="btn btn-primary btn-sm" onclick="openConfirmation()">
+                <i data-lucide="save" class="icon-sm"></i> שמור
+            </button>
+            <button class="btn btn-ghost btn-sm" onclick="resetForm()">איפוס</button>`;
+    } else {
+        actionsEl.innerHTML = `
+            <button class="btn btn-success btn-sm" onclick="approveAndSendToClient()">
+                <i data-lucide="send" class="icon-sm"></i> שלח ללקוח
+            </button>`;
+    }
+    if (typeof lucide !== 'undefined') lucide.createIcons();
 }
