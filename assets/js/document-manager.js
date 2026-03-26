@@ -2006,6 +2006,10 @@ function escapeHtml(text) {
     return div.innerHTML;
 }
 
+function escapeAttr(text) {
+    return String(text || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/'/g, '&#39;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
 // Validate URL scheme — only allow http(s) to prevent javascript: / data: injection
 function sanitizeUrl(url) {
     if (!url) return '';
