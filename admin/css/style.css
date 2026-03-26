@@ -3336,6 +3336,24 @@ tr.reminder-loading td:last-child {
 }
 
 /* ==================== RESPONSIVE ==================== */
+@media (max-width: 1200px) {
+    .stats-grid {
+        grid-template-columns: repeat(5, 1fr);
+    }
+}
+
+@media (max-width: 1024px) {
+    .ai-review-split {
+        grid-template-columns: minmax(320px, 480px) 1fr;
+    }
+}
+
+@media (max-width: 900px) {
+    .stats-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
 @media (max-width: 768px) {
     .admin-navbar {
         padding: 0 var(--sp-4);
@@ -3354,7 +3372,7 @@ tr.reminder-loading td:last-child {
     }
 
     .stats-grid {
-        grid-template-columns: repeat(2, 1fr);
+        grid-template-columns: repeat(3, 1fr);
     }
 
     .filters {
@@ -3392,7 +3410,7 @@ tr.reminder-loading td:last-child {
     }
 
     .stage-dropdown {
-        min-width: 170px;
+        min-width: min(190px, calc(100vw - 32px));
     }
 
     .preview-actions {
@@ -3403,6 +3421,14 @@ tr.reminder-loading td:last-child {
         flex-direction: column;
         display: flex;
         gap: var(--sp-3);
+    }
+
+    /* Prevent iOS auto-zoom on input focus */
+    select,
+    input[type="text"],
+    input[type="password"],
+    textarea {
+        font-size: 16px;
     }
 
     /* Reminders responsive */
@@ -3504,7 +3530,65 @@ tr.reminder-loading td:last-child {
     .ai-comparison-radio {
         font-size: var(--text-xs);
     }
+}
 
+@media (max-width: 480px) {
+    .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: var(--sp-2);
+    }
+
+    .stat-card {
+        padding: var(--sp-2) var(--sp-1);
+    }
+
+    .admin-navbar {
+        padding: 0 var(--sp-3);
+        height: 48px;
+    }
+
+    .content {
+        padding: var(--sp-3);
+    }
+
+    .tab-item {
+        padding: var(--sp-3) var(--sp-3);
+        font-size: var(--text-xs);
+    }
+
+    .filters {
+        gap: var(--sp-2);
+    }
+
+    .stage-dropdown {
+        min-width: min(170px, calc(100vw - 24px));
+    }
+
+    .ai-modal-panel {
+        width: 95%;
+    }
+
+    .ai-modal-panel-header {
+        padding: var(--sp-4) var(--sp-4) 0;
+        font-size: var(--text-lg);
+    }
+
+    .ai-modal-panel-body {
+        padding: var(--sp-4);
+    }
+
+    .ai-modal-panel-footer {
+        padding: 0 var(--sp-4) var(--sp-4);
+        flex-direction: column;
+    }
+
+    .ai-modal-panel-footer .btn {
+        width: 100%;
+    }
+
+    .chat-panel {
+        width: calc(100vw - 32px);
+    }
 }
 
 /* ==================== INLINE CONFIRM (AI Review cards) ==================== */
@@ -4994,5 +5078,14 @@ tr:hover .client-edit-link {
     .chat-fab {
         bottom: 16px;
         left: 16px;
+    }
+}
+
+@media (max-width: 480px) {
+    .chat-panel {
+        width: calc(100vw - 32px);
+    }
+    .chat-panel.chat-open {
+        width: 100%;
     }
 }

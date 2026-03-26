@@ -1318,6 +1318,87 @@ body {
     }
 }
 
+@media (max-width: 640px) {
+    .status-dropdown {
+        min-width: min(160px, calc(100vw - 32px));
+    }
+
+    .doc-combobox-dropdown {
+        width: min(280px, calc(100vw - 32px)) !important;
+    }
+
+    .document-item {
+        padding: var(--sp-2) var(--sp-3);
+    }
+}
+
+@media (max-width: 480px) {
+    .page-wrapper {
+        padding: var(--sp-1);
+    }
+
+    .status-count-boxes {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .page-header {
+        padding: var(--sp-3);
+    }
+
+    .header-title-row h1 {
+        font-size: var(--text-lg);
+    }
+
+    .client-bar {
+        padding: var(--sp-3);
+    }
+
+    .status-overview {
+        padding: var(--sp-3);
+    }
+
+    .card-section {
+        margin: var(--sp-2) var(--sp-3);
+    }
+
+    .instructions-section {
+        padding: var(--sp-3);
+    }
+
+    .document-item {
+        gap: var(--sp-2);
+        font-size: var(--text-xs);
+    }
+
+    .badge {
+        font-size: 10px;
+        padding: 1px var(--sp-2);
+    }
+
+    .delete-toggle,
+    .note-btn {
+        min-width: 44px;
+        min-height: 44px;
+    }
+}
+
+@media (max-width: 375px) {
+    .status-count-boxes {
+        grid-template-columns: 1fr 1fr;
+        gap: var(--sp-2);
+    }
+
+    .stat-pill {
+        font-size: var(--text-xs);
+        padding: var(--sp-1) var(--sp-2);
+    }
+
+    .actions-row .btn {
+        font-size: var(--text-sm);
+        padding: var(--sp-2) var(--sp-3);
+    }
+}
+
 /* Questionnaire collapsible — scrollable fixed-height component */
 #questionnaireSection .collapsible-content.open {
     max-height: none;

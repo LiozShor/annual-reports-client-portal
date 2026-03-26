@@ -202,6 +202,8 @@ body {
     cursor: pointer;
     border-radius: var(--radius-full);
     transition: all var(--transition-fast);
+    min-width: 44px;
+    min-height: 44px;
 }
 
 .help-toggle-btn:hover {
@@ -393,5 +395,38 @@ body {
 
     .contact-card .btn {
         width: 100%;
+    }
+}
+
+@media (max-width: 480px) {
+    body {
+        padding: var(--sp-2);
+    }
+
+    .page-header {
+        padding: var(--sp-4) var(--sp-3);
+    }
+
+    .content {
+        padding: var(--sp-3);
+    }
+
+    .category-header {
+        padding: var(--sp-3);
+        font-size: var(--text-sm);
+    }
+
+    .doc-row {
+        padding: var(--sp-3);
+        gap: var(--sp-2);
+    }
+
+    .person-header {
+        padding: var(--sp-3);
+        font-size: var(--text-base);
+    }
+
+    .contact-card {
+        padding: var(--sp-4) var(--sp-3);
     }
 }
