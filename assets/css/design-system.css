@@ -257,8 +257,8 @@ a:hover {
 }
 
 .btn-icon {
-    width: 36px;
-    height: 36px;
+    width: 44px;
+    height: 44px;
     padding: 0;
     border-radius: var(--radius-md);
 }
@@ -986,5 +986,74 @@ textarea {
     :root {
         --text-3xl: 1.5rem;
         --text-2xl: 1.25rem;
+    }
+
+    /* Prevent iOS auto-zoom on input focus */
+    .input,
+    .select,
+    .textarea,
+    select,
+    input[type="text"],
+    input[type="password"],
+    input[type="email"],
+    textarea {
+        font-size: 16px;
+    }
+}
+
+@media (max-width: 480px) {
+    :root {
+        --text-xl: 1.125rem;
+        --text-lg: 1rem;
+    }
+
+    .card-header {
+        padding: var(--sp-4) var(--sp-4);
+    }
+
+    .card-body {
+        padding: var(--sp-4);
+    }
+
+    .modal-panel {
+        width: 95%;
+    }
+
+    .modal-panel-header {
+        padding: var(--sp-5) var(--sp-5) 0;
+    }
+
+    .modal-panel-body {
+        padding: var(--sp-4) var(--sp-5);
+    }
+
+    .modal-panel-footer {
+        padding: 0 var(--sp-5) var(--sp-5);
+        flex-direction: column;
+    }
+
+    .modal-panel-footer .btn {
+        width: 100%;
+    }
+
+    .toast {
+        max-width: calc(100vw - 32px);
+    }
+}
+
+@media (max-width: 375px) {
+    :root {
+        --text-xl: 1rem;
+        --text-lg: 0.9375rem;
+        --sp-6: 20px;
+        --sp-8: 28px;
+    }
+
+    .btn {
+        padding: var(--sp-2) var(--sp-4);
+    }
+
+    .btn-lg {
+        padding: var(--sp-3) var(--sp-5);
     }
 }

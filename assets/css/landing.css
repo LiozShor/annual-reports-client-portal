@@ -203,3 +203,41 @@ body {
         padding: var(--sp-5);
     }
 }
+
+@media (max-width: 375px) {
+    .lang-grid {
+        grid-template-columns: 1fr;
+        gap: var(--sp-3);
+    }
+
+    .header h1 {
+        font-size: var(--text-lg);
+    }
+
+    .header {
+        padding: var(--sp-6) var(--sp-4) var(--sp-4);
+    }
+
+    .content {
+        padding: var(--sp-4);
+    }
+}
+
+@media (max-width: 320px) {
+    .landing-wrapper {
+        padding: var(--sp-2);
+    }
+
+    .header {
+        padding: var(--sp-5) var(--sp-3) var(--sp-3);
+    }
+
+    .content {
+        padding: var(--sp-3);
+    }
+
+    .actions .btn {
+        padding: var(--sp-3);
+        font-size: var(--text-sm);
+    }
+}

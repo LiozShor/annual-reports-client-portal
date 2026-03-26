@@ -252,8 +252,8 @@ function buildAnswersTableHTML(tallyData, formLanguage) {
 
     htmlRows += `
       <tr>
-        <td style="border:1px solid #ddd; padding:8px; background:#f9f9f9; font-weight:bold;">${htmlEscape(label)}</td>
-        <td style="border:1px solid #ddd; padding:8px;">${displayValue}</td>
+        <td style="border:1px solid #ddd; padding:12px 8px; background:#f9f9f9; font-weight:bold;">${htmlEscape(label)}</td>
+        <td style="border:1px solid #ddd; padding:12px 8px;">${displayValue}</td>
       </tr>`;
   });
 
