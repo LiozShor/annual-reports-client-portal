@@ -260,6 +260,23 @@
                     </div>
                 </div>
 
+                <!-- Client communications timeline -->
+                <div class="card-section card-section--info" id="clientNotesSection">
+                    <button class="collapsible-trigger" id="clientNotesTrigger"
+                        onclick="this.setAttribute('aria-expanded', this.getAttribute('aria-expanded')==='true'?'false':'true'); this.nextElementSibling.classList.toggle('open');"
+                        aria-expanded="false">
+                        <span class="flex items-center gap-2">
+                            <i data-lucide="mail" class="icon-sm"></i>
+                            <span>הודעות הלקוח</span>
+                            <span id="clientNotesCount" class="badge badge-info" style="display:none;">0</span>
+                        </span>
+                        <i data-lucide="chevron-down" class="icon-sm"></i>
+                    </button>
+                    <div class="collapsible-content">
+                        <div id="clientNotesTimeline" class="client-notes-timeline"></div>
+                    </div>
+                </div>
+
                 <!-- Add documents section -->
                 <div class="card-section card-section--brand">
                     <button class="collapsible-trigger" onclick="this.setAttribute('aria-expanded', this.getAttribute('aria-expanded')==='true'?'false':'true'); this.nextElementSibling.classList.toggle('open')" aria-expanded="false">
