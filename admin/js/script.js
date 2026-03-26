@@ -3541,7 +3541,8 @@ function updateReminderStats(stats) {
     document.getElementById('reminder-stat-scheduled').textContent = stats.scheduled || 0;
     document.getElementById('reminder-stat-due').textContent = stats.due_this_week || 0;
     document.getElementById('reminder-stat-suppressed').textContent = (stats.suppressed || 0) + (stats.exhausted || 0);
-    document.getElementById('reminder-stat-pending').textContent = stats.pending_review || 0;
+    const pendingEl = document.getElementById('reminder-stat-pending');
+    if (pendingEl) pendingEl.textContent = stats.pending_review || 0;
     // Apply active state for current filter
     const cardMap = { scheduled: 'reminder-stat-scheduled', due_this_week: 'reminder-stat-due', suppressed: 'reminder-stat-suppressed', pending: 'reminder-stat-pending' };
     document.querySelectorAll('.reminder-stat-item').forEach(card => {
