@@ -2258,10 +2258,41 @@ function handleFileSelected(event) {
         return;
     }
 
-    uploadFile(_uploadTargetDocId, file);
+    showUploadConfirmDialog(_uploadTargetDocId, file);
 }
 
-async function uploadFile(docId, file) {
+function showUploadConfirmDialog(docId, file) {
+    const doc = currentDocuments.find(d => d.id === docId);
+    const docName = doc ? (doc.name || doc.display_name || '') : '';
+    const sizeMB = (file.size / 1024 / 1024).toFixed(1);
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay show';
+    overlay.innerHTML = `
+        <div class="modal-panel">
+            <div class="modal-panel-body" style="padding-top:24px;">
+                <p style="margin-bottom:12px;"><strong>העלאת קובץ</strong></p>
+                <p style="margin-bottom:4px;">מסמך: <strong>${escapeHtml(docName)}</strong></p>
+                <p style="margin-bottom:16px; color:var(--gray-500); font-size:var(--text-sm);">${escapeHtml(file.name)} (${sizeMB}MB)</p>
+                <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+                    <input type="checkbox" id="_uploadOneDriveCheck" checked>
+                    <span>העלה גם ל-OneDrive</span>
+                </label>
+            </div>
+            <div class="modal-panel-footer">
+                <button class="btn btn-ghost" id="_uploadCancel">ביטול</button>
+                <button class="btn btn-primary" id="_uploadConfirm">העלה</button>
+            </div>
+        </div>`;
+    document.body.appendChild(overlay);
+    overlay.querySelector('#_uploadCancel').onclick = () => overlay.remove();
+    overlay.querySelector('#_uploadConfirm').onclick = () => {
+        const uploadToOneDrive = overlay.querySelector('#_uploadOneDriveCheck').checked;
+        overlay.remove();
+        uploadFile(docId, file, uploadToOneDrive);
+    };
+}
+
+async function uploadFile(docId, file, uploadToOneDrive = true) {
     const btn = document.getElementById(`upload-btn-${docId}`);
     if (btn) {
         btn.classList.add('uploading');
@@ -2275,6 +2306,7 @@ async function uploadFile(docId, file) {
         formData.append('doc_id', docId);
         formData.append('report_id', REPORT_ID);
         formData.append('file', file);
+        if (!uploadToOneDrive) formData.append('skip_onedrive', 'true');
 
         const response = await fetchWithTimeout(ENDPOINTS.UPLOAD_DOCUMENT, {
             method: 'POST',
