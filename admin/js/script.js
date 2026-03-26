@@ -43,7 +43,7 @@ async function login() {
     showLoading('מאמת...');
 
     try {
-        const _t0 = performance.now();
+
         const response = await fetchWithTimeout(ENDPOINTS.ADMIN_AUTH, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -51,7 +51,7 @@ async function login() {
         }, FETCH_TIMEOUTS.quick);
 
         const data = await response.json();
-        console.log(`⚡ admin-auth: ${Math.round(performance.now() - _t0)}ms`);
+
         hideLoading();
 
         if (data.ok && data.token) {
@@ -105,10 +105,10 @@ async function checkAuth() {
 
     // New tab/window - verify token with API
     try {
-        const _t0 = performance.now();
+
         const response = await fetchWithTimeout(ENDPOINTS.ADMIN_VERIFY, { headers: { 'Authorization': `Bearer ${authToken}` } }, FETCH_TIMEOUTS.quick);
         const data = await response.json();
-        console.log(`⚡ admin-verify: ${Math.round(performance.now() - _t0)}ms`);
+
 
         if (data.ok) {
             sessionStorage.setItem(SESSION_FLAG_KEY, 'true');
@@ -607,7 +607,7 @@ async function executeStageChange(reportId, newStage) {
     recalculateStats();
 
     try {
-        const _t0 = performance.now();
+
         const response = await fetchWithTimeout(ENDPOINTS.ADMIN_CHANGE_STAGE, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -615,7 +615,7 @@ async function executeStageChange(reportId, newStage) {
         }, FETCH_TIMEOUTS.mutate);
 
         const data = await response.json();
-        console.log(`⚡ admin-change-stage: ${Math.round(performance.now() - _t0)}ms`);
+
 
         if (!data.ok) {
             throw new Error(data.error || 'שגיאה לא ידועה');
@@ -1083,7 +1083,7 @@ async function performServerImport(clients, year, successMessage, options) {
     showLoading(clients.length > 1 ? `מייבא ${clients.length} לקוחות...` : 'מוסיף לקוח...');
 
     try {
-        const _t0 = performance.now();
+
         const response = await fetchWithTimeout(ENDPOINTS.ADMIN_BULK_IMPORT, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -1095,7 +1095,7 @@ async function performServerImport(clients, year, successMessage, options) {
         }, FETCH_TIMEOUTS.slow);
 
         const data = await response.json();
-        console.log(`⚡ admin-bulk-import: ${Math.round(performance.now() - _t0)}ms`);
+
         hideLoading();
 
         if (!data.ok) {
@@ -4527,7 +4527,7 @@ async function executeToggleActive(reportId, active) {
     filterClients();
 
     try {
-        const _t0 = performance.now();
+
         const response = await fetchWithTimeout(ENDPOINTS.ADMIN_TOGGLE_ACTIVE, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -4535,7 +4535,7 @@ async function executeToggleActive(reportId, active) {
         }, FETCH_TIMEOUTS.mutate);
 
         const data = await response.json();
-        console.log(`⚡ admin-toggle-active: ${Math.round(performance.now() - _t0)}ms`);
+
 
         if (!data.ok) {
             throw new Error(data.error || 'שגיאה לא ידועה');
@@ -4574,14 +4574,14 @@ async function openClientDetailModal(reportId) {
     document.getElementById('clientDetailModal').classList.add('show');
 
     try {
-        const _t0 = performance.now();
+
         const response = await fetchWithTimeout(ENDPOINTS.ADMIN_UPDATE_CLIENT, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ token: authToken, report_id: reportId, action: 'get' })
         }, FETCH_TIMEOUTS.load);
         const data = await response.json();
-        console.log(`⚡ admin-update-client (get): ${Math.round(performance.now() - _t0)}ms`);
+
 
         if (!data.ok) throw new Error(data.error || 'שגיאה בטעינה');
 
@@ -4627,14 +4627,14 @@ async function saveClientDetails() {
     const doSave = async () => {
         document.getElementById('clientDetailSavingOverlay').style.display = '';
         try {
-            const _t0 = performance.now();
+    
             const response = await fetchWithTimeout(ENDPOINTS.ADMIN_UPDATE_CLIENT, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ token: authToken, report_id: reportId, action: 'update', name, email, cc_email, phone })
             }, FETCH_TIMEOUTS.mutate);
             const data = await response.json();
-            console.log(`⚡ admin-update-client (save): ${Math.round(performance.now() - _t0)}ms`);
+
 
             if (!data.ok) throw new Error(data.error || 'שגיאה בשמירה');
 
