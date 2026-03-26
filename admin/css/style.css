@@ -4950,3 +4950,89 @@ tr:hover .client-edit-link {
         width: 100%;
     }
 }
+
+/* ==================== REMINDER NOTES EXPANDABLE ROW ==================== */
+.cn-toggle-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 2px 6px;
+    border-radius: var(--radius-full);
+    color: var(--gray-400);
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    margin-inline-start: var(--sp-2);
+    transition: color var(--transition-fast), background var(--transition-fast);
+    vertical-align: middle;
+}
+
+.cn-toggle-btn:hover, .cn-toggle-btn.active {
+    color: var(--brand-600);
+    background: var(--brand-50);
+}
+
+.cn-count-badge {
+    font-size: 0.65rem;
+    font-weight: 600;
+    min-width: 16px;
+    text-align: center;
+}
+
+tr.reminder-notes-row > td {
+    padding: 0 !important;
+    background: var(--gray-50);
+    border-top: none !important;
+}
+
+.rn-container {
+    padding: var(--sp-3) var(--sp-5);
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-2);
+}
+
+.rn-entry {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
+    font-size: 0.8125rem;
+}
+
+.rn-icon {
+    flex-shrink: 0;
+    width: 16px;
+    height: 16px;
+}
+
+.rn-icon--email { color: var(--info-500); }
+.rn-icon--manual { color: var(--warning-500); }
+
+.rn-date {
+    color: var(--gray-500);
+    font-size: 0.75rem;
+    white-space: nowrap;
+    min-width: 70px;
+}
+
+.rn-summary {
+    color: var(--gray-800);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 400px;
+}
+
+.rn-view-all {
+    padding-top: var(--sp-1);
+    font-size: 0.8125rem;
+}
+
+.rn-view-all a {
+    color: var(--brand-600);
+    text-decoration: none;
+}
+
+.rn-view-all a:hover {
+    text-decoration: underline;
+}

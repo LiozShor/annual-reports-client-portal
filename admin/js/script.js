@@ -3484,6 +3484,12 @@ function buildReminderTable(items, showDocs) {
         }
 
         const isSuppressed = r.reminder_suppress === 'forever';
+
+        // Parse client_notes
+        let clientNotesArr = [];
+        try { clientNotesArr = JSON.parse(r.client_notes || '[]'); } catch(e) {}
+        const hasNotes = clientNotesArr.length > 0;
+
         html += `
             <tr data-report-id="${escapeAttr(r.report_id)}"${isSuppressed ? ' class="reminder-row-suppressed"' : ''}>
                 <td><input type="checkbox" class="reminder-checkbox" value="${escapeAttr(r.report_id)}" onchange="updateReminderSelectedCount()"></td>
@@ -3491,6 +3497,10 @@ function buildReminderTable(items, showDocs) {
                     <strong class="client-link" onclick="viewClientDocs('${escapeAttr(r.report_id)}')">
                         ${escapeHtml(r.name)}
                     </strong>
+                    ${hasNotes ? `<button class="cn-toggle-btn" onclick="event.stopPropagation(); toggleReminderNotes('${escapeAttr(r.report_id)}')" title="הודעות הלקוח (${clientNotesArr.length})">
+                        <i data-lucide="message-circle" class="icon-sm"></i>
+                        <span class="cn-count-badge">${clientNotesArr.length}</span>
+                    </button>` : ''}
                 </td>
                 ${showDocs ? `
                 <td>
@@ -3531,10 +3541,56 @@ function buildReminderTable(items, showDocs) {
                 </td>
             </tr>
         `;
+
+        // Client notes detail row (hidden by default)
+        if (hasNotes) {
+            const sorted = [...clientNotesArr].sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+            const preview = sorted.slice(0, 3);
+            let notesHtml = preview.map(n => {
+                const isEmail = n.source === 'email';
+                const iconName = isEmail ? 'mail' : 'pencil';
+                const dateStr = n.date ? formatDateHe(n.date) : '';
+                return `<div class="rn-entry">
+                    <i data-lucide="${iconName}" class="icon-sm rn-icon ${isEmail ? 'rn-icon--email' : 'rn-icon--manual'}"></i>
+                    <span class="rn-date">${escapeHtml(dateStr)}</span>
+                    <span class="rn-summary">${escapeHtml(n.summary)}</span>
+                </div>`;
+            }).join('');
+
+            if (clientNotesArr.length > 3) {
+                notesHtml += `<div class="rn-view-all">
+                    <a href="javascript:void(0)" onclick="viewClientDocs('${escapeAttr(r.report_id)}')">
+                        הצג הכל (${clientNotesArr.length})
+                    </a>
+                </div>`;
+            }
+
+            html += `<tr class="reminder-notes-row" data-notes-for="${escapeAttr(r.report_id)}" style="display:none;">
+                <td colspan="${showDocs ? 9 : 8}">
+                    <div class="rn-container">${notesHtml}</div>
+                </td>
+            </tr>`;
+        }
     }
 
     html += '</tbody></table></div>';
     return html;
+}
+
+function toggleReminderNotes(reportId) {
+    const row = document.querySelector(`tr.reminder-notes-row[data-notes-for="${reportId}"]`);
+    if (!row) return;
+    const isVisible = row.style.display !== 'none';
+    // Close all other open notes rows first
+    document.querySelectorAll('tr.reminder-notes-row').forEach(r => r.style.display = 'none');
+    document.querySelectorAll('.cn-toggle-btn.active').forEach(b => b.classList.remove('active'));
+    if (!isVisible) {
+        row.style.display = '';
+        const btn = document.querySelector(`tr[data-report-id="${reportId}"] .cn-toggle-btn`);
+        if (btn) btn.classList.add('active');
+        // Init lucide icons in the expanded row
+        if (typeof lucide !== 'undefined') lucide.createIcons({ nameAttr: 'data-lucide', attrs: {} });
+    }
 }
 
 function toggleReminderSection(header) {
