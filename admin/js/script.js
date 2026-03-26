@@ -904,7 +904,7 @@ function startBackgroundRefresh() {
         else if (activeTab === 'ai-review') { aiReviewLoaded = false; loadAIClassifications(true); }
         else if (activeTab === 'reminders') { reminderLoaded = false; loadReminders(true); }
         else if (activeTab === 'questionnaires') { questionnaireLoaded = false; loadQuestionnaires(true); }
-    }, 60_000);
+    }, 300_000);
 }
 
 function stopBackgroundRefresh() {
