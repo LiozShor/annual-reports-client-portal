@@ -2160,6 +2160,40 @@ function renderAICards(items) {
             html += `<div class="ai-email-body" dir="auto"><span class="ai-email-body-label">💬 הודעת הלקוח:</span><span class="ai-email-body-text">${escapeHtml(emailBody).replace(/\n{3,}/g, '\n\n')}</span></div>`;
         }
 
+        // DL-199: Client communication notes timeline
+        const clientNotesRaw = clientItems.find(i => i.client_notes)?.client_notes;
+        if (clientNotesRaw) {
+            let cnArr = [];
+            try { cnArr = JSON.parse(clientNotesRaw); if (!Array.isArray(cnArr)) cnArr = []; } catch(e) {}
+            if (cnArr.length > 0) {
+                const sorted = [...cnArr].sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+                const preview = sorted.slice(0, 5);
+                let cnHtml = preview.map(n => {
+                    const isEmail = n.source === 'email';
+                    const iconName = isEmail ? 'mail' : 'pencil';
+                    const iconClass = isEmail ? 'cn-icon--email' : 'cn-icon--manual';
+                    const dateStr = n.date || '';
+                    return `<div class="ai-cn-entry">
+                        <i data-lucide="${iconName}" class="icon-sm ${iconClass}"></i>
+                        <span class="ai-cn-date">${escapeHtml(dateStr)}</span>
+                        <span class="ai-cn-summary">${escapeHtml(n.summary)}</span>
+                    </div>`;
+                }).join('');
+
+                const moreCount = cnArr.length > 5 ? ` (${cnArr.length} סה"כ)` : '';
+                const reportId = clientItems[0].report_record_id;
+                const viewAllLink = reportId
+                    ? `<a href="../document-manager.html?report_id=${encodeURIComponent(reportId)}" target="_blank" class="ai-cn-view-all">הצג הכל${moreCount}</a>`
+                    : '';
+
+                html += `<div class="ai-cn-section">
+                    <div class="ai-cn-header">📋 הודעות הלקוח${moreCount ? '' : ` (${cnArr.length})`}</div>
+                    ${cnHtml}
+                    ${viewAllLink}
+                </div>`;
+            }
+        }
+
         // Document status overview — grouped by category, collapsible
         const allDocs = (clientItems[0].all_docs || []);
         const groupMissingDocs = (clientItems[0].missing_docs || []);

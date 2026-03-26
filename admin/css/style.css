@@ -1931,6 +1931,57 @@ tr:hover .client-view-link {
     margin-inline-end: var(--sp-1);
 }
 
+/* DL-199: Client communication notes in AI review accordion */
+.ai-cn-section {
+    margin-top: var(--sp-2);
+    background: var(--gray-50);
+    border-radius: var(--radius-sm);
+    padding: var(--sp-2) var(--sp-3);
+    border-inline-start: 2px solid var(--info-300, #93c5fd);
+}
+.ai-cn-header {
+    font-size: var(--text-xs);
+    font-weight: 600;
+    color: var(--gray-500);
+    margin-bottom: var(--sp-2);
+}
+.ai-cn-entry {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
+    font-size: var(--text-xs);
+    padding: 2px 0;
+}
+.ai-cn-entry + .ai-cn-entry {
+    border-top: 1px solid var(--gray-100);
+    padding-top: 4px;
+    margin-top: 2px;
+}
+.cn-icon--email { color: var(--info-500); }
+.cn-icon--manual { color: var(--warning-500); }
+.ai-cn-date {
+    color: var(--gray-500);
+    white-space: nowrap;
+    min-width: 60px;
+}
+.ai-cn-summary {
+    color: var(--gray-700);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 350px;
+}
+.ai-cn-view-all {
+    display: inline-block;
+    margin-top: var(--sp-2);
+    font-size: var(--text-xs);
+    color: var(--brand-600);
+    text-decoration: none;
+}
+.ai-cn-view-all:hover {
+    text-decoration: underline;
+}
+
 /* Accordion stat badges */
 .ai-accordion-stat-badge {
     display: inline-flex;
