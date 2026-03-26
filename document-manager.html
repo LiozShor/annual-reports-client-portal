@@ -212,7 +212,10 @@
                         <i data-lucide="chevron-down" class="icon-sm"></i>
                     </button>
                     <div class="collapsible-content">
-                        <div style="display:flex; justify-content:flex-end; padding: var(--sp-3) var(--sp-4) 0;">
+                        <div style="display:flex; justify-content:flex-end; gap: var(--sp-2); padding: var(--sp-3) var(--sp-4) 0;">
+                            <button id="toggleNoAnswersBtn" class="btn btn-sm btn-ghost" onclick="toggleHideNoAnswers()">
+                                <i data-lucide="eye" class="icon-sm"></i> הצג תשובות לא
+                            </button>
                             <button class="btn btn-sm btn-ghost" onclick="printQuestionnaireFromDocManager()">
                                 <i data-lucide="printer" class="icon-sm"></i> הדפסה
                             </button>
