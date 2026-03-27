@@ -196,10 +196,11 @@ async function loadDocuments() {
 
     } catch (error) {
         cancelEscalation();
-        console.error('Document load failed');
+        console.error('Document load failed', error);
 
         // Hide loading spinner on error
-        document.getElementById('loading').style.display = 'none';
+        const loadingEl2 = document.getElementById('loading');
+        if (loadingEl2) loadingEl2.style.display = 'none';
 
         // Try to show cached data
         const cached = getCachedResponse('docs_' + reportId);
@@ -214,8 +215,7 @@ async function loadDocuments() {
             showErrorWithRetry(document.getElementById('error').parentElement || document.getElementById('loading').parentElement, error, {
                 lang: currentLang,
                 onRetry: function () {
-                    document.getElementById('loading').style.display = 'block';
-                    loadDocuments();
+                    location.reload();
                 }
             });
         }
