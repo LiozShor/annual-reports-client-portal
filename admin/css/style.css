@@ -1912,24 +1912,6 @@ tr:hover .client-view-link {
     border-inline-start: 2px solid var(--gray-300);
 }
 
-/* Email body preview (DL-188) */
-.ai-email-body {
-    font-size: var(--text-xs);
-    color: var(--gray-600);
-    margin-top: var(--sp-2);
-    line-height: 1.6;
-    background: var(--gray-50);
-    padding: var(--sp-2) var(--sp-3);
-    border-radius: var(--radius-sm);
-    border-inline-start: 2px solid var(--blue-300);
-    white-space: pre-wrap;
-    word-break: break-word;
-}
-.ai-email-body-label {
-    font-weight: 600;
-    color: var(--gray-500);
-    margin-inline-end: var(--sp-1);
-}
 
 /* DL-199: Client communication notes in AI review accordion */
 .ai-cn-section {
@@ -1971,15 +1953,22 @@ tr:hover .client-view-link {
     white-space: nowrap;
     max-width: 350px;
 }
-.ai-cn-view-all {
+.ai-cn-toggle {
     display: inline-block;
     margin-top: var(--sp-2);
     font-size: var(--text-xs);
     color: var(--brand-600);
-    text-decoration: none;
+    cursor: pointer;
 }
-.ai-cn-view-all:hover {
+.ai-cn-toggle:hover {
     text-decoration: underline;
+}
+.ai-cn-expanded {
+    display: none;
+}
+.ai-cn-entries-scroll {
+    max-height: 300px;
+    overflow-y: auto;
 }
 
 /* Accordion stat badges */
