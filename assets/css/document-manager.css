@@ -27,6 +27,147 @@ body {
     border-bottom: 1px solid var(--gray-200);
 }
 
+/* Top row: back button + client switcher */
+.page-header-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--sp-3);
+}
+
+/* Client switcher: year select + combobox */
+.client-switcher {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
+    flex-shrink: 0;
+}
+
+.switcher-year {
+    padding: var(--sp-1) var(--sp-2);
+    border: 1px solid var(--gray-300);
+    border-radius: var(--radius-md);
+    font-family: inherit;
+    font-size: var(--text-sm);
+    background: white;
+    color: var(--gray-700);
+    cursor: pointer;
+    height: 34px;
+}
+
+.switcher-year:focus {
+    outline: none;
+    border-color: var(--brand-500);
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+}
+
+/* Client combobox */
+.client-combobox {
+    position: relative;
+}
+
+.client-combobox-input {
+    width: 220px;
+    padding: var(--sp-1) var(--sp-3);
+    border: 1px solid var(--gray-300);
+    border-radius: var(--radius-md);
+    font-family: inherit;
+    font-size: var(--text-sm);
+    background: white;
+    color: var(--gray-800);
+    direction: rtl;
+    cursor: pointer;
+    height: 34px;
+    box-sizing: border-box;
+    transition: border-color var(--transition-fast);
+}
+
+.client-combobox-input::placeholder {
+    color: var(--gray-400);
+}
+
+.client-combobox-input:focus {
+    outline: none;
+    border-color: var(--brand-500);
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+    cursor: text;
+}
+
+.client-combobox-dropdown {
+    display: none;
+    position: fixed;
+    min-width: 280px;
+    max-height: 320px;
+    overflow-y: auto;
+    background: white;
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-lg);
+    z-index: 9999;
+    direction: rtl;
+}
+
+.client-combobox.open .client-combobox-dropdown {
+    display: block;
+}
+
+.client-combobox-option {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--sp-2) var(--sp-3);
+    font-size: var(--text-sm);
+    color: var(--gray-700);
+    cursor: pointer;
+    border-bottom: 1px solid var(--gray-100);
+    transition: background 100ms;
+    gap: var(--sp-2);
+}
+
+.client-combobox-option:hover,
+.client-combobox-option.focused {
+    background: var(--brand-50, #EEF2FF);
+}
+
+.client-combobox-option.current-client {
+    background: var(--warning-50, #FFFBEB);
+    border-right: 3px solid var(--warning-500, #F59E0B);
+}
+
+.client-combobox-option .option-name {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.client-combobox-empty {
+    padding: var(--sp-3);
+    text-align: center;
+    color: var(--gray-400);
+    font-size: var(--text-sm);
+}
+
+/* Stage badges inside client switcher (subset of admin/css/style.css) */
+.client-combobox-option .stage-badge {
+    display: inline-flex;
+    align-items: center;
+    border-radius: var(--radius-full);
+    font-size: 11px;
+    font-weight: 600;
+    white-space: nowrap;
+    padding: 1px 6px;
+    flex-shrink: 0;
+}
+.client-combobox-option .stage-1 { background: var(--gray-100); color: var(--gray-600); }
+.client-combobox-option .stage-2 { background: var(--warning-100); color: var(--warning-700); }
+.client-combobox-option .stage-3 { background: #FEF3C7; color: #92400E; }
+.client-combobox-option .stage-4 { background: var(--info-100); color: var(--info-700); }
+.client-combobox-option .stage-5 { background: #EDE9FE; color: #5B21B6; }
+.client-combobox-option .stage-6 { background: #CCFBF1; color: #0F766E; }
+.client-combobox-option .stage-7 { background: #FFF7ED; color: #C2410C; }
+.client-combobox-option .stage-8 { background: var(--success-100); color: var(--success-700); }
+
 .header-title-row {
     display: flex;
     align-items: center;

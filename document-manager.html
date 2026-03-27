@@ -25,10 +25,19 @@
         <div class="container">
             <!-- Header bar -->
             <header class="page-header">
-                <a href="admin/index.html" class="btn btn-ghost btn-sm">
-                    <i data-lucide="arrow-right" class="icon-sm"></i>
-                    חזרה לפורטל ניהול
-                </a>
+                <div class="page-header-top">
+                    <a href="admin/index.html" class="btn btn-ghost btn-sm">
+                        <i data-lucide="arrow-right" class="icon-sm"></i>
+                        חזרה לפורטל ניהול
+                    </a>
+                    <div class="client-switcher" id="clientSwitcher" style="display:none;">
+                        <select id="switcherYear" class="switcher-year" aria-label="שנת מס"></select>
+                        <div id="clientCombobox" class="client-combobox">
+                            <input type="text" id="clientComboboxInput" class="client-combobox-input" placeholder="🔍 חפש לקוח..." autocomplete="off" aria-label="חיפוש לקוח" readonly>
+                            <div id="clientComboboxDropdown" class="client-combobox-dropdown" role="listbox"></div>
+                        </div>
+                    </div>
+                </div>
                 <div class="header-title-row">
                     <a href="admin/index.html">
                         <img src="assets/images/logo.png" alt="משרד רו״ח משה עציץ" class="site-logo site-logo-md" width="1010" height="306">
