@@ -2177,14 +2177,11 @@ function renderAICards(items) {
                 const expandedHtml = hasMore
                     ? `<div class="ai-cn-expanded">${sorted.slice(5).map(renderEntry).join('')}</div>`
                     : '';
-                const toggleHtml = hasMore
-                    ? `<span class="ai-cn-toggle" onclick="toggleClientNotes(this)">הצג הכל (${sorted.length} סה"כ) ▼</span>`
-                    : '';
 
                 html += `<div class="ai-cn-section">
                     <div class="ai-cn-header">📋 הודעות הלקוח (${cnArr.length})</div>
                     <div class="ai-cn-entries">${previewHtml}${expandedHtml}</div>
-                    ${toggleHtml}
+                    <span class="ai-cn-toggle" onclick="toggleClientNotes(this)">הצג הכל ▼</span>
                 </div>`;
             }
         }
@@ -2660,12 +2657,11 @@ function toggleClientNotes(toggleEl) {
     const section = toggleEl.closest('.ai-cn-section');
     const expanded = section.querySelector('.ai-cn-expanded');
     const entries = section.querySelector('.ai-cn-entries');
-    if (!expanded) return;
-    if (!toggleEl.dataset.label) toggleEl.dataset.label = toggleEl.textContent;
-    const isOpen = expanded.style.display === 'block';
-    expanded.style.display = isOpen ? 'none' : 'block';
+    const isOpen = section.classList.contains('ai-cn-open');
+    section.classList.toggle('ai-cn-open', !isOpen);
+    if (expanded) expanded.style.display = isOpen ? 'none' : 'block';
     entries.classList.toggle('ai-cn-entries-scroll', !isOpen);
-    toggleEl.textContent = isOpen ? toggleEl.dataset.label : 'הסתר ▲';
+    toggleEl.textContent = isOpen ? 'הצג הכל ▼' : 'הסתר ▲';
 }
 
 // AI Review Actions
