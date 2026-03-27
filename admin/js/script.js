@@ -2128,13 +2128,13 @@ function renderAICards(items) {
             badgesHtml = `<span class="ai-accordion-stat-badge badge-matched">${pendingCount} מסמכים ממתינים</span>`;
         }
 
-        // Build document manager link button
+        // Build document manager link button (icon-only, next to expand arrow)
         const reportId = clientItems[0].report_record_id;
         const docManagerBtn = reportId
             ? `<a href="../document-manager.html?report_id=${encodeURIComponent(reportId)}"
                  target="_blank" class="ai-doc-manager-link"
                  onclick="event.stopPropagation()" title="לניהול המסמכים">
-                 <i data-lucide="folder-open" class="icon-xs"></i> לניהול המסמכים
+                 <i data-lucide="folder-open" class="icon-xs"></i>
                </a>`
             : '';
 
@@ -2146,9 +2146,9 @@ function renderAICards(items) {
                         ${escapeHtml(clientName)}
                     </div>
                     <div class="ai-accordion-stats">
-                        ${docManagerBtn}
                         ${badgesHtml}
                     </div>
+                    ${docManagerBtn}
                     <span class="ai-accordion-icon">▾</span>
                 </div>
                 <div class="ai-accordion-body">
