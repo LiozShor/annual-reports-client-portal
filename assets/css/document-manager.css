@@ -44,7 +44,8 @@ body {
 }
 
 .switcher-year {
-    padding: var(--sp-1) var(--sp-2);
+    width: 74px;
+    padding: var(--sp-1) var(--sp-1);
     border: 1px solid var(--gray-300);
     border-radius: var(--radius-md);
     font-family: inherit;
@@ -67,7 +68,7 @@ body {
 }
 
 .client-combobox-input {
-    width: 220px;
+    width: 200px;
     padding: var(--sp-1) var(--sp-3);
     border: 1px solid var(--gray-300);
     border-radius: var(--radius-md);
