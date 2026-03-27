@@ -2212,9 +2212,9 @@ function renderAICards(items) {
                 catGroups[catGroups.length - 1].docs.push(d);
             }
 
-            let categoriesHtml = '';
+            let categoriesHtml = '<div class="ai-missing-category-tags">';
             for (const group of catGroups) {
-                const tagsHtml = group.docs.map(d => {
+                categoriesHtml += group.docs.map(d => {
                     const id = d.template_id || d.name || '';
                     const label = d.name_short || d.name || id;
                     const isReceived = d.status === 'Received';
@@ -2222,11 +2222,8 @@ function renderAICards(items) {
                     const prefix = isReceived ? '&#x2713; ' : '';
                     return `<span class="${tagClass}">${prefix}${renderDocLabel(label)}</span>`;
                 }).join('');
-                categoriesHtml += `
-                    <div class="ai-missing-category">${escapeHtml(group.emoji)} ${escapeHtml(group.name)}</div>
-                    <div class="ai-missing-category-tags">${tagsHtml}</div>
-                `;
             }
+            categoriesHtml += '</div>';
 
             const toggleLabel = hasStatusVariation
                 ? `מסמכים נדרשים (${docsReceivedCount}/${docsTotalCount} התקבלו)`
@@ -3065,20 +3062,17 @@ function updateClientDocState(clientName, docRecordId) {
             catGroups[catGroups.length - 1].docs.push(d);
         }
 
-        let categoriesHtml = '';
+        let categoriesHtml = '<div class="ai-missing-category-tags">';
         for (const group of catGroups) {
-            const tagsHtml = group.docs.map(d => {
+            categoriesHtml += group.docs.map(d => {
                 const label = d.name_short || d.name || d.template_id || '';
                 const isReceived = d.status === 'Received';
                 const tagClass = isReceived ? 'ai-doc-tag-received' : 'ai-missing-doc-tag';
                 const prefix = isReceived ? '&#x2713; ' : '';
                 return `<span class="${tagClass}">${prefix}${renderDocLabel(label)}</span>`;
             }).join('');
-            categoriesHtml += `
-                <div class="ai-missing-category">${escapeHtml(group.emoji)} ${escapeHtml(group.name)}</div>
-                <div class="ai-missing-category-tags">${tagsHtml}</div>
-            `;
         }
+        categoriesHtml += '</div>';
 
         const toggleLabel = hasStatusVariation
             ? `מסמכים נדרשים (${docsReceivedCount}/${docsTotalCount} התקבלו)`
