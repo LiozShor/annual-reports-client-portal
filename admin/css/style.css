@@ -1968,6 +1968,12 @@ tr:hover .client-view-link {
     max-height: 300px;
     overflow-y: auto;
 }
+.ai-cn-open .ai-cn-summary {
+    white-space: normal;
+    overflow: visible;
+    text-overflow: unset;
+    max-width: none;
+}
 
 /* Accordion stat badges */
 .ai-accordion-stat-badge {
