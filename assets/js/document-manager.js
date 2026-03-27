@@ -2734,3 +2734,242 @@ function updateStickyBar() {
     }
     if (typeof lucide !== 'undefined') lucide.createIcons();
 }
+
+/* ===========================================
+   CLIENT SWITCHER (DL-208)
+   Year select + searchable client combobox in header
+   =========================================== */
+
+// State
+let _switcherClients = [];   // [{report_id, name, stage}]
+let _switcherYear = '';       // currently selected year in switcher
+let _comboOpen = false;
+let _comboFocusIndex = -1;
+
+/**
+ * Load the client list into the header switcher.
+ * Runs in parallel with loadDocuments().
+ */
+async function loadClientSwitcher() {
+    const defaultYear = new URLSearchParams(window.location.search).get('year') || '2025';
+    _switcherYear = defaultYear;
+    try {
+        const res = await fetch(`${ENDPOINTS.ADMIN_DASHBOARD}?year=${encodeURIComponent(defaultYear)}&_t=${Date.now()}`, {
+            headers: { 'Authorization': `Bearer ${ADMIN_TOKEN}` }
+        });
+        if (!res.ok) return;
+        const data = await res.json();
+
+        // Populate year select
+        const yearEl = document.getElementById('switcherYear');
+        const years = (data.available_years && data.available_years.length > 0)
+            ? data.available_years
+            : [defaultYear];
+        yearEl.innerHTML = years.map(y =>
+            `<option value="${y}"${String(y) === String(defaultYear) ? ' selected' : ''}>${y}</option>`
+        ).join('');
+
+        yearEl.addEventListener('change', () => {
+            _switcherYear = yearEl.value;
+            _reloadSwitcherForYear(_switcherYear);
+        });
+
+        // Build combobox
+        _switcherClients = (data.clients || []).filter(c => c.is_active !== false);
+        _buildClientCombobox(_switcherClients);
+
+        // Show switcher
+        document.getElementById('clientSwitcher').style.display = 'flex';
+    } catch (e) {
+        // Switcher is non-critical — fail silently
+    }
+}
+
+async function _reloadSwitcherForYear(year) {
+    try {
+        const res = await fetch(`${ENDPOINTS.ADMIN_DASHBOARD}?year=${encodeURIComponent(year)}&_t=${Date.now()}`, {
+            headers: { 'Authorization': `Bearer ${ADMIN_TOKEN}` }
+        });
+        if (!res.ok) return;
+        const data = await res.json();
+        _switcherClients = (data.clients || []).filter(c => c.is_active !== false);
+        _buildClientCombobox(_switcherClients);
+    } catch (e) { /* silent */ }
+}
+
+function _buildClientCombobox(clients) {
+    const input = document.getElementById('clientComboboxInput');
+    const dropdown = document.getElementById('clientComboboxDropdown');
+    const combo = document.getElementById('clientCombobox');
+
+    // Set input display value to current client name
+    const currentClient = clients.find(c => c.report_id === REPORT_ID);
+    input.value = currentClient ? currentClient.name : '';
+
+    _renderComboOptions(clients, '');
+
+    // Remove any previously attached listeners by cloning
+    const newInput = input.cloneNode(true);
+    input.parentNode.replaceChild(newInput, input);
+
+    newInput.addEventListener('mousedown', (e) => {
+        if (!_comboOpen) {
+            e.preventDefault();
+            _openCombo();
+        }
+    });
+    newInput.addEventListener('focus', () => {
+        if (!_comboOpen) _openCombo();
+    });
+    newInput.addEventListener('input', () => {
+        _renderComboOptions(_switcherClients, newInput.value);
+        _positionComboDropdown();
+    });
+    newInput.addEventListener('keydown', (e) => {
+        const options = dropdown.querySelectorAll('.client-combobox-option');
+        if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            _comboFocusIndex = Math.min(_comboFocusIndex + 1, options.length - 1);
+            _updateComboFocus(options);
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            _comboFocusIndex = Math.max(_comboFocusIndex - 1, 0);
+            _updateComboFocus(options);
+        } else if (e.key === 'Enter') {
+            e.preventDefault();
+            const focused = dropdown.querySelector('.client-combobox-option.focused');
+            if (focused) focused.click();
+        } else if (e.key === 'Escape') {
+            _closeCombo();
+            const cur = _switcherClients.find(c => c.report_id === REPORT_ID);
+            newInput.value = cur ? cur.name : '';
+        }
+    });
+
+    // Close on outside click — remove old listener first
+    document.removeEventListener('mousedown', _handleComboOutsideClick);
+    document.addEventListener('mousedown', _handleComboOutsideClick);
+}
+
+function _openCombo() {
+    const combo = document.getElementById('clientCombobox');
+    const input = document.getElementById('clientComboboxInput');
+    _comboOpen = true;
+    _comboFocusIndex = -1;
+    combo.classList.add('open');
+    input.readOnly = false;
+    input.select();
+    _renderComboOptions(_switcherClients, '');
+    _positionComboDropdown();
+}
+
+function _closeCombo() {
+    const combo = document.getElementById('clientCombobox');
+    _comboOpen = false;
+    _comboFocusIndex = -1;
+    combo.classList.remove('open');
+}
+
+function _handleComboOutsideClick(e) {
+    const combo = document.getElementById('clientCombobox');
+    if (combo && !combo.contains(e.target)) {
+        if (_comboOpen) {
+            _closeCombo();
+            const cur = _switcherClients.find(c => c.report_id === REPORT_ID);
+            const input = document.getElementById('clientComboboxInput');
+            if (input) input.value = cur ? cur.name : '';
+        }
+    }
+}
+
+function _renderComboOptions(clients, query) {
+    const dropdown = document.getElementById('clientComboboxDropdown');
+    if (!dropdown) return;
+    const q = query.trim().toLowerCase();
+    const filtered = q
+        ? clients.filter(c => c.name.toLowerCase().includes(q))
+        : clients;
+
+    if (filtered.length === 0) {
+        dropdown.innerHTML = `<div class="client-combobox-empty">לא נמצאו לקוחות</div>`;
+        return;
+    }
+
+    dropdown.innerHTML = filtered.map(c => {
+        const stage = (typeof STAGES !== 'undefined' && STAGES[c.stage]) || null;
+        const stageBadge = stage
+            ? `<span class="stage-badge ${stage.class}" style="font-size:11px;padding:1px 6px;min-width:auto;">${stage.label}</span>`
+            : '';
+        const isCurrent = c.report_id === REPORT_ID;
+        return `<div class="client-combobox-option${isCurrent ? ' current-client' : ''}"
+            role="option"
+            data-report-id="${_escAttr(c.report_id)}"
+            onclick="_switcherNavigate('${_escAttr(c.report_id)}')">
+            <span class="option-name">${_escHtml(c.name)}</span>
+            ${stageBadge}
+        </div>`;
+    }).join('');
+
+    _comboFocusIndex = -1;
+}
+
+function _updateComboFocus(options) {
+    options.forEach((el, i) => el.classList.toggle('focused', i === _comboFocusIndex));
+    if (_comboFocusIndex >= 0 && options[_comboFocusIndex]) {
+        options[_comboFocusIndex].scrollIntoView({ block: 'nearest' });
+    }
+}
+
+function _positionComboDropdown() {
+    const input = document.getElementById('clientComboboxInput');
+    const dropdown = document.getElementById('clientComboboxDropdown');
+    if (!input || !dropdown) return;
+    const rect = input.getBoundingClientRect();
+    dropdown.style.top = (rect.bottom + 4) + 'px';
+    dropdown.style.right = (window.innerWidth - rect.right) + 'px';
+    dropdown.style.left = 'auto';
+    dropdown.style.width = Math.max(rect.width, 280) + 'px';
+}
+
+function _switcherNavigate(reportId) {
+    if (reportId === REPORT_ID) {
+        _closeCombo();
+        return;
+    }
+    const isDirty = markedForRemoval.size > 0 || docsToAdd.size > 0 ||
+        markedForRestore.size > 0 || statusChanges.size > 0 || noteChanges.size > 0 ||
+        nameChanges.size > 0 || questionsAreDirty();
+
+    const doNavigate = () => {
+        const url = new URL(window.location.href);
+        url.searchParams.set('report_id', reportId);
+        window.location.href = url.toString();
+    };
+
+    if (isDirty) {
+        showConfirmDialog(
+            'יש שינויים שלא נשמרו. האם לעבור ללקוח אחר בלי לשמור?',
+            doNavigate,
+            'עבור בלי לשמור',
+            true
+        );
+    } else {
+        doNavigate();
+    }
+}
+
+function _escAttr(str) {
+    return String(str).replace(/['"<>&]/g, c => ({'\'': '&#39;', '"': '&quot;', '<': '&lt;', '>': '&gt;', '&': '&amp;'}[c]));
+}
+function _escHtml(str) {
+    return String(str).replace(/[<>&"]/g, c => ({'<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;'}[c]));
+}
+
+// Kick off switcher load alongside main load (non-blocking)
+if (REPORT_ID && REPORT_ID !== 'null' && REPORT_ID !== 'undefined') {
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', loadClientSwitcher);
+    } else {
+        loadClientSwitcher();
+    }
+}
