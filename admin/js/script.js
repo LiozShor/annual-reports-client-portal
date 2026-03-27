@@ -2154,21 +2154,14 @@ function renderAICards(items) {
                 <div class="ai-accordion-body">
         `;
 
-        // DL-188: Email body preview — show once per client accordion
-        const emailBody = clientItems.find(i => i.email_body_text)?.email_body_text;
-        if (emailBody) {
-            html += `<div class="ai-email-body" dir="auto"><span class="ai-email-body-label">💬 הודעת הלקוח:</span><span class="ai-email-body-text">${escapeHtml(emailBody).replace(/\n{3,}/g, '\n\n')}</span></div>`;
-        }
-
-        // DL-199: Client communication notes timeline
+        // DL-199: Client communication notes timeline (in-place expand)
         const clientNotesRaw = clientItems.find(i => i.client_notes)?.client_notes;
         if (clientNotesRaw) {
             let cnArr = [];
             try { cnArr = JSON.parse(clientNotesRaw); if (!Array.isArray(cnArr)) cnArr = []; } catch(e) {}
             if (cnArr.length > 0) {
                 const sorted = [...cnArr].sort((a, b) => (b.date || '').localeCompare(a.date || ''));
-                const preview = sorted.slice(0, 5);
-                let cnHtml = preview.map(n => {
+                const renderEntry = n => {
                     const isEmail = n.source === 'email';
                     const iconName = isEmail ? 'mail' : 'pencil';
                     const iconClass = isEmail ? 'cn-icon--email' : 'cn-icon--manual';
@@ -2178,18 +2171,20 @@ function renderAICards(items) {
                         <span class="ai-cn-date">${escapeHtml(dateStr)}</span>
                         <span class="ai-cn-summary">${escapeHtml(n.summary)}</span>
                     </div>`;
-                }).join('');
-
-                const moreCount = cnArr.length > 5 ? ` (${cnArr.length} סה"כ)` : '';
-                const reportId = clientItems[0].report_record_id;
-                const viewAllLink = reportId
-                    ? `<a href="../document-manager.html?report_id=${encodeURIComponent(reportId)}" target="_blank" class="ai-cn-view-all">הצג הכל${moreCount}</a>`
+                };
+                const previewHtml = sorted.slice(0, 5).map(renderEntry).join('');
+                const hasMore = sorted.length > 5;
+                const expandedHtml = hasMore
+                    ? `<div class="ai-cn-expanded">${sorted.slice(5).map(renderEntry).join('')}</div>`
+                    : '';
+                const toggleHtml = hasMore
+                    ? `<span class="ai-cn-toggle" onclick="toggleClientNotes(this)">הצג הכל (${sorted.length} סה"כ) ▼</span>`
                     : '';
 
                 html += `<div class="ai-cn-section">
-                    <div class="ai-cn-header">📋 הודעות הלקוח${moreCount ? '' : ` (${cnArr.length})`}</div>
-                    ${cnHtml}
-                    ${viewAllLink}
+                    <div class="ai-cn-header">📋 הודעות הלקוח (${cnArr.length})</div>
+                    <div class="ai-cn-entries">${previewHtml}${expandedHtml}</div>
+                    ${toggleHtml}
                 </div>`;
             }
         }
@@ -2659,6 +2654,18 @@ function cancelReReview(recordId) {
 function toggleAIAccordion(header) {
     const accordion = header.closest('.ai-accordion');
     accordion.classList.toggle('open');
+}
+
+function toggleClientNotes(toggleEl) {
+    const section = toggleEl.closest('.ai-cn-section');
+    const expanded = section.querySelector('.ai-cn-expanded');
+    const entries = section.querySelector('.ai-cn-entries');
+    if (!expanded) return;
+    if (!toggleEl.dataset.label) toggleEl.dataset.label = toggleEl.textContent;
+    const isOpen = expanded.style.display === 'block';
+    expanded.style.display = isOpen ? 'none' : 'block';
+    entries.classList.toggle('ai-cn-entries-scroll', !isOpen);
+    toggleEl.textContent = isOpen ? toggleEl.dataset.label : 'הסתר ▲';
 }
 
 // AI Review Actions
