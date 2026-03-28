@@ -558,6 +558,7 @@ async function loadDashboard(silent = false) {
         if (!pendingClientsLoaded) loadPendingClients(true);
         if (!questionnaireLoaded) loadQuestionnaires(true);
         if (!reminderLoaded) loadReminders(true);
+        updateActiveFilterCount(); // DL-214
     } catch (error) {
         if (!silent) hideLoading();
         console.error('Dashboard load failed');
@@ -681,7 +682,68 @@ function renderClientsTable(clients) {
         `;
     }
 
-    html += '</tbody></table></div>';
+    html += '</tbody></table>';
+
+    // Mobile card list (DL-214)
+    let cards = '<ul class="mobile-card-list" role="list" aria-label="רשימת לקוחות">';
+    for (const client of clients) {
+        const stage = STAGES[client.stage] || { label: client.stage, icon: 'help-circle', class: '' };
+        const docsReceived = client.docs_received || 0;
+        const docsTotal = client.docs_total || 0;
+        const progressPercent = docsTotal > 0 ? Math.round((docsReceived / docsTotal) * 100) : 0;
+        const missingCount = docsTotal - docsReceived;
+        const stageNum = stage.num || 0;
+        const rid = escapeAttr(client.report_id);
+        const cName = escapeAttr(client.name);
+        const isActive = client.is_active !== false;
+
+        cards += `<li class="mobile-card" data-report-id="${rid}" data-stage="${escapeAttr(client.stage)}" data-is-active="${isActive}">
+            <div class="mobile-card-primary">
+                <span class="mobile-card-checkbox"><input type="checkbox" class="dashboard-client-checkbox" value="${rid}" onchange="updateClientSelectedCount()"></span>
+                <div class="mobile-card-info">
+                    <span class="mobile-card-name" onclick="viewClientDocs('${rid}')" title="${escapeHtml(client.email || '')}">${escapeHtml(client.name)}</span>
+                    <span id="stage-badge-m-${rid}" class="stage-badge ${stage.class} clickable"
+                        onclick="openStageDropdown(event, '${rid}', '${escapeAttr(client.stage)}')"
+                        title="לחץ לשינוי שלב">
+                        <i data-lucide="${stage.icon}" class="icon-sm"></i> ${stage.label}
+                    </span>
+                </div>
+            </div>
+            <div class="mobile-card-secondary">
+                ${stageNum > 3 ? `
+                    <span class="mobile-card-detail">
+                        <span class="label">מסמכים</span>
+                        <span class="docs-count clickable-docs" onclick="toggleDocsPopover(event, '${rid}', '${cName}')">${docsReceived}/${docsTotal}</span>
+                    </span>
+                    <span class="mobile-card-detail">
+                        <span class="label">חסרים</span>
+                        <span class="missing-count ${missingCount > 0 ? 'has-missing' : 'all-done'}">${missingCount > 0 ? missingCount : '✓'}</span>
+                    </span>
+                ` : ''}
+                ${client.notes ? `<span class="notes-text" onclick="editReportNotes(event, '${rid}')">${escapeHtml((client.notes || '').substring(0, 40))}${(client.notes || '').length > 40 ? '…' : ''}</span>` : ''}
+            </div>
+            <div class="mobile-card-actions">
+                ${client.stage === 'Send_Questionnaire' ?
+                    `<button class="action-btn send" onclick="sendSingle('${rid}')" title="שלח שאלון"><i data-lucide="send" class="icon-sm"></i></button>` : ''}
+                ${(client.stage === 'Waiting_For_Answers' || client.stage === 'Collecting_Docs') ?
+                    `<button class="action-btn reminder-set-btn" onclick="sendDashboardReminder('${rid}', '${cName}')" title="שלח תזכורת"><i data-lucide="bell-ring" class="icon-sm"></i></button>` : ''}
+                <div class="row-overflow-dropdown">
+                    <button class="action-btn overflow" onclick="toggleRowMenu(this, event)" title="פעולות נוספות">⋮</button>
+                    <div class="row-menu">
+                        <button onclick="viewClient('${rid}'); closeAllRowMenus();"><i data-lucide="external-link"></i> צפייה כלקוח</button>
+                        ${stageNum >= 3 ?
+                            `<button onclick="viewQuestionnaire('${rid}'); closeAllRowMenus();"><i data-lucide="file-text"></i> צפה בשאלון</button>` : ''}
+                        ${isActive ?
+                            `<button class="danger" onclick="deactivateClient('${rid}', '${cName}'); closeAllRowMenus();"><i data-lucide="archive"></i> העבר לארכיון</button>` :
+                            `<button onclick="reactivateClient('${rid}'); closeAllRowMenus();"><i data-lucide="archive-restore"></i> הפעל מחדש</button>`}
+                    </div>
+                </div>
+            </div>
+        </li>`;
+    }
+    cards += '</ul>';
+
+    html += cards + '</div>';
     container.innerHTML = html;
     if (typeof lucide !== 'undefined') lucide.createIcons();
 }
@@ -714,6 +776,38 @@ function filterClients() {
 
     filtered = sortClients(filtered);
     renderClientsTable(filtered);
+    updateActiveFilterCount();
+}
+
+// DL-214: Mobile collapsible filter bar
+function toggleMobileFilters() {
+    const filters = document.querySelector('.filters.filters-mobile-hidden, .filters.filters-mobile-visible');
+    const bar = document.querySelector('.filters-mobile-bar');
+    if (!filters || !bar) return;
+
+    const isHidden = filters.classList.contains('filters-mobile-hidden');
+    if (isHidden) {
+        filters.classList.remove('filters-mobile-hidden');
+        filters.classList.add('filters-mobile-visible');
+        bar.classList.add('expanded');
+    } else {
+        filters.classList.remove('filters-mobile-visible');
+        filters.classList.add('filters-mobile-hidden');
+        bar.classList.remove('expanded');
+    }
+}
+
+function updateActiveFilterCount() {
+    const countEl = document.getElementById('activeFilterCount');
+    if (!countEl) return;
+    let count = 0;
+    const search = document.getElementById('searchInput');
+    if (search && search.value.trim()) count++;
+    const stage = document.getElementById('stageFilter');
+    if (stage && stage.value) count++;
+    const year = document.getElementById('yearFilter');
+    if (year && year.value) count++;
+    countEl.textContent = count > 0 ? count : '';
 }
 
 function toggleStageFilter(stage) {
@@ -1583,7 +1677,29 @@ function renderPendingClients() {
         `;
     }
 
-    html += '</tbody></table></div>';
+    html += '</tbody></table>';
+
+    // Mobile card list (DL-214)
+    let cards = '<ul class="mobile-card-list" role="list" aria-label="לקוחות ממתינים">';
+    for (const client of pendingClients) {
+        cards += `<li class="mobile-card">
+            <div class="mobile-card-primary">
+                <span class="mobile-card-checkbox"><input type="checkbox" class="client-checkbox" value="${client.report_id}" onchange="updateSelectedCount()"></span>
+                <div class="mobile-card-info">
+                    <span class="mobile-card-name" onclick="viewClientDocs('${escapeAttr(client.report_id)}')">${escapeHtml(client.name)}</span>
+                </div>
+            </div>
+            <div class="mobile-card-secondary">
+                <div class="email-cell">
+                    <a href="mailto:${escapeAttr(client.email)}" class="email-link">${escapeHtml(client.email)}</a>
+                    <button class="copy-email-btn" onclick="event.stopPropagation(); copyToClipboard('${escapeAttr(client.email)}', this)" title="העתק אימייל"><i data-lucide="copy" class="icon-xs"></i></button>
+                </div>
+            </div>
+        </li>`;
+    }
+    cards += '</ul>';
+
+    html += cards + '</div>';
     container.innerHTML = html;
     document.getElementById('sendActions').style.display = 'block';
     updateSelectedCount();
@@ -1793,7 +1909,48 @@ function renderReviewTable(queue) {
         `;
     }
 
-    html += '</tbody></table></div>';
+    html += '</tbody></table>';
+
+    // Mobile card list (DL-214)
+    const nowCards = new Date();
+    let cards = '<ul class="mobile-card-list" role="list" aria-label="תור בדיקה">';
+    for (let i = 0; i < queue.length; i++) {
+        const client = queue[i];
+        const completedAt = new Date(client.docs_completed_at);
+        const diffMs = nowCards - completedAt;
+        const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+        let waitingClass = '';
+        if (diffDays >= 14) waitingClass = 'waiting-urgent';
+        else if (diffDays >= 7) waitingClass = 'waiting-warn';
+        const waitingText = diffDays === 0 ? 'היום' : diffDays === 1 ? 'יום אחד' : `${diffDays} ימים`;
+        const dateStr = completedAt.toLocaleDateString('he-IL', { day: '2-digit', month: '2-digit', year: 'numeric' });
+
+        cards += `<li class="mobile-card">
+            <div class="mobile-card-primary">
+                <span class="fifo-number">${i + 1}</span>
+                <div class="mobile-card-info">
+                    <span class="mobile-card-name" onclick="viewClientDocs('${escapeAttr(client.report_id)}')">${escapeHtml(client.name)}</span>
+                    <span class="waiting-badge ${waitingClass}">${waitingText}</span>
+                </div>
+            </div>
+            <div class="mobile-card-secondary">
+                <span class="mobile-card-detail"><span class="label">שנה</span> ${client.year}</span>
+                <span class="mobile-card-detail"><span class="label">מסמכים</span> <span class="docs-count clickable-count" onclick="toggleDocsPopover(event, '${escapeOnclick(client.report_id)}', '${escapeOnclick(client.name)}')">${client.docs_received}/${client.docs_total}</span></span>
+                <span class="mobile-card-detail"><span class="label">השלמה</span> ${dateStr}</span>
+                <div class="email-cell">
+                    <a href="mailto:${escapeAttr(client.email)}" class="email-link">${escapeHtml(client.email)}</a>
+                    <button class="copy-email-btn" onclick="event.stopPropagation(); copyToClipboard('${escapeAttr(client.email)}', this)" title="העתק אימייל"><i data-lucide="copy" class="icon-xs"></i></button>
+                </div>
+            </div>
+            <div class="mobile-card-actions">
+                <button class="action-btn view" onclick="viewClient('${escapeAttr(client.report_id)}')" title="צפה בתיק"><i data-lucide="eye" class="icon-sm"></i></button>
+                <button class="action-btn complete" onclick="markComplete('${escapeOnclick(client.report_id)}', '${escapeOnclick(client.name)}')" title="סמן כהושלם"><i data-lucide="circle-check" class="icon-sm"></i></button>
+            </div>
+        </li>`;
+    }
+    cards += '</ul>';
+
+    html += cards + '</div>';
     container.innerHTML = html;
     if (typeof lucide !== 'undefined') lucide.createIcons();
 }
@@ -3965,7 +4122,80 @@ function buildReminderTable(items, showDocs) {
         `;
     }
 
-    html += '</tbody></table></div>';
+    html += '</tbody></table>';
+
+    // Mobile card list (DL-214)
+    const todayCards = new Date().toISOString().split('T')[0];
+    const weekFromNowCards = new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0];
+    let cards = '<ul class="mobile-card-list" role="list" aria-label="רשימת תזכורות">';
+    for (const r of items) {
+        const status = getReminderStatus(r);
+        const hasCustomMax = r.reminder_max != null;
+        const effectiveMax = hasCustomMax ? r.reminder_max : reminderDefaultMax;
+        const nextDate = r.reminder_next_date ? formatDateHe(r.reminder_next_date) : '-';
+        const isDue = r.reminder_next_date && r.reminder_next_date <= todayCards;
+        const isDueSoon = r.reminder_next_date && r.reminder_next_date <= weekFromNowCards && !isDue;
+        const dateClass = isDue ? 'reminder-date-due' : isDueSoon ? 'reminder-date-soon' : '';
+        const docsReceived = r.docs_received || 0;
+        const docsTotal = r.docs_total || 0;
+        const progressPercent = docsTotal > 0 ? Math.round((docsReceived / docsTotal) * 100) : 0;
+        const isSuppressed = r.reminder_suppress === 'forever';
+
+        let maxText;
+        if (hasCustomMax) maxText = effectiveMax;
+        else if (effectiveMax != null) maxText = effectiveMax;
+        else maxText = '∞';
+
+        cards += `<li class="mobile-card${isSuppressed ? ' reminder-card-suppressed' : ''}" data-report-id="${escapeAttr(r.report_id)}">
+            <div class="mobile-card-primary">
+                <span class="mobile-card-checkbox"><input type="checkbox" class="reminder-checkbox" value="${escapeAttr(r.report_id)}" onchange="updateReminderSelectedCount()"></span>
+                <div class="mobile-card-info">
+                    <span class="mobile-card-name" onclick="viewClientDocs('${escapeAttr(r.report_id)}')">${escapeHtml(r.name)}</span>
+                    <div class="reminder-status-dropdown">
+                        <button class="reminder-status-btn ${status.class}" onclick="toggleStatusMenu(this, event)">
+                            ${status.label} <span class="stage-caret">&#x25BE;</span>
+                        </button>
+                        <div class="suppress-menu status-menu">
+                            ${isSuppressed
+                                ? `<button onclick="reminderAction('unsuppress', '${escapeAttr(r.report_id)}')">פעיל</button>`
+                                : `<button class="danger" onclick="confirmSuppress('suppress_forever', '${escapeOnclick(r.report_id)}', '${escapeOnclick(r.name)}')">ללא תזכורות</button>`
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="mobile-card-secondary">
+                ${!isSuppressed ? `
+                    <span class="mobile-card-detail editable-date" onclick="editReminderDate('${escapeAttr(r.report_id)}', this)">
+                        <span class="label">הבא</span>
+                        <span class="reminder-date ${dateClass}">${nextDate} <i data-lucide="pencil" class="edit-pencil"></i></span>
+                    </span>
+                ` : ''}
+                <span class="mobile-card-detail" onclick="toggleHistoryPopover(event, '${escapeAttr(r.report_id)}')" style="cursor:pointer">
+                    <span class="label">נשלח</span> ${r.last_reminder_sent_at ? formatDateHe(r.last_reminder_sent_at.split('T')[0]) : '-'}
+                </span>
+                <span class="mobile-card-detail" onclick="toggleHistoryPopover(event, '${escapeAttr(r.report_id)}')" style="cursor:pointer">
+                    <span class="label">נשלחו</span> ${r.reminder_count || 0}/${maxText}
+                </span>
+                ${showDocs && docsTotal > 0 ? `
+                    <span class="mobile-card-detail clickable-docs" onclick="toggleDocsPopover(event, '${escapeOnclick(r.report_id)}', '${escapeOnclick(r.name)}')">
+                        <span class="label">מסמכים</span>
+                        <span class="docs-count">${docsReceived}/${docsTotal}</span>
+                    </span>
+                ` : ''}
+            </div>
+            ${!isSuppressed ? `
+                <div class="mobile-card-actions">
+                    <button class="action-btn send" onclick="reminderAction('send_now', '${escapeAttr(r.report_id)}')" title="שלח עכשיו">
+                        <i data-lucide="send" class="icon-sm"></i>
+                    </button>
+                </div>
+            ` : ''}
+        </li>`;
+    }
+    cards += '</ul>';
+
+    html += cards + '</div>';
     return html;
 }
 
@@ -5706,8 +5936,66 @@ function renderQuestionnairesTable(items) {
     });
 
     html += `</tbody></table>`;
-    container.innerHTML = `<div class="table-scroll-container" role="region" tabindex="0" aria-label="טבלת שאלונים">${html}</div>`;
+
+    // Mobile card list (DL-214)
+    let cards = '<ul class="mobile-card-list" role="list" aria-label="רשימת שאלונים">';
+    items.forEach((item, qaIdx) => {
+        const id = item.report_record_id || '';
+        const name = item.client_info?.name || '—';
+        const spouse = item.client_info?.spouse || '—';
+        const date = formatDateDisplay(item.client_info?.submission_date || '');
+        const clientRecord = clientsData.find(c => c.report_id === id);
+        const stage = STAGES[clientRecord?.stage] || null;
+
+        cards += `<li class="mobile-card" data-qa-id="${id}">
+            <div class="mobile-card-primary">
+                <span class="mobile-card-checkbox" onclick="event.stopPropagation();">
+                    <input type="checkbox" class="questionnaire-row-checkbox" data-qa-id="${id}" onchange="updateQuestionnaireSelectedCount()">
+                </span>
+                <div class="mobile-card-info">
+                    <span class="mobile-card-name" style="cursor:default">${escapeHtml(name)}</span>
+                    ${stage ? `<span class="stage-badge ${stage.class}"><i data-lucide="${stage.icon}" class="icon-sm"></i> ${stage.label}</span>` : ''}
+                </div>
+            </div>
+            <div class="mobile-card-secondary">
+                ${spouse !== '—' ? `<span class="mobile-card-detail"><span class="label">בן/בת זוג</span> ${escapeHtml(spouse)}</span>` : ''}
+                <span class="mobile-card-detail"><span class="label">הגשה</span> ${date}</span>
+            </div>
+            <div class="mobile-card-actions">
+                <button class="action-btn view" onclick="navigateToDocManager('${id}')" title="מנהל מסמכים">
+                    <i data-lucide="folder-open" class="icon-sm"></i>
+                </button>
+                <button class="action-btn" style="background:var(--gray-100);color:var(--gray-600);" onclick="printSingleQuestionnaire('${id}')" title="הדפס שאלון">
+                    <i data-lucide="printer" class="icon-sm"></i>
+                </button>
+                <button class="expand-toggle" id="toggle-m-${id}" onclick="toggleQuestionnaireCardDetail('${id}')" title="הצג/הסתר תשובות">
+                    <i data-lucide="chevron-left" class="icon-sm"></i>
+                </button>
+            </div>
+            <div class="qa-card-detail" id="card-detail-${id}">
+                ${buildQADetailHTML(item)}
+            </div>
+        </li>`;
+    });
+    cards += '</ul>';
+
+    container.innerHTML = `<div class="table-scroll-container" role="region" tabindex="0" aria-label="טבלת שאלונים">${html}${cards}</div>`;
     if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+// Toggle questionnaire detail in mobile card (DL-214)
+function toggleQuestionnaireCardDetail(id) {
+    const detail = document.getElementById('card-detail-' + id);
+    if (!detail) return;
+    detail.classList.toggle('open');
+    const toggle = document.getElementById('toggle-m-' + id);
+    if (toggle) {
+        const icon = toggle.querySelector('i');
+        if (icon) {
+            icon.setAttribute('data-lucide', detail.classList.contains('open') ? 'chevron-down' : 'chevron-left');
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+        }
+    }
 }
 
 function toggleQaHideNoAnswers() {

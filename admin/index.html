@@ -145,7 +145,14 @@
                         </div>
                     </div>
                     <div class="card-body">
-                        <div class="filters">
+                        <!-- Mobile collapsed filter bar (DL-214) -->
+                        <div class="filters-mobile-bar" onclick="toggleMobileFilters()">
+                            <i data-lucide="search" class="icon-sm filter-bar-icon"></i>
+                            <span class="filter-bar-label">חיפוש וסינון</span>
+                            <span class="filter-bar-count" id="activeFilterCount"></span>
+                            <i data-lucide="chevron-down" class="icon-sm filter-bar-chevron"></i>
+                        </div>
+                        <div class="filters filters-mobile-hidden">
                             <div class="filter-group">
                                 <label><i data-lucide="search" class="icon-sm"></i> חיפוש:</label>
                                 <input type="text" id="searchInput" placeholder="חיפוש לפי שם..."
