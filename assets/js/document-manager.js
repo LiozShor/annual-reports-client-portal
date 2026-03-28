@@ -2729,9 +2729,15 @@ function updateStickyBar() {
             </button>
             <button class="btn btn-ghost btn-sm" onclick="resetForm()">איפוס</button>`;
     } else {
-        actionsEl.innerHTML = `
+        const sentLabel = DOCS_FIRST_SENT_AT
+            ? `שלח שוב`
+            : 'שלח ללקוח';
+        const sentInfo = DOCS_FIRST_SENT_AT
+            ? `<span class="text-muted text-sm" style="margin-inline-end:var(--sp-2)">נשלח ${new Date(DOCS_FIRST_SENT_AT).toLocaleDateString('he-IL')}</span>`
+            : '';
+        actionsEl.innerHTML = `${sentInfo}
             <button class="btn btn-success btn-sm" onclick="approveAndSendToClient()">
-                <i data-lucide="send" class="icon-sm"></i> שלח ללקוח
+                <i data-lucide="send" class="icon-sm"></i> ${sentLabel}
             </button>`;
     }
     if (typeof lucide !== 'undefined') lucide.createIcons();
