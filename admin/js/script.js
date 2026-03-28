@@ -347,9 +347,12 @@ function loadMobileDocPreview(recordId) {
     loading.style.display = '';
 
     getDocPreviewUrl(item.onedrive_item_id).then(({ previewUrl, downloadUrl }) => {
-        loading.style.display = 'none';
+        // Keep spinner until iframe actually loads
+        iframe.onload = () => {
+            loading.style.display = 'none';
+            iframe.style.display = '';
+        };
         iframe.src = previewUrl;
-        iframe.style.display = '';
         if (downloadUrl) {
             downloadBtn.href = downloadUrl;
             downloadBtn.style.display = '';
@@ -2364,9 +2367,13 @@ async function loadDocPreview(recordId) {
         const { previewUrl, downloadUrl } = await getDocPreviewUrl(item.onedrive_item_id);
         // Verify still the active card (user might have clicked another)
         if (activePreviewItemId !== recordId) return;
-        loading.style.display = 'none';
+        // Keep spinner until iframe actually loads
+        iframe.onload = () => {
+            if (activePreviewItemId !== recordId) return;
+            loading.style.display = 'none';
+            iframe.style.display = '';
+        };
         iframe.src = previewUrl;
-        iframe.style.display = '';
         if (downloadUrl) {
             downloadBtn.href = downloadUrl;
             downloadBtn.style.display = '';
