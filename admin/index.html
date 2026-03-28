@@ -859,6 +859,86 @@
     <!-- Chat Widget -->
     <div id="chatWidget"></div>
 
+    <!-- Mobile Bottom Nav (hidden on desktop via CSS) -->
+    <div class="bottom-nav-backdrop" id="bottomNavBackdrop" onclick="closeBottomNavPopovers()"></div>
+    <nav class="bottom-nav" id="bottomNav">
+        <button class="bottom-nav-item active" onclick="switchTab('dashboard', event)" data-tab="dashboard">
+            <i data-lucide="bar-chart-3"></i>
+            <span>לוח בקרה</span>
+        </button>
+        <button class="bottom-nav-item" onclick="switchTab('import', event)" data-tab="import">
+            <i data-lucide="upload"></i>
+            <span>הוספת לקוחות</span>
+        </button>
+        <button class="bottom-nav-item" onclick="toggleBottomNavSubmenu(event)" data-tab="questionnaires-group">
+            <i data-lucide="file-text"></i>
+            <span>שאלונים</span>
+        </button>
+        <button class="bottom-nav-item" onclick="switchTab('ai-review', event)" data-tab="ai-review">
+            <i data-lucide="scan-eye"></i>
+            <span>סקירת AI</span>
+            <span class="bottom-nav-badge" id="aiReviewBottomBadge" style="display:none;">0</span>
+        </button>
+        <button class="bottom-nav-item" onclick="toggleBottomNavMore(event)" data-tab="more">
+            <i data-lucide="more-horizontal"></i>
+            <span>עוד</span>
+        </button>
+
+        <!-- Questionnaires popover (opens upward) -->
+        <div class="bottom-nav-popover" id="bottomNavQuestPopover">
+            <button onclick="switchTabFromBottomNav('send', event)">
+                <i data-lucide="mail" class="icon-sm"></i> שליחת שאלונים
+            </button>
+            <button onclick="switchTabFromBottomNav('questionnaires', event)">
+                <i data-lucide="file-text" class="icon-sm"></i> שאלונים שהתקבלו
+            </button>
+        </div>
+
+        <!-- More popover (opens upward) -->
+        <div class="bottom-nav-popover" id="bottomNavMorePopover">
+            <button onclick="switchTabFromBottomNav('review', event)">
+                <i data-lucide="clipboard-check" class="icon-sm"></i> מוכנים להכנה
+                <span class="bottom-nav-popover-badge" id="reviewBottomBadge" style="display:none;">0</span>
+            </button>
+            <button onclick="switchTabFromBottomNav('reminders', event)">
+                <i data-lucide="bell" class="icon-sm"></i> תזכורות חודשיות
+            </button>
+        </div>
+    </nav>
+
+    <!-- Mobile Preview Modal (AI Review) -->
+    <div id="mobilePreviewModal" class="ai-modal-overlay" onclick="if(event.target===this)closeMobilePreview()">
+        <div class="ai-modal-panel mobile-preview-panel">
+            <div class="mobile-preview-header">
+                <span class="preview-file-name" id="mobilePreviewFileName"></span>
+                <div class="mobile-preview-actions">
+                    <a href="#" target="_blank" id="mobilePreviewOpenTab" class="btn btn-ghost btn-sm" title="פתח בלשונית">
+                        <i data-lucide="external-link" class="icon-sm"></i>
+                    </a>
+                    <a href="#" id="mobilePreviewDownload" class="btn btn-ghost btn-sm" style="display:none;" download title="הורד">
+                        <i data-lucide="download" class="icon-sm"></i>
+                    </a>
+                    <button class="btn btn-ghost btn-sm" onclick="closeMobilePreview()">
+                        <i data-lucide="x" class="icon-sm"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="mobile-preview-body">
+                <div class="preview-loading" id="mobilePreviewLoading" style="display:none;">
+                    <div class="spinner spinner-lg"></div>
+                    <p>טוען תצוגה מקדימה...</p>
+                </div>
+                <div class="preview-error" id="mobilePreviewError" style="display:none;">
+                    <i data-lucide="alert-triangle" class="icon-2xl"></i>
+                    <p id="mobilePreviewErrorMsg">לא ניתן לטעון תצוגה מקדימה</p>
+                </div>
+                <iframe class="preview-iframe" id="mobilePreviewIframe" style="display:none;"></iframe>
+            </div>
+            <!-- AI classification info + actions (populated by JS) -->
+            <div class="mobile-preview-footer" id="mobilePreviewFooter" style="display:none;"></div>
+        </div>
+    </div>
+
     <!-- Script -->
     <script src="../assets/js/error-handler.js"></script>
     <script src="../assets/js/resilient-fetch.js"></script>
