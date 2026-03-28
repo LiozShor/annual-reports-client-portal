@@ -387,7 +387,7 @@ function buildMobilePreviewFooter(item, footer) {
                 <span class="ai-confidence-badge">${confidencePercent}%</span>
             </div>`;
         if (item.ai_reason) {
-            classificationHtml += `<div class="ai-reason-inline" style="font-size:var(--text-xs);color:var(--gray-500);margin-top:var(--sp-1);">${escapeHtml(item.ai_reason)}</div>`;
+            classificationHtml += `<div class="ai-reason-inline" style="font-size:var(--text-xs);color:var(--gray-500);margin-top:var(--sp-1);">${escapeHtml(friendlyAIReason(item.ai_reason))}</div>`;
         }
         const approveDisabled = item.is_unrequested;
         actionsHtml = `
@@ -428,7 +428,7 @@ function buildMobilePreviewFooter(item, footer) {
     } else {
         // Unmatched
         const reasonHtml = item.ai_reason
-            ? `<div style="font-size:var(--text-xs);color:var(--gray-500);margin-top:var(--sp-1);">${escapeHtml(item.ai_reason)}</div>`
+            ? `<div style="font-size:var(--text-xs);color:var(--gray-500);margin-top:var(--sp-1);">${escapeHtml(friendlyAIReason(item.ai_reason))}</div>`
             : '';
         classificationHtml = `
             <div class="ai-classification-result">
@@ -2495,6 +2495,12 @@ const RELATED_TEMPLATES = {
     T305: ['T305', 'T306'], T306: ['T305', 'T306'],
 };
 
+function friendlyAIReason(reason) {
+    if (!reason) return '';
+    if (reason.startsWith('Classification failed')) return 'קובץ PDF פגום';
+    return reason;
+}
+
 function getCardState(item) {
     if (!item.matched_template_id) return 'unmatched';
     const q = item.issuer_match_quality;
@@ -2819,7 +2825,7 @@ function renderAICard(item) {
     </button>`;
 
     const evidenceIcon = item.ai_reason
-        ? `<span class="ai-evidence-trigger" data-tooltip="${escapeAttr(item.ai_reason)}"><i data-lucide="bot" class="icon-sm"></i>?</span>`
+        ? `<span class="ai-evidence-trigger" data-tooltip="${escapeAttr(friendlyAIReason(item.ai_reason))}"><i data-lucide="bot" class="icon-sm"></i>?</span>`
         : '';
 
     let classificationHtml = '';
@@ -2955,7 +2961,7 @@ function renderAICard(item) {
     } else {
         // State D: Unmatched — amber border, show AI reason inline
         const reasonHtml = item.ai_reason
-            ? `<div class="ai-reason-inline">${escapeHtml(item.ai_reason)}</div>`
+            ? `<div class="ai-reason-inline">${escapeHtml(friendlyAIReason(item.ai_reason))}</div>`
             : '';
         classificationHtml = `
             <span class="ai-template-unmatched">🤖 לא זוהה</span>
