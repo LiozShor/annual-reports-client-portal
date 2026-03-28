@@ -47,6 +47,7 @@ const ENDPOINTS = {
     // --- Classification (migrated to Cloudflare Workers — DL-173) ---
     GET_PENDING_CLASSIFICATIONS: `${CF_BASE}/get-pending-classifications`,
     REVIEW_CLASSIFICATION:     `${CF_BASE}/review-classification`,
+    DISMISS_CLASSIFICATIONS:   `${CF_BASE}/dismiss-classifications`,
 
     // --- Notifications (migrated to Cloudflare Workers — DL-174, hybrid) ---
     ADMIN_REMINDERS:           `${CF_BASE}/admin-reminders`,
