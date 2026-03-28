@@ -5395,3 +5395,301 @@ tr:hover .client-edit-link {
 .mobile-preview-footer .ai-comparison-radio {
     font-size: var(--text-sm);
 }
+
+/* ========================================================================
+   DL-214: Mobile Table → Card Layout
+   ======================================================================== */
+
+/* --- Card list (hidden on desktop, shown at ≤768px) --- */
+.mobile-card-list {
+    display: none;
+    flex-direction: column;
+    gap: var(--sp-2);
+    padding: var(--sp-2);
+}
+
+.mobile-card {
+    background: #fff;
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+}
+
+.mobile-card-primary {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-3);
+    padding: var(--sp-3) var(--sp-3) var(--sp-2);
+}
+
+.mobile-card-primary .mobile-card-checkbox {
+    flex-shrink: 0;
+    width: 20px;
+    height: 20px;
+    min-width: 44px;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.mobile-card-primary .mobile-card-checkbox input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+}
+
+.mobile-card-primary .mobile-card-info {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--sp-2);
+}
+
+.mobile-card-primary .mobile-card-name {
+    font-weight: 600;
+    font-size: var(--text-sm);
+    color: var(--gray-900);
+    cursor: pointer;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 60%;
+}
+
+.mobile-card-primary .mobile-card-name:hover {
+    color: var(--brand-600);
+}
+
+.mobile-card-primary .stage-badge {
+    font-size: var(--text-xs);
+    flex-shrink: 0;
+}
+
+.mobile-card-primary .waiting-badge {
+    font-size: var(--text-xs);
+    flex-shrink: 0;
+}
+
+.mobile-card-primary .fifo-number {
+    font-weight: 700;
+    color: var(--gray-500);
+    font-size: var(--text-xs);
+    flex-shrink: 0;
+}
+
+.mobile-card-secondary {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--sp-2) var(--sp-3);
+    padding: 0 var(--sp-3) var(--sp-2);
+    font-size: var(--text-xs);
+    color: var(--gray-600);
+}
+
+.mobile-card-secondary .docs-progress-cell {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--sp-1);
+}
+
+.mobile-card-secondary .docs-progress-cell .progress-bar {
+    width: 48px;
+    height: 6px;
+}
+
+.mobile-card-secondary .email-cell {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--sp-1);
+}
+
+.mobile-card-secondary .email-link {
+    font-size: var(--text-xs);
+    max-width: 180px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.mobile-card-secondary .mobile-card-detail {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--sp-1);
+}
+
+.mobile-card-secondary .mobile-card-detail .label {
+    color: var(--gray-400);
+}
+
+.mobile-card-secondary .notes-text {
+    max-width: 200px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-style: italic;
+    color: var(--gray-500);
+}
+
+.mobile-card-secondary .reminder-date {
+    font-size: var(--text-xs);
+}
+
+.mobile-card-secondary .reminder-date-due {
+    color: var(--red-600);
+    font-weight: 600;
+}
+
+.mobile-card-secondary .reminder-date-soon {
+    color: var(--orange-600);
+    font-weight: 600;
+}
+
+.mobile-card-secondary .reminder-max-cell {
+    font-size: var(--text-xs);
+}
+
+.mobile-card-secondary .reminder-status-btn {
+    font-size: var(--text-xs);
+    padding: var(--sp-1) var(--sp-2);
+}
+
+.mobile-card-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: var(--sp-2);
+    padding: var(--sp-2) var(--sp-3);
+    border-top: 1px solid var(--gray-100);
+    background: var(--gray-50);
+}
+
+.mobile-card-actions .action-btn {
+    min-width: 44px;
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.mobile-card-actions .row-overflow-dropdown {
+    position: relative;
+}
+
+.mobile-card-actions .reminder-status-dropdown {
+    position: relative;
+}
+
+/* Questionnaire detail expansion inside card */
+.mobile-card .qa-card-detail {
+    display: none;
+    padding: var(--sp-3);
+    border-top: 1px solid var(--gray-100);
+    background: var(--gray-50);
+}
+
+.mobile-card .qa-card-detail.open {
+    display: block;
+}
+
+/* Suppressed reminder card */
+.mobile-card.reminder-card-suppressed {
+    opacity: 0.6;
+}
+
+/* --- Collapsible filter bar (mobile only) --- */
+.filters-mobile-bar {
+    display: none;
+    align-items: center;
+    gap: var(--sp-2);
+    padding: var(--sp-2) var(--sp-3);
+    background: var(--gray-50);
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius-lg);
+    cursor: pointer;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    margin-bottom: var(--sp-2);
+}
+
+.filters-mobile-bar .filter-bar-icon {
+    color: var(--gray-500);
+}
+
+.filters-mobile-bar .filter-bar-label {
+    flex: 1;
+    font-size: var(--text-sm);
+    color: var(--gray-600);
+}
+
+.filters-mobile-bar .filter-bar-count {
+    background: var(--brand-600);
+    color: white;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 2px 7px;
+    border-radius: 10px;
+    min-width: 20px;
+    text-align: center;
+}
+
+.filters-mobile-bar .filter-bar-count:empty {
+    display: none;
+}
+
+.filters-mobile-bar .filter-bar-chevron {
+    color: var(--gray-400);
+    transition: transform 0.2s ease;
+}
+
+.filters-mobile-bar.expanded .filter-bar-chevron {
+    transform: rotate(180deg);
+}
+
+/* --- Media queries: toggle table ↔ cards at 768px --- */
+@media (max-width: 768px) {
+    /* Show card lists, hide tables inside scroll containers */
+    .table-scroll-container > table {
+        display: none;
+    }
+
+    .mobile-card-list {
+        display: flex;
+    }
+
+    /* Show mobile filter bar, hide desktop filters */
+    .filters-mobile-bar {
+        display: flex;
+    }
+
+    .filters.filters-mobile-hidden {
+        display: none;
+    }
+
+    /* When filters are expanded on mobile */
+    .filters.filters-mobile-visible {
+        display: flex;
+        flex-direction: column;
+        align-items: stretch;
+        margin-bottom: var(--sp-2);
+    }
+}
+
+@media (min-width: 769px) {
+    /* Ensure desktop always shows tables and hides cards */
+    .mobile-card-list {
+        display: none !important;
+    }
+
+    .filters-mobile-bar {
+        display: none !important;
+    }
+
+    .filters.filters-mobile-hidden {
+        display: flex !important;
+    }
+}
