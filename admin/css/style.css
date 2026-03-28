@@ -5740,6 +5740,15 @@ tr:hover .client-edit-link {
     }
 }
 
+/* Hide chat widget until authenticated (it lives outside #app) */
+#chatWidget {
+    display: none;
+}
+
+.app.visible ~ #chatWidget {
+    display: block;
+}
+
 /* ==================== ENTITY TABS ==================== */
 .entity-tabs {
     display: flex;
