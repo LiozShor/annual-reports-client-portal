@@ -4849,6 +4849,19 @@ tr:hover .client-edit-link {
     border-color: var(--red-200);
     color: var(--red-600);
 }
+.streaming-cursor {
+    display: inline-block;
+    width: 2px;
+    height: 1em;
+    background: var(--brand-600);
+    margin-inline-start: 2px;
+    vertical-align: text-bottom;
+    animation: cursor-blink 0.7s steps(1) infinite;
+}
+@keyframes cursor-blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0; }
+}
 .chat-msg table {
     width: 100%;
     margin: 8px 0;

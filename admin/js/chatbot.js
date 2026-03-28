@@ -547,12 +547,67 @@
         } else if (role === 'user') {
             wrapper.textContent = content;
         } else {
-            // Assistant — parse markdown-like content
-            wrapper.innerHTML = formatAssistantContent(content);
+            // Assistant — streaming typewriter effect
+            const html = formatAssistantContent(content);
+            wrapper.innerHTML = '';
+            container.appendChild(wrapper);
+            container.scrollTop = container.scrollHeight;
+            typewriterEffect(wrapper, html, container);
+            return;
         }
 
         container.appendChild(wrapper);
         container.scrollTop = container.scrollHeight;
+    }
+
+    function typewriterEffect(element, html, scrollContainer) {
+        // Parse HTML into a temporary container to extract word-level chunks
+        const tmp = document.createElement('div');
+        tmp.innerHTML = html;
+        const chunks = [];
+        extractChunks(tmp, chunks);
+
+        // Add blinking cursor
+        const cursor = document.createElement('span');
+        cursor.className = 'streaming-cursor';
+        element.appendChild(cursor);
+
+        let i = 0;
+        const speed = 20; // ms per chunk
+
+        function tick() {
+            if (i >= chunks.length) {
+                cursor.remove();
+                return;
+            }
+            const chunk = chunks[i++];
+            // Insert before cursor
+            if (chunk.type === 'node') {
+                element.insertBefore(chunk.value, cursor);
+            } else {
+                // text — append word by word into current text node or create one
+                const textNode = document.createTextNode(chunk.value);
+                element.insertBefore(textNode, cursor);
+            }
+            scrollContainer.scrollTop = scrollContainer.scrollHeight;
+            requestAnimationFrame(() => setTimeout(tick, speed));
+        }
+        tick();
+    }
+
+    function extractChunks(node, chunks) {
+        for (const child of node.childNodes) {
+            if (child.nodeType === Node.TEXT_NODE) {
+                // Split text into words, preserving spaces
+                const words = child.textContent.match(/\S+\s*/g) || [];
+                for (const w of words) {
+                    chunks.push({ type: 'text', value: w });
+                }
+            } else {
+                // Element node — add as a single chunk (tables, links, brs, etc.)
+                chunks.push({ type: 'node', value: child.cloneNode(true) });
+            }
+        }
     }
 
     function formatAssistantContent(text) {
