@@ -5739,3 +5739,93 @@ tr:hover .client-edit-link {
         display: flex !important;
     }
 }
+
+/* ==================== ENTITY TABS ==================== */
+.entity-tabs {
+    display: flex;
+    gap: var(--sp-2);
+    padding: var(--sp-3) var(--sp-5);
+    background: white;
+    border-bottom: 1px solid var(--gray-200);
+}
+
+.entity-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--sp-2);
+    padding: var(--sp-2) var(--sp-4);
+    border-radius: var(--radius-full);
+    border: 1px solid transparent;
+    font-size: var(--text-sm);
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    font-family: inherit;
+}
+
+.entity-tab.active {
+    background: var(--brand-600);
+    color: white;
+}
+
+.entity-tab:not(.active) {
+    background: var(--gray-100);
+    color: var(--gray-600);
+    border-color: var(--gray-200);
+}
+
+.entity-tab:not(.active):hover {
+    background: var(--gray-200);
+    color: var(--gray-700);
+}
+
+/* Mobile entity segmented control */
+.entity-toggle-mobile {
+    display: none;
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    width: 100%;
+}
+
+.entity-toggle-btn {
+    flex: 1;
+    padding: var(--sp-2) var(--sp-3);
+    border: none;
+    background: white;
+    color: var(--gray-600);
+    font-size: var(--text-sm);
+    font-weight: 500;
+    cursor: pointer;
+    min-height: 44px;
+    transition: all 0.15s ease;
+    font-family: inherit;
+}
+
+.entity-toggle-btn.active {
+    background: var(--brand-600);
+    color: white;
+}
+
+.entity-toggle-btn:not(.active):hover {
+    background: var(--gray-50);
+}
+
+/* Desktop: show entity-tabs, hide mobile toggle */
+@media (min-width: 769px) {
+    .entity-toggle-mobile {
+        display: none !important;
+    }
+}
+
+/* Mobile: hide entity-tabs, show mobile toggle */
+@media (max-width: 768px) {
+    .entity-tabs {
+        display: none !important;
+    }
+
+    .entity-toggle-mobile {
+        display: flex;
+        margin-bottom: var(--sp-2);
+    }
+}

@@ -59,6 +59,15 @@
             </nav>
         </header>
 
+        <div class="entity-tabs">
+            <button class="entity-tab active" data-type="annual_report" onclick="switchEntityTab('annual_report')">
+                <i data-lucide="file-text" class="icon-sm"></i> דוחות שנתיים
+            </button>
+            <button class="entity-tab" data-type="capital_statement" onclick="switchEntityTab('capital_statement')">
+                <i data-lucide="landmark" class="icon-sm"></i> הצהרות הון
+            </button>
+        </div>
+
         <div class="tabs-nav">
             <button class="tab-item active" onclick="switchTab('dashboard', event)"><i data-lucide="bar-chart-3" class="icon-sm"></i> לוח בקרה</button>
             <button class="tab-item" onclick="switchTab('import', event)"><i data-lucide="upload" class="icon-sm"></i> הוספת לקוחות</button>
@@ -147,12 +156,18 @@
                     <div class="card-body">
                         <!-- Mobile collapsed filter bar (DL-214) -->
                         <div class="filters-mobile-bar" onclick="toggleMobileFilters()">
+                            <span class="entity-toggle-mobile-inline" id="entityBarLabel" onclick="event.stopPropagation()">דוחות שנתיים</span>
+                            <span class="filter-bar-separator">·</span>
                             <i data-lucide="search" class="icon-sm filter-bar-icon"></i>
                             <span class="filter-bar-label">חיפוש וסינון</span>
                             <span class="filter-bar-count" id="activeFilterCount"></span>
                             <i data-lucide="chevron-down" class="icon-sm filter-bar-chevron"></i>
                         </div>
                         <div class="filters filters-mobile-hidden">
+                            <div class="entity-toggle-mobile">
+                                <button class="entity-toggle-btn active" data-type="annual_report" onclick="switchEntityTab('annual_report')">דוחות שנתיים</button>
+                                <button class="entity-toggle-btn" data-type="capital_statement" onclick="switchEntityTab('capital_statement')">הצהרות הון</button>
+                            </div>
                             <div class="filter-group">
                                 <label><i data-lucide="search" class="icon-sm"></i> חיפוש:</label>
                                 <input type="text" id="searchInput" placeholder="חיפוש לפי שם..."
@@ -287,6 +302,13 @@
                                     <select id="manualYear">
                                     </select>
                                 </div>
+                                <div class="form-field">
+                                    <label class="form-label">סוג דוח:</label>
+                                    <select id="manualFilingType">
+                                        <option value="annual_report">דוח שנתי</option>
+                                        <option value="capital_statement">הצהרת הון</option>
+                                    </select>
+                                </div>
                                 <button class="btn btn-success w-full" onclick="addManualClient()">
                                     <i data-lucide="zap" class="icon-sm"></i> הוסף למערכת
                                 </button>
@@ -370,6 +392,13 @@
                                         <select id="importYear">
                                         </select>
                                     </div>
+                                    <div class="option-row">
+                                        <label><i data-lucide="file-text" class="icon-sm"></i> סוג דוח:</label>
+                                        <select id="importFilingType">
+                                            <option value="annual_report">דוח שנתי</option>
+                                            <option value="capital_statement">הצהרת הון</option>
+                                        </select>
+                                    </div>
                                 </div>
 
                                 <div class="table-wrapper mt-4">
@@ -417,6 +446,13 @@
                             <div class="form-field">
                                 <label class="form-label">לשנה:</label>
                                 <select id="rolloverTargetYear"></select>
+                            </div>
+                            <div class="form-field">
+                                <label class="form-label">סוג דוח:</label>
+                                <select id="rolloverFilingType">
+                                    <option value="annual_report">דוח שנתי</option>
+                                    <option value="capital_statement">הצהרת הון</option>
+                                </select>
                             </div>
                             <button class="btn btn-secondary w-full" onclick="previewYearRollover()">
                                 <i data-lucide="eye" class="icon-sm"></i> תצוגה מקדימה
