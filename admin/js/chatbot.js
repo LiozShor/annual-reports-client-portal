@@ -769,6 +769,19 @@
         if (panel) panel.classList.toggle('chat-open', isOpen);
         if (fab) fab.classList.toggle('chat-fab-hidden', isOpen);
 
+        // Mobile full-screen mode
+        const isMobile = window.matchMedia('(max-width: 768px)').matches;
+        if (isMobile) {
+            document.body.classList.toggle('chat-fullscreen', isOpen);
+            document.body.style.overflow = isOpen ? 'hidden' : '';
+            if (isOpen) {
+                setTimeout(() => {
+                    const input = document.getElementById('chatInput');
+                    if (input) input.focus();
+                }, 300);
+            }
+        }
+
         // Cancel pending approval if closing while waiting
         if (!isOpen && pendingApprovalReject) {
             pendingApprovalReject(new Error('cancelled'));
@@ -874,10 +887,28 @@
         `;
     }
 
+    function setupKeyboardHandling() {
+        if (!window.visualViewport) return;
+        const panel = document.getElementById('chatPanel');
+        if (!panel) return;
+
+        window.visualViewport.addEventListener('resize', () => {
+            if (!isOpen) return;
+            const isMobile = window.matchMedia('(max-width: 768px)').matches;
+            if (!isMobile) return;
+            // Offset = difference between layout viewport and visual viewport
+            const offset = window.innerHeight - window.visualViewport.height;
+            panel.style.height = offset > 0
+                ? `${window.visualViewport.height}px`
+                : '100dvh';
+        });
+    }
+
     // ==================== 15. init() ====================
 
     function init() {
         createWidgetHTML();
+        setupKeyboardHandling();
 
         // Delegated click handler for client links (data-report-id)
         const messagesEl = document.getElementById('chatMessages');

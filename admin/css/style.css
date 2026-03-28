@@ -3734,9 +3734,6 @@ tr.reminder-loading td:last-child {
         width: 100%;
     }
 
-    .chat-panel {
-        width: calc(100vw - 32px);
-    }
 }
 
 /* ==================== INLINE CONFIRM (AI Review cards) ==================== */
@@ -4740,7 +4737,7 @@ tr:hover .client-edit-link {
     border-radius: 50%;
     background: var(--brand-600);
     color: white;
-    z-index: 950;
+    z-index: 960;
     box-shadow: var(--shadow-lg);
     cursor: pointer;
     border: none;
@@ -4769,7 +4766,7 @@ tr:hover .client-edit-link {
     max-height: 500px;
     border-radius: var(--radius-xl);
     box-shadow: var(--shadow-lg);
-    z-index: 950;
+    z-index: 960;
     background: white;
     display: flex;
     flex-direction: column;
@@ -5045,31 +5042,57 @@ tr:hover .client-edit-link {
     color: var(--brand-700, #4338ca);
 }
 
-/* --- Mobile --- */
+/* --- Mobile chat overhaul (DL-215) --- */
 @media (max-width: 768px) {
+    /* FAB above bottom nav */
+    .chat-fab {
+        bottom: calc(76px + env(safe-area-inset-bottom, 0px));
+        inset-inline-start: 16px;
+        left: auto;
+        right: auto;
+        width: 52px;
+        height: 52px;
+    }
+
+    /* Full-screen takeover */
     .chat-panel.chat-open {
+        position: fixed;
         inset: 0;
         width: 100%;
-        max-height: 100%;
+        max-height: none;
+        height: 100dvh;
         border-radius: 0;
-        bottom: 0;
-        left: 0;
+        display: flex;
+        flex-direction: column;
     }
-    .chat-messages {
-        max-height: calc(100vh - 140px);
-    }
-    .chat-fab {
-        bottom: 16px;
-        left: 16px;
-    }
-}
 
-@media (max-width: 480px) {
-    .chat-panel {
-        width: calc(100vw - 32px);
+    /* Header safe area */
+    .chat-panel .chat-header {
+        padding-top: calc(8px + env(safe-area-inset-top, 0px));
+        min-height: 48px;
     }
-    .chat-panel.chat-open {
-        width: 100%;
+
+    /* Messages fill remaining space */
+    .chat-panel .chat-messages {
+        flex: 1;
+        max-height: none;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    /* Input row safe area + touch targets */
+    .chat-panel .chat-input-row {
+        padding-bottom: env(safe-area-inset-bottom, 0px);
+    }
+    .chat-panel .chat-input-row input,
+    .chat-panel .chat-input-row button {
+        min-height: 44px;
+    }
+
+    /* Hide bottom nav when chat is full-screen */
+    body.chat-fullscreen .bottom-nav,
+    body.chat-fullscreen .bottom-nav-backdrop {
+        display: none !important;
     }
 }
 
