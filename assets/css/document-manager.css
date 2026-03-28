@@ -1817,6 +1817,13 @@ body {
     word-break: break-word;
 }
 
+.cn-label {
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: var(--gray-400);
+    letter-spacing: 0.02em;
+}
+
 .cn-snippet {
     font-size: 0.75rem;
     color: var(--gray-500);
