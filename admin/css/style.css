@@ -4862,9 +4862,15 @@ tr:hover .client-edit-link {
     0%, 100% { opacity: 1; }
     50% { opacity: 0; }
 }
+.chat-msg:has(table) {
+    max-width: 100%;
+}
 .chat-msg table {
     width: 100%;
     margin: 8px 0;
+}
+.chat-msg [dir="rtl"] {
+    overflow-x: auto;
 }
 
 /* --- Approval Cards --- */
