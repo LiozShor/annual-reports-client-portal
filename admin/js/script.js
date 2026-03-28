@@ -5520,6 +5520,7 @@ checkAuth();
 let questionnairesData = [];
 let questionnaireLoaded = false;
 let questionnaireFilteredData = [];
+let qaHideNoAnswers = true;
 
 const QA_SORT_CONFIG = {
     qa_name:  { accessor: i => i.client_info?.name || '', type: 'string' },
@@ -5662,7 +5663,7 @@ function renderQuestionnairesTable(items) {
             </thead>
             <tbody>`;
 
-    items.forEach(item => {
+    items.forEach((item, qaIdx) => {
         const id = item.report_record_id || '';
         const name = item.client_info?.name || '—';
         const spouse = item.client_info?.spouse || '—';
@@ -5695,7 +5696,7 @@ function renderQuestionnairesTable(items) {
                         </div>
                     </td>
                 </tr>
-                <tr class="qa-detail-row" id="detail-${id}" style="display:none;">
+                <tr class="qa-detail-row" id="detail-${id}" data-qa-idx="${qaIdx}" style="display:none;">
                     <td colspan="6">
                         <div class="qa-detail-content">
                             ${buildQADetailHTML(item)}
@@ -5706,6 +5707,26 @@ function renderQuestionnairesTable(items) {
 
     html += `</tbody></table>`;
     container.innerHTML = `<div class="table-scroll-container" role="region" tabindex="0" aria-label="טבלת שאלונים">${html}</div>`;
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function toggleQaHideNoAnswers() {
+    qaHideNoAnswers = !qaHideNoAnswers;
+    const btn = document.getElementById('qaToggleNoBtn');
+    if (btn) {
+        btn.innerHTML = qaHideNoAnswers
+            ? '<i data-lucide="eye" class="icon-sm"></i> הצג תשובות לא'
+            : '<i data-lucide="eye-off" class="icon-sm"></i> הסתר תשובות לא';
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+    }
+    // Re-render all open detail rows
+    document.querySelectorAll('.qa-detail-row').forEach(row => {
+        const idx = row.dataset.qaIdx;
+        if (idx !== undefined && questionnaireFilteredData[idx]) {
+            const contentEl = row.querySelector('.qa-detail-content');
+            if (contentEl) contentEl.innerHTML = buildQADetailHTML(questionnaireFilteredData[idx]);
+        }
+    });
     if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
@@ -5747,7 +5768,9 @@ function buildQADetailHTML(item) {
             </div>
         </div>`;
 
-    if (answers.length === 0) {
+    const displayAnswers = qaHideNoAnswers ? answers.filter(a => a.value !== '✗ לא') : answers;
+
+    if (displayAnswers.length === 0) {
         html += `<p style="color:var(--gray-400); font-size:var(--text-sm);">אין תשובות להצגה</p>`;
     } else {
         html += `
@@ -5759,7 +5782,7 @@ function buildQADetailHTML(item) {
                 </tr>
             </thead>
             <tbody>`;
-        answers.forEach(({ label, value }) => {
+        displayAnswers.forEach(({ label, value }) => {
             html += `
                 <tr>
                     <td class="qa-question-col">${escapeHtml(label)}</td>
