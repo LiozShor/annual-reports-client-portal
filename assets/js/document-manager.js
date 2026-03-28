@@ -2528,8 +2528,9 @@ function renderClientNotes() {
             const dateStr = entry.date || '';
             const senderStr = entry.sender_email ? ` · ${escapeHtml(entry.sender_email)}` : '';
             const snippetHtml = entry.raw_snippet
-                ? `<div class="cn-snippet">${escapeHtml(entry.raw_snippet)}</div>`
+                ? `<div class="cn-snippet"><span class="cn-label">טקסט מקורי:</span> ${escapeHtml(entry.raw_snippet)}</div>`
                 : '';
+            const summaryLabel = isEmail ? '<span class="cn-label">סיכום AI:</span> ' : '';
 
             html += `<div class="cn-entry" data-cn-id="${escapeAttr(entry.id)}">
                 <div class="cn-icon ${iconClass}">
@@ -2539,7 +2540,7 @@ function renderClientNotes() {
                     <div class="cn-meta">
                         <span>${escapeHtml(dateStr)}</span>${senderStr}
                     </div>
-                    <div class="cn-summary">${escapeHtml(entry.summary)}</div>
+                    <div class="cn-summary">${summaryLabel}${escapeHtml(entry.summary)}</div>
                     ${snippetHtml}
                 </div>
                 <div class="cn-actions">
