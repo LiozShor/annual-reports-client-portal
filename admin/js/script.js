@@ -2975,6 +2975,94 @@ function transitionCardToReviewed(recordId, newReviewStatus, responseData) {
 
     recalcAIStats();
     if (typeof lucide !== 'undefined') lucide.createIcons();
+
+    // DL-210: Check if all items for this client are now reviewed
+    if (item) {
+        const clientName = item.client_name;
+        const clientItems = aiClassificationsData.filter(i => i.client_name === clientName);
+        const pendingLeft = clientItems.filter(i => (i.review_status || 'pending') === 'pending').length;
+        if (pendingLeft === 0 && clientItems.length > 0) {
+            showClientReviewDonePrompt(clientName);
+        }
+    }
+}
+
+// DL-210: Show "mark review as done?" prompt when all client items are reviewed
+function showClientReviewDonePrompt(clientName) {
+    const accordion = document.querySelector(`.ai-accordion[data-client="${CSS.escape(clientName)}"]`);
+    if (!accordion) return;
+
+    // Scroll to accordion header
+    accordion.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+    // Remove existing prompt if any
+    const existing = accordion.querySelector('.ai-review-done-prompt');
+    if (existing) existing.remove();
+
+    // Count approved/rejected/reassigned
+    const clientItems = aiClassificationsData.filter(i => i.client_name === clientName);
+    const approved = clientItems.filter(i => i.review_status === 'approved').length;
+    const rejected = clientItems.filter(i => i.review_status === 'rejected').length;
+    const reassigned = clientItems.filter(i => i.review_status === 'reassigned').length;
+
+    const statParts = [];
+    if (approved) statParts.push(`${approved} אושרו`);
+    if (reassigned) statParts.push(`${reassigned} שויכו`);
+    if (rejected) statParts.push(`${rejected} נדחו`);
+
+    const prompt = document.createElement('div');
+    prompt.className = 'ai-review-done-prompt';
+    prompt.innerHTML = `
+        <div class="ai-review-done-content">
+            <i data-lucide="check-circle-2" class="icon-md ai-review-done-icon"></i>
+            <div class="ai-review-done-text">
+                <strong>כל המסמכים נבדקו!</strong>
+                <span class="ai-review-done-stats">${statParts.join(' · ')}</span>
+            </div>
+            <button class="btn btn-success btn-sm ai-review-done-btn" onclick="dismissClientReview('${escapeAttr(clientName)}')">
+                <i data-lucide="check" class="icon-xs"></i>
+                סיום בדיקה
+            </button>
+        </div>
+    `;
+
+    // Insert after accordion header
+    const header = accordion.querySelector('.ai-accordion-header');
+    header.after(prompt);
+
+    // Update badge to show done state
+    const statsEl = accordion.querySelector('.ai-accordion-stats');
+    if (statsEl) {
+        statsEl.innerHTML = `<span class="ai-accordion-stat-badge badge-success">✓ הושלם</span>`;
+    }
+
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+// DL-210: Remove all reviewed cards for this client from the UI
+function dismissClientReview(clientName) {
+    const accordion = document.querySelector(`.ai-accordion[data-client="${CSS.escape(clientName)}"]`);
+    if (!accordion) return;
+
+    // Animate accordion collapse then remove
+    accordion.style.maxHeight = accordion.offsetHeight + 'px';
+    accordion.offsetHeight; // force reflow
+    accordion.classList.add('removing');
+    setTimeout(() => {
+        accordion.remove();
+
+        // Remove client items from data
+        aiClassificationsData = aiClassificationsData.filter(i => i.client_name !== clientName);
+
+        // Check if everything is empty
+        if (aiClassificationsData.length === 0) {
+            document.getElementById('aiCardsContainer').style.display = 'none';
+            document.getElementById('aiEmptyState').style.display = 'block';
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+        }
+
+        recalcAIStats();
+    }, 350);
 }
 
 function animateAndRemoveAI(recordId) {
