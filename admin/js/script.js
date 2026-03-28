@@ -3047,10 +3047,25 @@ function showClientReviewDonePrompt(clientName) {
     if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
-// DL-210: Remove all reviewed cards for this client from the UI
-function dismissClientReview(clientName) {
+// DL-210: Remove all reviewed cards for this client from the UI + delete from Airtable
+async function dismissClientReview(clientName) {
     const accordion = document.querySelector(`.ai-accordion[data-client="${CSS.escape(clientName)}"]`);
     if (!accordion) return;
+
+    // Collect record IDs before removing from data
+    const clientItems = aiClassificationsData.filter(i => i.client_name === clientName);
+    const recordIds = clientItems.map(i => i.id);
+
+    // Delete from Airtable (fire-and-forget, non-blocking)
+    if (recordIds.length > 0) {
+        fetchWithTimeout(ENDPOINTS.DISMISS_CLASSIFICATIONS, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ token: authToken, record_ids: recordIds })
+        }, FETCH_TIMEOUTS.mutate).catch(err => {
+            console.error('[dismissClientReview] Airtable delete failed:', err.message);
+        });
+    }
 
     // Animate accordion collapse then remove
     accordion.style.maxHeight = accordion.offsetHeight + 'px';
