@@ -1585,6 +1585,7 @@ tr:hover .client-view-link {
     transition: all var(--transition-base);
     max-width: 600px;
     margin-inline: auto;
+    overflow: hidden;
 }
 
 .ai-review-card:hover {
@@ -1705,6 +1706,9 @@ tr:hover .client-view-link {
 
 .ai-card-body {
     padding: var(--sp-4) var(--sp-5);
+    overflow-wrap: break-word;
+    word-break: break-word;
+    min-width: 0;
 }
 
 .ai-verdict-title {
@@ -1908,6 +1912,8 @@ tr:hover .client-view-link {
     padding: var(--sp-2) var(--sp-3);
     border-radius: var(--radius-sm);
     border-inline-start: 2px solid var(--gray-300);
+    overflow-wrap: break-word;
+    word-break: break-word;
 }
 
 
@@ -3629,6 +3635,16 @@ tr.reminder-loading td:last-child {
         flex-direction: column;
         align-items: flex-start;
         gap: var(--sp-2);
+    }
+
+    .ai-file-info {
+        flex-wrap: wrap;
+        max-width: 100%;
+    }
+
+    .ai-file-name {
+        white-space: normal;
+        word-break: break-all;
     }
 
     .ai-card-actions {
