@@ -5329,6 +5329,18 @@ tr:hover .client-edit-link {
     overflow-y: auto;
 }
 
+.mobile-preview-client {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
+    font-size: var(--text-sm);
+    font-weight: 600;
+    color: var(--gray-800);
+    padding-bottom: var(--sp-2);
+    border-bottom: 1px solid var(--gray-200);
+    margin-bottom: var(--sp-2);
+}
+
 .mobile-preview-footer .ai-classification-result {
     font-size: var(--text-sm);
 }
