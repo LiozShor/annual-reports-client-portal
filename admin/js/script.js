@@ -2280,6 +2280,14 @@ function renderAICards(items) {
     });
 
     if (typeof lucide !== 'undefined') lucide.createIcons();
+
+    // DL-210: Show review-done prompt for clients where all items are already reviewed
+    for (const [clientName, clientItems] of Object.entries(groups)) {
+        const pendingLeft = clientItems.filter(i => (i.review_status || 'pending') === 'pending').length;
+        if (pendingLeft === 0 && clientItems.length > 0) {
+            showClientReviewDonePrompt(clientName);
+        }
+    }
 }
 
 function renderAICard(item) {
