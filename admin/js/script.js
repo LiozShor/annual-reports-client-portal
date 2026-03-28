@@ -11,6 +11,7 @@ let reviewQueueData = [];
 let showArchivedMode = false;
 let dashboardLoaded = false;
 let pendingClientsLoaded = false;
+let activeEntityTab = sessionStorage.getItem('entityTab') || 'annual_report';
 
 const SORT_CONFIG = {
     name:    { accessor: c => c.name || '',    type: 'string' },
@@ -756,6 +757,9 @@ function filterClients() {
 
     let filtered = clientsData;
 
+    // Filter by entity type
+    filtered = filtered.filter(c => (c.filing_type || 'annual_report') === activeEntityTab);
+
     // Filter by active status based on archive mode
     filtered = filtered.filter(c => showArchivedMode ? c.is_active === false : c.is_active !== false);
 
@@ -1043,6 +1047,7 @@ function recalculateStats() {
     const counts = { total: 0, stage1: 0, stage2: 0, stage3: 0, stage4: 0, stage5: 0, stage6: 0, stage7: 0, stage8: 0 };
 
     for (const client of clientsData) {
+        if ((client.filing_type || 'annual_report') !== activeEntityTab) continue;
         if (client.is_active === false) continue; // Skip deactivated clients in stats
         counts.total++;
         const num = STAGES[client.stage]?.num;
@@ -1064,6 +1069,33 @@ function recalculateStats() {
     if (stage3Card) {
         stage3Card.classList.toggle('needs-attention', counts.stage3 > 0);
     }
+}
+
+function switchEntityTab(type) {
+    activeEntityTab = type;
+    sessionStorage.setItem('entityTab', type);
+
+    // Update desktop tab active state
+    document.querySelectorAll('.entity-tab').forEach(t =>
+        t.classList.toggle('active', t.dataset.type === type));
+
+    // Update mobile toggle active state
+    document.querySelectorAll('.entity-toggle-btn').forEach(t =>
+        t.classList.toggle('active', t.dataset.type === type));
+
+    // Update mobile bar inline label
+    const barLabel = document.getElementById('entityBarLabel');
+    if (barLabel) barLabel.textContent = type === 'capital_statement' ? 'הצהרות הון' : 'דוחות שנתיים';
+
+    // Update URL hash
+    history.replaceState(null, '', type === 'capital_statement' ? '#capital' : '#annual');
+
+    // Reset bulk selection
+    resetClientBulkSelection();
+
+    // Re-filter and re-render
+    recalculateStats();
+    filterClients();
 }
 
 // Close dropdowns/popovers on Escape; Enter on clickable counts triggers click
@@ -1471,6 +1503,7 @@ function clearPreview() {
 
 async function performServerImport(clients, year, successMessage, options) {
     showLoading(clients.length > 1 ? `מייבא ${clients.length} לקוחות...` : 'מוסיף לקוח...');
+    const filingType = options?.filing_type || activeEntityTab;
 
     try {
 
@@ -1480,7 +1513,8 @@ async function performServerImport(clients, year, successMessage, options) {
             body: JSON.stringify({
                 token: authToken,
                 year: parseInt(year),
-                clients: clients
+                clients: clients,
+                filing_type: filingType
             })
         }, FETCH_TIMEOUTS.slow);
 
@@ -1513,11 +1547,13 @@ async function startImport() {
     if (validClients.length === 0) return;
 
     const year = document.getElementById('importYear').value;
+    const filingType = document.getElementById('importFilingType').value;
 
     const success = await performServerImport(
         validClients.map(c => ({ name: c.name, email: c.email, cc_email: c.cc_email || '' })),
         year,
-        'הלקוחות נוספו בהצלחה למערכת.'
+        'הלקוחות נוספו בהצלחה למערכת.',
+        { filing_type: filingType }
     );
 
     if (success) {
@@ -1553,6 +1589,7 @@ async function addManualClient() {
     const email = document.getElementById('manualEmail').value.trim().toLowerCase();
     const cc_email = document.getElementById('manualCcEmail').value.trim().toLowerCase();
     const year = document.getElementById('manualYear').value;
+    const filingType = document.getElementById('manualFilingType').value;
 
     if (!name || !email) {
         showModal('warning', 'חסרים נתונים', 'נא להזין שם ואימייל');
@@ -1568,15 +1605,15 @@ async function addManualClient() {
         return;
     }
 
-    await _doManualAdd(name, email, cc_email, year);
+    await _doManualAdd(name, email, cc_email, year, filingType);
 }
 
-async function _doManualAdd(name, email, cc_email, year) {
+async function _doManualAdd(name, email, cc_email, year, filingType) {
     const data = await performServerImport(
         [{ name, email, cc_email }],
         year,
         null,
-        { suppressModal: true }
+        { suppressModal: true, filing_type: filingType }
     );
 
     if (data) {
@@ -5584,6 +5621,7 @@ function updateYearDropdowns(years) {
 async function previewYearRollover() {
     const sourceYear = document.getElementById('rolloverSourceYear').value;
     const targetYear = document.getElementById('rolloverTargetYear').value;
+    const filingType = document.getElementById('rolloverFilingType').value;
 
     if (sourceYear === targetYear) {
         showModal('warning', 'שגיאה', 'שנת המקור ושנת היעד חייבות להיות שונות');
@@ -5600,7 +5638,8 @@ async function previewYearRollover() {
                 token: authToken,
                 source_year: parseInt(sourceYear),
                 target_year: parseInt(targetYear),
-                mode: 'preview'
+                mode: 'preview',
+                filing_type: filingType
             })
         }, FETCH_TIMEOUTS.slow);
 
@@ -5639,6 +5678,8 @@ async function executeYearRollover() {
     const targetYear = document.getElementById('rolloverTargetYear').value;
     const count = document.getElementById('rolloverCount').textContent;
 
+    const filingType = document.getElementById('rolloverFilingType').value;
+
     showConfirmDialog(
         `להעביר ${count} לקוחות משנת ${sourceYear} לשנת ${targetYear}?`,
         async () => {
@@ -5652,7 +5693,8 @@ async function executeYearRollover() {
                         token: authToken,
                         source_year: parseInt(sourceYear),
                         target_year: parseInt(targetYear),
-                        mode: 'execute'
+                        mode: 'execute',
+                        filing_type: filingType
                     })
                 }, FETCH_TIMEOUTS.rollover);
 
@@ -5699,6 +5741,15 @@ document.getElementById('clientsTableContainer').addEventListener('contextmenu',
 document.addEventListener('scroll', closeAllRowMenus, true);
 
 // ==================== INIT ====================
+
+// Restore entity tab from URL hash or sessionStorage
+(function initEntityTab() {
+    const hash = location.hash;
+    if (hash === '#capital') activeEntityTab = 'capital_statement';
+    else if (hash === '#annual') activeEntityTab = 'annual_report';
+    // Sync UI after DOM is ready
+    document.addEventListener('DOMContentLoaded', () => switchEntityTab(activeEntityTab));
+})();
 
 // Populate year dropdowns immediately (script is at bottom of body, DOM is ready)
 populateYearDropdowns();
