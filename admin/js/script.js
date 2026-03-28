@@ -284,9 +284,22 @@ function syncAIBadge(topBadge, count) {
 
 // ==================== MOBILE PREVIEW MODAL (AI Review) ====================
 
+let mobilePreviewCardIds = []; // ordered list of visible card IDs for nav
+let mobilePreviewCurrentIdx = -1;
+
+function getMobilePreviewCardIds() {
+    // Get visible card IDs in DOM order (respects current filters)
+    const cards = document.querySelectorAll('#aiCardsContainer .ai-review-card:not([style*="display: none"])');
+    return Array.from(cards).map(c => c.dataset.id).filter(Boolean);
+}
+
 function loadMobileDocPreview(recordId) {
     const item = aiClassificationsData.find(i => i.id === recordId);
     if (!item) return;
+
+    // Build navigation list from visible cards
+    mobilePreviewCardIds = getMobilePreviewCardIds();
+    mobilePreviewCurrentIdx = mobilePreviewCardIds.indexOf(recordId);
 
     const modal = document.getElementById('mobilePreviewModal');
     const fileName = document.getElementById('mobilePreviewFileName');
@@ -309,6 +322,9 @@ function loadMobileDocPreview(recordId) {
     fileName.textContent = item.attachment_name || 'מסמך';
     openTab.href = item.file_url || '#';
     openTab.style.display = item.file_url ? '' : 'none';
+
+    // Update navigation counter & arrow states
+    updateMobilePreviewNav();
 
     // Build footer with AI classification info + actions
     buildMobilePreviewFooter(item, footer);
@@ -436,6 +452,33 @@ function closeMobilePreview() {
     if (modal) modal.classList.remove('show');
     document.body.style.overflow = '';
     if (iframe) iframe.src = 'about:blank';
+    mobilePreviewCurrentIdx = -1;
+}
+
+function navigateMobilePreview(direction) {
+    // direction: -1 = previous (right in RTL), +1 = next (left in RTL)
+    const newIdx = mobilePreviewCurrentIdx + direction;
+    if (newIdx < 0 || newIdx >= mobilePreviewCardIds.length) return;
+    const newId = mobilePreviewCardIds[newIdx];
+    mobilePreviewCurrentIdx = newIdx;
+    loadMobileDocPreview(newId);
+}
+
+function updateMobilePreviewNav() {
+    const counter = document.getElementById('mobilePreviewCounter');
+    const prevBtn = document.getElementById('mobilePreviewPrev');
+    const nextBtn = document.getElementById('mobilePreviewNext');
+    const nav = document.getElementById('mobilePreviewNav');
+
+    if (mobilePreviewCardIds.length <= 1) {
+        nav.style.display = 'none';
+        return;
+    }
+
+    nav.style.display = '';
+    counter.textContent = `${mobilePreviewCurrentIdx + 1} / ${mobilePreviewCardIds.length}`;
+    prevBtn.disabled = mobilePreviewCurrentIdx <= 0;
+    nextBtn.disabled = mobilePreviewCurrentIdx >= mobilePreviewCardIds.length - 1;
 }
 
 // ==================== DASHBOARD ====================

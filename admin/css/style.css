@@ -5258,6 +5258,38 @@ tr:hover .client-edit-link {
     flex-shrink: 0;
 }
 
+.mobile-preview-nav {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--sp-3);
+    padding: var(--sp-2) var(--sp-4);
+    border-bottom: 1px solid var(--gray-200);
+    background: var(--gray-50);
+    flex-shrink: 0;
+}
+
+.mobile-preview-nav .btn {
+    min-width: 40px;
+    min-height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.mobile-preview-nav .btn:disabled {
+    opacity: 0.3;
+    cursor: default;
+}
+
+.mobile-preview-counter {
+    font-size: var(--text-sm);
+    font-weight: 600;
+    color: var(--gray-600);
+    min-width: 60px;
+    text-align: center;
+}
+
 .mobile-preview-body {
     flex: 1;
     padding: 0;
