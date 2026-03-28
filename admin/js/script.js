@@ -151,6 +151,9 @@ function switchTab(tabName, evt) {
     document.getElementById(`tab-${tabName}`).classList.add('active');
     if (typeof lucide !== 'undefined') lucide.createIcons();
 
+    // Sync bottom nav active state (mobile)
+    syncBottomNav(tabName);
+
     // Load data: skip fetch if already loaded (show cached), else fetch
     if (tabName === 'dashboard' || tabName === 'review') {
         loadDashboard(dashboardLoaded);
@@ -188,6 +191,253 @@ function switchTabFromDropdown(tabName, event) {
     switchTab(tabName);
 }
 
+// ==================== MOBILE BOTTOM NAV ====================
+
+function syncBottomNav(tabName) {
+    const bottomNav = document.getElementById('bottomNav');
+    if (!bottomNav) return;
+
+    bottomNav.querySelectorAll('.bottom-nav-item').forEach(btn => btn.classList.remove('active'));
+
+    const questGroupTabs = ['send', 'questionnaires'];
+    const moreGroupTabs = ['review', 'reminders'];
+
+    let dataTab = tabName;
+    if (questGroupTabs.includes(tabName)) dataTab = 'questionnaires-group';
+    else if (moreGroupTabs.includes(tabName)) dataTab = 'more';
+
+    const target = bottomNav.querySelector(`[data-tab="${dataTab}"]`);
+    if (target) target.classList.add('active');
+
+    closeBottomNavPopovers();
+}
+
+function toggleBottomNavSubmenu(event) {
+    event.stopPropagation();
+    const popover = document.getElementById('bottomNavQuestPopover');
+    const morePopover = document.getElementById('bottomNavMorePopover');
+    const backdrop = document.getElementById('bottomNavBackdrop');
+    const wasOpen = popover.classList.contains('open');
+
+    morePopover.classList.remove('open');
+    popover.classList.toggle('open', !wasOpen);
+    backdrop.classList.toggle('open', !wasOpen);
+
+    if (!wasOpen) {
+        const btn = event.currentTarget;
+        const rect = btn.getBoundingClientRect();
+        popover.style.left = Math.max(8, rect.left + rect.width / 2 - 90) + 'px';
+    }
+
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function toggleBottomNavMore(event) {
+    event.stopPropagation();
+    const popover = document.getElementById('bottomNavMorePopover');
+    const questPopover = document.getElementById('bottomNavQuestPopover');
+    const backdrop = document.getElementById('bottomNavBackdrop');
+    const wasOpen = popover.classList.contains('open');
+
+    questPopover.classList.remove('open');
+    popover.classList.toggle('open', !wasOpen);
+    backdrop.classList.toggle('open', !wasOpen);
+
+    if (!wasOpen) {
+        const btn = event.currentTarget;
+        const rect = btn.getBoundingClientRect();
+        const popW = 180;
+        let leftPos = rect.left + rect.width / 2 - 90;
+        leftPos = Math.max(8, Math.min(leftPos, window.innerWidth - popW - 8));
+        popover.style.left = leftPos + 'px';
+    }
+
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function closeBottomNavPopovers() {
+    const q = document.getElementById('bottomNavQuestPopover');
+    const m = document.getElementById('bottomNavMorePopover');
+    const b = document.getElementById('bottomNavBackdrop');
+    if (q) q.classList.remove('open');
+    if (m) m.classList.remove('open');
+    if (b) b.classList.remove('open');
+}
+
+function switchTabFromBottomNav(tabName, event) {
+    event.stopPropagation();
+    closeBottomNavPopovers();
+    switchTab(tabName);
+}
+
+function syncAIBadge(topBadge, count) {
+    const bottomBadge = document.getElementById('aiReviewBottomBadge');
+    if (count > 0) {
+        topBadge.textContent = count;
+        topBadge.style.display = 'inline-flex';
+        if (bottomBadge) { bottomBadge.textContent = count; bottomBadge.style.display = 'inline-flex'; }
+    } else {
+        topBadge.style.display = 'none';
+        if (bottomBadge) bottomBadge.style.display = 'none';
+    }
+}
+
+// ==================== MOBILE PREVIEW MODAL (AI Review) ====================
+
+function loadMobileDocPreview(recordId) {
+    const item = aiClassificationsData.find(i => i.id === recordId);
+    if (!item) return;
+
+    const modal = document.getElementById('mobilePreviewModal');
+    const fileName = document.getElementById('mobilePreviewFileName');
+    const openTab = document.getElementById('mobilePreviewOpenTab');
+    const downloadBtn = document.getElementById('mobilePreviewDownload');
+    const loading = document.getElementById('mobilePreviewLoading');
+    const error = document.getElementById('mobilePreviewError');
+    const errorMsg = document.getElementById('mobilePreviewErrorMsg');
+    const iframe = document.getElementById('mobilePreviewIframe');
+    const footer = document.getElementById('mobilePreviewFooter');
+
+    // Reset state
+    loading.style.display = 'none';
+    error.style.display = 'none';
+    iframe.style.display = 'none';
+    iframe.src = 'about:blank';
+    downloadBtn.style.display = 'none';
+
+    // Set header info
+    fileName.textContent = item.attachment_name || 'מסמך';
+    openTab.href = item.file_url || '#';
+    openTab.style.display = item.file_url ? '' : 'none';
+
+    // Build footer with AI classification info + actions
+    buildMobilePreviewFooter(item, footer);
+
+    // Show modal
+    modal.classList.add('show');
+    document.body.style.overflow = 'hidden';
+
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+
+    // No onedrive_item_id — show error
+    if (!item.onedrive_item_id) {
+        error.style.display = '';
+        errorMsg.textContent = 'אין מזהה קובץ — לא ניתן לטעון תצוגה מקדימה';
+        return;
+    }
+
+    // Show loading
+    loading.style.display = '';
+
+    getDocPreviewUrl(item.onedrive_item_id).then(({ previewUrl, downloadUrl }) => {
+        loading.style.display = 'none';
+        iframe.src = previewUrl;
+        iframe.style.display = '';
+        if (downloadUrl) {
+            downloadBtn.href = downloadUrl;
+            downloadBtn.style.display = '';
+        }
+    }).catch(err => {
+        loading.style.display = 'none';
+        error.style.display = '';
+        errorMsg.textContent = err.message || 'שגיאה בטעינת תצוגה מקדימה';
+    });
+}
+
+function buildMobilePreviewFooter(item, footer) {
+    const reviewStatus = item.review_status || 'pending';
+    if (reviewStatus !== 'pending') {
+        footer.style.display = 'none';
+        return;
+    }
+
+    const state = getCardState(item);
+    const rawConfidence = item.ai_confidence || 0;
+    const confidencePercent = Math.round(rawConfidence * 100);
+
+    let classificationHtml = '';
+    let actionsHtml = '';
+
+    if (state === 'full' || state === 'fuzzy') {
+        const docDisplayName = item.matched_short_name || item.matched_template_name || 'לא ידוע';
+        classificationHtml = `
+            <div class="ai-classification-result">
+                <span class="ai-confidence-prefix">🤖 AI חושב שזה:</span>
+                <span class="ai-template-match">${renderDocLabel(docDisplayName)}</span>
+                <span class="ai-confidence-badge">${confidencePercent}%</span>
+            </div>`;
+        if (item.ai_reason) {
+            classificationHtml += `<div class="ai-reason-inline" style="font-size:var(--text-xs);color:var(--gray-500);margin-top:var(--sp-1);">${escapeHtml(item.ai_reason)}</div>`;
+        }
+        const approveDisabled = item.is_unrequested;
+        actionsHtml = `
+            <div class="ai-card-actions">
+                <button class="btn btn-success btn-sm" ${approveDisabled
+                    ? 'aria-disabled="true" title="לא ניתן לאשר מסמך שלא נדרש"'
+                    : `onclick="approveAIClassification('${escapeAttr(item.id)}'); closeMobilePreview();"`}>
+                    <i data-lucide="check" class="icon-sm"></i> נכון
+                </button>
+                <button class="btn btn-link btn-sm" onclick="closeMobilePreview(); showAIReassignModal('${escapeAttr(item.id)}')">
+                    <i data-lucide="arrow-right-left" class="icon-sm"></i> לא נכון, שייך מחדש
+                </button>
+                <button class="btn btn-outline-danger btn-sm" onclick="rejectAIClassification('${escapeAttr(item.id)}'); closeMobilePreview();">
+                    <i data-lucide="x" class="icon-sm"></i> מסמך לא רלוונטי
+                </button>
+            </div>`;
+
+    } else if (state === 'issuer-mismatch') {
+        const templateName = item.matched_short_name || item.matched_template_name || item.matched_template_id || '';
+        const aiIssuer = item.issuer_name || 'לא ידוע';
+        classificationHtml = `
+            <div class="ai-classification-result">
+                <span class="ai-confidence-prefix">🤖 AI חושב שזה:</span>
+                <span class="ai-template-match">${renderDocLabel(templateName)}</span>
+                <span class="ai-confidence-badge">${confidencePercent}%</span>
+            </div>
+            <div style="font-size:var(--text-xs);color:var(--gray-500);margin-top:var(--sp-1);">מ: ${escapeHtml(aiIssuer)}</div>`;
+        actionsHtml = `
+            <div class="ai-card-actions">
+                <button class="btn btn-link btn-sm" onclick="closeMobilePreview(); showAIReassignModal('${escapeAttr(item.id)}')">
+                    <i data-lucide="arrow-right-left" class="icon-sm"></i> שייך מחדש
+                </button>
+                <button class="btn btn-outline-danger btn-sm" onclick="rejectAIClassification('${escapeAttr(item.id)}'); closeMobilePreview();">
+                    <i data-lucide="x" class="icon-sm"></i> מסמך לא רלוונטי
+                </button>
+            </div>`;
+
+    } else {
+        // Unmatched
+        const reasonHtml = item.ai_reason
+            ? `<div style="font-size:var(--text-xs);color:var(--gray-500);margin-top:var(--sp-1);">${escapeHtml(item.ai_reason)}</div>`
+            : '';
+        classificationHtml = `
+            <div class="ai-classification-result">
+                <span class="ai-template-unmatched">🤖 לא זוהה</span>
+            </div>
+            ${reasonHtml}`;
+        actionsHtml = `
+            <div class="ai-card-actions">
+                <button class="btn btn-link btn-sm" onclick="closeMobilePreview(); showAIReassignModal('${escapeAttr(item.id)}')">
+                    <i data-lucide="arrow-right-left" class="icon-sm"></i> שייך ידנית
+                </button>
+                <button class="btn btn-outline-danger btn-sm" onclick="rejectAIClassification('${escapeAttr(item.id)}'); closeMobilePreview();">
+                    <i data-lucide="x" class="icon-sm"></i> מסמך לא רלוונטי
+                </button>
+            </div>`;
+    }
+
+    footer.innerHTML = classificationHtml + actionsHtml;
+    footer.style.display = '';
+}
+
+function closeMobilePreview() {
+    const modal = document.getElementById('mobilePreviewModal');
+    const iframe = document.getElementById('mobilePreviewIframe');
+    if (modal) modal.classList.remove('show');
+    document.body.style.overflow = '';
+    if (iframe) iframe.src = 'about:blank';
+}
+
 // ==================== DASHBOARD ====================
 
 async function loadDashboard(silent = false) {
@@ -222,11 +472,14 @@ async function loadDashboard(silent = false) {
         // Store review queue data
         reviewQueueData = data.review_queue || [];
         const badge = document.getElementById('reviewCountBadge');
+        const reviewBottomBadge = document.getElementById('reviewBottomBadge');
         if (reviewQueueData.length > 0) {
             badge.textContent = reviewQueueData.length;
             badge.style.display = 'inline-flex';
+            if (reviewBottomBadge) { reviewBottomBadge.textContent = reviewQueueData.length; reviewBottomBadge.style.display = 'inline-flex'; }
         } else {
             badge.style.display = 'none';
+            if (reviewBottomBadge) reviewBottomBadge.style.display = 'none';
         }
         document.getElementById('reviewHeaderCount').textContent = `${reviewQueueData.length} לקוחות בתור`;
         renderReviewTable(reviewQueueData);
@@ -936,14 +1189,9 @@ async function loadAIReviewCount() {
         if (data.ok && data.items) {
             const pending = data.items.filter(i => (i.review_status || 'pending') === 'pending');
             const uniqueClients = new Set(pending.map(i => i.client_id).filter(Boolean)).size;
-            if (uniqueClients > 0) {
-                badge.textContent = uniqueClients;
-                badge.style.display = 'inline-flex';
-            } else {
-                badge.style.display = 'none';
-            }
+            syncAIBadge(badge, uniqueClients);
         } else {
-            badge.style.display = 'none';
+            syncAIBadge(badge, 0);
         }
     } catch (e) {
         // Fetch failed - hide the loading badge
@@ -1814,6 +2062,12 @@ function resetPreviewPanel() {
 }
 
 async function loadDocPreview(recordId) {
+    // On mobile, use full-screen modal instead of side panel
+    if (window.innerWidth <= 768) {
+        loadMobileDocPreview(recordId);
+        return;
+    }
+
     // Toggle off if same card clicked
     if (activePreviewItemId === recordId) {
         resetPreviewPanel();
@@ -1916,12 +2170,7 @@ async function loadAIClassifications(silent = false) {
         const badge = document.getElementById('aiReviewTabBadge');
         const pendingForBadge = (data.items || []).filter(i => (i.review_status || 'pending') === 'pending');
         const uniqueClients = new Set(pendingForBadge.map(i => i.client_id).filter(Boolean)).size;
-        if (uniqueClients > 0) {
-            badge.textContent = uniqueClients;
-            badge.style.display = 'inline-flex';
-        } else {
-            badge.style.display = 'none';
-        }
+        syncAIBadge(badge, uniqueClients);
     } catch (error) {
         if (!silent) hideLoading();
         console.error('AI review load failed');
@@ -3269,15 +3518,8 @@ function recalcAIStats() {
     const badge = document.getElementById('aiReviewTabBadge');
     const uniqueClientsPending = new Set(pendingItems.map(i => i.client_id).filter(Boolean)).size;
     const uniqueClientsReviewed = new Set(reviewedItems.map(i => i.client_id).filter(Boolean)).size;
-    if (uniqueClientsPending > 0) {
-        badge.textContent = uniqueClientsPending;
-        badge.style.display = 'inline-flex';
-    } else if (uniqueClientsReviewed > 0) {
-        badge.textContent = uniqueClientsReviewed;
-        badge.style.display = 'inline-flex';
-    } else {
-        badge.style.display = 'none';
-    }
+    const badgeCount = uniqueClientsPending > 0 ? uniqueClientsPending : (uniqueClientsReviewed > 0 ? uniqueClientsReviewed : 0);
+    syncAIBadge(badge, badgeCount);
 }
 
 // AI helper functions
