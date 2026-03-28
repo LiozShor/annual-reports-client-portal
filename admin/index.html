@@ -910,6 +910,9 @@
     <div id="mobilePreviewModal" class="ai-modal-overlay" onclick="if(event.target===this)closeMobilePreview()">
         <div class="ai-modal-panel mobile-preview-panel">
             <div class="mobile-preview-header">
+                <button class="btn btn-ghost btn-sm" onclick="closeMobilePreview()">
+                    <i data-lucide="x" class="icon-sm"></i>
+                </button>
                 <span class="preview-file-name" id="mobilePreviewFileName"></span>
                 <div class="mobile-preview-actions">
                     <a href="#" target="_blank" id="mobilePreviewOpenTab" class="btn btn-ghost btn-sm" title="פתח בלשונית">
@@ -918,10 +921,17 @@
                     <a href="#" id="mobilePreviewDownload" class="btn btn-ghost btn-sm" style="display:none;" download title="הורד">
                         <i data-lucide="download" class="icon-sm"></i>
                     </a>
-                    <button class="btn btn-ghost btn-sm" onclick="closeMobilePreview()">
-                        <i data-lucide="x" class="icon-sm"></i>
-                    </button>
                 </div>
+            </div>
+            <!-- Card navigation arrows -->
+            <div class="mobile-preview-nav" id="mobilePreviewNav">
+                <button class="btn btn-ghost btn-sm" id="mobilePreviewPrev" onclick="navigateMobilePreview(-1)" title="הקודם">
+                    <i data-lucide="chevron-right" class="icon-sm"></i>
+                </button>
+                <span class="mobile-preview-counter" id="mobilePreviewCounter"></span>
+                <button class="btn btn-ghost btn-sm" id="mobilePreviewNext" onclick="navigateMobilePreview(1)" title="הבא">
+                    <i data-lucide="chevron-left" class="icon-sm"></i>
+                </button>
             </div>
             <div class="mobile-preview-body">
                 <div class="preview-loading" id="mobilePreviewLoading" style="display:none;">
