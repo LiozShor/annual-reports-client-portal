@@ -5712,13 +5712,6 @@ function renderQuestionnairesTable(items) {
 
 function toggleQaHideNoAnswers() {
     qaHideNoAnswers = !qaHideNoAnswers;
-    const btn = document.getElementById('qaToggleNoBtn');
-    if (btn) {
-        btn.innerHTML = qaHideNoAnswers
-            ? '<i data-lucide="eye" class="icon-sm"></i> הצג תשובות לא'
-            : '<i data-lucide="eye-off" class="icon-sm"></i> הסתר תשובות לא';
-        if (typeof lucide !== 'undefined') lucide.createIcons();
-    }
     // Re-render all open detail rows
     document.querySelectorAll('.qa-detail-row').forEach(row => {
         const idx = row.dataset.qaIdx;
@@ -5768,7 +5761,17 @@ function buildQADetailHTML(item) {
             </div>
         </div>`;
 
+    const noCount = answers.filter(a => a.value === '✗ לא').length;
     const displayAnswers = qaHideNoAnswers ? answers.filter(a => a.value !== '✗ לא') : answers;
+
+    if (noCount > 0) {
+        html += `<div style="margin-bottom:8px; text-align:start;">
+            <button class="btn btn-sm btn-ghost qa-toggle-no-btn" onclick="event.stopPropagation(); toggleQaHideNoAnswers()">
+                <i data-lucide="${qaHideNoAnswers ? 'eye' : 'eye-off'}" class="icon-sm"></i>
+                ${qaHideNoAnswers ? `הצג תשובות לא (${noCount})` : 'הסתר תשובות לא'}
+            </button>
+        </div>`;
+    }
 
     if (displayAnswers.length === 0) {
         html += `<p style="color:var(--gray-400); font-size:var(--text-sm);">אין תשובות להצגה</p>`;
