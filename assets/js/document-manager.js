@@ -1289,6 +1289,13 @@ function updateStatusOverview() {
         questionsAreDirty();
     document.getElementById('editSessionBar').style.display = hasChanges ? 'block' : 'none';
 
+    // Warn before leaving with unsaved changes
+    if (hasChanges) {
+        window.onbeforeunload = () => true;
+    } else {
+        window.onbeforeunload = null;
+    }
+
     // Mutually exclusive: save+reset row shown when changes pending, approve-send row when clean
     const saveResetRow = document.getElementById('save-reset-row');
     const approveSendRow = document.getElementById('approve-send-row');
