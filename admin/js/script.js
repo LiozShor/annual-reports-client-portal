@@ -442,7 +442,12 @@ function buildMobilePreviewFooter(item, footer) {
             </div>`;
     }
 
-    footer.innerHTML = classificationHtml + actionsHtml;
+    const clientName = item.client_name || '';
+    const clientHeader = clientName
+        ? `<div class="mobile-preview-client"><i data-lucide="user" class="icon-sm"></i> ${escapeHtml(clientName)}</div>`
+        : '';
+
+    footer.innerHTML = clientHeader + classificationHtml + actionsHtml;
     footer.style.display = '';
 }
 
