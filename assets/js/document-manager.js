@@ -2525,10 +2525,11 @@ function renderClientNotes() {
             const isEmail = entry.source === 'email';
             const iconClass = isEmail ? 'cn-icon--email' : 'cn-icon--manual';
             const iconName = isEmail ? 'mail' : 'pencil';
-            const dateStr = entry.date || '';
+            const rawDate = entry.date || '';
+            const dateStr = rawDate.match(/^(\d{4})-(\d{2})-(\d{2})/) ? rawDate.replace(/^(\d{4})-(\d{2})-(\d{2})/, '$3-$2-$1') : rawDate;
             const senderStr = entry.sender_email ? ` · ${escapeHtml(entry.sender_email)}` : '';
             const snippetHtml = entry.raw_snippet
-                ? `<div class="cn-snippet"><span class="cn-label">טקסט מקורי:</span> ${escapeHtml(entry.raw_snippet)}</div>`
+                ? `<div class="cn-snippet"><span class="cn-label">טקסט מקורי:</span> "${escapeHtml(entry.raw_snippet)}"</div>`
                 : '';
             const summaryLabel = isEmail ? '<span class="cn-label">סיכום AI:</span> ' : '';
 
