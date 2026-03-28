@@ -5009,7 +5009,7 @@ tr:hover .client-edit-link {
 .chat-input-row {
     display: flex;
     gap: var(--sp-2);
-    padding: var(--sp-3);
+    padding: var(--sp-2) var(--sp-3);
     border-top: 1px solid var(--gray-200);
     align-items: flex-end;
     flex-shrink: 0;
@@ -5018,12 +5018,13 @@ tr:hover .client-edit-link {
     flex: 1;
     border: 1px solid var(--gray-300);
     border-radius: 8px;
-    padding: 8px 12px;
+    padding: 6px 12px;
     font-size: var(--text-sm);
     font-family: inherit;
     resize: none;
     max-height: 80px;
     outline: none;
+    line-height: 1.4;
 }
 .chat-input:focus {
     border-color: var(--brand-400);
