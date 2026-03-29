@@ -48,6 +48,10 @@
                 <a href="./" class="nav-brand">
                     <img src="../assets/images/logo.png" alt="משרד רו״ח Client Name" class="site-logo site-logo-sm" width="1010" height="306">
                 </a>
+                <div class="entity-toggle-navbar" id="entityToggleNavbar">
+                    <button class="entity-nav-btn active" data-type="annual_report" onclick="switchEntityTab('annual_report')">שנתיים</button>
+                    <button class="entity-nav-btn" data-type="capital_statement" onclick="switchEntityTab('capital_statement')">הון</button>
+                </div>
                 <div class="nav-actions">
                     <button class="btn btn-ghost btn-sm" onclick="refreshData()">
                         <i data-lucide="refresh-cw" class="icon-sm"></i> רענן

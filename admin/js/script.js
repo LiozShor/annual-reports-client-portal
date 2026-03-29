@@ -1095,6 +1095,10 @@ function switchEntityTab(type) {
     const barLabel = document.getElementById('entityBarLabel');
     if (barLabel) barLabel.textContent = type === 'capital_statement' ? 'הצהרות הון' : 'דוחות שנתיים';
 
+    // Update navbar entity toggle (mobile)
+    document.querySelectorAll('.entity-nav-btn').forEach(t =>
+        t.classList.toggle('active', t.dataset.type === type));
+
     // Update URL hash
     history.replaceState(null, '', type === 'capital_statement' ? '#capital' : '#annual');
 
