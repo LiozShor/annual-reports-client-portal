@@ -492,6 +492,22 @@ function updateMobilePreviewNav() {
 
 // ==================== DASHBOARD ====================
 
+function updateReviewQueueUI() {
+    const filtered = reviewQueueData.filter(c => (c.filing_type || 'annual_report') === activeEntityTab);
+    const badge = document.getElementById('reviewCountBadge');
+    const reviewBottomBadge = document.getElementById('reviewBottomBadge');
+    if (filtered.length > 0) {
+        badge.textContent = filtered.length;
+        badge.style.display = 'inline-flex';
+        if (reviewBottomBadge) { reviewBottomBadge.textContent = filtered.length; reviewBottomBadge.style.display = 'inline-flex'; }
+    } else {
+        badge.style.display = 'none';
+        if (reviewBottomBadge) reviewBottomBadge.style.display = 'none';
+    }
+    document.getElementById('reviewHeaderCount').textContent = `${filtered.length} לקוחות בתור`;
+    renderReviewTable(filtered);
+}
+
 async function loadDashboard(silent = false) {
     // If already loaded and silent, skip API call — use cached data
     if (silent && dashboardLoaded && clientsData.length > 0) return;
@@ -521,20 +537,9 @@ async function loadDashboard(silent = false) {
         recalculateStats();
         existingEmails = new Set(clientsData.map(c => c.email?.toLowerCase()));
 
-        // Store review queue data
+        // Store review queue data (unfiltered) + render filtered by entity tab
         reviewQueueData = data.review_queue || [];
-        const badge = document.getElementById('reviewCountBadge');
-        const reviewBottomBadge = document.getElementById('reviewBottomBadge');
-        if (reviewQueueData.length > 0) {
-            badge.textContent = reviewQueueData.length;
-            badge.style.display = 'inline-flex';
-            if (reviewBottomBadge) { reviewBottomBadge.textContent = reviewQueueData.length; reviewBottomBadge.style.display = 'inline-flex'; }
-        } else {
-            badge.style.display = 'none';
-            if (reviewBottomBadge) reviewBottomBadge.style.display = 'none';
-        }
-        document.getElementById('reviewHeaderCount').textContent = `${reviewQueueData.length} לקוחות בתור`;
-        renderReviewTable(reviewQueueData);
+        updateReviewQueueUI();
 
         // Render table
         renderClientsTable(clientsData);
@@ -1109,9 +1114,10 @@ function switchEntityTab(type) {
     if (manualFT) manualFT.value = type;
     if (importFT) importFT.value = type;
 
-    // Re-filter and re-render dashboard
+    // Re-filter and re-render dashboard + review queue
     recalculateStats();
     filterClients();
+    updateReviewQueueUI();
 
     // Reload whichever functional tab is currently active
     const activeTab = document.querySelector('.tab-btn.active')?.dataset?.tab;
@@ -2051,10 +2057,11 @@ async function markComplete(reportId, name) {
 }
 
 function exportReviewToExcel() {
-    if (!reviewQueueData.length) return;
+    const filtered = reviewQueueData.filter(c => (c.filing_type || 'annual_report') === activeEntityTab);
+    if (!filtered.length) return;
 
     const now = new Date();
-    const exportData = reviewQueueData.map((c, i) => {
+    const exportData = filtered.map((c, i) => {
         const completedAt = new Date(c.docs_completed_at);
         const diffDays = Math.floor((now - completedAt) / (1000 * 60 * 60 * 24));
         return {
