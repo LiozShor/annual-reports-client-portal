@@ -109,6 +109,13 @@ async function checkExistingSubmission() {
         formIdHe = data.form_id_he || FORM_HE;
         formIdEn = data.form_id_en || FORM_EN;
 
+        // Dynamic header/title based on filing type
+        const ftLabelHe = data.filing_type_label_he || 'דוח שנתי';
+        const ftLabelEn = data.filing_type_label_en || 'Annual Report';
+        document.getElementById('headerTitle').textContent = '\uD83D\uDCCB \u05E9\u05D0\u05DC\u05D5\u05DF ' + ftLabelHe;
+        document.querySelector('.header-subtitle').textContent = ftLabelEn + ' Questionnaire';
+        document.title = ftLabelEn + ' Questionnaire';
+
         const stage = data.stage || 'Send_Questionnaire';
         const docCount = Number(data.document_count || 0);
         const hasDocs = docCount > 0;
