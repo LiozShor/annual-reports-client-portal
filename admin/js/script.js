@@ -1096,9 +1096,29 @@ function switchEntityTab(type) {
     // Reset bulk selection
     resetClientBulkSelection();
 
-    // Re-filter and re-render
+    // Invalidate all tab caches so they reload with new filing_type
+    dashboardLoaded = false;
+    pendingClientsLoaded = false;
+    questionnaireLoaded = false;
+    aiReviewLoaded = false;
+    reminderLoaded = false;
+
+    // Sync import/add filing type dropdowns
+    const manualFT = document.getElementById('manualFilingType');
+    const importFT = document.getElementById('importFilingType');
+    if (manualFT) manualFT.value = type;
+    if (importFT) importFT.value = type;
+
+    // Re-filter and re-render dashboard
     recalculateStats();
     filterClients();
+
+    // Reload whichever functional tab is currently active
+    const activeTab = document.querySelector('.tab-btn.active')?.dataset?.tab;
+    if (activeTab === 'send') loadPendingClients();
+    else if (activeTab === 'questionnaires') loadQuestionnaires();
+    else if (activeTab === 'ai-review') loadAIClassifications();
+    else if (activeTab === 'reminders') loadReminders();
 }
 
 // Close dropdowns/popovers on Escape; Enter on clickable counts triggers click
@@ -1360,7 +1380,7 @@ document.addEventListener('visibilitychange', () => {
 async function loadAIReviewCount() {
     const badge = document.getElementById('aiReviewTabBadge');
     try {
-        const resp = await fetchWithTimeout(`${ENDPOINTS.GET_PENDING_CLASSIFICATIONS}`, { headers: { 'Authorization': `Bearer ${authToken}` } }, FETCH_TIMEOUTS.quick);
+        const resp = await fetchWithTimeout(`${ENDPOINTS.GET_PENDING_CLASSIFICATIONS}?filing_type=${activeEntityTab}`, { headers: { 'Authorization': `Bearer ${authToken}` } }, FETCH_TIMEOUTS.quick);
         const data = await resp.json();
         badge.classList.remove('ai-badge-loading');
         if (data.ok && data.items) {
@@ -1650,7 +1670,7 @@ async function loadPendingClients(silent = false) {
 
     try {
         const year = document.getElementById('sendYearFilter').value;
-        const response = await fetchWithTimeout(`${ENDPOINTS.ADMIN_PENDING}?year=${year}`, { headers: { 'Authorization': `Bearer ${authToken}` } }, FETCH_TIMEOUTS.load);
+        const response = await fetchWithTimeout(`${ENDPOINTS.ADMIN_PENDING}?year=${year}&filing_type=${activeEntityTab}`, { headers: { 'Authorization': `Bearer ${authToken}` } }, FETCH_TIMEOUTS.load);
         const data = await response.json();
 
         if (!silent) hideLoading();
@@ -2395,7 +2415,7 @@ async function loadAIClassifications(silent = false) {
     if (!silent) showLoading('טוען סיווגים...');
 
     try {
-        const response = await fetchWithTimeout(`${ENDPOINTS.GET_PENDING_CLASSIFICATIONS}`, { headers: { 'Authorization': `Bearer ${authToken}` } }, FETCH_TIMEOUTS.load);
+        const response = await fetchWithTimeout(`${ENDPOINTS.GET_PENDING_CLASSIFICATIONS}?filing_type=${activeEntityTab}`, { headers: { 'Authorization': `Bearer ${authToken}` } }, FETCH_TIMEOUTS.load);
         const data = await response.json();
 
         if (!silent) hideLoading();
@@ -3879,7 +3899,7 @@ async function loadReminders(silent = false) {
         const response = await fetchWithTimeout(ENDPOINTS.ADMIN_REMINDERS, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ token: authToken, action: 'list' })
+            body: JSON.stringify({ token: authToken, action: 'list', filing_type: activeEntityTab })
         }, FETCH_TIMEOUTS.load);
         const data = await response.json();
 
@@ -4582,7 +4602,7 @@ async function viewQuestionnaire(reportId) {
             showLoading('טוען שאלון...');
             const year = document.getElementById('questionnaireYearFilter')?.value || String(new Date().getFullYear() - 1);
             const response = await fetchWithTimeout(
-                `${ENDPOINTS.ADMIN_QUESTIONNAIRES}?token=${encodeURIComponent(authToken)}&year=${encodeURIComponent(year)}`,
+                `${ENDPOINTS.ADMIN_QUESTIONNAIRES}?token=${encodeURIComponent(authToken)}&year=${encodeURIComponent(year)}&filing_type=${activeEntityTab}`,
                 { method: 'GET' },
                 FETCH_TIMEOUTS.load
             );
@@ -5851,7 +5871,7 @@ async function loadQuestionnaires(silent = false) {
     try {
         const year = document.getElementById('questionnaireYearFilter')?.value || String(new Date().getFullYear() - 1);
         const response = await fetchWithTimeout(
-            `${ENDPOINTS.ADMIN_QUESTIONNAIRES}?token=${encodeURIComponent(authToken)}&year=${encodeURIComponent(year)}`,
+            `${ENDPOINTS.ADMIN_QUESTIONNAIRES}?token=${encodeURIComponent(authToken)}&year=${encodeURIComponent(year)}&filing_type=${activeEntityTab}`,
             { method: 'GET' },
             FETCH_TIMEOUTS.load
         );
