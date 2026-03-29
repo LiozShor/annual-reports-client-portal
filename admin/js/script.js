@@ -3294,8 +3294,10 @@ async function approveAIClassification(recordId) {
             if (!data.ok) throw new Error(formatAIResponseError(data));
 
             const approvedItem = aiClassificationsData.find(i => i.id === recordId);
-            if (approvedItem?.matched_doc_record_id) {
-                updateClientDocState(approvedItem.client_name, approvedItem.matched_doc_record_id);
+            // DL-224: Use response doc_id (resolved by backend) instead of stale matched_doc_record_id
+            const resolvedDocId = data.doc_id || approvedItem?.matched_doc_record_id;
+            if (resolvedDocId && approvedItem) {
+                updateClientDocState(approvedItem.client_name, resolvedDocId);
             }
             // DL-086: Transition to reviewed state instead of removing
             transitionCardToReviewed(recordId, 'approved', data);
@@ -3329,8 +3331,10 @@ async function resubmitApprove(recordId, mode, loadingText) {
         if (!data.ok) throw new Error(formatAIResponseError(data));
 
         const approvedItem = aiClassificationsData.find(i => i.id === recordId);
-        if (approvedItem?.matched_doc_record_id) {
-            updateClientDocState(approvedItem.client_name, approvedItem.matched_doc_record_id);
+        // DL-224: Use response doc_id (resolved by backend)
+        const resolvedDocId = data.doc_id || approvedItem?.matched_doc_record_id;
+        if (resolvedDocId && approvedItem) {
+            updateClientDocState(approvedItem.client_name, resolvedDocId);
         }
         transitionCardToReviewed(recordId, 'approved', data);
         const modeLabel = mode === 'merge' ? 'מוזג' : mode === 'keep_both' ? 'נשמרו שניהם' : 'הוחלף';
