@@ -6,6 +6,12 @@
 let currentData = null;
 let currentLang = 'he';
 
+// Filing type tabs state
+let allReports = [];           // from get-client-reports
+let siblingTokens = {};        // reportId → token
+let tabDataCache = {};         // reportId → API response data
+let activeReportId = null;     // currently displayed report (set after reportId is parsed)
+
 // Emoji → Lucide icon mapping for categories
 const CATEGORY_ICONS = {
     '\u{1F4BC}': 'briefcase',     // 💼
@@ -93,6 +99,7 @@ function escapeHtml(text) {
 // Get URL params
 const params = new URLSearchParams(window.location.search);
 const reportId = params.get('report_id');
+activeReportId = reportId;
 
 // Auth tokens — never exposed in the page URL
 // Client flow: token stored in sessionStorage by landing.js (or URL param for old links)
@@ -190,6 +197,12 @@ async function loadDocuments() {
 
         renderDocuments();
         document.getElementById('results').style.display = 'block';
+
+        // Cache initial data for tab switching
+        tabDataCache[reportId] = data;
+
+        // Discover sibling reports (non-fatal, adds tabs if multi-report client)
+        discoverSiblingReports();
 
         // Show language toggle once results load
         document.getElementById('lang-toggle').style.display = 'flex';
@@ -446,6 +459,106 @@ function switchLanguage(lang) {
 
     // Re-render documents
     renderDocuments();
+
+    // Re-render filing tabs with correct language
+    if (allReports.length > 1) renderFilingTabs();
+}
+
+// ── Filing Type Tabs ──────────────────────────────────────────────
+
+async function discoverSiblingReports() {
+    try {
+        const tokenParam = clientToken ? `&token=${encodeURIComponent(clientToken)}` : '';
+        const resp = await fetchWithTimeout(
+            `${ENDPOINTS.GET_CLIENT_REPORTS}?report_id=${encodeURIComponent(reportId)}${tokenParam}`,
+            {}, FETCH_TIMEOUTS?.load || 15000
+        );
+        const data = await resp.json();
+        if (!data.ok || !data.reports || data.reports.length <= 1) return;
+
+        allReports = data.reports;
+        // Store tokens for sibling reports
+        for (const r of allReports) {
+            siblingTokens[r.report_id] = r.token;
+        }
+
+        renderFilingTabs();
+    } catch (e) {
+        // Non-fatal — single-report experience continues
+        console.error('[view-docs] Sibling discovery failed:', e.message);
+    }
+}
+
+function renderFilingTabs() {
+    const container = document.getElementById('filing-tabs');
+    if (!container) return;
+    const isHe = currentLang === 'he';
+
+    container.innerHTML = allReports.map(r => {
+        const label = isHe ? r.label_he : r.label_en;
+        const isActive = r.report_id === activeReportId;
+        return `<button class="filing-tab${isActive ? ' active' : ''}"
+                 data-report-id="${r.report_id}"
+                 onclick="switchFilingTab('${r.report_id}')">
+            ${escapeHtml(label)} <span class="tab-count">(${r.docs_received}/${r.docs_total})</span>
+        </button>`;
+    }).join('');
+    container.style.display = 'flex';
+}
+
+window.switchFilingTab = function(newReportId) {
+    if (newReportId === activeReportId) return;
+    activeReportId = newReportId;
+
+    // Update active tab styling
+    document.querySelectorAll('.filing-tab').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.reportId === newReportId);
+    });
+
+    if (tabDataCache[newReportId]) {
+        // Render from cache
+        currentData = tabDataCache[newReportId];
+        renderFromData(currentData);
+        document.getElementById('results').style.display = 'block';
+    } else {
+        // Fetch docs for this report
+        loadSiblingDocs(newReportId);
+    }
+};
+
+async function loadSiblingDocs(siblingReportId) {
+    const token = siblingTokens[siblingReportId];
+    if (!token) return;
+
+    // Show loading
+    document.getElementById('results').style.display = 'none';
+    document.getElementById('loading').style.display = 'block';
+
+    try {
+        const resp = await fetchWithTimeout(
+            `${ENDPOINTS.GET_CLIENT_DOCUMENTS}?report_id=${encodeURIComponent(siblingReportId)}&token=${encodeURIComponent(token)}`,
+            {}, FETCH_TIMEOUTS?.load || 15000
+        );
+        const data = await resp.json();
+
+        if (!data.ok) {
+            throw new Error(data.error || 'Failed to load documents');
+        }
+
+        // Cache and render
+        tabDataCache[siblingReportId] = data;
+        currentData = data;
+
+        document.getElementById('loading').style.display = 'none';
+        renderFromData(data);
+        document.getElementById('results').style.display = 'block';
+    } catch (err) {
+        document.getElementById('loading').style.display = 'none';
+        document.getElementById('results').style.display = 'block';
+        // Show error inline
+        const container = document.getElementById('documents-container');
+        if (container) container.innerHTML = `<div class="alert alert-danger">${currentLang === 'he' ? 'שגיאה בטעינת מסמכים' : 'Error loading documents'}</div>`;
+    }
 }
 
 function showError(message) {

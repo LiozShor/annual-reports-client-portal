@@ -5388,8 +5388,14 @@ function viewClient(reportId) {
 }
 
 function viewClientDocs(reportId) {
-    // SEC-004: Only pass report_id — document-manager fetches all data from API
-    window.location.href = `../document-manager.html?report_id=${encodeURIComponent(reportId)}`;
+    // Prefer client_id for multi-report tab support; fall back to report_id
+    const client = clientsData.find(c => c.report_id === reportId);
+    const clientId = client?.client_id;
+    if (clientId) {
+        window.location.href = `../document-manager.html?client_id=${encodeURIComponent(clientId)}`;
+    } else {
+        window.location.href = `../document-manager.html?report_id=${encodeURIComponent(reportId)}`;
+    }
 }
 
 function exportToExcel() {
@@ -6487,7 +6493,14 @@ function printSingleQuestionnaire(id) {
 }
 
 function navigateToDocManager(reportId) {
-    window.location.href = `../document-manager.html?report_id=${encodeURIComponent(reportId)}`;
+    // Prefer client_id for multi-report tab support; fall back to report_id
+    const client = clientsData.find(c => c.report_id === reportId);
+    const clientId = client?.client_id;
+    if (clientId) {
+        window.location.href = `../document-manager.html?client_id=${encodeURIComponent(clientId)}`;
+    } else {
+        window.location.href = `../document-manager.html?report_id=${encodeURIComponent(reportId)}`;
+    }
 }
 
 // Helper: format date for display (questionnaire tab)
