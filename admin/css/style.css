@@ -155,12 +155,12 @@ body {
 
 /* Stage 3 attention bounce — only applied via JS when count > 0 */
 @keyframes stage3-bounce {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-4px); }
+  0%, 100% { transform: translateY(2px); }
+  50% { transform: translateY(-6px); }
 }
 
 .stat-card.stage-3.needs-attention {
-  animation: stage3-bounce 2s ease-in-out infinite;
+  animation: stage3-bounce 1s ease-in-out infinite;
 }
 
 .stat-card.stage-3.needs-attention .stat-number {
