@@ -3348,6 +3348,52 @@ async function resubmitApprove(recordId, mode, loadingText) {
     }
 }
 
+// DL-224: Re-submit reassign with conflict resolution mode
+async function resubmitReassign(recordId, templateId, docRecordId, newDocName, mode, loadingText) {
+    setCardLoading(recordId, loadingText);
+    try {
+        const body = {
+            token: authToken,
+            classification_id: recordId,
+            action: 'reassign',
+            reassign_template_id: templateId,
+            reassign_doc_record_id: docRecordId || null,
+            force_overwrite: true,
+            approve_mode: mode
+        };
+        if (newDocName) body.new_doc_name = newDocName;
+
+        const response = await fetchWithTimeout(ENDPOINTS.REVIEW_CLASSIFICATION, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body)
+        }, FETCH_TIMEOUTS.mutate);
+
+        const data = await parseAIResponse(response);
+        clearCardLoading(recordId);
+
+        if (!data.ok) throw new Error(formatAIResponseError(data));
+
+        const reassignedItem = aiClassificationsData.find(i => i.id === recordId);
+        const resolvedDocId = data.doc_id || docRecordId;
+        if (resolvedDocId && reassignedItem) {
+            updateClientDocState(reassignedItem.client_name, resolvedDocId);
+        }
+        if (reassignedItem && data.doc_title) {
+            reassignedItem.matched_doc_name = data.doc_title;
+            reassignedItem.matched_template_id = templateId;
+            reassignedItem.matched_short_name = data.matched_short_name || data.doc_title || '';
+            reassignedItem.matched_template_name = reassignedItem.matched_short_name;
+        }
+        transitionCardToReviewed(recordId, 'reassigned', data);
+        const modeLabel = mode === 'merge' ? 'מוזג' : mode === 'keep_both' ? 'נשמרו שניהם' : 'הוחלף';
+        showAIToast(`${modeLabel} — ${formatAISuccessToast(data)}`, 'success');
+    } catch (error) {
+        clearCardLoading(recordId);
+        showModal('error', 'שגיאה', error.message);
+    }
+}
+
 async function rejectAIClassification(recordId) {
     showRejectNotesPanel(recordId);
 }
@@ -3502,14 +3548,15 @@ async function submitAIReassign(recordId, templateId, docRecordId, loadingText, 
         const data = await parseAIResponse(response);
         clearCardLoading(recordId);
 
-        // DL-070: Handle target doc conflict
+        // DL-224: Handle target doc conflict with 3-option dialog (same as approve)
         if (data._conflict) {
             const title = (data.conflict_doc_title || '').replace(/<[^>]+>/g, '');
-            showConfirmDialog(
-                `המסמך "${title}" כבר אושר ומכיל קובץ קיים.\nלהחליף את הקובץ הקיים?`,
-                () => submitAIReassign(recordId, templateId, docRecordId, 'מחליף מסמך...', newDocName, true),
-                'החלף מסמך',
-                true
+            const existingName = (data.conflict_existing_name || '').replace(/<[^>]+>/g, '');
+            const newName = (data.conflict_new_name || '').replace(/<[^>]+>/g, '');
+            showApproveConflictDialog(title, existingName, newName,
+                () => resubmitReassign(recordId, templateId, docRecordId, newDocName, 'merge', 'ממזג קבצים...'),
+                () => resubmitReassign(recordId, templateId, docRecordId, newDocName, 'keep_both', 'שומר שניהם...'),
+                () => resubmitReassign(recordId, templateId, docRecordId, newDocName, 'override', 'מחליף קובץ...')
             );
             return;
         }
