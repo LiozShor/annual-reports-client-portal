@@ -2669,9 +2669,9 @@ function renderAICards(items) {
         }
 
         // Build document manager link button (icon-only, next to expand arrow)
-        const reportId = clientItems[0].report_record_id;
-        const docManagerBtn = reportId
-            ? `<a href="../document-manager.html?report_id=${encodeURIComponent(reportId)}"
+        const clientId = clientItems[0].client_id;
+        const docManagerBtn = clientId
+            ? `<a href="../document-manager.html?client_id=${encodeURIComponent(clientId)}"
                  target="_blank" class="ai-doc-manager-link"
                  onclick="event.stopPropagation()" title="לניהול המסמכים">
                  <i data-lucide="folder-open" class="icon-xs"></i>
@@ -5391,13 +5391,10 @@ function viewClient(reportId) {
 }
 
 function viewClientDocs(reportId) {
-    // Prefer client_id for multi-report tab support; fall back to report_id
     const client = clientsData.find(c => c.report_id === reportId);
     const clientId = client?.client_id;
     if (clientId) {
         window.location.href = `../document-manager.html?client_id=${encodeURIComponent(clientId)}`;
-    } else {
-        window.location.href = `../document-manager.html?report_id=${encodeURIComponent(reportId)}`;
     }
 }
 
@@ -6506,13 +6503,10 @@ function printSingleQuestionnaire(id) {
 }
 
 function navigateToDocManager(reportId) {
-    // Prefer client_id for multi-report tab support; fall back to report_id
     const client = clientsData.find(c => c.report_id === reportId);
     const clientId = client?.client_id;
     if (clientId) {
         window.location.href = `../document-manager.html?client_id=${encodeURIComponent(clientId)}`;
-    } else {
-        window.location.href = `../document-manager.html?report_id=${encodeURIComponent(reportId)}`;
     }
 }
 
