@@ -3910,6 +3910,18 @@ tr.reminder-loading td:last-child {
     white-space: nowrap;
 }
 
+/* DL-224: Received docs in dropdown */
+.doc-combobox-option.doc-received {
+    opacity: 0.6;
+}
+.doc-combobox-option.doc-received:hover {
+    opacity: 0.85;
+}
+.doc-combobox-option .received-badge {
+    font-size: var(--text-xs);
+    white-space: nowrap;
+}
+
 .doc-combobox-empty {
     padding: var(--sp-4);
     text-align: center;
