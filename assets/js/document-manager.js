@@ -3,10 +3,8 @@
    SSOT: all data (docs, categories, templates) from API (Airtable)
    =========================================== */
 
-// SEC-004: Only read report_id from URL — client data fetched from API
 const params = new URLSearchParams(window.location.search);
 const CLIENT_ID = params.get('client_id');
-let REPORT_ID = params.get('report_id');
 let CLIENT_NAME = '';
 let SPOUSE_NAME = '';
 let YEAR = '';
@@ -113,20 +111,12 @@ if (document.readyState === 'loading') {
     initOfflineDetection('he');
 }
 
-// Entry point: support both client_id (new, multi-report) and report_id (backward compat)
+// Entry point: client_id required
 if (CLIENT_ID) {
-    // New flow: load all reports for this client, then load docs for first report
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', () => loadClientReports(CLIENT_ID));
     } else {
         loadClientReports(CLIENT_ID);
-    }
-} else if (REPORT_ID && REPORT_ID !== 'null' && REPORT_ID !== 'undefined') {
-    // Backward compat: load docs for single report, then discover siblings
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', () => loadDocuments(REPORT_ID));
-    } else {
-        loadDocuments(REPORT_ID);
     }
 } else {
     // No report context — show "Not Started" state

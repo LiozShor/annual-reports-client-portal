@@ -817,17 +817,16 @@ function prepareAirtablePayload(documents) {
 
 /**
  * Build action buttons HTML for office email
- * @param {Object} params - { reportId, clientEmail, year, spouseName, clientName }
+ * @param {Object} params - { reportId, clientId, clientEmail, year, spouseName, clientName }
  * @param {string} SECRET - Webhook secret token
  * @returns {string} HTML for action buttons
  */
 function buildActionButtonsHTML(params, SECRET) {
-  const { reportId, clientEmail, year, spouseName, clientName } = params;
+  const { reportId, clientId, clientEmail, year, spouseName, clientName } = params;
 
   const baseUrl = 'https://annual-reports-api.liozshor1.workers.dev/webhook';
   const approveUrl = `${baseUrl}/approve-and-send?report_id=${reportId}&token=${SECRET}`;
-  // SEC-004: Only report_id in URL — document-manager fetches client data from API
-  const editUrl = `https://liozshor.github.io/annual-reports-client-portal/document-manager.html?report_id=${reportId}`;
+  const editUrl = `https://liozshor.github.io/annual-reports-client-portal/document-manager.html?client_id=${clientId}`;
 
   return `
 <div style="margin-top:30px;padding:20px;background:#e3f2fd;border-radius:8px;text-align:center;">
