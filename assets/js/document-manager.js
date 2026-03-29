@@ -5,6 +5,7 @@
 
 const params = new URLSearchParams(window.location.search);
 const CLIENT_ID = params.get('client_id');
+let REPORT_ID = null;
 let CLIENT_NAME = '';
 let SPOUSE_NAME = '';
 let YEAR = '';
@@ -3158,7 +3159,7 @@ function _escHtml(str) {
 }
 
 // Kick off switcher load alongside main load (non-blocking)
-if (CLIENT_ID || (REPORT_ID && REPORT_ID !== 'null' && REPORT_ID !== 'undefined')) {
+if (CLIENT_ID) {
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', loadClientSwitcher);
     } else {
