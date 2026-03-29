@@ -1048,6 +1048,12 @@ tr.duplicate {
     margin-bottom: var(--sp-6);
 }
 
+.modal-actions {
+    display: flex;
+    justify-content: center;
+    gap: var(--sp-3);
+}
+
 .modal-stat {
     text-align: center;
 }
