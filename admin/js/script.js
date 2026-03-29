@@ -1634,9 +1634,12 @@ async function addManualClient() {
         showModal('warning', 'אימייל לא תקין', 'כתובת האימייל אינה תקינה');
         return;
     }
-    // Block if email already exists
-    if (existingEmails.has(email)) {
-        showModal('warning', 'לקוח קיים', 'כתובת המייל הזו כבר קיימת ברשימת הלקוחות.');
+    // Block only if same email + filing type already exists
+    const hasSameTypeReport = clientsData.some(c =>
+        c.email?.toLowerCase() === email && c.filing_type === filingType
+    );
+    if (hasSameTypeReport) {
+        showModal('warning', 'דוח קיים', 'ללקוח זה כבר קיים דוח מאותו סוג.');
         return;
     }
 
