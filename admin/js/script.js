@@ -3278,6 +3278,19 @@ async function approveAIClassification(recordId) {
             const data = await parseAIResponse(response);
             clearCardLoading(recordId);
 
+            // DL-222: Approve conflict — show 3-option dialog
+            if (data._conflict) {
+                const existingName = (data.conflict_existing_name || '').replace(/<[^>]+>/g, '');
+                const newName = (data.conflict_new_name || '').replace(/<[^>]+>/g, '');
+                const title = (data.conflict_doc_title || '').replace(/<[^>]+>/g, '');
+                showApproveConflictDialog(title, existingName, newName,
+                    () => resubmitApprove(recordId, 'merge', 'ממזג קבצים...'),
+                    () => resubmitApprove(recordId, 'keep_both', 'שומר שניהם...'),
+                    () => resubmitApprove(recordId, 'override', 'מחליף קובץ...')
+                );
+                return;
+            }
+
             if (!data.ok) throw new Error(formatAIResponseError(data));
 
             const approvedItem = aiClassificationsData.find(i => i.id === recordId);
@@ -3292,6 +3305,40 @@ async function approveAIClassification(recordId) {
             showModal('error', 'שגיאה', error.message);
         }
     }, { confirmText: 'נכון', btnClass: 'btn-success' });
+}
+
+// DL-222: Re-submit approve with conflict resolution mode
+async function resubmitApprove(recordId, mode, loadingText) {
+    setCardLoading(recordId, loadingText);
+    try {
+        const response = await fetchWithTimeout(ENDPOINTS.REVIEW_CLASSIFICATION, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                token: authToken,
+                classification_id: recordId,
+                action: 'approve',
+                force_overwrite: true,
+                approve_mode: mode
+            })
+        }, FETCH_TIMEOUTS.mutate);
+
+        const data = await parseAIResponse(response);
+        clearCardLoading(recordId);
+
+        if (!data.ok) throw new Error(formatAIResponseError(data));
+
+        const approvedItem = aiClassificationsData.find(i => i.id === recordId);
+        if (approvedItem?.matched_doc_record_id) {
+            updateClientDocState(approvedItem.client_name, approvedItem.matched_doc_record_id);
+        }
+        transitionCardToReviewed(recordId, 'approved', data);
+        const modeLabel = mode === 'merge' ? 'מוזג' : mode === 'keep_both' ? 'נשמרו שניהם' : 'הוחלף';
+        showAIToast(`${modeLabel} — ${formatAISuccessToast(data)}`, 'success');
+    } catch (error) {
+        clearCardLoading(recordId);
+        showModal('error', 'שגיאה', error.message);
+    }
 }
 
 async function rejectAIClassification(recordId) {
@@ -5594,6 +5641,53 @@ function closeConfirmDialog(confirmed) {
     const cb = _confirmCallback;
     _confirmCallback = null;
     if (confirmed && cb) cb();
+}
+
+// DL-222: 3-option conflict dialog for approve with existing file
+function showApproveConflictDialog(docTitle, existingName, newName, onMerge, onKeepBoth, onOverride) {
+    // Reuse the confirm dialog container but inject custom content
+    const dialog = document.getElementById('confirmDialog');
+    const msgEl = document.getElementById('confirmDialogMessage');
+    const btnEl = document.getElementById('confirmDialogBtn');
+    const footerEl = btnEl.parentElement;
+
+    // Save original footer HTML for restoration
+    const originalFooterHtml = footerEl.innerHTML;
+
+    msgEl.innerHTML = `<strong>למסמך "${escapeHtml(docTitle)}" כבר קיים קובץ מאושר.</strong>`
+        + `<div style="margin-top:8px;font-size:0.92em;color:var(--gray-600)">`
+        + `<div>קובץ קיים: <strong>${escapeHtml(existingName)}</strong></div>`
+        + `<div>קובץ חדש: <strong>${escapeHtml(newName)}</strong></div>`
+        + `</div>`
+        + `<div style="margin-top:12px">מה לעשות?</div>`;
+
+    footerEl.innerHTML = `
+        <div style="display:flex;flex-direction:column;gap:8px;width:100%">
+            <button class="btn btn-primary" id="conflictMergeBtn">
+                <i data-lucide="merge" class="icon-sm"></i> מזג קבצים
+            </button>
+            <button class="btn btn-outline" id="conflictKeepBothBtn">
+                <i data-lucide="copy-plus" class="icon-sm"></i> שמור שניהם
+            </button>
+            <button class="btn confirm-btn-danger" id="conflictOverrideBtn">
+                <i data-lucide="replace" class="icon-sm"></i> החלף קובץ
+            </button>
+            <button class="btn btn-ghost" id="conflictCancelBtn">ביטול</button>
+        </div>
+    `;
+
+    function cleanup() {
+        dialog.classList.remove('show');
+        footerEl.innerHTML = originalFooterHtml;
+    }
+
+    document.getElementById('conflictMergeBtn').addEventListener('click', () => { cleanup(); onMerge(); });
+    document.getElementById('conflictKeepBothBtn').addEventListener('click', () => { cleanup(); onKeepBoth(); });
+    document.getElementById('conflictOverrideBtn').addEventListener('click', () => { cleanup(); onOverride(); });
+    document.getElementById('conflictCancelBtn').addEventListener('click', () => { cleanup(); });
+
+    dialog.classList.add('show');
+    if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
 // ==================== YEAR DROPDOWNS ====================
