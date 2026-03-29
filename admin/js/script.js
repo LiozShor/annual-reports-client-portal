@@ -571,7 +571,7 @@ async function loadDashboard(silent = false) {
     } catch (error) {
         if (!silent) hideLoading();
         console.error('Dashboard load failed');
-        if (!silent) showModal('error', 'שגיאה', 'לא ניתן לטעון את הנתונים');
+        if (!silent) showModal('error', 'שגיאה', 'לא ניתן לטעון את הנתונים', null, { label: 'רענן', onClick: () => location.reload() });
     }
 }
 
@@ -5439,7 +5439,7 @@ function hideLoading() {
     document.getElementById('loadingOverlay').classList.remove('visible');
 }
 
-function showModal(type, title, body, stats = null) {
+function showModal(type, title, body, stats = null, action = null) {
     const icons = {
         success: '<i data-lucide="circle-check" class="icon-2xl"></i>',
         error: '<i data-lucide="circle-alert" class="icon-2xl"></i>',
@@ -5466,6 +5466,16 @@ function showModal(type, title, body, stats = null) {
         document.getElementById('modalStats').innerHTML = statsHtml;
     } else {
         document.getElementById('modalStats').innerHTML = '';
+    }
+
+    // Action button (e.g. refresh) — rendered before סגור
+    const actionsEl = document.getElementById('modalActions');
+    if (action && action.label && action.onClick) {
+        actionsEl.innerHTML = `<button class="btn btn-primary" id="modalActionBtn">${action.label}</button>`
+            + `<button class="btn btn-ghost" onclick="closeModal()">סגור</button>`;
+        document.getElementById('modalActionBtn').addEventListener('click', () => { closeModal(); action.onClick(); });
+    } else {
+        actionsEl.innerHTML = '<button class="btn btn-primary" onclick="closeModal()">סגור</button>';
     }
 
     document.getElementById('resultModal').classList.add('visible');
