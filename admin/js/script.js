@@ -2175,8 +2175,10 @@ function createDocCombobox(container, docs, { currentMatchId = null, onSelect = 
             html += `<div class="doc-combobox-category">${escapeHtml(group.emoji)} ${escapeHtml(group.name)}</div>`;
             for (const doc of filtered) {
                 const isCurrent = currentMatchId && doc.template_id === currentMatchId;
-                const cls = isCurrent ? ' current-match' : '';
-                const badge = isCurrent ? `<span class="current-badge">\u25c0 \u05e0\u05d5\u05db\u05d7\u05d9</span>` : '';
+                const isReceived = doc.status === 'Received';
+                const cls = (isCurrent ? ' current-match' : '') + (isReceived ? ' doc-received' : '');
+                const badge = isCurrent ? `<span class="current-badge">\u25c0 \u05e0\u05d5\u05db\u05d7\u05d9</span>` :
+                              isReceived ? `<span class="received-badge">\u2705</span>` : '';
                 html += `<div class="doc-combobox-option${cls}" data-value="${escapeAttr(doc.template_id)}" data-doc-id="${escapeAttr(doc.doc_record_id || '')}" data-name="${escapeAttr(getPlainName(doc))}">${renderDocLabel(getDisplayName(doc))}${badge}</div>`;
             }
         }
@@ -2810,7 +2812,8 @@ function renderAICards(items) {
     container.querySelectorAll('.doc-combobox-container').forEach(el => {
         const recordId = el.dataset.recordId;
         const itemData = aiClassificationsData.find(i => i.id === recordId);
-        const docs = itemData ? (itemData.missing_docs || []) : [];
+        // DL-224: Show all docs (not just missing) — received ones get checkmark badge
+        const docs = itemData ? (itemData.all_docs || itemData.missing_docs || []) : [];
         createDocCombobox(el, docs, {
             allowCreate: true,
             onSelect: (templateId) => {
@@ -3427,7 +3430,8 @@ async function executeReject(recordId, rejectionReason, notes) {
 
 function showAIReassignModal(recordId) {
     const item = aiClassificationsData.find(i => i.id === recordId);
-    const missingDocs = item ? (item.missing_docs || []) : [];
+    // DL-224: Show all docs (not just missing) — received ones get checkmark badge
+    const missingDocs = item ? (item.all_docs || item.missing_docs || []) : [];
 
     aiCurrentReassignId = recordId;
     const fileInfoEl = document.getElementById('aiReassignFileInfo');
