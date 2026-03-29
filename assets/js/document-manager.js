@@ -5,7 +5,8 @@
 
 // SEC-004: Only read report_id from URL — client data fetched from API
 const params = new URLSearchParams(window.location.search);
-const REPORT_ID = params.get('report_id');
+const CLIENT_ID = params.get('client_id');
+let REPORT_ID = params.get('report_id');
 let CLIENT_NAME = '';
 let SPOUSE_NAME = '';
 let YEAR = '';
@@ -32,6 +33,10 @@ let pendingTemplate = null; // Template awaiting detail input
 let apiTemplates = [];      // Templates from Airtable (SSOT)
 let apiCategories = [];     // Categories from Airtable (SSOT)
 let companyLinksMap = {};   // name_he → url from company_links table
+
+// Multi-report (filing tabs) state
+let allReports = [];          // All reports for this client [{report_id, filing_type, label_he, ...}]
+let reportDataCache = {};     // report_id → cached doc data for tab switching
 
 // Enhanced operations state
 let markedForRestore = new Set();   // doc IDs to un-waive
@@ -108,18 +113,26 @@ if (document.readyState === 'loading') {
     initOfflineDetection('he');
 }
 
-// Check if we have a report ID (if not, show "Not Started" state)
-if (!REPORT_ID || REPORT_ID === 'null' || REPORT_ID === 'undefined') {
+// Entry point: support both client_id (new, multi-report) and report_id (backward compat)
+if (CLIENT_ID) {
+    // New flow: load all reports for this client, then load docs for first report
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', () => loadClientReports(CLIENT_ID));
+    } else {
+        loadClientReports(CLIENT_ID);
+    }
+} else if (REPORT_ID && REPORT_ID !== 'null' && REPORT_ID !== 'undefined') {
+    // Backward compat: load docs for single report, then discover siblings
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', () => loadDocuments(REPORT_ID));
+    } else {
+        loadDocuments(REPORT_ID);
+    }
+} else {
+    // No report context — show "Not Started" state
     document.getElementById('loading').style.display = 'none';
     document.getElementById('not-started-view').style.display = 'block';
-    // Init icons for the not-started view
     setTimeout(initIcons, 50);
-} else {
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', loadDocuments);
-    } else {
-        loadDocuments();
-    }
 }
 
 // Show alert (in-flow banner at top of page)
@@ -177,20 +190,23 @@ function setBtnState(btn, state, text) {
     }
 }
 
-// Load documents
-async function loadDocuments() {
+// Load documents for a specific report
+async function loadDocuments(reportId) {
     const loadingEl = document.getElementById('loading');
     const cleanupEscalation = startLoadingEscalation(loadingEl);
 
     try {
         const response = await retryWithBackoff(
-            () => fetchWithTimeout(`${ENDPOINTS.GET_CLIENT_DOCUMENTS}?report_id=${REPORT_ID}&mode=office`, {
+            () => fetchWithTimeout(`${ENDPOINTS.GET_CLIENT_DOCUMENTS}?report_id=${reportId}&mode=office`, {
                 headers: { 'Authorization': `Bearer ${ADMIN_TOKEN}` }
             }, FETCH_TIMEOUTS.load),
             { maxRetries: 1 }
         );
         cleanupEscalation();
         const data = await response.json();
+
+        // Update global REPORT_ID to match what we loaded
+        REPORT_ID = reportId;
 
         // SEC-004: Populate all client data from API (not URL)
         if (data.client_name) {
@@ -294,12 +310,183 @@ async function loadDocuments() {
         initStickyBar();
         // Pre-fetch questionnaire in background so date shows in header before user clicks
         loadQuestionnaireForReport();
+
+        // Cache loaded data for tab switching
+        reportDataCache[reportId] = {
+            groups: currentGroups,
+            documents: currentDocuments,
+            templates: apiTemplates,
+            categories: apiCategories,
+            companyLinks: companyLinksMap,
+            clientName: CLIENT_NAME,
+            spouseName: SPOUSE_NAME,
+            year: YEAR,
+            stage: CURRENT_STAGE,
+            docsFirstSentAt: DOCS_FIRST_SENT_AT,
+            notes: REPORT_NOTES,
+            clientNotes: CLIENT_NOTES,
+            clientQuestions: data.client_questions
+        };
+
+        // Discover sibling reports if loaded via report_id (backward compat)
+        if (allReports.length === 0 && data.client_id) {
+            discoverSiblingReports(reportId);
+        }
     } catch (error) {
         cleanupEscalation();
         console.error('Document manager load failed');
         document.getElementById('loading').style.display = 'none';
         showAlert(getErrorMessage(error, 'he'), 'error');
     }
+}
+
+// Load all reports for a client (new flow: client_id URL param)
+async function loadClientReports(clientId) {
+    try {
+        const resp = await fetchWithTimeout(
+            `${ENDPOINTS.GET_CLIENT_REPORTS}?client_id=${encodeURIComponent(clientId)}&mode=office`,
+            { headers: { 'Authorization': `Bearer ${ADMIN_TOKEN}` } },
+            FETCH_TIMEOUTS.load
+        );
+        const data = await resp.json();
+        if (!data.ok) throw new Error(data.error || 'Failed to load reports');
+
+        allReports = data.reports || [];
+        if (allReports.length === 0) {
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('not-started-view').style.display = 'block';
+            return;
+        }
+
+        // Set active to first report
+        REPORT_ID = allReports[0].report_id;
+
+        // Render tabs if multiple reports
+        if (allReports.length > 1) renderFilingTabs();
+
+        // Load docs for active report
+        loadDocuments(REPORT_ID);
+    } catch (err) {
+        document.getElementById('loading').style.display = 'none';
+        showAlert('שגיאה בטעינת דוחות: ' + err.message, 'error');
+    }
+}
+
+// Discover sibling reports when loaded via report_id (backward compat)
+async function discoverSiblingReports(reportId) {
+    try {
+        const resp = await fetchWithTimeout(
+            `${ENDPOINTS.GET_CLIENT_REPORTS}?report_id=${encodeURIComponent(reportId)}&mode=office`,
+            { headers: { 'Authorization': `Bearer ${ADMIN_TOKEN}` } },
+            FETCH_TIMEOUTS.load
+        );
+        const data = await resp.json();
+        if (!data.ok || !data.reports) return;
+
+        allReports = data.reports;
+        if (allReports.length > 1) renderFilingTabs();
+    } catch (e) {
+        // Non-fatal — just no tabs
+    }
+}
+
+// Render filing type tabs for multi-report clients
+function renderFilingTabs() {
+    const container = document.getElementById('filing-tabs');
+    if (!container) return;
+    container.innerHTML = allReports.map(r =>
+        `<button class="filing-tab${r.report_id === REPORT_ID ? ' active' : ''}"
+                 data-report-id="${r.report_id}" onclick="switchFilingTab('${r.report_id}')">
+            ${escapeHtml(r.label_he)} <span class="tab-count">(${r.docs_received}/${r.docs_total})</span>
+        </button>`
+    ).join('');
+    container.style.display = 'flex';
+}
+
+// Switch between filing tabs
+window.switchFilingTab = function(reportId) {
+    if (reportId === REPORT_ID) return;
+
+    // Check for unsaved changes before switching
+    const hasChanges = markedForRemoval.size > 0 || docsToAdd.size > 0 ||
+        markedForRestore.size > 0 || statusChanges.size > 0 ||
+        noteChanges.size > 0 || nameChanges.size > 0 || questionsAreDirty();
+    if (hasChanges) {
+        showToast('יש שינויים שלא נשמרו — שמור או בטל לפני מעבר', 'error');
+        return;
+    }
+
+    REPORT_ID = reportId;
+
+    // Update active tab styling
+    document.querySelectorAll('.filing-tab').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.reportId === reportId);
+    });
+
+    // Load from cache or fetch
+    if (reportDataCache[reportId]) {
+        restoreFromCache(reportId);
+    } else {
+        document.getElementById('content').style.display = 'none';
+        document.getElementById('loading').style.display = 'block';
+        loadDocuments(reportId);
+    }
+};
+
+// Restore document manager state from cache (tab switch without fetch)
+function restoreFromCache(reportId) {
+    const cached = reportDataCache[reportId];
+    currentGroups = cached.groups;
+    currentDocuments = cached.documents;
+    apiTemplates = cached.templates;
+    apiCategories = cached.categories;
+    companyLinksMap = cached.companyLinks;
+    CLIENT_NAME = cached.clientName;
+    SPOUSE_NAME = cached.spouseName;
+    YEAR = cached.year;
+    CURRENT_STAGE = cached.stage;
+    DOCS_FIRST_SENT_AT = cached.docsFirstSentAt;
+    REPORT_NOTES = cached.notes;
+    CLIENT_NOTES = cached.clientNotes;
+
+    // Update header
+    const nameEl = document.getElementById('clientName');
+    if (nameEl) nameEl.textContent = CLIENT_NAME;
+    const spouseEl = document.getElementById('spouseName');
+    if (spouseEl) spouseEl.textContent = SPOUSE_NAME || '-';
+    const spouseToggle = document.getElementById('spouseDocToggle');
+    if (spouseToggle) spouseToggle.style.display = SPOUSE_NAME ? '' : 'none';
+    const yearEl = document.getElementById('year');
+    if (yearEl) yearEl.textContent = YEAR;
+    const stageEl = document.getElementById('clientStage');
+    if (stageEl) stageEl.textContent = STAGE_LABELS[CURRENT_STAGE] || CURRENT_STAGE;
+    updateSentBadge();
+
+    const notesTextarea = document.getElementById('reportNotesTextarea');
+    if (notesTextarea) notesTextarea.value = REPORT_NOTES;
+    renderClientNotes();
+
+    // Reset change tracking
+    markedForRemoval = new Set();
+    docsToAdd = new Map();
+    markedForRestore = new Set();
+    statusChanges = new Map();
+    noteChanges = new Map();
+    nameChanges = new Map();
+    const sendBtn = document.getElementById('approveSendBtn');
+    if (sendBtn) { sendBtn.disabled = false; sendBtn.title = ''; }
+
+    // Parse questions
+    try { clientQuestions = JSON.parse(cached.clientQuestions || '[]'); } catch (e) { clientQuestions = []; }
+    originalQuestionsJSON = JSON.stringify(clientQuestions);
+    renderQuestions();
+
+    // Re-render
+    initDocumentDropdown();
+    displayDocuments();
+    updateStats();
+    setTimeout(initIcons, 50);
+    loadQuestionnaireForReport();
 }
 
 // Save report notes on blur
@@ -2981,7 +3168,7 @@ function _escHtml(str) {
 }
 
 // Kick off switcher load alongside main load (non-blocking)
-if (REPORT_ID && REPORT_ID !== 'null' && REPORT_ID !== 'undefined') {
+if (CLIENT_ID || (REPORT_ID && REPORT_ID !== 'null' && REPORT_ID !== 'undefined')) {
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', loadClientSwitcher);
     } else {

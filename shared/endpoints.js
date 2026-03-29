@@ -55,4 +55,7 @@ const ENDPOINTS = {
     // --- Chat (DL-179) ---
     ADMIN_CHAT:                `${CF_BASE}/admin-chat`,
     ADMIN_SEND_FEEDBACK:       `${CF_BASE}/admin-send-feedback`,
+
+    // --- Client reports (DL-218) ---
+    GET_CLIENT_REPORTS:        `${CF_BASE}/get-client-reports`,
 };
