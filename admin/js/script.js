@@ -1120,11 +1120,13 @@ function switchEntityTab(type) {
     updateReviewQueueUI();
 
     // Reload whichever functional tab is currently active
-    const activeTab = document.querySelector('.tab-btn.active')?.dataset?.tab;
+    const activeContent = document.querySelector('.tab-content.active');
+    const activeTab = activeContent?.id?.replace('tab-', '');
     if (activeTab === 'send') loadPendingClients();
     else if (activeTab === 'questionnaires') loadQuestionnaires();
     else if (activeTab === 'ai-review') loadAIClassifications();
     else if (activeTab === 'reminders') loadReminders();
+    else if (activeTab === 'review') loadDashboard();
 }
 
 // Close dropdowns/popovers on Escape; Enter on clickable counts triggers click
