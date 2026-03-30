@@ -2165,72 +2165,88 @@ tr:hover .client-view-link {
     margin-bottom: var(--sp-1);
 }
 
-.ai-missing-doc-tag {
-    display: inline-flex;
-    align-items: center;
-    position: relative;
-    background: var(--gray-100);
+.ai-missing-doc-tag,
+.ai-doc-tag-waived,
+.ai-doc-tag-received,
+.ai-doc-tag-requires-fix {
+    display: inline-block;
     padding: 1px var(--sp-2);
     border-radius: var(--radius-sm);
     margin: 1px;
     font-size: 11px;
-    color: var(--gray-600);
     cursor: pointer;
     transition: background var(--transition-fast), color var(--transition-fast);
 }
 
-.ai-missing-doc-tag:hover {
-    background: var(--gray-200);
-    color: var(--gray-700);
+.ai-missing-doc-tag {
+    background: var(--gray-100);
+    color: var(--gray-600);
 }
 
+.ai-missing-doc-tag:hover { background: var(--gray-200); color: var(--gray-700); }
+
 .ai-doc-tag-waived {
-    display: inline-flex;
-    align-items: center;
-    position: relative;
     background: var(--gray-100);
-    padding: 1px var(--sp-2);
-    border-radius: var(--radius-sm);
-    margin: 1px;
-    font-size: 11px;
     color: var(--gray-400);
     opacity: 0.6;
     text-decoration: line-through;
-    cursor: pointer;
-    transition: background var(--transition-fast), opacity var(--transition-fast);
 }
 
-.ai-doc-tag-waived:hover {
-    opacity: 0.85;
-    background: var(--gray-200);
-}
+.ai-doc-tag-waived:hover { opacity: 0.85; background: var(--gray-200); }
 
 .ai-doc-tag-received {
-    display: inline-flex;
-    align-items: center;
     background: var(--success-50);
-    padding: 1px var(--sp-2);
-    border-radius: var(--radius-sm);
-    margin: 1px;
-    font-size: 11px;
-    color: var(--gray-400);
-    text-decoration: line-through;
-    cursor: default;
+    color: var(--success-700);
 }
 
-.ai-doc-tag-receive-btn {
-    display: none;
-    margin-inline-start: 3px;
-    color: var(--success-600);
-    font-weight: 700;
-    font-size: 11px;
+.ai-doc-tag-received:hover { background: var(--success-100); }
+
+.ai-doc-tag-requires-fix {
+    background: var(--warning-50, #fffbeb);
+    color: var(--warning-700, #b45309);
+}
+
+.ai-doc-tag-requires-fix:hover { background: var(--warning-100, #fef3c7); }
+
+.ai-doc-tag-active {
+    outline: 2px solid var(--primary-400);
+    outline-offset: 1px;
+}
+
+/* DL-227: Tag status menu */
+.ai-doc-tag-menu {
+    z-index: 1000;
+    background: var(--white, #fff);
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius-md);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+    padding: var(--sp-1) 0;
+    min-width: 120px;
+}
+
+.ai-doc-tag-menu-item {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
+    width: 100%;
+    padding: var(--sp-1) var(--sp-3);
+    border: none;
+    background: none;
+    font-size: 12px;
+    color: var(--gray-700);
     cursor: pointer;
-    line-height: 1;
+    text-align: start;
+    white-space: nowrap;
 }
 
-.ai-missing-doc-tag:hover .ai-doc-tag-receive-btn,
-.ai-doc-tag-waived:hover .ai-doc-tag-receive-btn {
-    display: inline;
+.ai-doc-tag-menu-item:hover {
+    background: var(--gray-50);
+}
+
+.ai-doc-tag-menu-icon {
+    width: 14px;
+    text-align: center;
+    flex-shrink: 0;
 }
 
 .ai-card-actions {

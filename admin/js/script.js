@@ -3824,22 +3824,73 @@ function renderDocTag(d) {
     const docId = d.doc_record_id || '';
     const status = d.status || 'Required_Missing';
 
-    if (status === 'Received') {
-        return `<span class="ai-doc-tag-received">&#x2713; ${renderDocLabel(label)}</span>`;
-    }
-    if (status === 'Waived') {
-        return `<span class="ai-doc-tag-waived" data-doc-record-id="${escapeAttr(docId)}" data-status="Waived" onclick="toggleDocStatus(this)">&mdash; ${renderDocLabel(label)}<span class="ai-doc-tag-receive-btn" onclick="markDocReceived(event, this.parentElement)" title="סמן כהתקבל">&#x2713;</span></span>`;
-    }
-    // Required_Missing (default)
-    return `<span class="ai-missing-doc-tag" data-doc-record-id="${escapeAttr(docId)}" data-status="Required_Missing" onclick="toggleDocStatus(this)">${renderDocLabel(label)}<span class="ai-doc-tag-receive-btn" onclick="markDocReceived(event, this.parentElement)" title="סמן כהתקבל">&#x2713;</span></span>`;
+    const tagClasses = {
+        'Received': 'ai-doc-tag-received',
+        'Waived': 'ai-doc-tag-waived',
+        'Requires_Fix': 'ai-doc-tag-requires-fix',
+    };
+    const tagClass = tagClasses[status] || 'ai-missing-doc-tag';
+    const prefixes = { 'Received': '&#x2713; ', 'Waived': '&mdash; ', 'Requires_Fix': '&#x26A0; ' };
+    const prefix = prefixes[status] || '';
+
+    return `<span class="${tagClass}" data-doc-record-id="${escapeAttr(docId)}" data-status="${escapeAttr(status)}" onclick="openDocTagMenu(event, this)">${prefix}${renderDocLabel(label)}</span>`;
 }
 
-function toggleDocStatus(tagEl) {
-    const docRecordId = tagEl.dataset.docRecordId;
-    const currentStatus = tagEl.dataset.status;
-    if (!docRecordId || tagEl._pending) return;
+function openDocTagMenu(event, tagEl) {
+    event.stopPropagation();
+    closeDocTagMenu();
 
-    const newStatus = currentStatus === 'Waived' ? 'Required_Missing' : 'Waived';
+    const currentStatus = tagEl.dataset.status || 'Required_Missing';
+    const docRecordId = tagEl.dataset.docRecordId;
+    if (!docRecordId) return;
+
+    const options = [
+        { status: 'Required_Missing', label: 'חסר', icon: '○' },
+        { status: 'Received', label: 'התקבל', icon: '✓' },
+        { status: 'Waived', label: 'לא נדרש', icon: '—' },
+        { status: 'Requires_Fix', label: 'דרוש תיקון', icon: '⚠' },
+    ].filter(o => o.status !== currentStatus);
+
+    const menu = document.createElement('div');
+    menu.className = 'ai-doc-tag-menu';
+    menu.innerHTML = options.map(o =>
+        `<button class="ai-doc-tag-menu-item" data-new-status="${o.status}" onclick="selectDocTagStatus(event, this)">
+            <span class="ai-doc-tag-menu-icon">${o.icon}</span> ${o.label}
+        </button>`
+    ).join('');
+
+    // Position relative to tag
+    const rect = tagEl.getBoundingClientRect();
+    menu.style.position = 'fixed';
+    menu.style.top = (rect.bottom + 4) + 'px';
+    menu.style.left = rect.left + 'px';
+    menu.dataset.docRecordId = docRecordId;
+    menu.dataset.tagId = docRecordId; // link back to tag
+
+    document.body.appendChild(menu);
+    tagEl.classList.add('ai-doc-tag-active');
+
+    // Close on outside click (next tick to avoid immediate close)
+    requestAnimationFrame(() => {
+        document._docTagMenuClose = (e) => {
+            if (!menu.contains(e.target) && e.target !== tagEl) closeDocTagMenu();
+        };
+        document.addEventListener('click', document._docTagMenuClose, { capture: true });
+    });
+}
+
+function selectDocTagStatus(event, btnEl) {
+    event.stopPropagation();
+    const menu = btnEl.closest('.ai-doc-tag-menu');
+    const docRecordId = menu.dataset.docRecordId;
+    const newStatus = btnEl.dataset.newStatus;
+    closeDocTagMenu();
+
+    // Find the tag's client
+    const tagEl = document.querySelector(`[data-doc-record-id="${CSS.escape(docRecordId)}"].ai-doc-tag-active`)
+        || document.querySelector(`[data-doc-record-id="${CSS.escape(docRecordId)}"]`);
+    if (!tagEl) return;
+
     const accordion = tagEl.closest('.ai-accordion');
     const clientName = accordion ? accordion.dataset.client : null;
     if (!clientName) return;
@@ -3847,16 +3898,14 @@ function toggleDocStatus(tagEl) {
     updateDocStatusInline(clientName, docRecordId, newStatus);
 }
 
-function markDocReceived(event, tagEl) {
-    event.stopPropagation();
-    const docRecordId = tagEl.dataset.docRecordId;
-    if (!docRecordId || tagEl._pending) return;
-
-    const accordion = tagEl.closest('.ai-accordion');
-    const clientName = accordion ? accordion.dataset.client : null;
-    if (!clientName) return;
-
-    updateDocStatusInline(clientName, docRecordId, 'Received');
+function closeDocTagMenu() {
+    const existing = document.querySelector('.ai-doc-tag-menu');
+    if (existing) existing.remove();
+    document.querySelectorAll('.ai-doc-tag-active').forEach(el => el.classList.remove('ai-doc-tag-active'));
+    if (document._docTagMenuClose) {
+        document.removeEventListener('click', document._docTagMenuClose, { capture: true });
+        document._docTagMenuClose = null;
+    }
 }
 
 async function updateDocStatusInline(clientName, docRecordId, newStatus) {
@@ -3891,7 +3940,8 @@ async function updateDocStatusInline(clientName, docRecordId, newStatus) {
     const statusLabels = {
         'Waived': 'המסמך סומן כלא נדרש',
         'Required_Missing': 'המסמך שוחזר לרשימה',
-        'Received': 'המסמך סומן כהתקבל'
+        'Received': 'המסמך סומן כהתקבל',
+        'Requires_Fix': 'המסמך סומן כדרוש תיקון'
     };
 
     try {
@@ -3906,15 +3956,10 @@ async function updateDocStatusInline(clientName, docRecordId, newStatus) {
 
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
-        // Show undo toast (skip undo for Received — it's intentional)
-        if (newStatus === 'Received') {
-            showAIToast(statusLabels[newStatus], 'success');
-        } else {
-            showAIToast(statusLabels[newStatus], 'success', {
-                label: 'ביטול',
-                onClick: () => undoDocStatusChange(clientName, docRecordId, previousStatus, reportRecordId)
-            });
-        }
+        showAIToast(statusLabels[newStatus] || 'הסטטוס עודכן', 'success', {
+            label: 'ביטול',
+            onClick: () => undoDocStatusChange(clientName, docRecordId, previousStatus, reportRecordId)
+        });
     } catch (err) {
         // Rollback on error
         applyDocStatusChange(clientName, docRecordId, previousStatus);
