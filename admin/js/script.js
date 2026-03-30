@@ -1375,18 +1375,25 @@ function stopBackgroundRefresh() {
     bgRefreshInterval = null;
 }
 
+let lastVisibilityRefresh = 0;
+
 document.addEventListener('visibilitychange', () => {
     if (!authToken) return; // Not logged in
     if (document.hidden) {
         stopBackgroundRefresh();
     } else {
-        // Silently refresh active tab on return, then restart interval
-        const activeTab = document.querySelector('.tab-content.active')?.id?.replace('tab-', '');
-        if (activeTab === 'dashboard' || activeTab === 'review') { dashboardLoaded = false; loadDashboard(true); }
-        else if (activeTab === 'send') { pendingClientsLoaded = false; loadPendingClients(true); }
-        else if (activeTab === 'ai-review') { aiReviewLoaded = false; loadAIClassifications(true); }
-        else if (activeTab === 'reminders') { reminderLoaded = false; loadReminders(true); }
-        else if (activeTab === 'questionnaires') { questionnaireLoaded = false; loadQuestionnaires(true); }
+        // Debounce: skip refresh if last one was < 60s ago (prevents OS-triggered visibility spam)
+        const now = Date.now();
+        if (now - lastVisibilityRefresh >= 60_000) {
+            lastVisibilityRefresh = now;
+            // Silently refresh active tab on return
+            const activeTab = document.querySelector('.tab-content.active')?.id?.replace('tab-', '');
+            if (activeTab === 'dashboard' || activeTab === 'review') { dashboardLoaded = false; loadDashboard(true); }
+            else if (activeTab === 'send') { pendingClientsLoaded = false; loadPendingClients(true); }
+            else if (activeTab === 'ai-review') { aiReviewLoaded = false; loadAIClassifications(true); }
+            else if (activeTab === 'reminders') { reminderLoaded = false; loadReminders(true); }
+            else if (activeTab === 'questionnaires') { questionnaireLoaded = false; loadQuestionnaires(true); }
+        }
         startBackgroundRefresh();
     }
 });
@@ -3674,7 +3681,7 @@ function showClientReviewDonePrompt(clientName) {
                 <strong>כל המסמכים נבדקו!</strong>
                 <span class="ai-review-done-stats">${statParts.join(' · ')}</span>
             </div>
-            <button class="btn btn-success btn-sm ai-review-done-btn" onclick="dismissClientReview('${escapeAttr(clientName)}')">
+            <button class="btn btn-success btn-sm ai-review-done-btn" onclick="dismissClientReview('${escapeOnclick(clientName)}')">
                 <i data-lucide="check" class="icon-xs"></i>
                 סיום בדיקה
             </button>
