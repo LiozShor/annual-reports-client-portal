@@ -2785,14 +2785,7 @@ function renderAICards(items) {
 
             let categoriesHtml = '<div class="ai-missing-category-tags">';
             for (const group of catGroups) {
-                categoriesHtml += group.docs.map(d => {
-                    const id = d.template_id || d.name || '';
-                    const label = d.name_short || d.name || id;
-                    const isReceived = d.status === 'Received';
-                    const tagClass = isReceived ? 'ai-doc-tag-received' : 'ai-missing-doc-tag';
-                    const prefix = isReceived ? '&#x2713; ' : '';
-                    return `<span class="${tagClass}">${prefix}${renderDocLabel(label)}</span>`;
-                }).join('');
+                categoriesHtml += group.docs.map(d => renderDocTag(d)).join('');
             }
             categoriesHtml += '</div>';
 
@@ -3797,26 +3790,206 @@ function animateAndRemoveAI(recordId) {
 function updateClientDocState(clientName, docRecordId) {
     if (!clientName || !docRecordId) return;
 
-    // Mutate aiClassificationsData for all sibling items of this client
+    // DL-227: Delegate to shared functions
+    applyDocStatusChange(clientName, docRecordId, 'Received');
+    refreshClientDocTags(clientName);
+}
+
+function recalcAIStats() {
+    // DL-086: Split into pending (needing review) and reviewed-unsent
+    const pendingItems = aiClassificationsData.filter(i => (i.review_status || 'pending') === 'pending');
+    const reviewedItems = aiClassificationsData.filter(i => (i.review_status || 'pending') !== 'pending');
+
+    const pendingCount = pendingItems.length;
+    const reviewedUnsent = reviewedItems.length;
+    const matched = pendingItems.filter(i => !!i.matched_template_id).length;
+    const unmatched = pendingCount - matched;
+    const mismatchCount = pendingItems.filter(i =>
+        i.matched_template_id && i.issuer_match_quality === 'mismatch'
+    ).length;
+
+
+    // Update tab badge — show unique client count (not doc count)
+    const badge = document.getElementById('aiReviewTabBadge');
+    const uniqueClientsPending = new Set(pendingItems.map(i => i.client_id).filter(Boolean)).size;
+    const uniqueClientsReviewed = new Set(reviewedItems.map(i => i.client_id).filter(Boolean)).size;
+    const badgeCount = uniqueClientsPending > 0 ? uniqueClientsPending : (uniqueClientsReviewed > 0 ? uniqueClientsReviewed : 0);
+    syncAIBadge(badge, badgeCount);
+}
+
+// --- DL-227: Inline doc tag rendering + waive/receive ---
+
+function renderDocTag(d) {
+    const label = d.name_short || d.name || d.template_id || '';
+    const docId = d.doc_record_id || '';
+    const status = d.status || 'Required_Missing';
+
+    if (status === 'Received') {
+        return `<span class="ai-doc-tag-received">&#x2713; ${renderDocLabel(label)}</span>`;
+    }
+    if (status === 'Waived') {
+        return `<span class="ai-doc-tag-waived" data-doc-record-id="${escapeAttr(docId)}" data-status="Waived" onclick="toggleDocStatus(this)">&mdash; ${renderDocLabel(label)}<span class="ai-doc-tag-receive-btn" onclick="markDocReceived(event, this.parentElement)" title="סמן כהתקבל">&#x2713;</span></span>`;
+    }
+    // Required_Missing (default)
+    return `<span class="ai-missing-doc-tag" data-doc-record-id="${escapeAttr(docId)}" data-status="Required_Missing" onclick="toggleDocStatus(this)">${renderDocLabel(label)}<span class="ai-doc-tag-receive-btn" onclick="markDocReceived(event, this.parentElement)" title="סמן כהתקבל">&#x2713;</span></span>`;
+}
+
+function toggleDocStatus(tagEl) {
+    const docRecordId = tagEl.dataset.docRecordId;
+    const currentStatus = tagEl.dataset.status;
+    if (!docRecordId || tagEl._pending) return;
+
+    const newStatus = currentStatus === 'Waived' ? 'Required_Missing' : 'Waived';
+    const accordion = tagEl.closest('.ai-accordion');
+    const clientName = accordion ? accordion.dataset.client : null;
+    if (!clientName) return;
+
+    updateDocStatusInline(clientName, docRecordId, newStatus);
+}
+
+function markDocReceived(event, tagEl) {
+    event.stopPropagation();
+    const docRecordId = tagEl.dataset.docRecordId;
+    if (!docRecordId || tagEl._pending) return;
+
+    const accordion = tagEl.closest('.ai-accordion');
+    const clientName = accordion ? accordion.dataset.client : null;
+    if (!clientName) return;
+
+    updateDocStatusInline(clientName, docRecordId, 'Received');
+}
+
+async function updateDocStatusInline(clientName, docRecordId, newStatus) {
+    // Find representative item to get report_record_id
+    const representative = aiClassificationsData.find(i => i.client_name === clientName);
+    if (!representative) return;
+    const reportRecordId = representative.report_record_id;
+    if (!reportRecordId) return;
+
+    // Find the doc in all_docs to get previous status
+    const allDocs = representative.all_docs || representative.missing_docs || [];
+    const doc = allDocs.find(d => d.doc_record_id === docRecordId);
+    if (!doc) return;
+    const previousStatus = doc.status || 'Required_Missing';
+    if (previousStatus === newStatus) return;
+
+    // Optimistic update: mutate data
+    applyDocStatusChange(clientName, docRecordId, newStatus);
+    refreshClientDocTags(clientName);
+
+    // Fire API
+    const payload = {
+        data: {
+            fields: [{ label: 'report_record_id', type: 'HIDDEN_FIELDS', value: reportRecordId }],
+            extensions: {
+                status_changes: [{ id: docRecordId, new_status: newStatus }],
+                send_email: false
+            }
+        }
+    };
+
+    const statusLabels = {
+        'Waived': 'המסמך סומן כלא נדרש',
+        'Required_Missing': 'המסמך שוחזר לרשימה',
+        'Received': 'המסמך סומן כהתקבל'
+    };
+
+    try {
+        const response = await fetchWithTimeout(ENDPOINTS.EDIT_DOCUMENTS, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${authToken}`
+            },
+            body: JSON.stringify(payload)
+        }, FETCH_TIMEOUTS.mutate);
+
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+        // Show undo toast (skip undo for Received — it's intentional)
+        if (newStatus === 'Received') {
+            showAIToast(statusLabels[newStatus], 'success');
+        } else {
+            showAIToast(statusLabels[newStatus], 'success', {
+                label: 'ביטול',
+                onClick: () => undoDocStatusChange(clientName, docRecordId, previousStatus, reportRecordId)
+            });
+        }
+    } catch (err) {
+        // Rollback on error
+        applyDocStatusChange(clientName, docRecordId, previousStatus);
+        refreshClientDocTags(clientName);
+        showAIToast('שגיאה בעדכון סטטוס המסמך', 'danger');
+        console.error('DL-227: status update failed', err);
+    }
+}
+
+async function undoDocStatusChange(clientName, docRecordId, revertStatus, reportRecordId) {
+    applyDocStatusChange(clientName, docRecordId, revertStatus);
+    refreshClientDocTags(clientName);
+
+    const payload = {
+        data: {
+            fields: [{ label: 'report_record_id', type: 'HIDDEN_FIELDS', value: reportRecordId }],
+            extensions: {
+                status_changes: [{ id: docRecordId, new_status: revertStatus }],
+                send_email: false
+            }
+        }
+    };
+
+    try {
+        const response = await fetchWithTimeout(ENDPOINTS.EDIT_DOCUMENTS, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${authToken}`
+            },
+            body: JSON.stringify(payload)
+        }, FETCH_TIMEOUTS.mutate);
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        showAIToast('הפעולה בוטלה', 'success');
+    } catch (err) {
+        showAIToast('שגיאה בביטול — רענן את הדף', 'danger');
+        console.error('DL-227: undo failed', err);
+    }
+}
+
+function applyDocStatusChange(clientName, docRecordId, newStatus) {
     for (const item of aiClassificationsData) {
         if (item.client_name !== clientName) continue;
 
-        // Remove from missing_docs
-        if (item.missing_docs) {
-            item.missing_docs = item.missing_docs.filter(d => d.doc_record_id !== docRecordId);
-        }
-
-        // Mark as Received in all_docs and bump count
+        // Update in all_docs
         if (item.all_docs) {
             const doc = item.all_docs.find(d => d.doc_record_id === docRecordId);
-            if (doc && doc.status !== 'Received') {
-                doc.status = 'Received';
-                item.docs_received_count = (item.docs_received_count || 0) + 1;
+            if (doc) {
+                const wasReceived = doc.status === 'Received';
+                const isNowReceived = newStatus === 'Received';
+                doc.status = newStatus;
+                if (!wasReceived && isNowReceived) {
+                    item.docs_received_count = (item.docs_received_count || 0) + 1;
+                } else if (wasReceived && !isNowReceived) {
+                    item.docs_received_count = Math.max(0, (item.docs_received_count || 0) - 1);
+                }
+            }
+        }
+
+        // Update missing_docs: remove if waived/received, add back if restored
+        if (item.missing_docs) {
+            if (newStatus === 'Required_Missing') {
+                // Add back if not already there
+                if (!item.missing_docs.find(d => d.doc_record_id === docRecordId)) {
+                    const docData = (item.all_docs || []).find(d => d.doc_record_id === docRecordId);
+                    if (docData) item.missing_docs.push(docData);
+                }
+            } else {
+                item.missing_docs = item.missing_docs.filter(d => d.doc_record_id !== docRecordId);
             }
         }
     }
+}
 
-    // Re-render the doc overview tags inside this client's accordion
+function refreshClientDocTags(clientName) {
     const accordion = document.querySelector(`.ai-accordion[data-client="${CSS.escape(clientName)}"]`);
     if (!accordion) return;
 
@@ -3832,7 +4005,7 @@ function updateClientDocState(clientName, docRecordId) {
 
     const docsGroup = accordion.querySelector('.ai-missing-docs-group');
     if (docsGroup && displayDocs.length > 0) {
-        // Rebuild category tags
+        let categoriesHtml = '<div class="ai-missing-category-tags">';
         const catGroups = [];
         let currentCat = null;
         for (const d of displayDocs) {
@@ -3843,16 +4016,8 @@ function updateClientDocState(clientName, docRecordId) {
             }
             catGroups[catGroups.length - 1].docs.push(d);
         }
-
-        let categoriesHtml = '<div class="ai-missing-category-tags">';
         for (const group of catGroups) {
-            categoriesHtml += group.docs.map(d => {
-                const label = d.name_short || d.name || d.template_id || '';
-                const isReceived = d.status === 'Received';
-                const tagClass = isReceived ? 'ai-doc-tag-received' : 'ai-missing-doc-tag';
-                const prefix = isReceived ? '&#x2713; ' : '';
-                return `<span class="${tagClass}">${prefix}${renderDocLabel(label)}</span>`;
-            }).join('');
+            categoriesHtml += group.docs.map(d => renderDocTag(d)).join('');
         }
         categoriesHtml += '</div>';
 
@@ -3913,35 +4078,12 @@ function updateClientDocState(clientName, docRecordId) {
                 </div>
             `;
         } else {
-            // All same-type docs received — show message
-            const templateName = cardItem.matched_short_name || cardItem.matched_template_name || '';
+            const templateName = cardItem.matched_short_name || cardItem.matched_template_name || cardItem.matched_template_id || '';
             validationArea.innerHTML = `
                 <div class="ai-validation-title">⚠️ כל מסמכי ${renderDocLabel(templateName)} כבר התקבלו</div>
             `;
         }
     });
-}
-
-function recalcAIStats() {
-    // DL-086: Split into pending (needing review) and reviewed-unsent
-    const pendingItems = aiClassificationsData.filter(i => (i.review_status || 'pending') === 'pending');
-    const reviewedItems = aiClassificationsData.filter(i => (i.review_status || 'pending') !== 'pending');
-
-    const pendingCount = pendingItems.length;
-    const reviewedUnsent = reviewedItems.length;
-    const matched = pendingItems.filter(i => !!i.matched_template_id).length;
-    const unmatched = pendingCount - matched;
-    const mismatchCount = pendingItems.filter(i =>
-        i.matched_template_id && i.issuer_match_quality === 'mismatch'
-    ).length;
-
-
-    // Update tab badge — show unique client count (not doc count)
-    const badge = document.getElementById('aiReviewTabBadge');
-    const uniqueClientsPending = new Set(pendingItems.map(i => i.client_id).filter(Boolean)).size;
-    const uniqueClientsReviewed = new Set(reviewedItems.map(i => i.client_id).filter(Boolean)).size;
-    const badgeCount = uniqueClientsPending > 0 ? uniqueClientsPending : (uniqueClientsReviewed > 0 ? uniqueClientsReviewed : 0);
-    syncAIBadge(badge, badgeCount);
 }
 
 // AI helper functions

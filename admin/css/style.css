@@ -2166,17 +2166,48 @@ tr:hover .client-view-link {
 }
 
 .ai-missing-doc-tag {
-    display: inline-block;
+    display: inline-flex;
+    align-items: center;
+    position: relative;
     background: var(--gray-100);
     padding: 1px var(--sp-2);
     border-radius: var(--radius-sm);
     margin: 1px;
     font-size: 11px;
     color: var(--gray-600);
+    cursor: pointer;
+    transition: background var(--transition-fast), color var(--transition-fast);
+}
+
+.ai-missing-doc-tag:hover {
+    background: var(--gray-200);
+    color: var(--gray-700);
+}
+
+.ai-doc-tag-waived {
+    display: inline-flex;
+    align-items: center;
+    position: relative;
+    background: var(--gray-100);
+    padding: 1px var(--sp-2);
+    border-radius: var(--radius-sm);
+    margin: 1px;
+    font-size: 11px;
+    color: var(--gray-400);
+    opacity: 0.6;
+    text-decoration: line-through;
+    cursor: pointer;
+    transition: background var(--transition-fast), opacity var(--transition-fast);
+}
+
+.ai-doc-tag-waived:hover {
+    opacity: 0.85;
+    background: var(--gray-200);
 }
 
 .ai-doc-tag-received {
-    display: inline-block;
+    display: inline-flex;
+    align-items: center;
     background: var(--success-50);
     padding: 1px var(--sp-2);
     border-radius: var(--radius-sm);
@@ -2184,6 +2215,22 @@ tr:hover .client-view-link {
     font-size: 11px;
     color: var(--gray-400);
     text-decoration: line-through;
+    cursor: default;
+}
+
+.ai-doc-tag-receive-btn {
+    display: none;
+    margin-inline-start: 3px;
+    color: var(--success-600);
+    font-weight: 700;
+    font-size: 11px;
+    cursor: pointer;
+    line-height: 1;
+}
+
+.ai-missing-doc-tag:hover .ai-doc-tag-receive-btn,
+.ai-doc-tag-waived:hover .ai-doc-tag-receive-btn {
+    display: inline;
 }
 
 .ai-card-actions {
