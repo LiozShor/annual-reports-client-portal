@@ -2460,11 +2460,12 @@ async function loadAIClassifications(silent = false) {
         const newItems = data.items || [];
 
         // Silent refresh: skip re-render if data hasn't changed (prevents accordion collapse)
-        if (silent && aiReviewLoaded) {
+        if (silent && aiClassificationsData.length > 0) {
             const oldFingerprint = aiClassificationsData.map(i => `${i.id}:${i.review_status || 'pending'}`).sort().join(',');
             const newFingerprint = newItems.map(i => `${i.id}:${i.review_status || 'pending'}`).sort().join(',');
             if (oldFingerprint === newFingerprint) {
                 // Data unchanged — just update badge, skip DOM rebuild
+                aiReviewLoaded = true;
                 const badge = document.getElementById('aiReviewTabBadge');
                 const pendingForBadge = newItems.filter(i => (i.review_status || 'pending') === 'pending');
                 const uniqueClients = new Set(pendingForBadge.map(i => i.client_id).filter(Boolean)).size;
