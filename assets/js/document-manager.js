@@ -5,6 +5,7 @@
 
 const params = new URLSearchParams(window.location.search);
 const CLIENT_ID = params.get('client_id');
+const PREFERRED_FILING_TYPE = params.get('filing_type'); // auto-select tab from email link
 let REPORT_ID = null;
 let CLIENT_NAME = '';
 let SPOUSE_NAME = '';
@@ -359,8 +360,8 @@ async function loadClientReports(clientId) {
             return;
         }
 
-        // Set active report — prefer URL tab param, fallback to first
-        const preferredTab = params.get('tab');
+        // Set active report — prefer URL filing_type/tab param, fallback to first
+        const preferredTab = PREFERRED_FILING_TYPE || params.get('tab');
         const tabMatch = preferredTab && allReports.find(r => r.filing_type === preferredTab);
         REPORT_ID = tabMatch ? tabMatch.report_id : allReports[0].report_id;
 
