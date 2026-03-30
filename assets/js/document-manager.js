@@ -2532,7 +2532,7 @@ function printQuestionnaireFromDocManager() {
 <tbody>${rows}</tbody></table>
 ${cqHtml}
 ${notesHtml}
-<div class="footer">הודפס מתוך מערכת ניהול דוחות שנתיים — משה עציץ רו"ח</div>
+<div class="footer">הודפס מתוך מערכת ניהול דוחות — משה עציץ רו"ח</div>
 </body></html>`;
 
     printWindow.document.write(html);

@@ -188,8 +188,14 @@ async function loadDocuments() {
         const email = data.support_email || 'reports@moshe-atsits.co.il';
         document.getElementById('email-display').textContent = email;
         document.getElementById('email-display-en').textContent = email;
-        const filingLabel = data.report?.filing_type_label_he || '\u05d3\u05d5\u05d7 \u05e9\u05e0\u05ea\u05d9';
+        const filingLabel = data.report?.filing_type_label_he || '\u05d3\u05d5\u05d7';
         document.getElementById('email-button').href = `mailto:${email}?subject=${encodeURIComponent(`\u05de\u05e1\u05de\u05db\u05d9\u05dd \u05dc${filingLabel} ${year} - ${displayName}`)}`;
+
+        const ftLabelHe = data.report?.filing_type_label_he || '\u05d3\u05d5\u05d7';
+        const ftLabelEn = data.report?.filing_type_label_en || 'Report';
+        document.title = `\u05e8\u05e9\u05d9\u05de\u05ea \u05de\u05e1\u05de\u05db\u05d9\u05dd \u05e0\u05d3\u05e8\u05e9\u05d9\u05dd \u05dc\u05d4\u05db\u05e0\u05ea \u05d4${ftLabelHe} - Required Documents for ${ftLabelEn}`;
+        document.getElementById('title-he').textContent = `\u05e8\u05e9\u05d9\u05de\u05ea \u05de\u05e1\u05de\u05db\u05d9\u05dd \u05e0\u05d3\u05e8\u05e9\u05d9\u05dd \u05dc\u05d4\u05db\u05e0\u05ea \u05d4${ftLabelHe}`;
+        document.getElementById('title-en').textContent = `Required Documents for ${ftLabelEn}`;
 
         // Set default language based on questionnaire language
         currentLang = sourceLanguage || 'he';
@@ -254,8 +260,14 @@ function renderFromData(data) {
     const email = data.support_email || 'reports@moshe-atsits.co.il';
     document.getElementById('email-display').textContent = email;
     document.getElementById('email-display-en').textContent = email;
-    const filingLabel2 = data.report?.filing_type_label_he || '\u05d3\u05d5\u05d7 \u05e9\u05e0\u05ea\u05d9';
+    const filingLabel2 = data.report?.filing_type_label_he || '\u05d3\u05d5\u05d7';
     document.getElementById('email-button').href = `mailto:${email}?subject=${encodeURIComponent(`\u05de\u05e1\u05de\u05db\u05d9\u05dd \u05dc${filingLabel2} ${year} - ${displayName}`)}`;
+
+    const ftLabelHe = data.report?.filing_type_label_he || '\u05d3\u05d5\u05d7';
+    const ftLabelEn = data.report?.filing_type_label_en || 'Report';
+    document.title = `\u05e8\u05e9\u05d9\u05de\u05ea \u05de\u05e1\u05de\u05db\u05d9\u05dd \u05e0\u05d3\u05e8\u05e9\u05d9\u05dd \u05dc\u05d4\u05db\u05e0\u05ea \u05d4${ftLabelHe} - Required Documents for ${ftLabelEn}`;
+    document.getElementById('title-he').textContent = `\u05e8\u05e9\u05d9\u05de\u05ea \u05de\u05e1\u05de\u05db\u05d9\u05dd \u05e0\u05d3\u05e8\u05e9\u05d9\u05dd \u05dc\u05d4\u05db\u05e0\u05ea \u05d4${ftLabelHe}`;
+    document.getElementById('title-en').textContent = `Required Documents for ${ftLabelEn}`;
 
     currentLang = sourceLanguage || 'he';
     switchLanguage(currentLang);
@@ -278,8 +290,8 @@ function renderDocuments() {
             container.innerHTML = `<div class="alert alert-info" style="flex-direction:column; align-items:center; text-align:center">
                 <i data-lucide="clipboard-list" class="icon"></i>
                 <span>${isHe
-                    ? 'טרם מולא שאלון שנתי. יש למלא את השאלון כדי שנוכל להכין את רשימת המסמכים הנדרשים.'
-                    : "The annual questionnaire hasn't been submitted yet. Please fill it out so we can prepare your required documents list."
+                    ? 'טרם מולא שאלון. יש למלא את השאלון כדי שנוכל להכין את רשימת המסמכים הנדרשים.'
+                    : "The questionnaire hasn't been submitted yet. Please fill it out so we can prepare your required documents list."
                 }</span>
                 ${ctaHtml}
             </div>`;
