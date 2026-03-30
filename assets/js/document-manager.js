@@ -10,6 +10,8 @@ let CLIENT_NAME = '';
 let SPOUSE_NAME = '';
 let YEAR = '';
 let CURRENT_STAGE = '';
+let CLIENT_EMAIL = '';
+let CLIENT_CC_EMAIL = '';
 // STAGE_LABELS, API_BASE, ADMIN_TOKEN_KEY loaded from shared/constants.js
 // sanitizeDocHtml() loaded from shared/utils.js
 // ENDPOINTS loaded from shared/endpoints.js
@@ -36,6 +38,12 @@ let companyLinksMap = {};   // name_he → url from company_links table
 // Multi-report (filing tabs) state
 let allReports = [];          // All reports for this client [{report_id, filing_type, label_he, ...}]
 let reportDataCache = {};     // report_id → cached doc data for tab switching
+
+// Filing type display labels
+const FILING_TYPE_LABELS = {
+    annual_report: 'דוח שנתי',
+    capital_statement: 'הצהרת הון'
+};
 
 // Enhanced operations state
 let markedForRestore = new Set();   // doc IDs to un-waive
@@ -343,17 +351,22 @@ async function loadClientReports(clientId) {
         if (!data.ok) throw new Error(data.error || 'Failed to load reports');
 
         allReports = data.reports || [];
+        CLIENT_EMAIL = data.client_email || '';
+        CLIENT_CC_EMAIL = data.cc_email || '';
         if (allReports.length === 0) {
             document.getElementById('loading').style.display = 'none';
             document.getElementById('not-started-view').style.display = 'block';
             return;
         }
 
-        // Set active to first report
-        REPORT_ID = allReports[0].report_id;
+        // Set active report — prefer URL tab param, fallback to first
+        const preferredTab = params.get('tab');
+        const tabMatch = preferredTab && allReports.find(r => r.filing_type === preferredTab);
+        REPORT_ID = tabMatch ? tabMatch.report_id : allReports[0].report_id;
 
         // Render tabs if multiple reports
         if (allReports.length > 1) renderFilingTabs();
+        renderAddFilingTypeBtn();
 
         // Load docs for active report
         loadDocuments(REPORT_ID);
@@ -376,6 +389,7 @@ async function discoverSiblingReports(reportId) {
 
         allReports = data.reports;
         if (allReports.length > 1) renderFilingTabs();
+        renderAddFilingTypeBtn();
     } catch (e) {
         // Non-fatal — just no tabs
     }
@@ -393,6 +407,75 @@ function renderFilingTabs() {
     ).join('');
     container.style.display = 'flex';
 }
+
+// Render "Add [other filing type]" button (DL-228)
+function renderAddFilingTypeBtn() {
+    const container = document.getElementById('addOtherTypeContainer');
+    if (!container) return;
+
+    // Determine what types exist
+    const existingTypes = new Set(allReports.map(r => r.filing_type || 'annual_report'));
+
+    let otherType = null;
+    if (existingTypes.has('annual_report') && !existingTypes.has('capital_statement')) otherType = 'capital_statement';
+    else if (existingTypes.has('capital_statement') && !existingTypes.has('annual_report')) otherType = 'annual_report';
+
+    if (!otherType || !CLIENT_EMAIL) {
+        container.style.display = 'none';
+        container.innerHTML = '';
+        return;
+    }
+
+    const label = FILING_TYPE_LABELS[otherType] || otherType;
+    container.innerHTML = `<button class="add-filing-type-btn" onclick="addOtherFilingType()">
+        <i data-lucide="file-plus" class="icon-sm"></i> הוסף ${escapeHtml(label)}
+    </button>`;
+    container.style.display = 'block';
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+window.addOtherFilingType = function() {
+    const existingTypes = new Set(allReports.map(r => r.filing_type || 'annual_report'));
+    let otherType = null;
+    if (existingTypes.has('annual_report') && !existingTypes.has('capital_statement')) otherType = 'capital_statement';
+    else if (existingTypes.has('capital_statement') && !existingTypes.has('annual_report')) otherType = 'annual_report';
+    if (!otherType || !CLIENT_EMAIL) return;
+
+    const label = FILING_TYPE_LABELS[otherType];
+    const year = YEAR || allReports[0]?.year || new Date().getFullYear();
+
+    showConfirmDialog(
+        `להוסיף ${label} ללקוח ${CLIENT_NAME || CLIENT_EMAIL}?`,
+        async () => {
+            try {
+                const resp = await fetchWithTimeout(ENDPOINTS.ADMIN_BULK_IMPORT, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${ADMIN_TOKEN}`
+                    },
+                    body: JSON.stringify({
+                        token: ADMIN_TOKEN,
+                        year: Number(year),
+                        filing_type: otherType,
+                        clients: [{ name: CLIENT_NAME, email: CLIENT_EMAIL, cc_email: CLIENT_CC_EMAIL || undefined }]
+                    })
+                }, FETCH_TIMEOUTS.quick);
+                const data = await resp.json();
+                if (data.ok && data.created > 0) {
+                    showToast(`${label} נוסף בהצלחה`, 'success');
+                    // Reload to show both filing tabs
+                    setTimeout(() => location.reload(), 800);
+                } else {
+                    showToast('שגיאה בהוספת דוח', 'error');
+                }
+            } catch (err) {
+                showToast('שגיאה בהוספת דוח', 'error');
+            }
+        },
+        `הוסף ${label}`
+    );
+};
 
 // Switch between filing tabs
 window.switchFilingTab = function(reportId) {
