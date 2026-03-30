@@ -754,6 +754,79 @@ tr.duplicate {
     width: 100%;
 }
 
+/* ==================== Existing Client Banner (DL-228) ==================== */
+.existing-client-banner {
+    max-height: 0;
+    overflow: hidden;
+    opacity: 0;
+    transition: max-height 200ms ease, opacity 200ms ease, margin 200ms ease;
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+    border-radius: var(--radius-md, 6px);
+    padding: 0;
+    margin-top: 0;
+    font-size: 0.85rem;
+    line-height: 1.5;
+}
+
+.existing-client-banner.visible {
+    max-height: 200px;
+    opacity: 1;
+    padding: var(--sp-3, 12px) var(--sp-4, 16px);
+    margin-top: var(--sp-2, 8px);
+}
+
+.existing-client-banner .banner-title {
+    font-weight: 600;
+    margin-bottom: 4px;
+}
+
+.existing-client-banner .banner-detail {
+    color: var(--neutral-600, #4b5563);
+    font-size: 0.8rem;
+}
+
+.existing-client-banner .banner-actions {
+    display: flex;
+    gap: var(--sp-2, 8px);
+    margin-top: var(--sp-2, 8px);
+}
+
+.existing-client-banner .banner-actions button {
+    padding: 4px 12px;
+    border-radius: var(--radius-sm, 4px);
+    border: none;
+    cursor: pointer;
+    font-size: 0.8rem;
+    font-family: inherit;
+}
+
+.existing-client-banner .btn-fill {
+    background: var(--brand-600, #2563eb);
+    color: white;
+}
+
+.existing-client-banner .btn-fill:hover {
+    background: var(--brand-700, #1d4ed8);
+}
+
+.existing-client-banner .btn-dismiss {
+    background: transparent;
+    color: var(--neutral-500, #6b7280);
+}
+
+.existing-client-banner .btn-dismiss:hover {
+    color: var(--neutral-700, #374151);
+}
+
+/* Pre-filled field visual tint */
+input.field-prefilled,
+select.field-prefilled {
+    background: #fefce8 !important;
+    border-color: #fde68a !important;
+    transition: background 300ms ease, border-color 300ms ease;
+}
+
 /* ==================== IMPORT OPTIONS ==================== */
 .import-options {
     background: var(--info-50);

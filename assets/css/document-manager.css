@@ -44,6 +44,32 @@
     color: var(--brand-500);
 }
 
+/* ==================== Add Other Filing Type Button (DL-228) ==================== */
+#addOtherTypeContainer {
+    padding: 0 var(--sp-4);
+    margin-bottom: var(--sp-3);
+}
+
+.add-filing-type-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--sp-2);
+    padding: var(--sp-2) var(--sp-3);
+    border: 1px dashed var(--brand-300, #93c5fd);
+    border-radius: var(--radius-md, 6px);
+    background: var(--brand-50, #eff6ff);
+    color: var(--brand-600, #2563eb);
+    font-size: var(--text-sm, 0.875rem);
+    font-family: inherit;
+    cursor: pointer;
+    transition: background 150ms ease, border-color 150ms ease;
+}
+
+.add-filing-type-btn:hover {
+    background: var(--brand-100, #dbeafe);
+    border-color: var(--brand-400, #60a5fa);
+}
+
 /* ==================== BODY & PAGE ==================== */
 body {
     background: var(--gray-50);

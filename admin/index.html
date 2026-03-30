@@ -294,7 +294,8 @@
                                 </div>
                                 <div class="form-field">
                                     <label class="form-label">אימייל:</label>
-                                    <input type="text" id="manualEmail" placeholder="israel@example.com">
+                                    <input type="text" id="manualEmail" placeholder="israel@example.com" onblur="onEmailBlur()">
+                                    <div id="existingClientBanner" class="existing-client-banner" role="status" aria-live="polite"></div>
                                 </div>
                                 <div class="form-field">
                                     <label class="form-label">אימייל בן/בת זוג (לא חובה):</label>

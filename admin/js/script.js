@@ -13,6 +13,26 @@ let dashboardLoaded = false;
 let pendingClientsLoaded = false;
 let activeEntityTab = sessionStorage.getItem('entityTab') || 'annual_report';
 
+const FILING_TYPE_LABELS = {
+    annual_report: 'דוח שנתי',
+    capital_statement: 'הצהרת הון'
+};
+
+function getClientOtherFilingType(email, year) {
+    if (!email) return null;
+    const normalEmail = email.toLowerCase();
+    const normalYear = String(year || document.getElementById('yearFilter')?.value || new Date().getFullYear());
+    const clientReports = clientsData.filter(c =>
+        c.email?.toLowerCase() === normalEmail &&
+        String(c.year) === normalYear &&
+        c.is_active !== false
+    );
+    const types = new Set(clientReports.map(c => c.filing_type || 'annual_report'));
+    if (types.has('annual_report') && !types.has('capital_statement')) return 'capital_statement';
+    if (types.has('capital_statement') && !types.has('annual_report')) return 'annual_report';
+    return null;
+}
+
 const SORT_CONFIG = {
     name:    { accessor: c => c.name || '',    type: 'string' },
     stage:   { accessor: c => STAGES[c.stage]?.num || 0, type: 'number' },
@@ -624,6 +644,8 @@ function renderClientsTable(clients) {
         const rid = escapeAttr(client.report_id);
         const cName = escapeAttr(client.name);
         const isActive = client.is_active !== false;
+        const otherType = getClientOtherFilingType(client.email, client.year);
+        const otherTypeLabel = otherType ? FILING_TYPE_LABELS[otherType] : '';
 
         html += `
             <tr data-report-id="${rid}" data-client-name="${cName}" data-stage="${escapeAttr(client.stage)}" data-is-active="${isActive}">
@@ -682,6 +704,8 @@ function renderClientsTable(clients) {
                             <button onclick="viewClient('${rid}'); closeAllRowMenus();"><i data-lucide="external-link"></i> צפייה כלקוח</button>
                             ${stageNum >= 3 ?
                 `<button onclick="viewQuestionnaire('${rid}'); closeAllRowMenus();"><i data-lucide="file-text"></i> צפה בשאלון</button>` : ''}
+                            ${isActive && otherType ?
+                `<button onclick="addSecondFilingType('${rid}'); closeAllRowMenus();"><i data-lucide="file-plus"></i> הוסף ${otherTypeLabel}</button>` : ''}
                             ${isActive ?
                 `<button class="danger" onclick="deactivateClient('${rid}', '${cName}'); closeAllRowMenus();"><i data-lucide="archive"></i> העבר לארכיון</button>` :
                 `<button onclick="reactivateClient('${rid}'); closeAllRowMenus();"><i data-lucide="archive-restore"></i> הפעל מחדש</button>`}
@@ -706,6 +730,8 @@ function renderClientsTable(clients) {
         const rid = escapeAttr(client.report_id);
         const cName = escapeAttr(client.name);
         const isActive = client.is_active !== false;
+        const mOtherType = getClientOtherFilingType(client.email, client.year);
+        const mOtherTypeLabel = mOtherType ? FILING_TYPE_LABELS[mOtherType] : '';
 
         cards += `<li class="mobile-card" data-report-id="${rid}" data-stage="${escapeAttr(client.stage)}" data-is-active="${isActive}">
             <div class="mobile-card-primary">
@@ -743,6 +769,8 @@ function renderClientsTable(clients) {
                         <button onclick="viewClient('${rid}'); closeAllRowMenus();"><i data-lucide="external-link"></i> צפייה כלקוח</button>
                         ${stageNum >= 3 ?
                             `<button onclick="viewQuestionnaire('${rid}'); closeAllRowMenus();"><i data-lucide="file-text"></i> צפה בשאלון</button>` : ''}
+                        ${isActive && mOtherType ?
+                            `<button onclick="addSecondFilingType('${rid}'); closeAllRowMenus();"><i data-lucide="file-plus"></i> הוסף ${mOtherTypeLabel}</button>` : ''}
                         ${isActive ?
                             `<button class="danger" onclick="deactivateClient('${rid}', '${cName}'); closeAllRowMenus();"><i data-lucide="archive"></i> העבר לארכיון</button>` :
                             `<button onclick="reactivateClient('${rid}'); closeAllRowMenus();"><i data-lucide="archive-restore"></i> הפעל מחדש</button>`}
@@ -1668,6 +1696,8 @@ async function _doManualAdd(name, email, cc_email, year, filingType) {
         document.getElementById('manualName').value = '';
         document.getElementById('manualEmail').value = '';
         document.getElementById('manualCcEmail').value = '';
+        dismissExistingBanner();
+        document.querySelectorAll('.field-prefilled').forEach(el => el.classList.remove('field-prefilled'));
 
         const reportId = data.report_ids?.[0];
         if (reportId) {
@@ -1681,6 +1711,109 @@ async function _doManualAdd(name, email, cc_email, year, filingType) {
 
         loadDashboard();
     }
+}
+
+// ==================== EXISTING CLIENT BANNER (DL-228) ====================
+
+function onEmailBlur() {
+    const email = (document.getElementById('manualEmail')?.value || '').toLowerCase().trim();
+    if (!email) { dismissExistingBanner(); return; }
+
+    const year = document.getElementById('manualYear')?.value || String(new Date().getFullYear());
+
+    const matches = clientsData.filter(c =>
+        c.email?.toLowerCase() === email &&
+        String(c.year) === String(year) &&
+        c.is_active !== false
+    );
+
+    if (!matches.length) { dismissExistingBanner(); return; }
+
+    const types = new Set(matches.map(c => c.filing_type || 'annual_report'));
+
+    let otherType = null;
+    if (types.has('annual_report') && !types.has('capital_statement')) otherType = 'capital_statement';
+    else if (types.has('capital_statement') && !types.has('annual_report')) otherType = 'annual_report';
+
+    if (!otherType) { dismissExistingBanner(); return; }
+
+    const client = matches[0];
+    const existingType = types.has('annual_report') ? 'annual_report' : 'capital_statement';
+    const existingLabel = FILING_TYPE_LABELS[existingType] || existingType;
+    const otherLabel = FILING_TYPE_LABELS[otherType] || otherType;
+    const stageLabel = STAGES[client.stage]?.label || client.stage || '';
+    const ccLine = client.cc_email
+        ? `<div class="banner-detail">CC: ${escapeHtml(client.cc_email)}</div>`
+        : '';
+
+    const banner = document.getElementById('existingClientBanner');
+    if (!banner) return;
+
+    banner.innerHTML = `
+        <div class="banner-title">ℹ️ לקוח קיים: ${escapeHtml(client.name || email)}</div>
+        <div class="banner-detail">${escapeHtml(existingLabel)} ${escapeHtml(String(year))} — ${escapeHtml(stageLabel)}</div>
+        ${ccLine}
+        <div class="banner-actions">
+            <button class="btn-fill" onclick="fillFromExisting('${escapeHtml(email)}')">מלא פרטים ← ${escapeHtml(otherLabel)}</button>
+            <button class="btn-dismiss" onclick="dismissExistingBanner()">✕</button>
+        </div>
+    `;
+
+    requestAnimationFrame(() => banner.classList.add('visible'));
+}
+
+function fillFromExisting(email) {
+    const normalEmail = email.toLowerCase();
+    const client = clientsData.find(c => c.email?.toLowerCase() === normalEmail && c.is_active !== false);
+    if (!client) { dismissExistingBanner(); return; }
+
+    const nameEl = document.getElementById('manualName');
+    const ccEl = document.getElementById('manualCcEmail');
+    const filingTypeEl = document.getElementById('manualFilingType');
+
+    if (nameEl) {
+        nameEl.value = client.name || '';
+        if (client.name) nameEl.classList.add('field-prefilled');
+    }
+    if (ccEl) {
+        ccEl.value = client.cc_email || '';
+        if (client.cc_email) ccEl.classList.add('field-prefilled');
+    }
+    if (filingTypeEl) {
+        const year = document.getElementById('manualYear')?.value;
+        const otherType = getClientOtherFilingType(email, year);
+        if (otherType) filingTypeEl.value = otherType;
+    }
+
+    dismissExistingBanner();
+}
+
+function dismissExistingBanner() {
+    const banner = document.getElementById('existingClientBanner');
+    if (!banner) return;
+    banner.classList.remove('visible');
+    setTimeout(() => { banner.innerHTML = ''; }, 200);
+}
+
+async function addSecondFilingType(reportId) {
+    const client = clientsData.find(c => c.report_id === reportId);
+    if (!client) return;
+
+    const year = String(client.year || document.getElementById('yearFilter')?.value || new Date().getFullYear());
+    const otherType = getClientOtherFilingType(client.email, year);
+    if (!otherType) {
+        showModal('warning', 'דוח קיים', 'ללקוח זה כבר קיימים שני סוגי דוחות.');
+        return;
+    }
+
+    const otherLabel = FILING_TYPE_LABELS[otherType] || otherType;
+    showConfirmDialog(
+        `להוסיף ${otherLabel} ללקוח ${client.name || client.email}?`,
+        async () => {
+            await _doManualAdd(client.name, client.email, client.cc_email || '', year, otherType);
+        },
+        `הוסף ${otherLabel}`
+    );
 }
 
 // ==================== SEND QUESTIONNAIRES ====================
@@ -5565,6 +5698,14 @@ function openClientContextMenu(e) {
             items += `<button onclick="viewQuestionnaire('${rid}'); closeAllRowMenus();"><i data-lucide="file-text"></i> צפה בשאלון</button>`;
         }
         items += `<button onclick="viewClient('${rid}'); closeAllRowMenus();"><i data-lucide="external-link"></i> צפייה כלקוח</button>`;
+        const ctxClient = clientsData.find(c => c.report_id === rid);
+        if (ctxClient) {
+            const ctxOtherType = getClientOtherFilingType(ctxClient.email, ctxClient.year);
+            if (ctxOtherType) {
+                const ctxLabel = FILING_TYPE_LABELS[ctxOtherType];
+                items += `<button onclick="addSecondFilingType('${rid}'); closeAllRowMenus();"><i data-lucide="file-plus"></i> הוסף ${ctxLabel}</button>`;
+            }
+        }
         items += `<hr>`;
         items += `<button class="danger" onclick="deactivateClient('${rid}', '${cName}'); closeAllRowMenus();"><i data-lucide="archive"></i> העבר לארכיון</button>`;
     } else {
@@ -5710,7 +5851,9 @@ function viewClientDocs(reportId) {
     const client = clientsData.find(c => c.report_id === reportId);
     const clientId = client?.client_id;
     if (clientId) {
-        window.location.href = `../document-manager.html?client_id=${encodeURIComponent(clientId)}`;
+        const ft = client.filing_type || activeEntityTab || '';
+        const tabParam = ft ? `&tab=${encodeURIComponent(ft)}` : '';
+        window.location.href = `../document-manager.html?client_id=${encodeURIComponent(clientId)}${tabParam}`;
     }
 }
 
