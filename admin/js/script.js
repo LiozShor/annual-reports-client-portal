@@ -3848,7 +3848,6 @@ function openDocTagMenu(event, tagEl) {
         { status: 'Required_Missing', label: 'חסר', icon: '○' },
         { status: 'Received', label: 'התקבל', icon: '✓' },
         { status: 'Waived', label: 'לא נדרש', icon: '—' },
-        { status: 'Requires_Fix', label: 'דרוש תיקון', icon: '⚠' },
     ].filter(o => o.status !== currentStatus);
 
     const menu = document.createElement('div');
