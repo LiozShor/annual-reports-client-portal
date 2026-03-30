@@ -3880,7 +3880,7 @@ async function updateDocStatusInline(clientName, docRecordId, newStatus) {
     // Fire API
     const payload = {
         data: {
-            fields: [{ label: 'report_record_id', type: 'HIDDEN_FIELDS', value: reportRecordId }],
+            fields: [{ type: 'HIDDEN_FIELDS', value: { report_record_id: reportRecordId } }],
             extensions: {
                 status_changes: [{ id: docRecordId, new_status: newStatus }],
                 send_email: false
@@ -3930,7 +3930,7 @@ async function undoDocStatusChange(clientName, docRecordId, revertStatus, report
 
     const payload = {
         data: {
-            fields: [{ label: 'report_record_id', type: 'HIDDEN_FIELDS', value: reportRecordId }],
+            fields: [{ type: 'HIDDEN_FIELDS', value: { report_record_id: reportRecordId } }],
             extensions: {
                 status_changes: [{ id: docRecordId, new_status: revertStatus }],
                 send_email: false
