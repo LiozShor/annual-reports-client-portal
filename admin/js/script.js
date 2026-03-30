@@ -1382,9 +1382,9 @@ document.addEventListener('visibilitychange', () => {
     if (document.hidden) {
         stopBackgroundRefresh();
     } else {
-        // Debounce: skip refresh if last one was < 60s ago (prevents OS-triggered visibility spam)
+        // Debounce: skip refresh if last one was < 5min ago (prevents OS-triggered visibility spam)
         const now = Date.now();
-        if (now - lastVisibilityRefresh >= 60_000) {
+        if (now - lastVisibilityRefresh >= 300_000) {
             lastVisibilityRefresh = now;
             // Silently refresh active tab on return
             const activeTab = document.querySelector('.tab-content.active')?.id?.replace('tab-', '');
@@ -2457,7 +2457,23 @@ async function loadAIClassifications(silent = false) {
             throw new Error(data.error || 'שגיאה בטעינת הנתונים');
         }
 
-        aiClassificationsData = data.items || [];
+        const newItems = data.items || [];
+
+        // Silent refresh: skip re-render if data hasn't changed (prevents accordion collapse)
+        if (silent && aiReviewLoaded) {
+            const oldFingerprint = aiClassificationsData.map(i => `${i.id}:${i.review_status || 'pending'}`).sort().join(',');
+            const newFingerprint = newItems.map(i => `${i.id}:${i.review_status || 'pending'}`).sort().join(',');
+            if (oldFingerprint === newFingerprint) {
+                // Data unchanged — just update badge, skip DOM rebuild
+                const badge = document.getElementById('aiReviewTabBadge');
+                const pendingForBadge = newItems.filter(i => (i.review_status || 'pending') === 'pending');
+                const uniqueClients = new Set(pendingForBadge.map(i => i.client_id).filter(Boolean)).size;
+                syncAIBadge(badge, uniqueClients);
+                return;
+            }
+        }
+
+        aiClassificationsData = newItems;
         aiReviewLoaded = true;
         resetPreviewPanel();
 
@@ -2466,7 +2482,7 @@ async function loadAIClassifications(silent = false) {
 
         // Update tab badge — show unique client count (not doc count)
         const badge = document.getElementById('aiReviewTabBadge');
-        const pendingForBadge = (data.items || []).filter(i => (i.review_status || 'pending') === 'pending');
+        const pendingForBadge = newItems.filter(i => (i.review_status || 'pending') === 'pending');
         const uniqueClients = new Set(pendingForBadge.map(i => i.client_id).filter(Boolean)).size;
         syncAIBadge(badge, uniqueClients);
     } catch (error) {
