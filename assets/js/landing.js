@@ -17,11 +17,13 @@ if (window.location.search) {
 }
 
 // Default form IDs — overridden by API response when available
-const FORM_HE = '1AkYKb';
-const FORM_EN = '1AkopM';
+const FILING_CONFIG = {
+    annual_report: { form_he: '1AkYKb', form_en: '1AkopM' },
+    capital_statement: { form_he: '7Roovz', form_en: '' }
+};
 // API-driven form IDs (populated in checkExistingSubmission)
-let formIdHe = FORM_HE;
-let formIdEn = FORM_EN;
+let formIdHe = FILING_CONFIG.annual_report.form_he;
+let formIdEn = FILING_CONFIG.annual_report.form_en;
 // Endpoints loaded from shared/endpoints.js
 const CHECK_ENDPOINT = ENDPOINTS.CHECK_EXISTING_SUBMISSION;
 
@@ -29,7 +31,7 @@ const CHECK_ENDPOINT = ENDPOINTS.CHECK_EXISTING_SUBMISSION;
 // --- Localization ---
 // Base64 stored to avoid encoding issues in some editors
 const HE_B64 = {
-    header_title: "8J+TiyDXqdeQ15zXldefINeT15XXlyDXqdeg16rXmQ==",
+    header_title: "8J+TiyDXqdeQ15zXldef",
     loading_check: "15HXldeT16cg16DXqteV16DXmdedINen15nXmdee15nXnS4uLg==",
 
     // Alert messages
@@ -106,12 +108,14 @@ async function checkExistingSubmission() {
         email = data.client_email || '';
 
         // API-driven form IDs (filing_type layer)
-        formIdHe = data.form_id_he || FORM_HE;
-        formIdEn = data.form_id_en || FORM_EN;
+        const filingType = data.filing_type || 'annual_report';
+        const fallback = FILING_CONFIG[filingType] || FILING_CONFIG.annual_report;
+        formIdHe = data.form_id_he || fallback.form_he;
+        formIdEn = data.form_id_en || fallback.form_en;
 
         // Dynamic header/title based on filing type
-        const ftLabelHe = data.filing_type_label_he || 'דוח שנתי';
-        const ftLabelEn = data.filing_type_label_en || 'Annual Report';
+        const ftLabelHe = data.filing_type_label_he || 'דוח';
+        const ftLabelEn = data.filing_type_label_en || 'Report';
         document.getElementById('headerTitle').textContent = '\uD83D\uDCCB \u05E9\u05D0\u05DC\u05D5\u05DF ' + ftLabelHe;
         document.querySelector('.header-subtitle').textContent = ftLabelEn + ' Questionnaire';
         document.title = ftLabelEn + ' Questionnaire';

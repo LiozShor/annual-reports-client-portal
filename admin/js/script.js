@@ -493,6 +493,7 @@ function updateMobilePreviewNav() {
 // ==================== DASHBOARD ====================
 
 function updateReviewQueueUI() {
+    reviewQueueData.forEach(c => { if (!c.filing_type) console.warn('Missing filing_type for record', c.id || c.report_id); });
     const filtered = reviewQueueData.filter(c => (c.filing_type || 'annual_report') === activeEntityTab);
     const badge = document.getElementById('reviewCountBadge');
     const reviewBottomBadge = document.getElementById('reviewBottomBadge');
@@ -766,6 +767,7 @@ function filterClients() {
     let filtered = clientsData;
 
     // Filter by entity type
+    filtered.forEach(c => { if (!c.filing_type) console.warn('Missing filing_type for record', c.id || c.report_id); });
     filtered = filtered.filter(c => (c.filing_type || 'annual_report') === activeEntityTab);
 
     // Filter by active status based on archive mode
@@ -1055,6 +1057,7 @@ function recalculateStats() {
     const counts = { total: 0, stage1: 0, stage2: 0, stage3: 0, stage4: 0, stage5: 0, stage6: 0, stage7: 0, stage8: 0 };
 
     for (const client of clientsData) {
+        if (!client.filing_type) console.warn('Missing filing_type for record', client.id || client.report_id);
         if ((client.filing_type || 'annual_report') !== activeEntityTab) continue;
         if (client.is_active === false) continue; // Skip deactivated clients in stats
         counts.total++;
@@ -2066,6 +2069,7 @@ async function markComplete(reportId, name) {
 }
 
 function exportReviewToExcel() {
+    reviewQueueData.forEach(c => { if (!c.filing_type) console.warn('Missing filing_type for record', c.id || c.report_id); });
     const filtered = reviewQueueData.filter(c => (c.filing_type || 'annual_report') === activeEntityTab);
     if (!filtered.length) return;
 
@@ -6599,7 +6603,7 @@ function generateQuestionnairePrintHTML(items) {
         }
 
         printHtml += `
-  <div class="footer">הודפס מתוך מערכת ניהול דוחות שנתיים — Client Name רו"ח</div>
+  <div class="footer">הודפס מתוך מערכת ניהול דוחות — Client Name רו"ח</div>
 </div>`;
     });
 
