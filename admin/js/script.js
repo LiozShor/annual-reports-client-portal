@@ -6789,7 +6789,7 @@ function generateQuestionnairePrintHTML(items) {
 <html dir="rtl" lang="he">
 <head>
 <meta charset="UTF-8">
-<title>שאלוני לקוחות — הדפסה</title>
+<title>שאלונים — הדפסה</title>
 <style>
   @page { margin: 15mm; size: A4; }
   * { box-sizing: border-box; }
@@ -6890,11 +6890,13 @@ function generateQuestionnairePrintHTML(items) {
         } catch (e) { clientQuestions = []; }
 
         const date = formatDateDisplay(info.submission_date || '');
+        const reportClient = clientsData.find(c => c.report_id === item.report_record_id);
+        const ftLabel = FILING_TYPE_LABELS[reportClient?.filing_type || activeEntityTab] || FILING_TYPE_LABELS.annual_report;
         printHtml += `
 <div class="client-page">
   <div class="client-header">
     <h2>${escapeHtml(info.name || '—')}</h2>
-    <div class="meta">שנת מס ${escapeHtml(info.year || '—')} | הוגש: ${date} | ${escapeHtml(info.email || '—')}${info.phone ? ` | ${escapeHtml(info.phone)}` : ''}</div>
+    <div class="meta">שנת מס ${escapeHtml(info.year || '—')} | ${ftLabel} | הוגש: ${date} | ${escapeHtml(info.email || '—')}${info.phone ? ` | ${escapeHtml(info.phone)}` : ''}</div>
   </div>
   <div class="summary-grid">
     <div class="summary-field">
