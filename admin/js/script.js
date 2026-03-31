@@ -2456,6 +2456,7 @@ const REJECTION_REASONS = {
     incomplete: 'מסמך חלקי / חתוך',
     wrong_year: 'שנה לא נכונה',
     wrong_person: 'לא שייך ללקוח',
+    not_relevant: 'מסמך לא רלוונטי',
     other: 'אחר'
 };
 
