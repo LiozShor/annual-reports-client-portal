@@ -3031,7 +3031,7 @@ function updateStickyBar() {
    =========================================== */
 
 // State
-let _switcherClients = [];   // [{report_id, name, stage}]
+let _switcherClients = [];   // [{client_id, name, stage}]
 let _switcherYear = '';       // currently selected year in switcher
 let _comboOpen = false;
 let _comboFocusIndex = -1;
@@ -3093,7 +3093,7 @@ function _buildClientCombobox(clients) {
     const combo = document.getElementById('clientCombobox');
 
     // Set input display value to current client name
-    const currentClient = clients.find(c => c.report_id === REPORT_ID);
+    const currentClient = clients.find(c => c.client_id === CLIENT_ID);
     input.value = currentClient ? currentClient.name : '';
 
     _renderComboOptions(clients, '');
@@ -3131,7 +3131,7 @@ function _buildClientCombobox(clients) {
             if (focused) focused.click();
         } else if (e.key === 'Escape') {
             _closeCombo();
-            const cur = _switcherClients.find(c => c.report_id === REPORT_ID);
+            const cur = _switcherClients.find(c => c.client_id === CLIENT_ID);
             newInput.value = cur ? cur.name : '';
         }
     });
@@ -3165,7 +3165,7 @@ function _handleComboOutsideClick(e) {
     if (combo && !combo.contains(e.target)) {
         if (_comboOpen) {
             _closeCombo();
-            const cur = _switcherClients.find(c => c.report_id === REPORT_ID);
+            const cur = _switcherClients.find(c => c.client_id === CLIENT_ID);
             const input = document.getElementById('clientComboboxInput');
             if (input) input.value = cur ? cur.name : '';
         }
@@ -3190,11 +3190,11 @@ function _renderComboOptions(clients, query) {
         const stageBadge = stage
             ? `<span class="stage-badge ${stage.class}" style="font-size:11px;padding:1px 6px;min-width:auto;">${stage.label}</span>`
             : '';
-        const isCurrent = c.report_id === REPORT_ID;
+        const isCurrent = c.client_id === CLIENT_ID;
         return `<div class="client-combobox-option${isCurrent ? ' current-client' : ''}"
             role="option"
-            data-report-id="${_escAttr(c.report_id)}"
-            onclick="_switcherNavigate('${_escAttr(c.report_id)}')">
+            data-client-id="${_escAttr(c.client_id)}"
+            onclick="_switcherNavigate('${_escAttr(c.client_id)}')">
             <span class="option-name">${_escHtml(c.name)}</span>
             ${stageBadge}
         </div>`;
@@ -3221,8 +3221,8 @@ function _positionComboDropdown() {
     dropdown.style.width = Math.max(rect.width, 280) + 'px';
 }
 
-function _switcherNavigate(reportId) {
-    if (reportId === REPORT_ID) {
+function _switcherNavigate(clientId) {
+    if (clientId === CLIENT_ID) {
         _closeCombo();
         return;
     }
@@ -3232,7 +3232,7 @@ function _switcherNavigate(reportId) {
 
     const doNavigate = () => {
         const url = new URL(window.location.href);
-        url.searchParams.set('report_id', reportId);
+        url.searchParams.set('client_id', clientId);
         window.location.href = url.toString();
     };
 
