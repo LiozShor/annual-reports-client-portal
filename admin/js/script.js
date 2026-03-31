@@ -6951,8 +6951,7 @@ function generateQuestionnairePrintHTML(items) {
             printHtml += `</div>`;
         }
 
-        // Office notes
-        const reportClient = clientsData.find(c => c.report_id === item.report_record_id);
+        // Office notes (reportClient already resolved above for filing type)
         if (reportClient?.notes) {
             printHtml += `<div class="office-notes"><h4>הערות משרד</h4><div class="notes-content">${escapeHtml(reportClient.notes)}</div></div>`;
         }
