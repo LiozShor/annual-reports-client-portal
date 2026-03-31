@@ -577,7 +577,7 @@ function mapLegacyToSSOT(typeId, params) {
         if (items.length === 0) continue;
 
         items.forEach(item => {
-          const params = { year: tax_year };
+          const params = { year: tax_year, year_plus_1: String(parseInt(tax_year) + 1) };
 
           // ========== SPECIAL HANDLING FOR NII DOCUMENTS ==========
           if (isNIIDocumentType(docTypeId)) {
@@ -616,7 +616,7 @@ function mapLegacyToSSOT(typeId, params) {
           // Add ALL parameters from docType.details
           if (docType.details && docType.details.length > 0) {
             docType.details.forEach(detail => {
-              if (detail.key === 'year') return;
+              if (detail.key === 'year' || detail.key === 'year_plus_1') return;
 
               if (mapping.fixedParams && mapping.fixedParams[detail.key]) {
                 params[detail.key] = cleanAndBold(mapping.fixedParams[detail.key]);
@@ -636,13 +636,13 @@ function mapLegacyToSSOT(typeId, params) {
         });
       } else {
         // Single document
-        const params = { year: tax_year };
+        const params = { year: tax_year, year_plus_1: String(parseInt(tax_year) + 1) };
 
         params.name = mapping.isSpouse ? cleanAndBold(spouseNamePlain) : cleanAndBold(clientNamePlain);
 
         if (docType.details && docType.details.length > 0) {
           docType.details.forEach(detail => {
-            if (detail.key === 'year' || detail.key === 'name') return;
+            if (detail.key === 'year' || detail.key === 'year_plus_1' || detail.key === 'name') return;
 
             if (mapping.fixedParams && mapping.fixedParams[detail.key]) {
               params[detail.key] = cleanAndBold(mapping.fixedParams[detail.key]);
