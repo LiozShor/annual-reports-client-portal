@@ -1924,15 +1924,30 @@ function renderPendingClients() {
     if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
+const MAX_BULK_SEND = 50;
+
 function toggleSelectAll() {
     const selectAll = document.getElementById('selectAll').checked;
-    document.querySelectorAll('.client-checkbox').forEach(cb => cb.checked = selectAll);
+    const cbs = document.querySelectorAll('.client-checkbox');
+    if (selectAll) {
+        let count = 0;
+        cbs.forEach(cb => {
+            cb.checked = count < MAX_BULK_SEND;
+            count++;
+        });
+    } else {
+        cbs.forEach(cb => cb.checked = false);
+    }
     updateSelectedCount();
 }
 
 function updateSelectedCount() {
     const selected = document.querySelectorAll('.client-checkbox:checked').length;
     document.getElementById('selectedCount').textContent = selected;
+    // Disable unchecked checkboxes when at limit
+    document.querySelectorAll('.client-checkbox').forEach(cb => {
+        if (!cb.checked) cb.disabled = selected >= MAX_BULK_SEND;
+    });
     const sendBar = document.getElementById('sendActions');
     if (selected > 0) {
         sendBar.style.display = '';
@@ -1956,6 +1971,10 @@ async function sendToSelected() {
 
 async function sendToAll() {
     const reportIds = pendingClients.map(c => c.report_id);
+    if (reportIds.length > MAX_BULK_SEND) {
+        showModal('warning', 'מגבלת שליחה', `ניתן לשלוח עד ${MAX_BULK_SEND} שאלונים בבת אחת. כרגע יש ${reportIds.length} לקוחות ממתינים.\nיש לבחור לקוחות ספציפיים.`);
+        return;
+    }
     showConfirmDialog(`האם לשלוח שאלון ל-${reportIds.length} לקוחות?`, async () => {
         await sendQuestionnaires(reportIds);
     }, 'שלח לכולם');
@@ -1969,6 +1988,10 @@ let _sendQuestionnairesLocked = false;
 
 async function sendQuestionnaires(reportIds) {
     if (_sendQuestionnairesLocked) return;
+    if (reportIds.length > MAX_BULK_SEND) {
+        showModal('warning', 'מגבלת שליחה', `ניתן לשלוח עד ${MAX_BULK_SEND} שאלונים בבת אחת. נבחרו ${reportIds.length}.`);
+        return;
+    }
     _sendQuestionnairesLocked = true;
 
     const CHUNK_SIZE = 25;
@@ -5745,15 +5768,26 @@ function openClientContextMenu(e) {
 function toggleClientSelectAll(masterCb) {
     const table = masterCb.closest('table');
     if (!table) return;
-    table.querySelectorAll('.dashboard-client-checkbox').forEach(cb => {
-        cb.checked = masterCb.checked;
-    });
+    const cbs = table.querySelectorAll('.dashboard-client-checkbox');
+    if (masterCb.checked) {
+        let count = 0;
+        cbs.forEach(cb => {
+            cb.checked = count < MAX_BULK_SEND;
+            count++;
+        });
+    } else {
+        cbs.forEach(cb => cb.checked = false);
+    }
     updateClientSelectedCount();
 }
 
 function updateClientSelectedCount() {
     const checked = document.querySelectorAll('.dashboard-client-checkbox:checked');
     const count = checked.length;
+    // Disable unchecked checkboxes when at limit
+    document.querySelectorAll('.dashboard-client-checkbox').forEach(cb => {
+        if (!cb.checked) cb.disabled = count >= MAX_BULK_SEND;
+    });
     const bar = document.getElementById('clientBulkActions');
     const countEl = document.getElementById('clientSelectedCount');
     const sendBtn = document.getElementById('bulkSendBtn');
