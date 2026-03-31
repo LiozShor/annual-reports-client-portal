@@ -429,9 +429,9 @@ function renderAddFilingTypeBtn() {
 
     const label = FILING_TYPE_LABELS[otherType] || otherType;
     container.innerHTML = `<button class="add-filing-type-btn" onclick="addOtherFilingType()">
-        <i data-lucide="file-plus" class="icon-sm"></i> הוסף ${escapeHtml(label)}
+        <i data-lucide="plus" style="width:14px;height:14px"></i> הוסף ${escapeHtml(label)}
     </button>`;
-    container.style.display = 'block';
+    container.style.display = 'inline-flex';
     if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
@@ -492,6 +492,7 @@ window.switchFilingTab = function(reportId) {
     }
 
     REPORT_ID = reportId;
+    _questionnaireFetched = false; // Reset so questionnaire reloads for new report/filing type
 
     // Update active tab styling
     document.querySelectorAll('.filing-tab').forEach(btn => {
@@ -2437,10 +2438,19 @@ async function loadQuestionnaireForReport() {
 
     const container = document.getElementById('questionnaireContent');
     if (!container) return;
+    // Update default label based on filing type
+    const currentReportForLabel = allReports.find(r => r.report_id === REPORT_ID);
+    const ftForLabel = currentReportForLabel?.filing_type || 'annual_report';
+    const defaultQLabel = ftForLabel === 'capital_statement' ? 'שאלון הצהרת הון' : 'השאלון השנתי';
+    const labelElDefault = document.getElementById('questionnaireLabel');
+    if (labelElDefault) labelElDefault.textContent = defaultQLabel;
+
     container.innerHTML = '<div class="questionnaire-loading"><div class="spinner"></div><span>טוען שאלון...</span></div>';
 
     try {
-        const url = `${ENDPOINTS.ADMIN_QUESTIONNAIRES}?token=${encodeURIComponent(ADMIN_TOKEN)}&report_id=${encodeURIComponent(REPORT_ID)}`;
+        const currentReport = allReports.find(r => r.report_id === REPORT_ID);
+        const ft = currentReport?.filing_type || 'annual_report';
+        const url = `${ENDPOINTS.ADMIN_QUESTIONNAIRES}?token=${encodeURIComponent(ADMIN_TOKEN)}&report_id=${encodeURIComponent(REPORT_ID)}&filing_type=${encodeURIComponent(ft)}`;
         const resp = await fetchWithTimeout(url, { method: 'GET' }, 20000);
         const data = await resp.json();
 
@@ -2456,7 +2466,8 @@ async function loadQuestionnaireForReport() {
         const submissionDate = _questionnaireData.client_info?.submission_date;
         if (labelEl && submissionDate) {
             const formatted = new Date(submissionDate).toLocaleDateString('he-IL', { year: 'numeric', month: '2-digit', day: '2-digit' });
-            labelEl.textContent = `השאלון השנתי - הוגש ב-${formatted}`;
+            const qLabel = ft === 'capital_statement' ? 'שאלון הצהרת הון' : 'השאלון השנתי';
+            labelEl.textContent = `${qLabel} - הוגש ב-${formatted}`;
         }
 
         _renderQuestionnaire(container);
@@ -2555,6 +2566,8 @@ function printQuestionnaireFromDocManager() {
     const answers = qa.answers || [];
     const printAnswers = answers.filter(a => a.value && a.value !== '✗ לא');
     const date = info.submission_date ? new Date(info.submission_date).toLocaleDateString('he-IL', { day:'2-digit', month:'2-digit', year:'numeric' }) : '—';
+    const activeReport = allReports.find(r => r.report_id === REPORT_ID);
+    const ftLabel = FILING_TYPE_LABELS[activeReport?.filing_type || 'annual_report'] || 'דוח שנתי';
 
     let rows = printAnswers.map((a, i) => `<tr>
         <td class="q-col">${escapeHtml(a.label)}</td>
@@ -2609,8 +2622,8 @@ function printQuestionnaireFromDocManager() {
   .footer{margin-top:12px;font-size:8pt;color:#9ca3af;border-top:1px solid #e5e7eb;padding-top:8px}
 </style></head><body>
 <div class="header">
-  <h2>${escapeHtml(info.name || '—')}</h2>
-  <div class="meta">שנת מס ${escapeHtml(info.year || '—')} | הוגש: ${date} | ${escapeHtml(info.email || '—')}${info.phone ? ` | ${escapeHtml(info.phone)}` : ''}</div>
+  <h2>${escapeHtml(info.name || '—')} — ${ftLabel} ${escapeHtml(info.year || '—')}</h2>
+  <div class="meta">${escapeHtml(info.email || '—')}${info.phone ? ` | ${escapeHtml(info.phone)}` : ''} | שאלון הוגש: ${date}</div>
 </div>
 <table><thead><tr><th class="q-col">שאלה</th><th class="a-col">תשובה</th></tr></thead>
 <tbody>${rows}</tbody></table>

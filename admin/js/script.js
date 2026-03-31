@@ -6895,8 +6895,8 @@ function generateQuestionnairePrintHTML(items) {
         printHtml += `
 <div class="client-page">
   <div class="client-header">
-    <h2>${escapeHtml(info.name || '—')}</h2>
-    <div class="meta">שנת מס ${escapeHtml(info.year || '—')} | ${ftLabel} | הוגש: ${date} | ${escapeHtml(info.email || '—')}${info.phone ? ` | ${escapeHtml(info.phone)}` : ''}</div>
+    <h2>${escapeHtml(info.name || '—')} — ${ftLabel} ${escapeHtml(info.year || '—')}</h2>
+    <div class="meta">${escapeHtml(info.email || '—')}${info.phone ? ` | ${escapeHtml(info.phone)}` : ''} | שאלון הוגש: ${date}</div>
   </div>
   <div class="summary-grid">
     <div class="summary-field">
