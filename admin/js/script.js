@@ -7143,17 +7143,20 @@ async function openSplitModal(recordId) {
         if (!pdfResp.ok) throw new Error('Could not download PDF');
         const pdfData = await pdfResp.arrayBuffer();
 
+        console.warn('[split] PDF downloaded, size:', pdfData.byteLength);
         const pdfDoc = await pdfjsLib.getDocument({ data: pdfData }).promise;
+        console.warn('[split] PDF parsed, pages:', pdfDoc.numPages);
         splitState.pdfDoc = pdfDoc;
         splitState.pageCount = pdfDoc.numPages;
         document.getElementById('splitModalPageInfo').textContent = `(${splitState.pageCount} עמודים)`;
 
         await renderSplitThumbnails(pdfDoc);
+        console.warn('[split] Thumbnails rendered');
         setSplitMode(splitState.mode); // re-apply to update groups with actual page count
     } catch (err) {
         console.error('[split] Failed to load PDF:', err);
         document.getElementById('splitThumbnailGrid').innerHTML =
-            '<div class="split-error">שגיאה בטעינת הקובץ. נסה שוב.</div>';
+            `<div class="split-error">שגיאה בטעינת הקובץ: ${err.message || 'Unknown error'}</div>`;
     }
 }
 
