@@ -46,28 +46,31 @@
 
 /* ==================== Add Other Filing Type Button (DL-228) ==================== */
 #addOtherTypeContainer {
-    padding: 0 var(--sp-4);
-    margin-bottom: var(--sp-3);
+    margin-inline-start: auto;
 }
 
 .add-filing-type-btn {
     display: inline-flex;
     align-items: center;
-    gap: var(--sp-2);
-    padding: var(--sp-2) var(--sp-3);
-    border: 1px dashed var(--brand-300, #93c5fd);
-    border-radius: var(--radius-md, 6px);
-    background: var(--brand-50, #eff6ff);
-    color: var(--brand-600, #2563eb);
-    font-size: var(--text-sm, 0.875rem);
+    gap: var(--sp-1);
+    padding: var(--sp-1) var(--sp-3);
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius-full);
+    background: white;
+    color: var(--brand-600);
+    font-size: var(--text-xs, 0.75rem);
+    font-weight: 500;
     font-family: inherit;
     cursor: pointer;
-    transition: background 150ms ease, border-color 150ms ease;
+    transition: var(--transition-fast);
+    white-space: nowrap;
 }
 
 .add-filing-type-btn:hover {
-    background: var(--brand-100, #dbeafe);
-    border-color: var(--brand-400, #60a5fa);
+    background: var(--brand-50);
+    border-color: var(--brand-300, #a5b4fc);
+    color: var(--brand-700);
+    box-shadow: var(--shadow-sm);
 }
 
 /* ==================== BODY & PAGE ==================== */
@@ -1312,6 +1315,17 @@ body {
     flex-wrap: wrap;
 }
 
+.actions-row.sticky {
+    position: sticky;
+    bottom: 0;
+    z-index: 50;
+    background: var(--surface-primary);
+    border-top: 1px solid var(--border-secondary);
+    padding: var(--sp-3) var(--sp-4);
+    margin: 0 calc(-1 * var(--sp-5));
+    box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.08);
+}
+
 /* ==================== BUTTON LOADING STATES ==================== */
 @keyframes spin {
     to { transform: rotate(360deg); }
@@ -1646,6 +1660,11 @@ body {
     .client-bar {
         flex-direction: column;
         gap: var(--sp-2);
+    }
+
+    #addOtherTypeContainer {
+        margin-inline-start: 0;
+        align-self: flex-start;
     }
 
     .page-header {
