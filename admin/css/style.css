@@ -6029,3 +6029,147 @@ tr:hover .client-edit-link {
         display: flex;
     }
 }
+
+/* ---- PDF Split Modal (DL-237) ---- */
+
+#aiSplitModal .ai-modal-panel {
+    max-width: 800px;
+}
+
+.split-page-info {
+    font-size: 14px;
+    font-weight: 400;
+    color: var(--text-secondary, #6b7280);
+    margin-right: 8px;
+}
+
+.split-mode-tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+}
+
+.split-mode-tab {
+    padding: 8px 16px;
+    border: 1px solid var(--border-color, #e5e7eb);
+    border-radius: 6px;
+    background: var(--bg-secondary, #f9fafb);
+    cursor: pointer;
+    font-size: 14px;
+    font-family: inherit;
+    transition: all 0.15s;
+}
+
+.split-mode-tab.active {
+    background: var(--brand-color, #4f46e5);
+    color: #fff;
+    border-color: var(--brand-color, #4f46e5);
+}
+
+.split-mode-tab:hover:not(.active) {
+    border-color: var(--brand-color, #4f46e5);
+}
+
+.split-manual-input {
+    margin-bottom: 16px;
+}
+
+.split-manual-input .form-control {
+    font-family: 'Inter', monospace;
+    direction: ltr;
+    text-align: left;
+}
+
+.split-thumbnail-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 12px;
+    max-height: 400px;
+    overflow-y: auto;
+    padding: 8px;
+}
+
+.split-thumb-wrapper {
+    position: relative;
+    border: 2px solid var(--border-color, #e5e7eb);
+    border-radius: 6px;
+    padding: 4px;
+    transition: all 0.15s;
+    text-align: center;
+    background: #fff;
+}
+
+.split-thumb-wrapper img {
+    display: block;
+    margin: 0 auto;
+    border-radius: 3px;
+}
+
+.split-thumb-label {
+    display: block;
+    font-size: 12px;
+    color: var(--text-secondary, #6b7280);
+    margin-top: 4px;
+}
+
+.split-thumb-group-label {
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    color: #fff;
+    font-size: 12px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+}
+
+.split-result-preview {
+    margin-top: 12px;
+    padding: 8px 12px;
+    background: var(--bg-secondary, #f0fdf4);
+    border-radius: 6px;
+    text-align: center;
+}
+
+.split-preview-count {
+    font-weight: 600;
+    color: var(--success-color, #16a34a);
+}
+
+.split-loading,
+.split-error {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--text-secondary, #6b7280);
+}
+
+.split-error {
+    color: var(--danger-color, #dc2626);
+}
+
+.ai-pages-badge {
+    display: inline-flex;
+    align-items: center;
+    font-size: 11px;
+    padding: 1px 6px;
+    border-radius: 4px;
+    background: var(--bg-secondary, #eff6ff);
+    color: var(--brand-color, #3b82f6);
+    white-space: nowrap;
+}
+
+.ai-split-btn {
+    border-color: var(--brand-color, #4f46e5) !important;
+    color: var(--brand-color, #4f46e5) !important;
+}
+
+.ai-split-btn:hover {
+    background: var(--brand-color, #4f46e5) !important;
+    color: #fff !important;
+}

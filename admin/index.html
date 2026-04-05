@@ -796,6 +796,39 @@
         </div>
     </div>
 
+    <!-- AI Split Modal (DL-237) -->
+    <div id="aiSplitModal" class="ai-modal-overlay" onclick="if(event.target===this)closeSplitModal()">
+        <div class="ai-modal-panel" style="max-width: 800px;">
+            <div class="ai-modal-panel-header">
+                <i data-lucide="scissors" class="icon"></i>
+                פיצול PDF
+                <span id="splitModalPageInfo" class="split-page-info"></span>
+            </div>
+            <div class="ai-modal-panel-body">
+                <div class="split-mode-tabs">
+                    <button class="split-mode-tab active" onclick="setSplitMode('all')">פיצול לכל העמודים</button>
+                    <button class="split-mode-tab" onclick="setSplitMode('manual')">טווח ידני</button>
+                </div>
+                <div id="splitManualInput" class="split-manual-input" style="display:none">
+                    <label class="form-label">הזן טווחי עמודים (מופרדים בפסיקים):</label>
+                    <input type="text" id="splitRangeInput" class="form-control" placeholder="1-2, 3, 4-5" dir="ltr" oninput="parseSplitRanges()">
+                    <small id="splitRangeError" class="text-danger" style="display:none"></small>
+                </div>
+                <div id="splitThumbnailGrid" class="split-thumbnail-grid">
+                    <div class="split-loading">טוען עמודים...</div>
+                </div>
+                <div id="splitResultPreview" class="split-result-preview" style="display:none"></div>
+            </div>
+            <div class="ai-modal-panel-footer">
+                <button class="btn btn-secondary" onclick="closeSplitModal()">ביטול</button>
+                <button class="btn btn-primary" id="splitConfirmBtn" onclick="confirmSplit()" disabled>
+                    <i data-lucide="scissors" class="icon-sm"></i>
+                    <span id="splitConfirmText">פצל</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- AI Toast -->
     <div id="aiToast" class="ai-toast">
         <i data-lucide="check-circle" class="icon-sm" id="aiToastIcon"></i>

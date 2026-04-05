@@ -3199,6 +3199,17 @@ function renderAICard(item) {
         `;
     }
 
+    // DL-237: Split button for multi-page PDFs (all card states)
+    if (item.page_count && item.page_count >= 2) {
+        actionsHtml += `
+            <button class="btn btn-outline btn-sm ai-split-btn"
+                onclick="event.stopPropagation(); openSplitModal('${escapeAttr(item.id)}')"
+                title="פיצול PDF — ${item.page_count} עמודים">
+                <i data-lucide="scissors" class="icon-sm"></i> פיצול (${item.page_count} עמ׳)
+            </button>
+        `;
+    }
+
     return `
         <div class="ai-review-card ${cardClass}" data-id="${escapeAttr(item.id)}" ${item.is_unrequested ? 'data-unrequested="true"' : ''}>
             <div class="ai-card-top" onclick="loadDocPreview('${escapeAttr(item.id)}')">
@@ -3207,6 +3218,7 @@ function renderAICard(item) {
                     <span class="ai-file-name clickable-preview" ${senderTooltip ? `title="${escapeAttr(senderTooltip)}"` : ''}>${escapeHtml(item.attachment_name || 'ללא שם')}</span>
                     ${item.is_duplicate ? '<span class="ai-duplicate-badge" title="קובץ כפול — אותו קובץ כבר קיים במערכת">כפול</span>' : ''}
                     ${item.is_unrequested ? '<span class="ai-unrequested-badge" title="מסמך שלא נדרש מהלקוח">לא נדרש</span>' : ''}
+                    ${item.page_count && item.page_count >= 2 ? `<span class="ai-pages-badge" title="${item.page_count} עמודים">📄 ${item.page_count} עמ׳</span>` : ''}
                     ${evidenceIcon}
                 </div>
                 ${viewFileBtn}
@@ -7061,5 +7073,318 @@ function formatDateDisplay(dateStr) {
         return d.toLocaleDateString('he-IL', { day: '2-digit', month: '2-digit', year: 'numeric' });
     } catch (e) {
         return dateStr;
+    }
+}
+
+// ---- PDF Split Modal (DL-237) ----
+
+let pdfjsLoaded = false;
+async function ensurePdfJs() {
+    if (pdfjsLoaded) return;
+    return new Promise((resolve, reject) => {
+        const script = document.createElement('script');
+        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+        script.onload = () => {
+            pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+            pdfjsLoaded = true;
+            resolve();
+        };
+        script.onerror = reject;
+        document.head.appendChild(script);
+    });
+}
+
+const splitState = {
+    classificationId: null,
+    pageCount: 0,
+    mode: 'all',
+    groups: [],
+    pdfDoc: null,
+    thumbnailsRendered: false,
+};
+
+const SPLIT_GROUP_COLORS = [
+    '#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6',
+    '#ec4899', '#06b6d4', '#84cc16', '#f97316', '#6366f1',
+];
+
+async function openSplitModal(recordId) {
+    const item = aiClassificationsData.find(c => c.id === recordId);
+    if (!item) return;
+
+    splitState.classificationId = recordId;
+    splitState.pageCount = item.page_count || 0;
+    splitState.mode = 'all';
+    splitState.groups = [];
+    splitState.pdfDoc = null;
+    splitState.thumbnailsRendered = false;
+
+    const modal = document.getElementById('aiSplitModal');
+    modal.classList.add('visible');
+    document.getElementById('splitModalPageInfo').textContent = `(${splitState.pageCount} עמודים)`;
+    document.getElementById('splitThumbnailGrid').innerHTML = '<div class="split-loading">טוען עמודים...</div>';
+    document.getElementById('splitManualInput').style.display = 'none';
+    const rangeInput = document.getElementById('splitRangeInput');
+    if (rangeInput) rangeInput.value = '';
+    document.getElementById('splitRangeError').style.display = 'none';
+
+    setSplitMode('all');
+    lucide.createIcons();
+
+    try {
+        await ensurePdfJs();
+        const { downloadUrl } = await getDocPreviewUrl(item.onedrive_item_id);
+        if (!downloadUrl) throw new Error('Could not get PDF download URL');
+
+        const pdfDoc = await pdfjsLib.getDocument(downloadUrl).promise;
+        splitState.pdfDoc = pdfDoc;
+        splitState.pageCount = pdfDoc.numPages;
+        document.getElementById('splitModalPageInfo').textContent = `(${splitState.pageCount} עמודים)`;
+
+        await renderSplitThumbnails(pdfDoc);
+        setSplitMode(splitState.mode); // re-apply to update groups with actual page count
+    } catch (err) {
+        console.error('[split] Failed to load PDF:', err);
+        document.getElementById('splitThumbnailGrid').innerHTML =
+            '<div class="split-error">שגיאה בטעינת הקובץ. נסה שוב.</div>';
+    }
+}
+
+function closeSplitModal() {
+    document.getElementById('aiSplitModal').classList.remove('visible');
+    splitState.pdfDoc = null;
+}
+
+async function renderSplitThumbnails(pdfDoc) {
+    const grid = document.getElementById('splitThumbnailGrid');
+    grid.innerHTML = '';
+
+    const SCALE = 0.3;
+    const DPR = window.devicePixelRatio || 1;
+
+    for (let i = 1; i <= pdfDoc.numPages; i++) {
+        const page = await pdfDoc.getPage(i);
+        const viewport = page.getViewport({ scale: SCALE });
+
+        const wrapper = document.createElement('div');
+        wrapper.className = 'split-thumb-wrapper';
+        wrapper.dataset.page = i;
+
+        const canvas = document.createElement('canvas');
+        canvas.width = viewport.width * DPR;
+        canvas.height = viewport.height * DPR;
+        canvas.style.width = viewport.width + 'px';
+        canvas.style.height = viewport.height + 'px';
+
+        const ctx = canvas.getContext('2d');
+        ctx.scale(DPR, DPR);
+        await page.render({ canvasContext: ctx, viewport }).promise;
+
+        // Convert canvas to img for memory efficiency
+        const img = document.createElement('img');
+        img.src = canvas.toDataURL();
+        img.style.width = viewport.width + 'px';
+        img.style.height = viewport.height + 'px';
+
+        const label = document.createElement('span');
+        label.className = 'split-thumb-label';
+        label.textContent = `עמוד ${i}`;
+
+        wrapper.appendChild(img);
+        wrapper.appendChild(label);
+        grid.appendChild(wrapper);
+    }
+
+    splitState.thumbnailsRendered = true;
+}
+
+function setSplitMode(mode) {
+    splitState.mode = mode;
+
+    document.querySelectorAll('.split-mode-tab').forEach(tab => tab.classList.remove('active'));
+    const tabs = document.querySelectorAll('.split-mode-tab');
+    if (mode === 'all' && tabs[0]) tabs[0].classList.add('active');
+    if (mode === 'manual' && tabs[1]) tabs[1].classList.add('active');
+
+    document.getElementById('splitManualInput').style.display = mode === 'manual' ? 'block' : 'none';
+
+    if (mode === 'all') {
+        splitState.groups = [];
+        for (let i = 1; i <= splitState.pageCount; i++) {
+            splitState.groups.push([i]);
+        }
+    } else {
+        parseSplitRanges();
+    }
+
+    updateSplitPreview();
+    updateThumbnailHighlights();
+}
+
+function parseSplitRanges() {
+    const input = document.getElementById('splitRangeInput').value.trim();
+    const errorEl = document.getElementById('splitRangeError');
+
+    if (!input) {
+        splitState.groups = [];
+        errorEl.style.display = 'none';
+        updateSplitPreview();
+        updateThumbnailHighlights();
+        return;
+    }
+
+    const parts = input.split(',').map(s => s.trim()).filter(Boolean);
+    const groups = [];
+    const usedPages = new Set();
+
+    for (const part of parts) {
+        const rangeMatch = part.match(/^(\d+)\s*-\s*(\d+)$/);
+        const singleMatch = part.match(/^(\d+)$/);
+
+        if (rangeMatch) {
+            const start = parseInt(rangeMatch[1]);
+            const end = parseInt(rangeMatch[2]);
+            if (start < 1 || end > splitState.pageCount || start > end) {
+                errorEl.textContent = `טווח לא תקין: ${part} (PDF מכיל ${splitState.pageCount} עמודים)`;
+                errorEl.style.display = 'block';
+                splitState.groups = [];
+                updateSplitPreview();
+                updateThumbnailHighlights();
+                return;
+            }
+            const group = [];
+            for (let p = start; p <= end; p++) {
+                if (usedPages.has(p)) {
+                    errorEl.textContent = `עמוד ${p} מופיע יותר מפעם אחת`;
+                    errorEl.style.display = 'block';
+                    splitState.groups = [];
+                    updateSplitPreview();
+                    updateThumbnailHighlights();
+                    return;
+                }
+                usedPages.add(p);
+                group.push(p);
+            }
+            groups.push(group);
+        } else if (singleMatch) {
+            const p = parseInt(singleMatch[1]);
+            if (p < 1 || p > splitState.pageCount) {
+                errorEl.textContent = `עמוד ${p} לא קיים (PDF מכיל ${splitState.pageCount} עמודים)`;
+                errorEl.style.display = 'block';
+                splitState.groups = [];
+                updateSplitPreview();
+                updateThumbnailHighlights();
+                return;
+            }
+            if (usedPages.has(p)) {
+                errorEl.textContent = `עמוד ${p} מופיע יותר מפעם אחת`;
+                errorEl.style.display = 'block';
+                splitState.groups = [];
+                updateSplitPreview();
+                updateThumbnailHighlights();
+                return;
+            }
+            usedPages.add(p);
+            groups.push([p]);
+        } else {
+            errorEl.textContent = `פורמט לא תקין: "${part}". השתמש ב-1-3, 4, 5-7`;
+            errorEl.style.display = 'block';
+            splitState.groups = [];
+            updateSplitPreview();
+            updateThumbnailHighlights();
+            return;
+        }
+    }
+
+    if (groups.length < 2) {
+        errorEl.textContent = 'יש להגדיר לפחות 2 קבוצות';
+        errorEl.style.display = 'block';
+        splitState.groups = [];
+        updateSplitPreview();
+        updateThumbnailHighlights();
+        return;
+    }
+
+    errorEl.style.display = 'none';
+    splitState.groups = groups;
+    updateSplitPreview();
+    updateThumbnailHighlights();
+}
+
+function updateThumbnailHighlights() {
+    document.querySelectorAll('.split-thumb-wrapper').forEach(w => {
+        w.style.borderColor = '';
+        w.style.backgroundColor = '';
+        const gl = w.querySelector('.split-thumb-group-label');
+        if (gl) gl.remove();
+    });
+
+    splitState.groups.forEach((group, gi) => {
+        const color = SPLIT_GROUP_COLORS[gi % SPLIT_GROUP_COLORS.length];
+        group.forEach(pageNum => {
+            const wrapper = document.querySelector(`.split-thumb-wrapper[data-page="${pageNum}"]`);
+            if (wrapper) {
+                wrapper.style.borderColor = color;
+                wrapper.style.backgroundColor = color + '15';
+
+                const label = document.createElement('span');
+                label.className = 'split-thumb-group-label';
+                label.style.backgroundColor = color;
+                label.textContent = `${gi + 1}`;
+                wrapper.appendChild(label);
+            }
+        });
+    });
+}
+
+function updateSplitPreview() {
+    const preview = document.getElementById('splitResultPreview');
+    const confirmBtn = document.getElementById('splitConfirmBtn');
+    const confirmText = document.getElementById('splitConfirmText');
+
+    if (splitState.groups.length >= 2) {
+        const count = splitState.groups.length;
+        preview.innerHTML = `<span class="split-preview-count">${count} מסמכים ייווצרו</span>`;
+        preview.style.display = 'block';
+        confirmBtn.disabled = false;
+        confirmText.textContent = `פצל ל-${count} מסמכים`;
+    } else {
+        preview.innerHTML = '';
+        preview.style.display = 'none';
+        confirmBtn.disabled = true;
+        confirmText.textContent = 'פצל';
+    }
+}
+
+async function confirmSplit() {
+    if (splitState.groups.length < 2) return;
+
+    closeSplitModal();
+    showLoading(`מפצל PDF ל-${splitState.groups.length} מסמכים ומסווג מחדש...`);
+
+    try {
+        const resp = await fetchWithTimeout(ENDPOINTS.REVIEW_CLASSIFICATION, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                token: authToken,
+                classification_id: splitState.classificationId,
+                action: 'split',
+                groups: splitState.groups,
+            }),
+        }, FETCH_TIMEOUTS.mutate);
+
+        const result = await resp.json();
+        hideLoading();
+
+        if (result.ok) {
+            showAIToast(`הקובץ פוצל ל-${result.created || splitState.groups.length} מסמכים חדשים`, 'success');
+            await loadAIClassifications();
+        } else {
+            showModal('error', 'שגיאה בפיצול', result.error || 'שגיאה לא ידועה');
+        }
+    } catch (err) {
+        hideLoading();
+        showModal('error', 'שגיאה בפיצול', err.message);
     }
 }
