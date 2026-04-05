@@ -1503,9 +1503,38 @@ function updateStatusOverview() {
     const overview = document.getElementById('statusOverview');
     if (!overview) return;
 
+    // Show edit session bar only when there are pending changes
+    const hasChanges = markedForRemoval.size > 0 || docsToAdd.size > 0 ||
+        markedForRestore.size > 0 || statusChanges.size > 0 || noteChanges.size > 0 || nameChanges.size > 0 ||
+        questionsAreDirty();
+    document.getElementById('editSessionBar').style.display = hasChanges ? 'block' : 'none';
+
+    // Warn before leaving with unsaved changes
+    if (hasChanges) {
+        window.onbeforeunload = () => true;
+    } else {
+        window.onbeforeunload = null;
+    }
+
+    // Mutually exclusive: save+reset row shown when changes pending, approve-send row when clean
+    const saveResetRow = document.getElementById('save-reset-row');
+    const approveSendRow = document.getElementById('approve-send-row');
+    const actionsRow = saveResetRow?.closest('.actions-row');
+    if (actionsRow) actionsRow.classList.toggle('sticky', hasChanges);
+    if (saveResetRow) saveResetRow.style.display = hasChanges ? 'contents' : 'none';
+    if (approveSendRow) {
+        approveSendRow.style.display = hasChanges ? 'none' : '';
+        // Reset send button to idle when row becomes visible again (after save-then-change cycle)
+        if (!hasChanges) {
+            const sendBtn = document.getElementById('approveSendBtn');
+            if (sendBtn) setBtnState(sendBtn, 'idle');
+        }
+    }
+
     const total = currentDocuments.length;
     if (total === 0) {
-        overview.style.display = 'none';
+        overview.style.display = hasChanges ? 'block' : 'none';
+        updateStickyBar();
         return;
     }
     overview.style.display = 'block';
@@ -1545,34 +1574,6 @@ function updateStatusOverview() {
     const completePct = activeTotal > 0 ? Math.round((received / activeTotal) * 100) : 0;
     document.getElementById('statusSummaryText').textContent =
         `${received} מתוך ${activeTotal} (${completePct}%)`;
-
-    // Show edit session bar only when there are pending changes
-    const hasChanges = markedForRemoval.size > 0 || docsToAdd.size > 0 ||
-        markedForRestore.size > 0 || statusChanges.size > 0 || noteChanges.size > 0 || nameChanges.size > 0 ||
-        questionsAreDirty();
-    document.getElementById('editSessionBar').style.display = hasChanges ? 'block' : 'none';
-
-    // Warn before leaving with unsaved changes
-    if (hasChanges) {
-        window.onbeforeunload = () => true;
-    } else {
-        window.onbeforeunload = null;
-    }
-
-    // Mutually exclusive: save+reset row shown when changes pending, approve-send row when clean
-    const saveResetRow = document.getElementById('save-reset-row');
-    const approveSendRow = document.getElementById('approve-send-row');
-    const actionsRow = saveResetRow?.closest('.actions-row');
-    if (actionsRow) actionsRow.classList.toggle('sticky', hasChanges);
-    if (saveResetRow) saveResetRow.style.display = hasChanges ? 'contents' : 'none';
-    if (approveSendRow) {
-        approveSendRow.style.display = hasChanges ? 'none' : '';
-        // Reset send button to idle when row becomes visible again (after save-then-change cycle)
-        if (!hasChanges) {
-            const sendBtn = document.getElementById('approveSendBtn');
-            if (sendBtn) setBtnState(sendBtn, 'idle');
-        }
-    }
 
     updateStickyBar();
 }
