@@ -7169,40 +7169,51 @@ async function renderSplitThumbnails(pdfDoc) {
     const grid = document.getElementById('splitThumbnailGrid');
     grid.innerHTML = '';
 
-    const SCALE = 0.3;
-    const DPR = window.devicePixelRatio || 1;
+    const SCALE = 0.2; // Lower scale for faster rendering on large PDFs
+    const DPR = Math.min(window.devicePixelRatio || 1, 2); // Cap at 2x
 
     for (let i = 1; i <= pdfDoc.numPages; i++) {
-        const page = await pdfDoc.getPage(i);
-        const viewport = page.getViewport({ scale: SCALE });
-
+        // Create placeholder immediately so user sees progress
         const wrapper = document.createElement('div');
         wrapper.className = 'split-thumb-wrapper';
         wrapper.dataset.page = i;
-
-        const canvas = document.createElement('canvas');
-        canvas.width = viewport.width * DPR;
-        canvas.height = viewport.height * DPR;
-        canvas.style.width = viewport.width + 'px';
-        canvas.style.height = viewport.height + 'px';
-
-        const ctx = canvas.getContext('2d');
-        ctx.scale(DPR, DPR);
-        await page.render({ canvasContext: ctx, viewport }).promise;
-
-        // Convert canvas to img for memory efficiency
-        const img = document.createElement('img');
-        img.src = canvas.toDataURL();
-        img.style.width = viewport.width + 'px';
-        img.style.height = viewport.height + 'px';
 
         const label = document.createElement('span');
         label.className = 'split-thumb-label';
         label.textContent = `עמוד ${i}`;
 
-        wrapper.appendChild(img);
         wrapper.appendChild(label);
         grid.appendChild(wrapper);
+
+        try {
+            const page = await pdfDoc.getPage(i);
+            const viewport = page.getViewport({ scale: SCALE });
+
+            const canvas = document.createElement('canvas');
+            canvas.width = viewport.width * DPR;
+            canvas.height = viewport.height * DPR;
+            canvas.style.width = viewport.width + 'px';
+            canvas.style.height = viewport.height + 'px';
+
+            const ctx = canvas.getContext('2d');
+            ctx.scale(DPR, DPR);
+            await page.render({ canvasContext: ctx, viewport }).promise;
+
+            // Convert canvas to img for memory efficiency
+            const img = document.createElement('img');
+            img.src = canvas.toDataURL('image/jpeg', 0.6); // JPEG for smaller memory
+            img.style.width = viewport.width + 'px';
+            img.style.height = viewport.height + 'px';
+
+            wrapper.insertBefore(img, label);
+            page.cleanup(); // Free page resources
+        } catch (pageErr) {
+            console.error(`[split] Failed to render page ${i}:`, pageErr);
+            const errSpan = document.createElement('span');
+            errSpan.className = 'split-thumb-label';
+            errSpan.textContent = '⚠️ שגיאה';
+            wrapper.insertBefore(errSpan, label);
+        }
     }
 
     splitState.thumbnailsRendered = true;
