@@ -7137,10 +7137,13 @@ async function openSplitModal(recordId) {
 
     try {
         await ensurePdfJs();
-        const { downloadUrl } = await getDocPreviewUrl(item.onedrive_item_id);
-        if (!downloadUrl) throw new Error('Could not get PDF download URL');
+        // DL-237: Fetch PDF binary through our API proxy (CSP blocks direct SharePoint URLs)
+        const proxyUrl = `${ENDPOINTS.GET_PREVIEW_URL.replace('get-preview-url', 'download-file')}?token=${encodeURIComponent(authToken)}&itemId=${encodeURIComponent(item.onedrive_item_id)}`;
+        const pdfResp = await fetch(proxyUrl);
+        if (!pdfResp.ok) throw new Error('Could not download PDF');
+        const pdfData = await pdfResp.arrayBuffer();
 
-        const pdfDoc = await pdfjsLib.getDocument(downloadUrl).promise;
+        const pdfDoc = await pdfjsLib.getDocument({ data: pdfData }).promise;
         splitState.pdfDoc = pdfDoc;
         splitState.pageCount = pdfDoc.numPages;
         document.getElementById('splitModalPageInfo').textContent = `(${splitState.pageCount} עמודים)`;
