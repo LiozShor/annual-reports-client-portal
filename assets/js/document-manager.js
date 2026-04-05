@@ -2028,7 +2028,7 @@ async function confirmSubmit() {
             setBtnState(saveBtn, 'success', 'נשמר!');
             setTimeout(() => {
                 setBtnState(saveBtn, 'idle');
-                loadDocuments();
+                loadDocuments(REPORT_ID);
             }, 1500);
         } else {
             throw new Error('Server error');
