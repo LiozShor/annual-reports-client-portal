@@ -1562,6 +1562,8 @@ function updateStatusOverview() {
     // Mutually exclusive: save+reset row shown when changes pending, approve-send row when clean
     const saveResetRow = document.getElementById('save-reset-row');
     const approveSendRow = document.getElementById('approve-send-row');
+    const actionsRow = saveResetRow?.closest('.actions-row');
+    if (actionsRow) actionsRow.classList.toggle('sticky', hasChanges);
     if (saveResetRow) saveResetRow.style.display = hasChanges ? 'contents' : 'none';
     if (approveSendRow) {
         approveSendRow.style.display = hasChanges ? 'none' : '';
