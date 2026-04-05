@@ -1316,13 +1316,15 @@ body {
 }
 
 .actions-row.sticky {
-    position: sticky;
+    position: fixed;
     bottom: 0;
+    left: 0;
+    right: 0;
     z-index: 50;
     background: var(--surface-primary);
     border-top: 1px solid var(--border-secondary);
     padding: var(--sp-3) var(--sp-4);
-    margin: 0 calc(-1 * var(--sp-5));
+    margin: 0;
     box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.08);
 }
 
