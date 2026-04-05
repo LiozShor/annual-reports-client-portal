@@ -3199,16 +3199,19 @@ function renderAICard(item) {
         `;
     }
 
-    // DL-237: Split button for multi-page PDFs (all card states)
-    if (item.page_count && item.page_count >= 2) {
-        actionsHtml += `
-            <button class="btn btn-outline btn-sm ai-split-btn"
-                onclick="event.stopPropagation(); openSplitModal('${escapeAttr(item.id)}')"
-                title="פיצול PDF — ${item.page_count} עמודים">
-                <i data-lucide="scissors" class="icon-sm"></i> פיצול (${item.page_count} עמ׳)
-            </button>
-        `;
-    }
+    // DL-237: Split banner for multi-page PDFs — own row above actions
+    const splitBannerHtml = (item.page_count && item.page_count >= 2) ? `
+            <div class="ai-split-banner">
+                <span class="ai-split-banner-info">
+                    <i data-lucide="file-text" class="icon-sm"></i>
+                    PDF עם ${item.page_count} עמודים — ניתן לפצל ולסווג כל חלק בנפרד
+                </span>
+                <button class="btn btn-outline btn-sm ai-split-btn"
+                    onclick="event.stopPropagation(); openSplitModal('${escapeAttr(item.id)}')"
+                    title="פיצול PDF — ${item.page_count} עמודים">
+                    <i data-lucide="scissors" class="icon-sm"></i> פיצול PDF
+                </button>
+            </div>` : '';
 
     return `
         <div class="ai-review-card ${cardClass}" data-id="${escapeAttr(item.id)}" ${item.is_unrequested ? 'data-unrequested="true"' : ''}>
@@ -3230,6 +3233,7 @@ function renderAICard(item) {
                     </div>
                 </div>
             </div>
+            ${splitBannerHtml}
             <div class="ai-card-actions">
                 ${actionsHtml}
             </div>
