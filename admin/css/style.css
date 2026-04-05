@@ -6164,9 +6164,29 @@ tr:hover .client-edit-link {
     white-space: nowrap;
 }
 
+.ai-split-banner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--sp-3);
+    padding: var(--sp-2) var(--sp-5);
+    background: #eff6ff;
+    border-top: 1px solid #dbeafe;
+    font-size: 13px;
+    color: #1e40af;
+}
+
+.ai-split-banner-info {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
+}
+
 .ai-split-btn {
     border-color: var(--brand-color, #4f46e5) !important;
     color: var(--brand-color, #4f46e5) !important;
+    white-space: nowrap;
+    flex-shrink: 0;
 }
 
 .ai-split-btn:hover {
