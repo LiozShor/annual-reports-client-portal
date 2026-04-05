@@ -7124,9 +7124,9 @@ async function openSplitModal(recordId) {
     splitState.thumbnailsRendered = false;
 
     const modal = document.getElementById('aiSplitModal');
-    modal.classList.add('visible');
+    modal.classList.add('show');
     document.getElementById('splitModalPageInfo').textContent = `(${splitState.pageCount} עמודים)`;
-    document.getElementById('splitThumbnailGrid').innerHTML = '<div class="split-loading">טוען עמודים...</div>';
+    document.getElementById('splitThumbnailGrid').innerHTML = '<div class="split-loading"><div class="split-spinner"></div>מוריד ומעבד את הקובץ...</div>';
     document.getElementById('splitManualInput').style.display = 'none';
     const rangeInput = document.getElementById('splitRangeInput');
     if (rangeInput) rangeInput.value = '';
@@ -7161,7 +7161,7 @@ async function openSplitModal(recordId) {
 }
 
 function closeSplitModal() {
-    document.getElementById('aiSplitModal').classList.remove('visible');
+    document.getElementById('aiSplitModal').classList.remove('show');
     splitState.pdfDoc = null;
 }
 
