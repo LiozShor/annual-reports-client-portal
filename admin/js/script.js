@@ -3202,10 +3202,6 @@ function renderAICard(item) {
     // DL-237: Split banner for multi-page PDFs — own row above actions
     const splitBannerHtml = (item.page_count && item.page_count >= 2) ? `
             <div class="ai-split-banner">
-                <span class="ai-split-banner-info">
-                    <i data-lucide="file-text" class="icon-sm"></i>
-                    PDF עם ${item.page_count} עמודים — ניתן לפצל ולסווג כל חלק בנפרד
-                </span>
                 <button class="btn btn-outline btn-sm ai-split-btn"
                     onclick="event.stopPropagation(); openSplitModal('${escapeAttr(item.id)}')"
                     title="פיצול PDF — ${item.page_count} עמודים">
@@ -3221,7 +3217,7 @@ function renderAICard(item) {
                     <span class="ai-file-name clickable-preview" ${senderTooltip ? `title="${escapeAttr(senderTooltip)}"` : ''}>${escapeHtml(item.attachment_name || 'ללא שם')}</span>
                     ${item.is_duplicate ? '<span class="ai-duplicate-badge" title="קובץ כפול — אותו קובץ כבר קיים במערכת">כפול</span>' : ''}
                     ${item.is_unrequested ? '<span class="ai-unrequested-badge" title="מסמך שלא נדרש מהלקוח">לא נדרש</span>' : ''}
-                    ${item.page_count && item.page_count >= 2 ? `<span class="ai-pages-badge" title="${item.page_count} עמודים">📄 ${item.page_count} עמ׳</span>` : ''}
+
                     ${evidenceIcon}
                 </div>
                 ${viewFileBtn}
