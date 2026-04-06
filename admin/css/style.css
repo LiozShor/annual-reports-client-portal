@@ -1783,43 +1783,34 @@ tr:hover .client-view-link {
     flex-shrink: 0;
 }
 
-/* DL-239: Filing type toggle in reassign modal */
-.ai-reassign-ft-toggle {
+/* DL-239: Filing type toggle inside combobox dropdown */
+.doc-combobox-ft-toggle {
     display: flex;
-    gap: var(--sp-2);
-    margin-bottom: var(--sp-3);
-}
-.ai-ft-toggle-btn {
-    flex: 1;
+    gap: var(--sp-1);
     padding: var(--sp-2) var(--sp-3);
-    border-radius: var(--radius-md);
+    border-bottom: 1px solid var(--neutral-100, #f3f4f6);
+}
+.doc-combobox-ft-btn {
+    flex: 1;
+    padding: var(--sp-1) var(--sp-2);
+    border-radius: var(--radius-full);
     border: 1px solid var(--neutral-200, #e5e7eb);
     background: var(--neutral-50, #f9fafb);
-    color: var(--neutral-600, #4b5563);
-    font-size: var(--text-sm);
+    color: var(--neutral-500, #6b7280);
+    font-size: var(--text-xs);
     font-weight: 500;
     cursor: pointer;
     text-align: center;
     transition: all 0.15s ease;
 }
-.ai-ft-toggle-btn:hover {
+.doc-combobox-ft-btn:hover {
     background: var(--neutral-100, #f3f4f6);
 }
-.ai-ft-toggle-btn.active {
+.doc-combobox-ft-btn.active {
     background: var(--primary-50, #eff6ff);
     color: var(--primary-700, #1d4ed8);
     border-color: var(--primary-300, #93c5fd);
     font-weight: 600;
-}
-
-/* DL-239: Inline filing type toggle (inside card assign section) */
-.ai-inline-ft-toggle {
-    display: flex;
-    gap: var(--sp-2);
-    margin-bottom: var(--sp-2);
-}
-.ai-inline-ft-toggle .ai-ft-toggle-btn {
-    flex: 1;
 }
 
 /* DL-238: Filing type badge */

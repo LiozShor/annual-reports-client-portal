@@ -2259,17 +2259,25 @@ function exportReviewToExcel() {
 
 // ==================== DOC SEARCH COMBOBOX ====================
 
-function createDocCombobox(container, docs, { currentMatchId = null, onSelect = null, allowCreate = false } = {}) {
-    // Group docs by category, skip empty categories
-    const groups = [];
-    let currentCat = null;
-    for (const doc of docs) {
-        if (doc.category !== currentCat) {
-            currentCat = doc.category;
-            groups.push({ category: doc.category, name: doc.category_name || doc.category, emoji: doc.category_emoji || '', docs: [] });
+function createDocCombobox(container, docs, { currentMatchId = null, onSelect = null, allowCreate = false, otherDocs = null, ownFilingType = null, otherFilingType = null } = {}) {
+    // DL-239: Track active doc set for filing type toggle
+    let activeDocs = docs;
+
+    function groupDocs(docList) {
+        const groups = [];
+        let currentCat = null;
+        for (const doc of docList) {
+            if (doc.category !== currentCat) {
+                currentCat = doc.category;
+                groups.push({ category: doc.category, name: doc.category_name || doc.category, emoji: doc.category_emoji || '', docs: [] });
+            }
+            groups[groups.length - 1].docs.push(doc);
         }
-        groups[groups.length - 1].docs.push(doc);
+        return groups;
     }
+
+    // Group docs by category, skip empty categories
+    let groups = groupDocs(docs);
 
     const getDisplayName = (doc) => doc.name_short || doc.name || doc.template_id || '';
     const getPlainName = (doc) => (getDisplayName(doc)).replace(/<\/?b>/g, '');
@@ -2328,6 +2336,17 @@ function createDocCombobox(container, docs, { currentMatchId = null, onSelect = 
         let html = '';
         let hasResults = false;
 
+        // DL-239: Filing type toggle inside dropdown
+        if (otherDocs && otherDocs.length > 0 && ownFilingType && otherFilingType) {
+            const ownLabel = FILING_TYPE_LABELS[ownFilingType] || ownFilingType;
+            const otherLabel = FILING_TYPE_LABELS[otherFilingType] || otherFilingType;
+            const isOwnActive = activeDocs === docs;
+            html += `<div class="doc-combobox-ft-toggle">
+                <button class="doc-combobox-ft-btn${isOwnActive ? ' active' : ''}" data-ft="own">${escapeHtml(ownLabel)}</button>
+                <button class="doc-combobox-ft-btn${!isOwnActive ? ' active' : ''}" data-ft="other">${escapeHtml(otherLabel)}</button>
+            </div>`;
+        }
+
         if (allowCreate) {
             html += `<div class="doc-combobox-create-btn" data-action="create">+ \u05d4\u05d5\u05e1\u05e3 \u05de\u05e1\u05de\u05da \u05d7\u05d3\u05e9</div>`;
         }
@@ -2357,6 +2376,27 @@ function createDocCombobox(container, docs, { currentMatchId = null, onSelect = 
         }
 
         dropdown.innerHTML = html;
+
+        // DL-239: Bind filing type toggle clicks
+        dropdown.querySelectorAll('.doc-combobox-ft-btn').forEach(btn => {
+            btn.addEventListener('mousedown', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                if (btn.classList.contains('active')) return;
+                activeDocs = btn.dataset.ft === 'own' ? docs : otherDocs;
+                groups = groupDocs(activeDocs);
+                // Reset selection
+                selectedValue = null;
+                input.value = '';
+                input.classList.remove('has-value');
+                combobox.dataset.selectedValue = '';
+                combobox.dataset.selectedDocId = '';
+                if (onSelect) onSelect(null, null);
+                renderOptions(input.value);
+                // Keep dropdown open
+                dropdown.style.display = '';
+            });
+        });
 
         // Bind create button click
         const createBtn = dropdown.querySelector('.doc-combobox-create-btn');
@@ -2992,41 +3032,22 @@ function renderAICards(items) {
         const itemData = aiClassificationsData.find(i => i.id === recordId);
         // DL-224: Show all docs (not just missing) — received ones get checkmark badge
         const ownDocs = itemData ? (itemData.all_docs || itemData.missing_docs || []) : [];
-        const otherDocs = itemData?.other_report_docs || [];
-        const hasBothTypes = otherDocs.length > 0;
-
-        const buildCombobox = (docs) => {
-            createDocCombobox(el, docs, {
-                allowCreate: true,
-                onSelect: (templateId) => {
-                    const btn = el.closest('.ai-card-actions')?.querySelector('.btn-ai-assign-confirm');
-                    if (btn) btn.disabled = !templateId;
-                }
-            });
-        };
-
-        // DL-239: Render inline filing type toggle when client has both types
-        const toggleEl = el.previousElementSibling;
-        if (hasBothTypes && toggleEl?.classList.contains('ai-inline-ft-toggle')) {
-            const ownFt = itemData.filing_type || 'annual_report';
-            const otherFt = itemData.other_filing_type || (ownFt === 'annual_report' ? 'capital_statement' : 'annual_report');
-            toggleEl.innerHTML = `
-                <button class="ai-ft-toggle-btn active" data-ft="${escapeAttr(ownFt)}">${escapeHtml(FILING_TYPE_LABELS[ownFt] || ownFt)}</button>
-                <button class="ai-ft-toggle-btn" data-ft="${escapeAttr(otherFt)}">${escapeHtml(FILING_TYPE_LABELS[otherFt] || otherFt)}</button>
-            `;
-            toggleEl.style.display = '';
+        const otherDocsArr = itemData?.other_report_docs || [];
+        const hasBothTypes = otherDocsArr.length > 0;
             toggleEl.querySelectorAll('.ai-ft-toggle-btn').forEach(btn => {
-                btn.onclick = (e) => {
-                    e.stopPropagation();
-                    toggleEl.querySelectorAll('.ai-ft-toggle-btn').forEach(b => b.classList.remove('active'));
-                    btn.classList.add('active');
-                    buildCombobox(btn.dataset.ft === ownFt ? ownDocs : otherDocs);
-                    if (typeof lucide !== 'undefined') lucide.createIcons();
-                };
-            });
-        }
-
-        buildCombobox(ownDocs);
+        createDocCombobox(el, ownDocs, {
+            allowCreate: true,
+            onSelect: (templateId) => {
+                const btn = el.closest('.ai-card-actions')?.querySelector('.btn-ai-assign-confirm');
+                if (btn) btn.disabled = !templateId;
+            },
+            // DL-239: Pass other filing type docs for toggle
+            ...(hasBothTypes ? {
+                otherDocs: otherDocsArr,
+                ownFilingType: itemData.filing_type || 'annual_report',
+                otherFilingType: itemData.other_filing_type || (itemData.filing_type === 'annual_report' ? 'capital_statement' : 'annual_report'),
+            } : {}),
+        });
     });
 
     if (typeof lucide !== 'undefined') lucide.createIcons();
@@ -3158,7 +3179,6 @@ function renderAICard(item) {
             actionsHtml = `
                 <div class="ai-assign-section">
                     <span class="ai-assign-label">שייך ל:</span>
-                    <div class="ai-inline-ft-toggle" data-record-id="${escapeAttr(item.id)}" style="display:none"></div>
                     <div class="doc-combobox-container" data-record-id="${escapeAttr(item.id)}"></div>
                     <button class="btn btn-success btn-sm btn-ai-assign-confirm" disabled
                         onclick="assignAIUnmatched('${escapeAttr(item.id)}', this)">
@@ -3703,8 +3723,8 @@ function showAIReassignModal(recordId) {
     const item = aiClassificationsData.find(i => i.id === recordId);
     // DL-224: Show all docs (not just missing) — received ones get checkmark badge
     const ownDocs = item ? (item.all_docs || item.missing_docs || []) : [];
-    const otherDocs = item?.other_report_docs || [];
-    const hasBothTypes = otherDocs.length > 0;
+    const otherDocsArr = item?.other_report_docs || [];
+    const hasBothTypes = otherDocsArr.length > 0;
 
     aiCurrentReassignId = recordId;
     aiReassignSelectedReportId = item?.report_record_id || null;
@@ -3716,39 +3736,9 @@ function showAIReassignModal(recordId) {
         fileInfoEl.textContent = '';
     }
 
-    // DL-239: Filing type toggle for cross-type reassign
+    // DL-239: Hide external toggle (now inside combobox dropdown)
     const toggleContainer = document.getElementById('aiReassignFtToggle');
-    if (toggleContainer) {
-        if (hasBothTypes) {
-            const ownFt = item.filing_type || 'annual_report';
-            const otherFt = item.other_filing_type || (ownFt === 'annual_report' ? 'capital_statement' : 'annual_report');
-            toggleContainer.innerHTML = `
-                <button class="ai-ft-toggle-btn active" data-ft="${escapeAttr(ownFt)}" data-report-id="${escapeAttr(item.report_record_id || '')}">${escapeHtml(FILING_TYPE_LABELS[ownFt] || ownFt)}</button>
-                <button class="ai-ft-toggle-btn" data-ft="${escapeAttr(otherFt)}" data-report-id="${escapeAttr(item.other_report_id || '')}">${escapeHtml(FILING_TYPE_LABELS[otherFt] || otherFt)}</button>
-            `;
-            toggleContainer.style.display = '';
-            toggleContainer.querySelectorAll('.ai-ft-toggle-btn').forEach(btn => {
-                btn.onclick = () => {
-                    toggleContainer.querySelectorAll('.ai-ft-toggle-btn').forEach(b => b.classList.remove('active'));
-                    btn.classList.add('active');
-                    aiReassignSelectedReportId = btn.dataset.reportId || null;
-                    const docs = btn.dataset.ft === ownFt ? ownDocs : otherDocs;
-                    document.getElementById('aiReassignConfirmBtn').disabled = true;
-                    createDocCombobox(comboContainer, docs, {
-                        currentMatchId: btn.dataset.ft === ownFt ? currentMatchId : null,
-                        allowCreate: true,
-                        onSelect: (templateId) => {
-                            document.getElementById('aiReassignConfirmBtn').disabled = !templateId;
-                        }
-                    });
-                    if (typeof lucide !== 'undefined') lucide.createIcons();
-                };
-            });
-        } else {
-            toggleContainer.innerHTML = '';
-            toggleContainer.style.display = 'none';
-        }
-    }
+    if (toggleContainer) { toggleContainer.style.display = 'none'; toggleContainer.innerHTML = ''; }
 
     const comboContainer = document.getElementById('aiReassignComboboxContainer');
     const currentMatchId = item ? item.matched_template_id : null;
@@ -3759,7 +3749,13 @@ function showAIReassignModal(recordId) {
         allowCreate: true,
         onSelect: (templateId) => {
             document.getElementById('aiReassignConfirmBtn').disabled = !templateId;
-        }
+        },
+        // DL-239: Pass other filing type docs for in-dropdown toggle
+        ...(hasBothTypes ? {
+            otherDocs: otherDocsArr,
+            ownFilingType: item.filing_type || 'annual_report',
+            otherFilingType: item.other_filing_type || (item.filing_type === 'annual_report' ? 'capital_statement' : 'annual_report'),
+        } : {}),
     });
 
     document.getElementById('aiReassignModal').classList.add('show');
