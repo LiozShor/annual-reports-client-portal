@@ -6177,10 +6177,9 @@ tr:hover .client-edit-link {
     justify-content: space-between;
     gap: var(--sp-3);
     padding: var(--sp-2) var(--sp-5);
-    background: #eff6ff;
-    border-top: 1px solid #dbeafe;
+    background: transparent;
+    border-top: none;
     font-size: 13px;
-    color: #1e40af;
 }
 
 .ai-split-btn {
