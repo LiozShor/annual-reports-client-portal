@@ -1783,6 +1783,27 @@ tr:hover .client-view-link {
     flex-shrink: 0;
 }
 
+/* DL-238: Filing type badge */
+.ai-filing-type-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 1px var(--sp-2);
+    border-radius: var(--radius-full);
+    font-size: var(--text-xs);
+    font-weight: 600;
+    flex-shrink: 0;
+}
+.ai-ft-annual_report {
+    background: var(--primary-50, #eff6ff);
+    color: var(--primary-700, #1d4ed8);
+    border: 1px solid var(--primary-200, #bfdbfe);
+}
+.ai-ft-capital_statement {
+    background: #f5f3ff;
+    color: #6d28d9;
+    border: 1px solid #ddd6fe;
+}
+
 .ai-card-body {
     padding: var(--sp-4) var(--sp-5);
     overflow-wrap: break-word;

@@ -1136,11 +1136,11 @@ function switchEntityTab(type) {
     // Reset bulk selection
     resetClientBulkSelection();
 
-    // Invalidate all tab caches so they reload with new filing_type
+    // Invalidate tab caches so they reload with new filing_type
+    // DL-238: aiReviewLoaded NOT invalidated — AI Review always shows all filing types
     dashboardLoaded = false;
     pendingClientsLoaded = false;
     questionnaireLoaded = false;
-    aiReviewLoaded = false;
     reminderLoaded = false;
 
     // Sync import/add filing type dropdowns
@@ -1159,7 +1159,7 @@ function switchEntityTab(type) {
     const activeTab = activeContent?.id?.replace('tab-', '');
     if (activeTab === 'send') loadPendingClients();
     else if (activeTab === 'questionnaires') loadQuestionnaires();
-    else if (activeTab === 'ai-review') loadAIClassifications();
+    // DL-238: AI Review not reloaded on entity tab switch — always shows all
     else if (activeTab === 'reminders') loadReminders();
     else if (activeTab === 'review') loadDashboard();
 }
@@ -1430,7 +1430,7 @@ document.addEventListener('visibilitychange', () => {
 async function loadAIReviewCount() {
     const badge = document.getElementById('aiReviewTabBadge');
     try {
-        const resp = await fetchWithTimeout(`${ENDPOINTS.GET_PENDING_CLASSIFICATIONS}?filing_type=${activeEntityTab}`, { headers: { 'Authorization': `Bearer ${authToken}` } }, FETCH_TIMEOUTS.quick);
+        const resp = await fetchWithTimeout(`${ENDPOINTS.GET_PENDING_CLASSIFICATIONS}?filing_type=all`, { headers: { 'Authorization': `Bearer ${authToken}` } }, FETCH_TIMEOUTS.quick); // DL-238: combined badge count
         const data = await resp.json();
         badge.classList.remove('ai-badge-loading');
         if (data.ok && data.items) {
@@ -2601,7 +2601,7 @@ async function loadAIClassifications(silent = false) {
     if (!silent) showLoading('טוען סיווגים...');
 
     try {
-        const response = await fetchWithTimeout(`${ENDPOINTS.GET_PENDING_CLASSIFICATIONS}?filing_type=${activeEntityTab}`, { headers: { 'Authorization': `Bearer ${authToken}` } }, FETCH_TIMEOUTS.load);
+        const response = await fetchWithTimeout(`${ENDPOINTS.GET_PENDING_CLASSIFICATIONS}?filing_type=all`, { headers: { 'Authorization': `Bearer ${authToken}` } }, FETCH_TIMEOUTS.load); // DL-238: unified view
         const data = await response.json();
 
         if (!silent) hideLoading();
@@ -3215,6 +3215,7 @@ function renderAICard(item) {
                 <div class="ai-file-info">
                     <span class="ai-file-source-label">📎 קובץ מקור:</span>
                     <span class="ai-file-name clickable-preview" ${senderTooltip ? `title="${escapeAttr(senderTooltip)}"` : ''}>${escapeHtml(item.attachment_name || 'ללא שם')}</span>
+                    ${item.filing_type ? `<span class="ai-filing-type-badge ai-ft-${escapeAttr(item.filing_type)}">${escapeHtml(FILING_TYPE_LABELS[item.filing_type] || item.filing_type)}</span>` : ''}
                     ${item.is_duplicate ? '<span class="ai-duplicate-badge" title="קובץ כפול — אותו קובץ כבר קיים במערכת">כפול</span>' : ''}
                     ${item.is_unrequested ? '<span class="ai-unrequested-badge" title="מסמך שלא נדרש מהלקוח">לא נדרש</span>' : ''}
 
@@ -3296,6 +3297,7 @@ function renderReviewedCard(item, reviewStatus) {
             <div class="ai-card-top" onclick="loadDocPreview('${escapeAttr(item.id)}')">
                 <div class="ai-file-info">
                     <span class="ai-review-lozenge ${lozengeClass}">${lozengeText}</span>
+                    ${item.filing_type ? `<span class="ai-filing-type-badge ai-ft-${escapeAttr(item.filing_type)}">${escapeHtml(FILING_TYPE_LABELS[item.filing_type] || item.filing_type)}</span>` : ''}
                     <span class="ai-file-name clickable-preview" ${senderTooltip ? `title="${escapeAttr(senderTooltip)}"` : ''}>${escapeHtml(item.attachment_name || 'ללא שם')}</span>
                 </div>
                 ${viewFileBtn}
