@@ -3666,12 +3666,19 @@ async function executeReject(recordId, rejectionReason, notes) {
     }
 }
 
+// DL-239: Track selected report for cross-filing-type reassign
+let aiReassignSelectedReportId = null;
+
 function showAIReassignModal(recordId) {
     const item = aiClassificationsData.find(i => i.id === recordId);
     // DL-224: Show all docs (not just missing) — received ones get checkmark badge
-    const missingDocs = item ? (item.all_docs || item.missing_docs || []) : [];
+    const ownDocs = item ? (item.all_docs || item.missing_docs || []) : [];
+    const otherDocs = item?.other_report_docs || [];
+    const hasBothTypes = otherDocs.length > 0;
 
     aiCurrentReassignId = recordId;
+    aiReassignSelectedReportId = item?.report_record_id || null;
+
     const fileInfoEl = document.getElementById('aiReassignFileInfo');
     if (item) {
         fileInfoEl.innerHTML = `<i data-lucide="file" class="icon-sm" style="display:inline;vertical-align:middle;"></i> ${escapeHtml(item.attachment_name || 'ללא שם')}`;
@@ -3679,11 +3686,45 @@ function showAIReassignModal(recordId) {
         fileInfoEl.textContent = '';
     }
 
+    // DL-239: Filing type toggle for cross-type reassign
+    const toggleContainer = document.getElementById('aiReassignFtToggle');
+    if (toggleContainer) {
+        if (hasBothTypes) {
+            const ownFt = item.filing_type || 'annual_report';
+            const otherFt = item.other_filing_type || (ownFt === 'annual_report' ? 'capital_statement' : 'annual_report');
+            toggleContainer.innerHTML = `
+                <button class="ai-ft-toggle-btn active" data-ft="${escapeAttr(ownFt)}" data-report-id="${escapeAttr(item.report_record_id || '')}">${escapeHtml(FILING_TYPE_LABELS[ownFt] || ownFt)}</button>
+                <button class="ai-ft-toggle-btn" data-ft="${escapeAttr(otherFt)}" data-report-id="${escapeAttr(item.other_report_id || '')}">${escapeHtml(FILING_TYPE_LABELS[otherFt] || otherFt)}</button>
+            `;
+            toggleContainer.style.display = '';
+            toggleContainer.querySelectorAll('.ai-ft-toggle-btn').forEach(btn => {
+                btn.onclick = () => {
+                    toggleContainer.querySelectorAll('.ai-ft-toggle-btn').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    aiReassignSelectedReportId = btn.dataset.reportId || null;
+                    const docs = btn.dataset.ft === ownFt ? ownDocs : otherDocs;
+                    document.getElementById('aiReassignConfirmBtn').disabled = true;
+                    createDocCombobox(comboContainer, docs, {
+                        currentMatchId: btn.dataset.ft === ownFt ? currentMatchId : null,
+                        allowCreate: true,
+                        onSelect: (templateId) => {
+                            document.getElementById('aiReassignConfirmBtn').disabled = !templateId;
+                        }
+                    });
+                    if (typeof lucide !== 'undefined') lucide.createIcons();
+                };
+            });
+        } else {
+            toggleContainer.innerHTML = '';
+            toggleContainer.style.display = 'none';
+        }
+    }
+
     const comboContainer = document.getElementById('aiReassignComboboxContainer');
     const currentMatchId = item ? item.matched_template_id : null;
 
     document.getElementById('aiReassignConfirmBtn').disabled = true;
-    createDocCombobox(comboContainer, missingDocs, {
+    createDocCombobox(comboContainer, ownDocs, {
         currentMatchId,
         allowCreate: true,
         onSelect: (templateId) => {
@@ -3708,16 +3749,20 @@ async function confirmAIReassign() {
     if (!templateId || !aiCurrentReassignId) return;
 
     const recordId = aiCurrentReassignId;
+    // DL-239: Capture selected report ID for cross-type reassign before closing
+    const selectedReportId = aiReassignSelectedReportId;
+    const item = aiClassificationsData.find(i => i.id === recordId);
+    const isCrossType = selectedReportId && item && selectedReportId !== item.report_record_id;
     closeAIReassignModal();
 
     if (templateId === '__NEW__' && newDocName.trim()) {
-        await submitAIReassign(recordId, 'general_doc', '', null, newDocName.trim());
+        await submitAIReassign(recordId, 'general_doc', '', null, newDocName.trim(), false, isCrossType ? selectedReportId : null);
     } else {
         await submitAIReassign(recordId, templateId, docRecordId);
     }
 }
 
-async function submitAIReassign(recordId, templateId, docRecordId, loadingText, newDocName, forceOverwrite) {
+async function submitAIReassign(recordId, templateId, docRecordId, loadingText, newDocName, forceOverwrite, targetReportId) {
     setCardLoading(recordId, loadingText || 'משייך מחדש...');
 
     try {
@@ -3730,6 +3775,7 @@ async function submitAIReassign(recordId, templateId, docRecordId, loadingText, 
         };
         if (newDocName) body.new_doc_name = newDocName;
         if (forceOverwrite) body.force_overwrite = true;
+        if (targetReportId) body.target_report_id = targetReportId; // DL-239
 
         const response = await fetchWithTimeout(ENDPOINTS.REVIEW_CLASSIFICATION, {
             method: 'POST',

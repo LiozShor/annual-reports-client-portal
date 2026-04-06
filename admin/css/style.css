@@ -1783,6 +1783,35 @@ tr:hover .client-view-link {
     flex-shrink: 0;
 }
 
+/* DL-239: Filing type toggle in reassign modal */
+.ai-reassign-ft-toggle {
+    display: flex;
+    gap: var(--sp-2);
+    margin-bottom: var(--sp-3);
+}
+.ai-ft-toggle-btn {
+    flex: 1;
+    padding: var(--sp-2) var(--sp-3);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--neutral-200, #e5e7eb);
+    background: var(--neutral-50, #f9fafb);
+    color: var(--neutral-600, #4b5563);
+    font-size: var(--text-sm);
+    font-weight: 500;
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.15s ease;
+}
+.ai-ft-toggle-btn:hover {
+    background: var(--neutral-100, #f3f4f6);
+}
+.ai-ft-toggle-btn.active {
+    background: var(--primary-50, #eff6ff);
+    color: var(--primary-700, #1d4ed8);
+    border-color: var(--primary-300, #93c5fd);
+    font-weight: 600;
+}
+
 /* DL-238: Filing type badge */
 .ai-filing-type-badge {
     display: inline-flex;
