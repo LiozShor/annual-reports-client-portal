@@ -3216,6 +3216,7 @@ function renderAICard(item) {
         actionsHtml = `
             <div class="ai-assign-section">
                 <span class="ai-assign-label">שייך ל:</span>
+                <div class="ai-inline-ft-toggle" data-record-id="${escapeAttr(item.id)}" style="display:none"></div>
                 <div class="doc-combobox-container" data-record-id="${escapeAttr(item.id)}"></div>
                 <button class="btn btn-success btn-sm btn-ai-assign-confirm" disabled
                     onclick="assignAIUnmatched('${escapeAttr(item.id)}', this)">
