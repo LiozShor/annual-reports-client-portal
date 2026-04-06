@@ -7395,7 +7395,10 @@ async function confirmSplit() {
         hideLoading();
 
         if (result.ok) {
-            showAIToast(`הקובץ פוצל ל-${result.created || splitState.groups.length} מסמכים חדשים`, 'success');
+            showAIToast('הפיצול התחיל — המסמכים החדשים יופיעו בעוד מספר שניות', 'success', {
+                label: 'רענן',
+                onClick: () => loadAIClassifications(),
+            });
             await loadAIClassifications();
         } else {
             showModal('error', 'שגיאה בפיצול', result.error || 'שגיאה לא ידועה');
