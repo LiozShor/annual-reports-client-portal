@@ -7389,7 +7389,7 @@ async function confirmSplit() {
                 action: 'split',
                 groups: splitState.groups,
             }),
-        }, FETCH_TIMEOUTS.mutate);
+        }, 120000); // 2 min — each page needs AI classification
 
         const result = await resp.json();
         hideLoading();
