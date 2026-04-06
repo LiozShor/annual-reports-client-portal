@@ -616,9 +616,14 @@ function initDocumentDropdown() {
         }
     }
 
+    // Filter templates by active report's filing type
+    const activeReport = allReports.find(r => r.report_id === REPORT_ID);
+    const currentFilingType = activeReport?.filing_type || 'annual_report';
+    const relevantTemplates = apiTemplates.filter(t => !t.filing_type || t.filing_type === currentFilingType);
+
     // Group templates by category
     const groups = {};
-    for (const tpl of apiTemplates) {
+    for (const tpl of relevantTemplates) {
         const catId = tpl.category || 'other';
         if (!groups[catId]) groups[catId] = [];
         groups[catId].push(tpl);
