@@ -1812,6 +1812,16 @@ tr:hover .client-view-link {
     font-weight: 600;
 }
 
+/* DL-239: Inline filing type toggle (inside card assign section) */
+.ai-inline-ft-toggle {
+    display: flex;
+    gap: var(--sp-2);
+    margin-bottom: var(--sp-2);
+}
+.ai-inline-ft-toggle .ai-ft-toggle-btn {
+    flex: 1;
+}
+
 /* DL-238: Filing type badge */
 .ai-filing-type-badge {
     display: inline-flex;

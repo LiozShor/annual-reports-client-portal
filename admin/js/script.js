@@ -2991,14 +2991,42 @@ function renderAICards(items) {
         const recordId = el.dataset.recordId;
         const itemData = aiClassificationsData.find(i => i.id === recordId);
         // DL-224: Show all docs (not just missing) — received ones get checkmark badge
-        const docs = itemData ? (itemData.all_docs || itemData.missing_docs || []) : [];
-        createDocCombobox(el, docs, {
-            allowCreate: true,
-            onSelect: (templateId) => {
-                const btn = el.closest('.ai-card-actions').querySelector('.btn-ai-assign-confirm');
-                if (btn) btn.disabled = !templateId;
-            }
-        });
+        const ownDocs = itemData ? (itemData.all_docs || itemData.missing_docs || []) : [];
+        const otherDocs = itemData?.other_report_docs || [];
+        const hasBothTypes = otherDocs.length > 0;
+
+        const buildCombobox = (docs) => {
+            createDocCombobox(el, docs, {
+                allowCreate: true,
+                onSelect: (templateId) => {
+                    const btn = el.closest('.ai-card-actions')?.querySelector('.btn-ai-assign-confirm');
+                    if (btn) btn.disabled = !templateId;
+                }
+            });
+        };
+
+        // DL-239: Render inline filing type toggle when client has both types
+        const toggleEl = el.previousElementSibling;
+        if (hasBothTypes && toggleEl?.classList.contains('ai-inline-ft-toggle')) {
+            const ownFt = itemData.filing_type || 'annual_report';
+            const otherFt = itemData.other_filing_type || (ownFt === 'annual_report' ? 'capital_statement' : 'annual_report');
+            toggleEl.innerHTML = `
+                <button class="ai-ft-toggle-btn active" data-ft="${escapeAttr(ownFt)}">${escapeHtml(FILING_TYPE_LABELS[ownFt] || ownFt)}</button>
+                <button class="ai-ft-toggle-btn" data-ft="${escapeAttr(otherFt)}">${escapeHtml(FILING_TYPE_LABELS[otherFt] || otherFt)}</button>
+            `;
+            toggleEl.style.display = '';
+            toggleEl.querySelectorAll('.ai-ft-toggle-btn').forEach(btn => {
+                btn.onclick = (e) => {
+                    e.stopPropagation();
+                    toggleEl.querySelectorAll('.ai-ft-toggle-btn').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    buildCombobox(btn.dataset.ft === ownFt ? ownDocs : otherDocs);
+                    if (typeof lucide !== 'undefined') lucide.createIcons();
+                };
+            });
+        }
+
+        buildCombobox(ownDocs);
     });
 
     if (typeof lucide !== 'undefined') lucide.createIcons();
@@ -3130,6 +3158,7 @@ function renderAICard(item) {
             actionsHtml = `
                 <div class="ai-assign-section">
                     <span class="ai-assign-label">שייך ל:</span>
+                    <div class="ai-inline-ft-toggle" data-record-id="${escapeAttr(item.id)}" style="display:none"></div>
                     <div class="doc-combobox-container" data-record-id="${escapeAttr(item.id)}"></div>
                     <button class="btn btn-success btn-sm btn-ai-assign-confirm" disabled
                         onclick="assignAIUnmatched('${escapeAttr(item.id)}', this)">
@@ -3833,9 +3862,17 @@ async function assignAIUnmatched(recordId, btnEl) {
     const newDocName = comboboxEl ? (comboboxEl.dataset.newDocName || '') : '';
     if (!templateId) return;
 
+    // DL-239: Detect cross-type toggle for "create new doc" path
+    const item = aiClassificationsData.find(i => i.id === recordId);
+    const assignSection = btnEl.closest('.ai-assign-section') || actionsContainer;
+    const activeToggle = assignSection.querySelector('.ai-inline-ft-toggle .ai-ft-toggle-btn.active');
+    const selectedFt = activeToggle?.dataset.ft;
+    const isCrossType = selectedFt && item && selectedFt !== item.filing_type;
+    const targetReportId = isCrossType ? item.other_report_id : null;
+
     if (templateId === '__NEW__' && newDocName.trim()) {
         showInlineConfirm(recordId, `ליצור מסמך "${newDocName.trim()}"?`, async () => {
-            await submitAIReassign(recordId, 'general_doc', '', 'יוצר ומשייך...', newDocName.trim());
+            await submitAIReassign(recordId, 'general_doc', '', 'יוצר ומשייך...', newDocName.trim(), false, targetReportId);
         }, { confirmText: 'צור ושייך' });
     } else {
         showInlineConfirm(recordId, 'לשייך?', async () => {
