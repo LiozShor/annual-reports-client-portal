@@ -5285,8 +5285,8 @@ tr:hover .client-edit-link {
         display: none !important;
     }
 
-    /* Bottom nav bar */
-    .bottom-nav {
+    /* Bottom nav bar — only show after auth (lives outside #app) */
+    .app.visible ~ .bottom-nav {
         display: flex;
         position: fixed;
         bottom: 0;
