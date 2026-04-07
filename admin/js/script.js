@@ -2393,8 +2393,9 @@ function createDocCombobox(container, docs, { currentMatchId = null, onSelect = 
                 combobox.dataset.selectedDocId = '';
                 if (onSelect) onSelect(null, null);
                 renderOptions(input.value);
-                // Keep dropdown open
-                dropdown.style.display = '';
+                // Keep dropdown open and re-anchor to input
+                positionDropdown();
+                dropdown.scrollTop = 0;
             });
         });
 
