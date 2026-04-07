@@ -2471,6 +2471,14 @@ function createDocCombobox(container, docs, { currentMatchId = null, onSelect = 
     }
 
     input.addEventListener('focus', open);
+    // DL-239: Click already-focused input to toggle close
+    input.addEventListener('mousedown', (e) => {
+        if (combobox.classList.contains('open') && document.activeElement === input) {
+            e.preventDefault();
+            close();
+            input.blur();
+        }
+    });
     input.addEventListener('input', () => {
         if (inCreateMode) {
             combobox.dataset.newDocName = input.value;
