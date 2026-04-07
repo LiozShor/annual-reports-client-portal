@@ -2445,15 +2445,29 @@ function createDocCombobox(container, docs, { currentMatchId = null, onSelect = 
         dropdown.style.maxHeight = dropHeight + 'px';
     }
 
+    // DL-239: Re-anchor fixed-position dropdown on scroll/resize while open
+    let scrollHandler = null;
     function open() {
         if (inCreateMode) return;
         combobox.classList.add('open');
         positionDropdown();
         renderOptions(input.classList.contains('has-value') ? '' : input.value);
+        if (!scrollHandler) {
+            scrollHandler = () => {
+                if (combobox.classList.contains('open')) positionDropdown();
+            };
+            window.addEventListener('scroll', scrollHandler, true);
+            window.addEventListener('resize', scrollHandler);
+        }
     }
 
     function close() {
         combobox.classList.remove('open');
+        if (scrollHandler) {
+            window.removeEventListener('scroll', scrollHandler, true);
+            window.removeEventListener('resize', scrollHandler);
+            scrollHandler = null;
+        }
     }
 
     input.addEventListener('focus', open);
