@@ -3034,7 +3034,6 @@ function renderAICards(items) {
         const ownDocs = itemData ? (itemData.all_docs || itemData.missing_docs || []) : [];
         const otherDocsArr = itemData?.other_report_docs || [];
         const hasBothTypes = otherDocsArr.length > 0;
-            toggleEl.querySelectorAll('.ai-ft-toggle-btn').forEach(btn => {
         createDocCombobox(el, ownDocs, {
             allowCreate: true,
             onSelect: (templateId) => {

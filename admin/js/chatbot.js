@@ -904,7 +904,7 @@
         ];
 
         const chipsHtml = suggestions.map(s =>
-            `<button class="chat-chip" onclick="window._chatbot.suggest('${escapeAttr(s)}')">${escapeHtml(s)}</button>`
+            `<button class="chat-chip" onclick="window._chatbot.suggest('${s.replace(/'/g, "\\'")}')">${escapeHtml(s)}</button>`
         ).join('');
 
         widget.innerHTML = `
