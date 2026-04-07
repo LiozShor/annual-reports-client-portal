@@ -7034,15 +7034,20 @@ function generateQuestionnairePrintHTML(items) {
         const answers = item.answers || [];
         const printAnswers = answers.filter(a => a.value && a.value !== '✗ לא');
         let clientQuestions = [];
-        try {
-            const rawCQ = item.client_questions || item.raw_answers?.client_questions || '[]';
-            clientQuestions = JSON.parse(rawCQ);
-            if (!Array.isArray(clientQuestions)) clientQuestions = [];
-        } catch (e) { clientQuestions = []; }
+        const rawCQ = item.client_questions || item.raw_answers?.client_questions || '';
+        if (rawCQ && String(rawCQ).trim()) {
+            try {
+                const parsed = JSON.parse(rawCQ);
+                if (Array.isArray(parsed)) clientQuestions = parsed;
+            } catch (e) {
+                console.warn('Failed to parse client_questions for print', e);
+            }
+        }
 
         const date = formatDateDisplay(info.submission_date || '');
         const reportClient = clientsData.find(c => c.report_id === item.report_record_id);
-        const ftLabel = FILING_TYPE_LABELS[reportClient?.filing_type || activeEntityTab] || FILING_TYPE_LABELS.annual_report;
+        const itemFilingType = item.filing_type || reportClient?.filing_type || activeEntityTab;
+        const ftLabel = FILING_TYPE_LABELS[itemFilingType] || FILING_TYPE_LABELS.annual_report;
         printHtml += `
 <div class="client-page">
   <div class="client-header">
@@ -7102,9 +7107,10 @@ function generateQuestionnairePrintHTML(items) {
             printHtml += `</div>`;
         }
 
-        // Office notes (reportClient already resolved above for filing type)
-        if (reportClient?.notes) {
-            printHtml += `<div class="office-notes"><h4>הערות משרד</h4><div class="notes-content">${escapeHtml(reportClient.notes)}</div></div>`;
+        // Office notes — read from item.notes (returned by API), fallback to clientsData lookup
+        const itemNotes = item.notes || reportClient?.notes || '';
+        if (itemNotes) {
+            printHtml += `<div class="office-notes"><h4>הערות משרד</h4><div class="notes-content">${escapeHtml(itemNotes)}</div></div>`;
         }
 
         printHtml += `
