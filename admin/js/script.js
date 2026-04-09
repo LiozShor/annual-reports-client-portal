@@ -539,15 +539,14 @@ async function loadDashboard(silent = false) {
     if (silent && isFresh) return;
 
     // DL-247: Inline loading for first-ever load only (no full-screen overlay)
-    const tabEl = document.getElementById('tab-dashboard');
-    if (!dashboardLoaded && tabEl) tabEl.classList.add('tab-loading-inline');
+
 
     try {
         const year = document.getElementById('yearFilter')?.value || '2025';
         const response = await fetchWithTimeout(`${ENDPOINTS.ADMIN_DASHBOARD}?year=${year}&_t=${Date.now()}`, { headers: { 'Authorization': `Bearer ${authToken}` } }, FETCH_TIMEOUTS.load);
         const data = await response.json();
 
-        if (tabEl) tabEl.classList.remove('tab-loading-inline');
+
 
         if (!data.ok) {
             if (data.error === 'unauthorized') {
@@ -599,7 +598,7 @@ async function loadDashboard(silent = false) {
         if (!reminderLoaded) loadReminders(true);
         updateActiveFilterCount(); // DL-214
     } catch (error) {
-        if (tabEl) tabEl.classList.remove('tab-loading-inline');
+
         console.error('Dashboard load failed');
         if (!silent) showModal('error', 'שגיאה', 'לא ניתן לטעון את הנתונים', null, { label: 'רענן', onClick: () => location.reload() });
     }
@@ -1838,15 +1837,14 @@ async function loadPendingClients(silent = false) {
     const isFresh = pendingClientsLoaded && (Date.now() - pendingClientsLoadedAt < STALE_AFTER_MS);
     if (silent && isFresh) return;
 
-    const tabEl = document.getElementById('tab-send');
-    if (!pendingClientsLoaded && tabEl) tabEl.classList.add('tab-loading-inline');
+
 
     try {
         const year = document.getElementById('sendYearFilter').value;
         const response = await deduplicatedFetch(`${ENDPOINTS.ADMIN_PENDING}?year=${year}&filing_type=${activeEntityTab}`, { headers: { 'Authorization': `Bearer ${authToken}` } }, FETCH_TIMEOUTS.load);
         const data = await response.json();
 
-        if (tabEl) tabEl.classList.remove('tab-loading-inline');
+
 
         if (!data.ok) throw new Error(data.error);
 
@@ -1856,7 +1854,7 @@ async function loadPendingClients(silent = false) {
         renderPendingClients();
 
     } catch (error) {
-        if (tabEl) tabEl.classList.remove('tab-loading-inline');
+
         if (!silent) showModal('error', 'שגיאה', 'לא ניתן לטעון את הרשימה');
     }
 }
@@ -2679,14 +2677,13 @@ async function loadAIClassifications(silent = false) {
     const isFresh = aiReviewLoaded && (Date.now() - aiReviewLoadedAt < STALE_AFTER_MS);
     if (silent && isFresh) return;
 
-    const tabEl = document.getElementById('tab-ai-review');
-    if (!aiReviewLoaded && tabEl) tabEl.classList.add('tab-loading-inline');
+
 
     try {
         const response = await deduplicatedFetch(`${ENDPOINTS.GET_PENDING_CLASSIFICATIONS}?filing_type=all`, { headers: { 'Authorization': `Bearer ${authToken}` } }, FETCH_TIMEOUTS.load); // DL-238: unified view
         const data = await response.json();
 
-        if (tabEl) tabEl.classList.remove('tab-loading-inline');
+
 
         if (!data.ok) {
             if (data.error === 'unauthorized') {
@@ -2728,7 +2725,7 @@ async function loadAIClassifications(silent = false) {
         const uniqueClients = new Set(pendingForBadge.map(i => i.client_id).filter(Boolean)).size;
         syncAIBadge(badge, uniqueClients);
     } catch (error) {
-        if (tabEl) tabEl.classList.remove('tab-loading-inline');
+
         console.error('AI review load failed');
         if (!silent) {
             const container = document.getElementById('aiCardsContainer');
@@ -4521,8 +4518,7 @@ async function loadReminders(silent = false) {
     const isFresh = reminderLoaded && (Date.now() - reminderLoadedAt < STALE_AFTER_MS);
     if (silent && isFresh) return;
 
-    const tabEl = document.getElementById('tab-reminders');
-    if (!reminderLoaded && tabEl) tabEl.classList.add('tab-loading-inline');
+
 
     try {
         const response = await fetchWithTimeout(ENDPOINTS.ADMIN_REMINDERS, {
@@ -4532,7 +4528,7 @@ async function loadReminders(silent = false) {
         }, FETCH_TIMEOUTS.load);
         const data = await response.json();
 
-        if (tabEl) tabEl.classList.remove('tab-loading-inline');
+
 
         if (!data.ok) {
             if (data.error === 'unauthorized') { logout(); return; }
@@ -4546,7 +4542,7 @@ async function loadReminders(silent = false) {
         updateReminderStats(data.stats || {});
         filterReminders();
     } catch (error) {
-        if (tabEl) tabEl.classList.remove('tab-loading-inline');
+
         console.error('Reminders load failed');
         if (!silent) {
             document.getElementById('reminderTableContainer').innerHTML = `
@@ -6579,8 +6575,7 @@ async function loadQuestionnaires(silent = false) {
     const isFresh = questionnaireLoaded && (Date.now() - questionnaireLoadedAt < STALE_AFTER_MS);
     if (silent && isFresh) return;
 
-    const tabEl = document.getElementById('tab-questionnaires');
-    if (!questionnaireLoaded && tabEl) tabEl.classList.add('tab-loading-inline');
+
 
     try {
         const year = document.getElementById('questionnaireYearFilter')?.value || String(new Date().getFullYear() - 1);
@@ -6591,7 +6586,7 @@ async function loadQuestionnaires(silent = false) {
         );
         const data = await response.json();
 
-        if (tabEl) tabEl.classList.remove('tab-loading-inline');
+
 
         if (!data.ok) {
             if (data.error === 'unauthorized') { logout(); return; }
@@ -6605,7 +6600,7 @@ async function loadQuestionnaires(silent = false) {
         filterQuestionnaires();
 
     } catch (error) {
-        if (tabEl) tabEl.classList.remove('tab-loading-inline');
+
         if (!silent) showModal('error', 'שגיאה בטעינת שאלונים', error.message || 'לא ניתן לטעון את השאלונים');
     }
 }
