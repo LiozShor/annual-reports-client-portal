@@ -991,7 +991,7 @@ select.field-prefilled {
 }
 
 /* DL-247: Refresh button spin animation */
-.spin-animation {
+.is-refreshing svg {
     animation: spin 0.8s linear infinite;
 }
 

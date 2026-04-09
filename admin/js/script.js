@@ -608,12 +608,12 @@ function renderClientsTable(clients) {
     const container = document.getElementById('clientsTableContainer');
 
     if (!clients || clients.length === 0) {
-        const noApiData = !clientsData || clientsData.length === 0;
+        // DL-247: Don't replace skeleton with empty state if data hasn't loaded yet
+        if (!dashboardLoaded) return;
         container.innerHTML = `
             <div class="empty-state">
                 <div class="empty-state-icon"><i data-lucide="folder-open" class="icon-2xl"></i></div>
                 <p>לא נמצאו לקוחות</p>
-                ${noApiData ? `<button class="btn btn-primary" onclick="loadDashboard()" style="margin-top:12px">טען לקוחות</button>` : ''}
             </div>
         `;
         if (typeof lucide !== 'undefined') lucide.createIcons();
@@ -1157,10 +1157,12 @@ function switchEntityTab(type) {
     if (manualFT) manualFT.value = type;
     if (importFT) importFT.value = type;
 
-    // Re-filter and re-render dashboard + review queue
-    recalculateStats();
-    filterClients();
-    updateReviewQueueUI();
+    // Re-filter and re-render dashboard + review queue (skip if data not loaded yet — preserves skeletons)
+    if (dashboardLoaded) {
+        recalculateStats();
+        filterClients();
+        updateReviewQueueUI();
+    }
 
     // DL-247: Reload active tab with opacity fade instead of full-screen overlay
     const activeContent = document.querySelector('.tab-content.active');
@@ -1382,11 +1384,11 @@ function copyToClipboard(text, btn) {
 }
 
 function refreshData() {
-    // DL-247: Spin the refresh icon while loading
+    // DL-247: Spin the refresh button while loading
+    // Add class to BUTTON (not SVG) — lucide.createIcons() replaces SVG nodes
     const btn = document.querySelector('[onclick="refreshData()"]');
-    const icon = btn?.querySelector('[data-lucide="refresh-cw"]');
-    if (icon) icon.classList.add('spin-animation');
-    const stopSpin = () => { if (icon) icon.classList.remove('spin-animation'); };
+    if (btn) btn.classList.add('is-refreshing');
+    const stopSpin = () => { if (btn) btn.classList.remove('is-refreshing'); };
 
     // Force fresh fetch by resetting staleness timestamps
     const activeTab = document.querySelector('.tab-content.active')?.id?.replace('tab-', '');
