@@ -1382,16 +1382,32 @@ function copyToClipboard(text, btn) {
 }
 
 function refreshData() {
+    // DL-247: Spin the refresh icon while loading
+    const btn = document.querySelector('[onclick="refreshData()"]');
+    const icon = btn?.querySelector('[data-lucide="refresh-cw"]');
+    if (icon) icon.classList.add('spin-animation');
+    const stopSpin = () => { if (icon) icon.classList.remove('spin-animation'); };
+
+    // Force fresh fetch by resetting staleness timestamps
     const activeTab = document.querySelector('.tab-content.active')?.id?.replace('tab-', '');
+    let promise;
     if (activeTab === 'reminders') {
-        loadReminders();
+        reminderLoadedAt = 0;
+        promise = loadReminders();
     } else if (activeTab === 'ai-review') {
-        loadAIClassifications();
+        aiReviewLoadedAt = 0;
+        promise = loadAIClassifications();
     } else if (activeTab === 'send') {
-        loadPendingClients();
+        pendingClientsLoadedAt = 0;
+        promise = loadPendingClients();
+    } else if (activeTab === 'questionnaires') {
+        questionnaireLoadedAt = 0;
+        promise = loadQuestionnaires();
     } else {
-        loadDashboard();
+        dashboardLoadedAt = 0;
+        promise = loadDashboard();
     }
+    if (promise) promise.then(stopSpin, stopSpin);
 }
 
 // ==================== BACKGROUND REFRESH (DL-175) ====================

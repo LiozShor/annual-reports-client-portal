@@ -990,6 +990,11 @@ select.field-prefilled {
     transition: opacity 0.15s ease;
 }
 
+/* DL-247: Refresh button spin animation */
+.spin-animation {
+    animation: spin 0.8s linear infinite;
+}
+
 .loading-box p {
     color: var(--gray-600);
     font-size: var(--text-sm);
