@@ -7645,8 +7645,8 @@ function previewZoom(direction) {
             : Math.max(currentIdx - 1, 0);
     }
     splitPreviewState.scale = ZOOM_STEPS[newIdx];
-    // Reset pan when zooming out to 1x or below
-    if (splitPreviewState.scale <= 1) {
+    // Reset pan when zooming back to exactly 1x
+    if (splitPreviewState.scale === 1) {
         splitPreviewState.translateX = 0;
         splitPreviewState.translateY = 0;
     }
@@ -7666,11 +7666,7 @@ function applyPreviewTransform() {
 
     // Update cursor based on zoom
     const container = document.getElementById('splitPreviewImageContainer');
-    if (s > 1) {
-        container.style.cursor = splitPreviewState.isDragging ? 'grabbing' : 'grab';
-    } else {
-        container.style.cursor = 'default';
-    }
+    container.style.cursor = splitPreviewState.isDragging ? 'grabbing' : 'grab';
 }
 
 function handlePreviewKeydown(e) {
@@ -7728,7 +7724,7 @@ function handlePreviewKeydown(e) {
 
     // Drag-to-pan
     container.addEventListener('mousedown', (e) => {
-        if (!splitPreviewState.open || splitPreviewState.scale <= 1) return;
+        if (!splitPreviewState.open) return;
         splitPreviewState.isDragging = true;
         splitPreviewState.dragStartX = e.clientX;
         splitPreviewState.dragStartY = e.clientY;
