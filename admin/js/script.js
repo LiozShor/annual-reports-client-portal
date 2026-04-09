@@ -7700,8 +7700,8 @@ function handlePreviewKeydown(e) {
     }
 }
 
-// Scroll wheel zoom
-document.addEventListener('DOMContentLoaded', () => {
+// Scroll wheel zoom + drag-to-pan (registered immediately — script loads at end of body)
+(function initPreviewInteractions() {
     const container = document.getElementById('splitPreviewImageContainer');
     if (!container) return;
 
@@ -7754,4 +7754,4 @@ document.addEventListener('DOMContentLoaded', () => {
         if (container) container.classList.remove('dragging');
         applyPreviewTransform(); // Re-enable transition
     });
-});
+})();
