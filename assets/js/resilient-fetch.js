@@ -214,15 +214,14 @@ async function deduplicatedFetch(url, options = {}, timeoutMs) {
         return fetchWithTimeout(url, options, timeoutMs);
     }
 
-    if (_inflightRequests.has(url)) {
-        return _inflightRequests.get(url);
+    if (!_inflightRequests.has(url)) {
+        const promise = fetchWithTimeout(url, options, timeoutMs)
+            .finally(() => _inflightRequests.delete(url));
+        _inflightRequests.set(url, promise);
     }
 
-    const promise = fetchWithTimeout(url, options, timeoutMs)
-        .finally(() => _inflightRequests.delete(url));
-
-    _inflightRequests.set(url, promise);
-    return promise;
+    // DL-247: Clone for each consumer — Response body can only be read once
+    return _inflightRequests.get(url).then(r => r.clone());
 }
 
 // --- Session Storage Cache (for view-documents) ---

@@ -11,6 +11,10 @@ let reviewQueueData = [];
 let showArchivedMode = false;
 let dashboardLoaded = false;
 let pendingClientsLoaded = false;
+// Staleness timestamps — SWR: show cached data, refresh if stale (DL-247)
+let dashboardLoadedAt = 0;
+let pendingClientsLoadedAt = 0;
+const STALE_AFTER_MS = 30000; // 30s — skip re-fetch if data is fresh
 let activeEntityTab = sessionStorage.getItem('entityTab') || 'annual_report';
 
 const FILING_TYPE_LABELS = {
@@ -175,17 +179,17 @@ function switchTab(tabName, evt) {
     // Sync bottom nav active state (mobile)
     syncBottomNav(tabName);
 
-    // Load data: skip fetch if already loaded (show cached), else fetch
+    // DL-247: Always silent on tab switch — show cached data, refresh if stale
     if (tabName === 'dashboard' || tabName === 'review') {
-        loadDashboard(dashboardLoaded);
+        loadDashboard(true);
     } else if (tabName === 'send') {
-        loadPendingClients(pendingClientsLoaded);
+        loadPendingClients(true);
     } else if (tabName === 'ai-review') {
-        loadAIClassifications(aiReviewLoaded);
+        loadAIClassifications(true);
     } else if (tabName === 'reminders') {
-        loadReminders(reminderLoaded);
+        loadReminders(true);
     } else if (tabName === 'questionnaires') {
-        loadQuestionnaires(questionnaireLoaded);
+        loadQuestionnaires(true);
     }
 }
 
@@ -530,17 +534,20 @@ function updateReviewQueueUI() {
 }
 
 async function loadDashboard(silent = false) {
-    // If already loaded and silent, skip API call — use cached data
-    if (silent && dashboardLoaded && clientsData.length > 0) return;
+    // DL-247: SWR — skip if data is fresh, otherwise fetch silently
+    const isFresh = dashboardLoaded && (Date.now() - dashboardLoadedAt < STALE_AFTER_MS);
+    if (silent && isFresh) return;
 
-    if (!silent) showLoading('טוען נתונים...');
+    // DL-247: Inline loading for first-ever load only (no full-screen overlay)
+    const tabEl = document.getElementById('tab-dashboard');
+    if (!dashboardLoaded && tabEl) tabEl.classList.add('tab-loading-inline');
 
     try {
         const year = document.getElementById('yearFilter')?.value || '2025';
         const response = await fetchWithTimeout(`${ENDPOINTS.ADMIN_DASHBOARD}?year=${year}&_t=${Date.now()}`, { headers: { 'Authorization': `Bearer ${authToken}` } }, FETCH_TIMEOUTS.load);
         const data = await response.json();
 
-        if (!silent) hideLoading();
+        if (tabEl) tabEl.classList.remove('tab-loading-inline');
 
         if (!data.ok) {
             if (data.error === 'unauthorized') {
@@ -553,6 +560,7 @@ async function loadDashboard(silent = false) {
         // Store clients data
         clientsData = data.clients || [];
         dashboardLoaded = true;
+        dashboardLoadedAt = Date.now();
 
         // Update stats (recalculate client-side to exclude deactivated)
         recalculateStats();
@@ -575,8 +583,8 @@ async function loadDashboard(silent = false) {
         if (data.available_years && data.available_years.length > 0) {
             const yearChanged = updateYearDropdowns(data.available_years);
             if (yearChanged) {
-                dashboardLoaded = false; // year changed — invalidate cache
-                pendingClientsLoaded = false;
+                dashboardLoaded = false; dashboardLoadedAt = 0; // year changed — invalidate cache
+                pendingClientsLoaded = false; pendingClientsLoadedAt = 0;
                 loadDashboard(true); // reload with the newest year
                 return;
             }
@@ -586,11 +594,12 @@ async function loadDashboard(silent = false) {
         loadAIReviewCount();
         loadReminderCount();
         if (!pendingClientsLoaded) loadPendingClients(true);
+        if (!aiReviewLoaded) loadAIClassifications(true); // DL-247: prefetch AI review
         if (!questionnaireLoaded) loadQuestionnaires(true);
         if (!reminderLoaded) loadReminders(true);
         updateActiveFilterCount(); // DL-214
     } catch (error) {
-        if (!silent) hideLoading();
+        if (tabEl) tabEl.classList.remove('tab-loading-inline');
         console.error('Dashboard load failed');
         if (!silent) showModal('error', 'שגיאה', 'לא ניתן לטעון את הנתונים', null, { label: 'רענן', onClick: () => location.reload() });
     }
@@ -1138,10 +1147,10 @@ function switchEntityTab(type) {
 
     // Invalidate tab caches so they reload with new filing_type
     // DL-238: aiReviewLoaded NOT invalidated — AI Review always shows all filing types
-    dashboardLoaded = false;
-    pendingClientsLoaded = false;
-    questionnaireLoaded = false;
-    reminderLoaded = false;
+    dashboardLoaded = false; dashboardLoadedAt = 0;
+    pendingClientsLoaded = false; pendingClientsLoadedAt = 0;
+    questionnaireLoaded = false; questionnaireLoadedAt = 0;
+    reminderLoaded = false; reminderLoadedAt = 0;
 
     // Sync import/add filing type dropdowns
     const manualFT = document.getElementById('manualFilingType');
@@ -1154,13 +1163,17 @@ function switchEntityTab(type) {
     filterClients();
     updateReviewQueueUI();
 
-    // Reload whichever functional tab is currently active
+    // DL-247: Reload active tab with opacity fade instead of full-screen overlay
     const activeContent = document.querySelector('.tab-content.active');
     const activeTab = activeContent?.id?.replace('tab-', '');
-    if (activeTab === 'send') loadPendingClients();
-    else if (activeTab === 'questionnaires') loadQuestionnaires();
+    if (activeContent && activeTab !== 'dashboard' && activeTab !== 'ai-review') {
+        activeContent.classList.add('tab-refreshing');
+    }
+    const removeRefresh = () => { if (activeContent) activeContent.classList.remove('tab-refreshing'); };
+    if (activeTab === 'send') loadPendingClients().then(removeRefresh, removeRefresh);
+    else if (activeTab === 'questionnaires') loadQuestionnaires().then(removeRefresh, removeRefresh);
     // DL-238: AI Review not reloaded on entity tab switch — always shows all
-    else if (activeTab === 'reminders') loadReminders();
+    else if (activeTab === 'reminders') loadReminders().then(removeRefresh, removeRefresh);
     else if (activeTab === 'review') loadDashboard();
 }
 
@@ -1390,11 +1403,11 @@ function startBackgroundRefresh() {
     if (bgRefreshInterval) return;
     bgRefreshInterval = setInterval(() => {
         const activeTab = document.querySelector('.tab-content.active')?.id?.replace('tab-', '');
-        if (activeTab === 'dashboard' || activeTab === 'review') loadDashboard(true);
-        else if (activeTab === 'send') loadPendingClients(true);
-        else if (activeTab === 'ai-review') { aiReviewLoaded = false; loadAIClassifications(true); }
-        else if (activeTab === 'reminders') { reminderLoaded = false; loadReminders(true); }
-        else if (activeTab === 'questionnaires') { questionnaireLoaded = false; loadQuestionnaires(true); }
+        if (activeTab === 'dashboard' || activeTab === 'review') { dashboardLoadedAt = 0; loadDashboard(true); }
+        else if (activeTab === 'send') { pendingClientsLoadedAt = 0; loadPendingClients(true); }
+        else if (activeTab === 'ai-review') { aiReviewLoadedAt = 0; loadAIClassifications(true); }
+        else if (activeTab === 'reminders') { reminderLoadedAt = 0; loadReminders(true); }
+        else if (activeTab === 'questionnaires') { questionnaireLoadedAt = 0; loadQuestionnaires(true); }
     }, 300_000);
 }
 
@@ -1414,13 +1427,13 @@ document.addEventListener('visibilitychange', () => {
         const now = Date.now();
         if (now - lastVisibilityRefresh >= 300_000) {
             lastVisibilityRefresh = now;
-            // Silently refresh active tab on return
+            // Silently refresh active tab on return — reset timestamps to force SWR refresh
             const activeTab = document.querySelector('.tab-content.active')?.id?.replace('tab-', '');
-            if (activeTab === 'dashboard' || activeTab === 'review') { dashboardLoaded = false; loadDashboard(true); }
-            else if (activeTab === 'send') { pendingClientsLoaded = false; loadPendingClients(true); }
-            else if (activeTab === 'ai-review') { aiReviewLoaded = false; loadAIClassifications(true); }
-            else if (activeTab === 'reminders') { reminderLoaded = false; loadReminders(true); }
-            else if (activeTab === 'questionnaires') { questionnaireLoaded = false; loadQuestionnaires(true); }
+            if (activeTab === 'dashboard' || activeTab === 'review') { dashboardLoadedAt = 0; loadDashboard(true); }
+            else if (activeTab === 'send') { pendingClientsLoadedAt = 0; loadPendingClients(true); }
+            else if (activeTab === 'ai-review') { aiReviewLoadedAt = 0; loadAIClassifications(true); }
+            else if (activeTab === 'reminders') { reminderLoadedAt = 0; loadReminders(true); }
+            else if (activeTab === 'questionnaires') { questionnaireLoadedAt = 0; loadQuestionnaires(true); }
         }
         startBackgroundRefresh();
     }
@@ -1821,26 +1834,29 @@ async function addSecondFilingType(reportId) {
 let pendingClients = [];
 
 async function loadPendingClients(silent = false) {
-    // If already loaded and silent, skip API call — use cached data
-    if (silent && pendingClientsLoaded) return;
+    // DL-247: SWR — skip if fresh, otherwise fetch silently
+    const isFresh = pendingClientsLoaded && (Date.now() - pendingClientsLoadedAt < STALE_AFTER_MS);
+    if (silent && isFresh) return;
 
-    if (!silent) showLoading('טוען לקוחות ממתינים...');
+    const tabEl = document.getElementById('tab-send');
+    if (!pendingClientsLoaded && tabEl) tabEl.classList.add('tab-loading-inline');
 
     try {
         const year = document.getElementById('sendYearFilter').value;
-        const response = await fetchWithTimeout(`${ENDPOINTS.ADMIN_PENDING}?year=${year}&filing_type=${activeEntityTab}`, { headers: { 'Authorization': `Bearer ${authToken}` } }, FETCH_TIMEOUTS.load);
+        const response = await deduplicatedFetch(`${ENDPOINTS.ADMIN_PENDING}?year=${year}&filing_type=${activeEntityTab}`, { headers: { 'Authorization': `Bearer ${authToken}` } }, FETCH_TIMEOUTS.load);
         const data = await response.json();
 
-        if (!silent) hideLoading();
+        if (tabEl) tabEl.classList.remove('tab-loading-inline');
 
         if (!data.ok) throw new Error(data.error);
 
         pendingClients = data.clients || [];
         pendingClientsLoaded = true;
+        pendingClientsLoadedAt = Date.now();
         renderPendingClients();
 
     } catch (error) {
-        if (!silent) hideLoading();
+        if (tabEl) tabEl.classList.remove('tab-loading-inline');
         if (!silent) showModal('error', 'שגיאה', 'לא ניתן לטעון את הרשימה');
     }
 }
@@ -2534,6 +2550,7 @@ function createDocCombobox(container, docs, { currentMatchId = null, onSelect = 
 let aiClassificationsData = [];
 let aiCurrentReassignId = null;
 let aiReviewLoaded = false;
+let aiReviewLoadedAt = 0;
 let activePreviewItemId = null;
 
 const REJECTION_REASONS = {
@@ -2658,16 +2675,18 @@ async function loadDocPreview(recordId) {
 }
 
 async function loadAIClassifications(silent = false) {
-    // Skip fetch if cached and silent (prefetch or tab switch)
-    if (silent && aiReviewLoaded) return;
+    // DL-247: SWR — skip if fresh, otherwise fetch silently
+    const isFresh = aiReviewLoaded && (Date.now() - aiReviewLoadedAt < STALE_AFTER_MS);
+    if (silent && isFresh) return;
 
-    if (!silent) showLoading('טוען סיווגים...');
+    const tabEl = document.getElementById('tab-ai-review');
+    if (!aiReviewLoaded && tabEl) tabEl.classList.add('tab-loading-inline');
 
     try {
-        const response = await fetchWithTimeout(`${ENDPOINTS.GET_PENDING_CLASSIFICATIONS}?filing_type=all`, { headers: { 'Authorization': `Bearer ${authToken}` } }, FETCH_TIMEOUTS.load); // DL-238: unified view
+        const response = await deduplicatedFetch(`${ENDPOINTS.GET_PENDING_CLASSIFICATIONS}?filing_type=all`, { headers: { 'Authorization': `Bearer ${authToken}` } }, FETCH_TIMEOUTS.load); // DL-238: unified view
         const data = await response.json();
 
-        if (!silent) hideLoading();
+        if (tabEl) tabEl.classList.remove('tab-loading-inline');
 
         if (!data.ok) {
             if (data.error === 'unauthorized') {
@@ -2686,6 +2705,7 @@ async function loadAIClassifications(silent = false) {
             if (oldFingerprint === newFingerprint) {
                 // Data unchanged — just update badge, skip DOM rebuild
                 aiReviewLoaded = true;
+                aiReviewLoadedAt = Date.now();
                 const badge = document.getElementById('aiReviewTabBadge');
                 const pendingForBadge = newItems.filter(i => (i.review_status || 'pending') === 'pending');
                 const uniqueClients = new Set(pendingForBadge.map(i => i.client_id).filter(Boolean)).size;
@@ -2696,6 +2716,7 @@ async function loadAIClassifications(silent = false) {
 
         aiClassificationsData = newItems;
         aiReviewLoaded = true;
+        aiReviewLoadedAt = Date.now();
         resetPreviewPanel();
 
         updateAIStats(data.stats || {});
@@ -2707,7 +2728,7 @@ async function loadAIClassifications(silent = false) {
         const uniqueClients = new Set(pendingForBadge.map(i => i.client_id).filter(Boolean)).size;
         syncAIBadge(badge, uniqueClients);
     } catch (error) {
-        if (!silent) hideLoading();
+        if (tabEl) tabEl.classList.remove('tab-loading-inline');
         console.error('AI review load failed');
         if (!silent) {
             const container = document.getElementById('aiCardsContainer');
@@ -4491,14 +4512,17 @@ function showAIToast(message, type, action) {
 
 let remindersData = [];
 let reminderLoaded = false;
+let reminderLoadedAt = 0;
 let reminderDefaultMax = null; // null = unlimited
 let activeCardFilter = 'scheduled';
 
 async function loadReminders(silent = false) {
-    // Skip fetch if cached and silent (prefetch or tab switch)
-    if (silent && reminderLoaded) return;
+    // DL-247: SWR — skip if fresh (POST-based, no deduplicatedFetch)
+    const isFresh = reminderLoaded && (Date.now() - reminderLoadedAt < STALE_AFTER_MS);
+    if (silent && isFresh) return;
 
-    if (!silent) showLoading('טוען תזכורות...');
+    const tabEl = document.getElementById('tab-reminders');
+    if (!reminderLoaded && tabEl) tabEl.classList.add('tab-loading-inline');
 
     try {
         const response = await fetchWithTimeout(ENDPOINTS.ADMIN_REMINDERS, {
@@ -4508,7 +4532,7 @@ async function loadReminders(silent = false) {
         }, FETCH_TIMEOUTS.load);
         const data = await response.json();
 
-        if (!silent) hideLoading();
+        if (tabEl) tabEl.classList.remove('tab-loading-inline');
 
         if (!data.ok) {
             if (data.error === 'unauthorized') { logout(); return; }
@@ -4517,11 +4541,12 @@ async function loadReminders(silent = false) {
 
         remindersData = data.items || [];
         reminderLoaded = true;
+        reminderLoadedAt = Date.now();
         reminderDefaultMax = data.default_max !== undefined ? data.default_max : null;
         updateReminderStats(data.stats || {});
         filterReminders();
     } catch (error) {
-        if (!silent) hideLoading();
+        if (tabEl) tabEl.classList.remove('tab-loading-inline');
         console.error('Reminders load failed');
         if (!silent) {
             document.getElementById('reminderTableContainer').innerHTML = `
@@ -6520,6 +6545,7 @@ checkAuth();
 
 let questionnairesData = [];
 let questionnaireLoaded = false;
+let questionnaireLoadedAt = 0;
 let questionnaireFilteredData = [];
 let qaHideNoAnswers = true;
 
@@ -6549,21 +6575,23 @@ function initQuestionnaireYearFilter() {
 
 async function loadQuestionnaires(silent = false) {
     initQuestionnaireYearFilter();
-    // Skip fetch if cached and silent (prefetch or tab switch)
-    if (silent && questionnaireLoaded) return;
+    // DL-247: SWR — skip if fresh, otherwise fetch silently
+    const isFresh = questionnaireLoaded && (Date.now() - questionnaireLoadedAt < STALE_AFTER_MS);
+    if (silent && isFresh) return;
 
-    if (!silent) showLoading('טוען שאלונים...');
+    const tabEl = document.getElementById('tab-questionnaires');
+    if (!questionnaireLoaded && tabEl) tabEl.classList.add('tab-loading-inline');
 
     try {
         const year = document.getElementById('questionnaireYearFilter')?.value || String(new Date().getFullYear() - 1);
-        const response = await fetchWithTimeout(
+        const response = await deduplicatedFetch(
             `${ENDPOINTS.ADMIN_QUESTIONNAIRES}?token=${encodeURIComponent(authToken)}&year=${encodeURIComponent(year)}&filing_type=${activeEntityTab}`,
             { method: 'GET' },
             FETCH_TIMEOUTS.load
         );
         const data = await response.json();
 
-        if (!silent) hideLoading();
+        if (tabEl) tabEl.classList.remove('tab-loading-inline');
 
         if (!data.ok) {
             if (data.error === 'unauthorized') { logout(); return; }
@@ -6572,12 +6600,13 @@ async function loadQuestionnaires(silent = false) {
 
         questionnairesData = data.items || [];
         questionnaireLoaded = true;
+        questionnaireLoadedAt = Date.now();
         updateQuestionnaireStats();
         filterQuestionnaires();
 
     } catch (error) {
-        if (!silent) hideLoading();
-        showModal('error', 'שגיאה בטעינת שאלונים', error.message || 'לא ניתן לטעון את השאלונים');
+        if (tabEl) tabEl.classList.remove('tab-loading-inline');
+        if (!silent) showModal('error', 'שגיאה בטעינת שאלונים', error.message || 'לא ניתן לטעון את השאלונים');
     }
 }
 
