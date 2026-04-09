@@ -7267,6 +7267,7 @@ async function openSplitModal(recordId) {
 }
 
 function closeSplitModal() {
+    closePagePreview(); // DL-246: close lightbox if open
     document.getElementById('aiSplitModal').classList.remove('show');
     splitState.pdfDoc = null;
 }
@@ -7312,6 +7313,19 @@ async function renderSplitThumbnails(pdfDoc) {
             img.style.height = viewport.height + 'px';
 
             wrapper.insertBefore(img, label);
+
+            // DL-246: Add magnify overlay for page preview
+            const zoomOverlay = document.createElement('div');
+            zoomOverlay.className = 'split-thumb-zoom';
+            zoomOverlay.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>';
+            wrapper.appendChild(zoomOverlay);
+
+            // Click thumbnail to preview page
+            wrapper.addEventListener('click', (e) => {
+                e.stopPropagation();
+                openPagePreview(i);
+            });
+
             page.cleanup(); // Free page resources
         } catch (pageErr) {
             console.error(`[split] Failed to render page ${i}:`, pageErr);
@@ -7518,3 +7532,226 @@ async function confirmSplit() {
         showModal('error', 'שגיאה בפיצול', err.message);
     }
 }
+
+// ---- Page Preview Lightbox (DL-246) ----
+
+const splitPreviewState = {
+    open: false,
+    currentPage: 1,
+    scale: 1,
+    translateX: 0,
+    translateY: 0,
+    isDragging: false,
+    dragStartX: 0,
+    dragStartY: 0,
+    lastTranslateX: 0,
+    lastTranslateY: 0,
+};
+
+async function openPagePreview(pageNum) {
+    if (!splitState.pdfDoc) return;
+    splitPreviewState.currentPage = pageNum;
+    splitPreviewState.scale = 1;
+    splitPreviewState.translateX = 0;
+    splitPreviewState.translateY = 0;
+    splitPreviewState.open = true;
+
+    const overlay = document.getElementById('splitPagePreview');
+    overlay.classList.add('show');
+
+    document.addEventListener('keydown', handlePreviewKeydown);
+
+    await renderPreviewPage(pageNum);
+}
+
+function closePagePreview() {
+    splitPreviewState.open = false;
+    document.getElementById('splitPagePreview').classList.remove('show');
+    document.removeEventListener('keydown', handlePreviewKeydown);
+    // Reset image to avoid flash of old content
+    const img = document.getElementById('splitPreviewImage');
+    img.src = '';
+    img.style.transform = '';
+}
+
+let _previewRenderGen = 0;
+
+async function renderPreviewPage(pageNum) {
+    const gen = ++_previewRenderGen;
+
+    const label = document.getElementById('splitPreviewPageLabel');
+    label.textContent = `עמוד ${pageNum} מתוך ${splitState.pageCount}`;
+
+    const zoomLabel = document.getElementById('splitPreviewZoomLevel');
+    zoomLabel.textContent = '100%';
+    splitPreviewState.scale = 1;
+    splitPreviewState.translateX = 0;
+    splitPreviewState.translateY = 0;
+
+    const img = document.getElementById('splitPreviewImage');
+    img.style.transform = '';
+    img.alt = '';
+
+    try {
+        const page = await splitState.pdfDoc.getPage(pageNum);
+        const PREVIEW_SCALE = 1.5;
+        const DPR = Math.min(window.devicePixelRatio || 1, 2);
+        const viewport = page.getViewport({ scale: PREVIEW_SCALE });
+
+        const canvas = document.createElement('canvas');
+        canvas.width = viewport.width * DPR;
+        canvas.height = viewport.height * DPR;
+
+        const ctx = canvas.getContext('2d');
+        ctx.scale(DPR, DPR);
+        await page.render({ canvasContext: ctx, viewport }).promise;
+
+        if (gen !== _previewRenderGen) { page.cleanup(); return; } // stale render
+
+        img.src = canvas.toDataURL('image/jpeg', 0.85);
+        img.style.width = viewport.width + 'px';
+        img.style.height = viewport.height + 'px';
+        canvas.width = 0; // release backing store
+        canvas.height = 0;
+        page.cleanup();
+    } catch (err) {
+        if (gen !== _previewRenderGen) return;
+        console.error('[preview] Failed to render page:', err);
+        img.alt = 'שגיאה בטעינת העמוד';
+    }
+}
+
+function previewNavigate(delta) {
+    if (!splitPreviewState.open) return;
+    let newPage = splitPreviewState.currentPage + delta;
+    if (newPage < 1) newPage = splitState.pageCount;
+    if (newPage > splitState.pageCount) newPage = 1;
+    splitPreviewState.currentPage = newPage;
+    renderPreviewPage(newPage);
+}
+
+function previewZoom(direction) {
+    const ZOOM_STEPS = [0.5, 0.75, 1, 1.5, 2, 3];
+    const currentIdx = ZOOM_STEPS.indexOf(splitPreviewState.scale);
+    let newIdx;
+    if (currentIdx === -1) {
+        // Find nearest step
+        newIdx = ZOOM_STEPS.findIndex(s => s >= splitPreviewState.scale);
+        if (direction > 0) newIdx = Math.min(newIdx + 1, ZOOM_STEPS.length - 1);
+        else newIdx = Math.max((newIdx ?? 1) - 1, 0);
+    } else {
+        newIdx = direction > 0
+            ? Math.min(currentIdx + 1, ZOOM_STEPS.length - 1)
+            : Math.max(currentIdx - 1, 0);
+    }
+    splitPreviewState.scale = ZOOM_STEPS[newIdx];
+    // Reset pan when zooming out to 1x or below
+    if (splitPreviewState.scale <= 1) {
+        splitPreviewState.translateX = 0;
+        splitPreviewState.translateY = 0;
+    }
+    applyPreviewTransform();
+}
+
+function applyPreviewTransform() {
+    const img = document.getElementById('splitPreviewImage');
+    const s = splitPreviewState.scale;
+    const tx = splitPreviewState.translateX;
+    const ty = splitPreviewState.translateY;
+    img.style.transform = `scale(${s}) translate(${tx}px, ${ty}px)`;
+    // Remove transition during drag for responsiveness
+    img.style.transition = splitPreviewState.isDragging ? 'none' : 'transform 0.15s ease';
+
+    document.getElementById('splitPreviewZoomLevel').textContent = `${Math.round(s * 100)}%`;
+
+    // Update cursor based on zoom
+    const container = document.getElementById('splitPreviewImageContainer');
+    if (s > 1) {
+        container.style.cursor = splitPreviewState.isDragging ? 'grabbing' : 'grab';
+    } else {
+        container.style.cursor = 'default';
+    }
+}
+
+function handlePreviewKeydown(e) {
+    if (!splitPreviewState.open) return;
+    switch (e.key) {
+        case 'Escape':
+            closePagePreview();
+            e.preventDefault();
+            break;
+        case 'ArrowRight':
+            previewNavigate(-1); // RTL: right = previous
+            e.preventDefault();
+            break;
+        case 'ArrowLeft':
+            previewNavigate(1); // RTL: left = next
+            e.preventDefault();
+            break;
+        case '+':
+        case '=':
+            previewZoom(1);
+            e.preventDefault();
+            break;
+        case '-':
+            previewZoom(-1);
+            e.preventDefault();
+            break;
+    }
+}
+
+// Scroll wheel zoom
+document.addEventListener('DOMContentLoaded', () => {
+    const container = document.getElementById('splitPreviewImageContainer');
+    if (!container) return;
+
+    container.addEventListener('wheel', (e) => {
+        if (!splitPreviewState.open) return;
+        e.preventDefault();
+        const direction = e.deltaY < 0 ? 1 : -1;
+        previewZoom(direction);
+    }, { passive: false });
+
+    // Double-click to toggle zoom
+    container.addEventListener('dblclick', (e) => {
+        if (!splitPreviewState.open) return;
+        e.preventDefault();
+        if (splitPreviewState.scale === 1) {
+            splitPreviewState.scale = 2;
+        } else {
+            splitPreviewState.scale = 1;
+            splitPreviewState.translateX = 0;
+            splitPreviewState.translateY = 0;
+        }
+        applyPreviewTransform();
+    });
+
+    // Drag-to-pan
+    container.addEventListener('mousedown', (e) => {
+        if (!splitPreviewState.open || splitPreviewState.scale <= 1) return;
+        splitPreviewState.isDragging = true;
+        splitPreviewState.dragStartX = e.clientX;
+        splitPreviewState.dragStartY = e.clientY;
+        splitPreviewState.lastTranslateX = splitPreviewState.translateX;
+        splitPreviewState.lastTranslateY = splitPreviewState.translateY;
+        container.classList.add('dragging');
+        e.preventDefault();
+    });
+
+    document.addEventListener('mousemove', (e) => {
+        if (!splitPreviewState.isDragging) return;
+        const dx = (e.clientX - splitPreviewState.dragStartX) / splitPreviewState.scale;
+        const dy = (e.clientY - splitPreviewState.dragStartY) / splitPreviewState.scale;
+        splitPreviewState.translateX = splitPreviewState.lastTranslateX + dx;
+        splitPreviewState.translateY = splitPreviewState.lastTranslateY + dy;
+        applyPreviewTransform();
+    });
+
+    document.addEventListener('mouseup', () => {
+        if (!splitPreviewState.isDragging) return;
+        splitPreviewState.isDragging = false;
+        const container = document.getElementById('splitPreviewImageContainer');
+        if (container) container.classList.remove('dragging');
+        applyPreviewTransform(); // Re-enable transition
+    });
+});

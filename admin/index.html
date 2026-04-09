@@ -830,6 +830,28 @@
         </div>
     </div>
 
+    <!-- Page Preview Lightbox (DL-246) -->
+    <div id="splitPagePreview" class="split-preview-overlay" onclick="if(event.target===this)closePagePreview()">
+      <div class="split-preview-container">
+        <div class="split-preview-header">
+          <span id="splitPreviewPageLabel">עמוד 1 מתוך 5</span>
+          <button class="split-preview-close" onclick="closePagePreview()"><i data-lucide="x"></i></button>
+        </div>
+        <div class="split-preview-body">
+          <button class="split-preview-nav prev" onclick="previewNavigate(-1)"><i data-lucide="chevron-right"></i></button>
+          <div id="splitPreviewImageContainer" class="split-preview-img-container">
+            <img id="splitPreviewImage" />
+          </div>
+          <button class="split-preview-nav next" onclick="previewNavigate(1)"><i data-lucide="chevron-left"></i></button>
+        </div>
+        <div class="split-preview-controls">
+          <button onclick="previewZoom(-1)"><i data-lucide="zoom-out"></i></button>
+          <span id="splitPreviewZoomLevel">100%</span>
+          <button onclick="previewZoom(1)"><i data-lucide="zoom-in"></i></button>
+        </div>
+      </div>
+    </div>
+
     <!-- AI Toast -->
     <div id="aiToast" class="ai-toast">
         <i data-lucide="check-circle" class="icon-sm" id="aiToastIcon"></i>

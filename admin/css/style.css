@@ -6248,3 +6248,254 @@ tr:hover .client-edit-link {
     background: var(--brand-color, #4f46e5) !important;
     color: #fff !important;
 }
+
+/* ==================== SPLIT PAGE PREVIEW LIGHTBOX (DL-246) ==================== */
+
+/* Overlay — sits above split modal */
+.split-preview-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 1100;
+    background: rgba(0, 0, 0, 0.85);
+    align-items: center;
+    justify-content: center;
+}
+
+.split-preview-overlay.show {
+    display: flex;
+}
+
+/* Container */
+.split-preview-container {
+    display: flex;
+    flex-direction: column;
+    max-width: 90vw;
+    max-height: 90vh;
+    width: 100%;
+    gap: 12px;
+}
+
+/* Header */
+.split-preview-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 8px;
+    color: #fff;
+    font-size: 15px;
+}
+
+.split-preview-close {
+    background: none;
+    border: none;
+    color: #fff;
+    cursor: pointer;
+    padding: 6px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    transition: background 0.15s;
+}
+
+.split-preview-close:hover {
+    background: rgba(255, 255, 255, 0.15);
+}
+
+/* Body — nav arrows + image */
+.split-preview-body {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+    min-height: 0;
+}
+
+.split-preview-nav {
+    background: rgba(255, 255, 255, 0.1);
+    border: none;
+    color: #fff;
+    cursor: pointer;
+    padding: 12px 8px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    transition: background 0.15s;
+    flex-shrink: 0;
+}
+
+.split-preview-nav:hover {
+    background: rgba(255, 255, 255, 0.25);
+}
+
+/* Image container — overflow hidden for zoom/pan */
+.split-preview-img-container {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.05);
+    min-height: 300px;
+    max-height: calc(90vh - 120px);
+    cursor: grab;
+    position: relative;
+}
+
+.split-preview-img-container.dragging {
+    cursor: grabbing;
+}
+
+.split-preview-img-container img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+    transition: transform 0.15s ease;
+    transform-origin: center center;
+    user-select: none;
+    -webkit-user-drag: none;
+}
+
+/* Zoom controls */
+.split-preview-controls {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 4px 0;
+}
+
+.split-preview-controls button {
+    background: rgba(255, 255, 255, 0.1);
+    border: none;
+    color: #fff;
+    cursor: pointer;
+    padding: 8px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    transition: background 0.15s;
+}
+
+.split-preview-controls button:hover {
+    background: rgba(255, 255, 255, 0.25);
+}
+
+#splitPreviewZoomLevel {
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 14px;
+    min-width: 48px;
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+}
+
+/* Thumbnail hover magnify icon */
+.split-thumb-wrapper {
+    cursor: zoom-in;
+}
+
+.split-thumb-zoom {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.4);
+    border-radius: 4px;
+    opacity: 0;
+    transition: opacity 0.15s;
+    pointer-events: none;
+}
+
+.split-thumb-zoom svg {
+    width: 24px;
+    height: 24px;
+    color: #fff;
+}
+
+.split-thumb-wrapper:hover .split-thumb-zoom {
+    opacity: 1;
+}
+
+/* ==================== REJECTED UPLOADS ARCHIVE (ru-) ==================== */
+.rejected-uploads-list {
+    padding: var(--sp-2) 0;
+}
+.ru-empty {
+    font-size: var(--text-sm);
+    color: var(--gray-400);
+    padding: var(--sp-3) 0;
+    text-align: center;
+}
+.ru-entry {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--sp-3);
+    padding: var(--sp-3) 0;
+    font-size: var(--text-sm);
+}
+.ru-entry + .ru-entry {
+    border-top: 1px solid var(--gray-100);
+}
+.ru-icon {
+    flex-shrink: 0;
+    margin-top: 2px;
+    color: var(--danger-400, #f87171);
+}
+.ru-body {
+    flex: 1;
+    min-width: 0;
+}
+.ru-meta {
+    display: flex;
+    gap: var(--sp-2);
+    align-items: baseline;
+    flex-wrap: wrap;
+    margin-bottom: 2px;
+}
+.ru-filename {
+    font-weight: 600;
+    color: var(--gray-800);
+    word-break: break-all;
+}
+.ru-date {
+    font-size: var(--text-xs);
+    color: var(--gray-500);
+    white-space: nowrap;
+}
+.ru-detail {
+    font-size: var(--text-xs);
+    color: var(--gray-600);
+    display: flex;
+    gap: var(--sp-2);
+    flex-wrap: wrap;
+}
+.ru-reason {
+    font-style: italic;
+}
+.ru-notes {
+    color: var(--gray-500);
+}
+.ru-actions {
+    flex-shrink: 0;
+    display: flex;
+    gap: var(--sp-1);
+    opacity: 0;
+    transition: opacity 0.15s;
+}
+.ru-entry:hover .ru-actions {
+    opacity: 1;
+}
+.ru-delete {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--gray-400);
+    padding: 2px;
+    border-radius: var(--radius-sm);
+    transition: color 0.15s;
+}
+.ru-delete:hover {
+    color: var(--danger-600, #dc2626);
+}
