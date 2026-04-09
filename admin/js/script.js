@@ -7582,14 +7582,11 @@ async function renderPreviewPage(pageNum) {
     const label = document.getElementById('splitPreviewPageLabel');
     label.textContent = `עמוד ${pageNum} מתוך ${splitState.pageCount}`;
 
-    const zoomLabel = document.getElementById('splitPreviewZoomLevel');
-    zoomLabel.textContent = '100%';
-    splitPreviewState.scale = 1;
+    // Keep current zoom level, reset pan position
     splitPreviewState.translateX = 0;
     splitPreviewState.translateY = 0;
 
     const img = document.getElementById('splitPreviewImage');
-    img.style.transform = '';
     img.alt = '';
 
     try {
@@ -7614,6 +7611,7 @@ async function renderPreviewPage(pageNum) {
         canvas.width = 0; // release backing store
         canvas.height = 0;
         page.cleanup();
+        applyPreviewTransform(); // re-apply current zoom level
     } catch (err) {
         if (gen !== _previewRenderGen) return;
         console.error('[preview] Failed to render page:', err);
