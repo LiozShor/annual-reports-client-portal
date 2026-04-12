@@ -272,6 +272,55 @@ function renderFromData(data) {
     currentLang = sourceLanguage || 'he';
     switchLanguage(currentLang);
     renderDocuments();
+    updateFilingBadge();
+}
+
+/**
+ * Build the amber "rejected uploads" callout HTML.
+ * Returns '' when entries is empty/falsy (no-op).
+ * @param {Array} entries - parsed rejected_uploads_log array
+ * @param {boolean} isHe  - true = Hebrew (RTL), false = English (LTR)
+ */
+function buildRejectedUploadsCallout(entries, isHe) {
+    if (!Array.isArray(entries) || entries.length === 0) return '';
+
+    const dir   = isHe ? 'rtl' : 'ltr';
+    const align = isHe ? 'right' : 'left';
+
+    const title    = isHe
+        ? '\u05de\u05e1\u05de\u05db\u05d9\u05dd \u05e9\u05e7\u05d9\u05d1\u05dc\u05e0\u05d5 \u05de\u05de\u05da \u05d1\u05e2\u05d1\u05e8'
+        : 'Files we received from you previously';
+    const subtitle = isHe
+        ? '\u05e9\u05d9\u05dd \u05dc\u05d1 \u2014 \u05dc\u05d0 \u05e0\u05d9\u05ea\u05df \u05d4\u05d9\u05d4 \u05dc\u05e9\u05dc\u05d1 \u05d0\u05ea \u05d4\u05de\u05e1\u05de\u05db\u05d9\u05dd \u05d4\u05d1\u05d0\u05d9\u05dd. \u05d0\u05dd \u05d4\u05dd \u05e8\u05dc\u05d5\u05d5\u05e0\u05d8\u05d9\u05d9\u05dd, \u05d0\u05e0\u05d0 \u05e9\u05dc\u05d7 \u05d0\u05d5\u05ea\u05dd \u05e9\u05d5\u05d1 \u05d1\u05d0\u05d9\u05db\u05d5\u05ea \u05d8\u05d5\u05d1\u05d4.'
+        : "Note \u2014 we received the following files but couldn\u2019t use them. If they are relevant, please resend them clearly.";
+
+    let rowsHtml = '';
+    for (const entry of entries) {
+        // Format date DD/MM/YYYY from YYYY-MM-DD
+        const rawDate = entry.received_at || '';
+        let dateStr = rawDate;
+        if (/^\d{4}-\d{2}-\d{2}$/.test(rawDate)) {
+            const [y, m, d] = rawDate.split('-');
+            dateStr = `${d}/${m}/${y}`;
+        }
+
+        let rowText = escapeHtml(entry.filename || '');
+        rowText += ` \u00B7 ${escapeHtml(dateStr)}`;
+        if (entry.reason_text && entry.reason_text.trim()) {
+            rowText += ` \u00B7 ${escapeHtml(entry.reason_text)}`;
+        }
+        if (entry.notes && entry.notes.trim()) {
+            rowText += ` (${escapeHtml(entry.notes)})`;
+        }
+
+        rowsHtml += `<div style="padding:6px 0;border-bottom:1px solid #FDE68A;font-size:14px;color:#92400E;direction:${dir};text-align:${align};">${rowText}</div>`;
+    }
+
+    return `<div style="background:#FEF3C7;border:1px solid #F59E0B;border-radius:8px;padding:20px;margin-bottom:20px;direction:${dir};">` +
+        `<div style="font-size:16px;font-weight:700;color:#92400E;margin-bottom:8px;text-align:${align};">${title}</div>` +
+        `<div style="font-size:14px;color:#78350F;margin-bottom:12px;text-align:${align};">${subtitle}</div>` +
+        `<div>${rowsHtml}</div>` +
+        `</div>`;
 }
 
 function renderDocuments() {
@@ -279,6 +328,23 @@ function renderDocuments() {
 
     const container = document.getElementById('documents-container');
     const isHe = currentLang === 'he';
+
+    // Render rejected-uploads callout above the doc list
+    const calloutContainer = document.getElementById('rejected-uploads-callout');
+    if (calloutContainer) {
+        let rejectedEntries = [];
+        try {
+            const raw = currentData.rejected_uploads_log;
+            if (raw && typeof raw === 'string' && raw.trim()) {
+                rejectedEntries = JSON.parse(raw);
+            } else if (Array.isArray(raw)) {
+                rejectedEntries = raw;
+            }
+        } catch (e) {
+            rejectedEntries = [];
+        }
+        calloutContainer.innerHTML = buildRejectedUploadsCallout(rejectedEntries, isHe);
+    }
 
     if (currentData.document_count === 0) {
         const stage = currentData.report?.stage || '';
@@ -472,8 +538,25 @@ function switchLanguage(lang) {
     // Re-render documents
     renderDocuments();
 
-    // Re-render filing tabs with correct language
-    if (allReports.length > 1) renderFilingTabs();
+    // Re-render filing tabs and badge with correct language
+    if (allReports.length > 1) {
+        renderFilingTabs();
+        updateFilingBadge();
+    }
+}
+
+// ── Filing Type Badge (DL-251) ───────────────────────────────────
+function updateFilingBadge() {
+    const badge = document.getElementById('filing-type-badge');
+    if (!badge || allReports.length <= 1) return;
+
+    const report = allReports.find(r => r.report_id === activeReportId);
+    if (!report) return;
+
+    const isHe = currentLang === 'he';
+    badge.textContent = isHe ? report.label_he : report.label_en;
+    badge.className = `ai-filing-type-badge ai-ft-${report.filing_type}`;
+    badge.style.display = 'inline-flex';
 }
 
 // ── Filing Type Tabs ──────────────────────────────────────────────
@@ -516,6 +599,7 @@ function renderFilingTabs() {
         </button>`;
     }).join('');
     container.style.display = 'flex';
+    updateFilingBadge();
 }
 
 window.switchFilingTab = function(newReportId) {

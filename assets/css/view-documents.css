@@ -3,6 +3,29 @@
    Uses design-system.css tokens
    =========================================== */
 
+/* ==================== FILING TYPE BADGE (DL-251) ==================== */
+.ai-filing-type-badge {
+    display: none;
+    align-items: center;
+    padding: 2px var(--sp-3);
+    border-radius: var(--radius-full);
+    font-size: var(--text-sm);
+    font-weight: 600;
+    flex-shrink: 0;
+    margin-inline-start: var(--sp-2);
+    vertical-align: middle;
+}
+.ai-ft-annual_report {
+    background: var(--primary-50, #eff6ff);
+    color: var(--primary-700, #1d4ed8);
+    border: 1px solid var(--primary-200, #bfdbfe);
+}
+.ai-ft-capital_statement {
+    background: #f5f3ff;
+    color: #6d28d9;
+    border: 1px solid #ddd6fe;
+}
+
 /* ==================== FILING TABS (DL-218) ==================== */
 .filing-tabs {
     display: flex;
