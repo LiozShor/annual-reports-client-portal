@@ -30,7 +30,8 @@ const STALE_AFTER_MS = 30000; // 30s — skip re-fetch if data is fresh
 // DL-256: Pagination state
 let _clientsPage = 1;
 let _qaPage = 1;
-let _reminderPage = 1;
+let _reminderPageA = 1;
+let _reminderPageB = 1;
 let _aiPage = 1;
 const PAGE_SIZE = 50;
 
@@ -4750,7 +4751,8 @@ document.addEventListener('keydown', (e) => {
     }
 });
 
-let _filteredReminders = []; // DL-256: filtered reminder list for pagination
+let _filteredTypeA = []; // DL-256: filtered Type A reminders for per-section pagination
+let _filteredTypeB = []; // DL-256: filtered Type B reminders for per-section pagination
 function filterReminders(keepPage) {
     const search = (document.getElementById('reminderSearchInput').value || '').trim().toLowerCase();
 
@@ -4780,34 +4782,37 @@ function filterReminders(keepPage) {
         return da.localeCompare(db);
     };
 
-    // Sort combined, then paginate
-    _filteredReminders = filtered.sort(sortFn);
-    if (!keepPage) _reminderPage = 1;
+    // DL-256: Split first, paginate each section independently
+    _filteredTypeA = filtered.filter(r => r.stage === 'Waiting_For_Answers').sort(sortFn);
+    _filteredTypeB = filtered.filter(r => r.stage === 'Collecting_Docs').sort(sortFn);
+    if (!keepPage) { _reminderPageA = 1; _reminderPageB = 1; }
 
-    const pageSlice = _filteredReminders.slice((_reminderPage - 1) * PAGE_SIZE, _reminderPage * PAGE_SIZE);
-    const typeA = pageSlice.filter(r => r.stage === 'Waiting_For_Answers');
-    const typeB = pageSlice.filter(r => r.stage === 'Collecting_Docs');
+    const typeASlice = _filteredTypeA.slice((_reminderPageA - 1) * PAGE_SIZE, _reminderPageA * PAGE_SIZE);
+    const typeBSlice = _filteredTypeB.slice((_reminderPageB - 1) * PAGE_SIZE, _reminderPageB * PAGE_SIZE);
 
-    renderRemindersTable(typeA, typeB);
-    renderPagination('reminderPagination', _filteredReminders.length, _reminderPage, PAGE_SIZE, goToReminderPage);
+    renderRemindersTable(typeASlice, typeBSlice);
 }
 
-function goToReminderPage(page) {
-    _reminderPage = page;
+function goToReminderPageA(page) {
+    _reminderPageA = page;
     filterReminders(true);
-    document.getElementById('reminderTableContainer')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+function goToReminderPageB(page) {
+    _reminderPageB = page;
+    filterReminders(true);
 }
 
 function renderRemindersTable(typeA, typeB) {
     const container = document.getElementById('reminderTableContainer');
-    const totalItems = typeA.length + typeB.length;
+    const totalA = _filteredTypeA.length;
+    const totalB = _filteredTypeB.length;
 
     // Preserve accordion open state across re-renders
     const openSections = new Set();
     const allSections = container.querySelectorAll('.reminder-section');
     allSections.forEach((el, i) => { if (el.classList.contains('open')) openSections.add(i); });
 
-    if (totalItems === 0) {
+    if (totalA === 0 && totalB === 0) {
         container.innerHTML = `
             <div class="empty-state">
                 <div class="empty-state-icon"><i data-lucide="bell" class="icon-2xl"></i></div>
@@ -4827,30 +4832,32 @@ function renderRemindersTable(typeA, typeB) {
         <input type="checkbox" class="reminder-section-select-all" onclick="event.stopPropagation()" onchange="toggleSectionSelectAll(this)" title="בחר הכל">
         <i data-lucide="clipboard-list" class="icon-sm"></i>
         <h3>לא מילאו שאלון</h3>
-        <span class="reminder-section-count">${typeA.length}</span>
+        <span class="reminder-section-count">${totalA}</span>
     </div>`;
     html += `<div class="reminder-section-body">`;
 
     if (typeA.length > 0) {
         html += buildReminderTable(typeA, false);
+        html += `<div id="reminderPaginationA"></div>`;
     } else {
         html += `<div class="reminder-section-empty">אין לקוחות בקטגוריה זו</div>`;
     }
     html += `</div></div>`;
 
-    // --- Type B: Filled but missing docs (stage 3) ---
+    // --- Type B: Filled but missing docs (stage 4) ---
     html += `<div class="reminder-section${openSections.has(1) ? ' open' : ''}">`;
     html += `<div class="reminder-section-header reminder-section-b" onclick="toggleReminderSection(this)">
         <i data-lucide="chevron-left" class="icon-sm reminder-chevron"></i>
         <input type="checkbox" class="reminder-section-select-all" onclick="event.stopPropagation()" onchange="toggleSectionSelectAll(this)" title="בחר הכל">
         <i data-lucide="folder-open" class="icon-sm"></i>
         <h3>חסרים מסמכים</h3>
-        <span class="reminder-section-count">${typeB.length}</span>
+        <span class="reminder-section-count">${totalB}</span>
     </div>`;
     html += `<div class="reminder-section-body">`;
 
     if (typeB.length > 0) {
         html += buildReminderTable(typeB, true);
+        html += `<div id="reminderPaginationB"></div>`;
     } else {
         html += `<div class="reminder-section-empty">אין לקוחות בקטגוריה זו</div>`;
     }
@@ -4858,6 +4865,10 @@ function renderRemindersTable(typeA, typeB) {
 
     container.innerHTML = html;
     safeCreateIcons(container);
+
+    // DL-256: Per-section pagination (rendered after innerHTML so containers exist)
+    renderPagination('reminderPaginationA', totalA, _reminderPageA, PAGE_SIZE, goToReminderPageA);
+    renderPagination('reminderPaginationB', totalB, _reminderPageB, PAGE_SIZE, goToReminderPageB);
 }
 
 function buildReminderTable(items, showDocs) {
