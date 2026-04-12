@@ -1612,7 +1612,7 @@ function clearPreview() {
 }
 
 async function performServerImport(clients, year, successMessage, options) {
-    showLoading(clients.length > 1 ? `מייבא ${clients.length} לקוחות...` : 'מוסיף לקוח...');
+    showLoading(clients.length > 1 ? `מייבא ${clients.length} לקוחות...` : 'מוסיף לקוח...', FETCH_TIMEOUTS.batch + 5000);
     const filingType = options?.filing_type || activeEntityTab;
 
     try {
