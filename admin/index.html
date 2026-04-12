@@ -827,9 +827,17 @@
                     <div class="split-loading">טוען עמודים...</div>
                 </div>
                 <div id="splitResultPreview" class="split-result-preview" style="display:none"></div>
+                <!-- DL-250: Progress view shown during split processing -->
+                <div id="splitProgressView" style="display:none">
+                    <div class="split-progress-header">
+                        <div class="split-progress-bar"><div class="split-progress-fill" id="splitProgressFill"></div></div>
+                        <span id="splitProgressLabel" class="split-progress-label">0/0</span>
+                    </div>
+                    <div id="splitProgressSteps" class="split-progress-steps"></div>
+                </div>
             </div>
             <div class="ai-modal-panel-footer">
-                <button class="btn btn-secondary" onclick="closeSplitModal()">ביטול</button>
+                <button class="btn btn-secondary" id="splitCancelBtn" onclick="closeSplitModal()">ביטול</button>
                 <button class="btn btn-primary" id="splitConfirmBtn" onclick="confirmSplit()" disabled>
                     <i data-lucide="scissors" class="icon-sm"></i>
                     <span id="splitConfirmText">פצל</span>

@@ -7312,6 +7312,14 @@ function closeSplitModal() {
     closePagePreview(); // DL-246: close lightbox if open
     document.getElementById('aiSplitModal').classList.remove('show');
     splitState.pdfDoc = null;
+    // DL-250: Reset progress view for next open
+    document.getElementById('splitProgressView').style.display = 'none';
+    document.getElementById('splitThumbnailGrid').style.display = '';
+    document.querySelector('.split-mode-tabs').style.display = '';
+    document.getElementById('splitConfirmBtn').style.display = '';
+    const cancelBtn = document.getElementById('splitCancelBtn');
+    cancelBtn.disabled = false;
+    cancelBtn.textContent = 'ביטול';
 }
 
 async function renderSplitThumbnails(pdfDoc) {
@@ -7539,38 +7547,155 @@ function updateSplitPreview() {
     }
 }
 
+// DL-250: Frontend-orchestrated split with live progress
 async function confirmSplit() {
     if (splitState.groups.length < 2) return;
 
-    closeSplitModal();
-    showLoading(`מפצל PDF ל-${splitState.groups.length} מסמכים ומסווג מחדש...`);
+    const totalSegments = splitState.groups.length;
+    const classificationId = splitState.classificationId;
+
+    // Switch modal to progress view
+    document.getElementById('splitThumbnailGrid').style.display = 'none';
+    document.getElementById('splitResultPreview').style.display = 'none';
+    document.querySelector('.split-mode-tabs').style.display = 'none';
+    document.getElementById('splitManualInput').style.display = 'none';
+    document.getElementById('splitConfirmBtn').style.display = 'none';
+    document.getElementById('splitCancelBtn').disabled = true;
+
+    const progressView = document.getElementById('splitProgressView');
+    const progressFill = document.getElementById('splitProgressFill');
+    const progressLabel = document.getElementById('splitProgressLabel');
+    const stepsContainer = document.getElementById('splitProgressSteps');
+    progressView.style.display = 'block';
+
+    // Build step list
+    const stepHtml = [`<div class="split-step active" id="splitStep0">
+        <div class="split-step-icon"><div class="split-step-spinner"></div></div>
+        <span class="split-step-name">מפצל ומעלה ${totalSegments} קבצים...</span>
+        <span class="split-step-detail"></span>
+    </div>`];
+    for (let i = 0; i < totalSegments; i++) {
+        const pr = splitState.groups[i].length === 1
+            ? String(splitState.groups[i][0])
+            : `${splitState.groups[i][0]}-${splitState.groups[i][splitState.groups[i].length - 1]}`;
+        stepHtml.push(`<div class="split-step" id="splitStep${i + 1}">
+            <div class="split-step-icon"><span style="color:var(--gray-300)">●</span></div>
+            <span class="split-step-name">עמודים ${pr}</span>
+            <span class="split-step-detail">ממתין</span>
+        </div>`);
+    }
+    stepsContainer.innerHTML = stepHtml.join('');
+
+    function updateStep(idx, status, detail) {
+        const step = document.getElementById(`splitStep${idx}`);
+        if (!step) return;
+        step.className = 'split-step ' + status;
+        const iconEl = step.querySelector('.split-step-icon');
+        const detailEl = step.querySelector('.split-step-detail');
+        if (status === 'active') {
+            iconEl.innerHTML = '<div class="split-step-spinner"></div>';
+        } else if (status === 'done') {
+            iconEl.innerHTML = '<span style="color:var(--success-color, #16a34a)">✓</span>';
+        } else if (status === 'failed') {
+            iconEl.innerHTML = '<span style="color:var(--danger-color, #dc2626)">✗</span>';
+        }
+        if (detail) detailEl.textContent = detail;
+        step.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    function updateProgress(completed) {
+        const pct = Math.round((completed / (totalSegments + 1)) * 100);
+        progressFill.style.width = pct + '%';
+        progressLabel.textContent = `${completed}/${totalSegments + 1}`;
+    }
+
+    updateProgress(0);
 
     try {
-        const resp = await fetchWithTimeout(ENDPOINTS.REVIEW_CLASSIFICATION, {
+        // Phase 1: Split PDF + upload segments to OneDrive
+        const splitResp = await fetchWithTimeout(ENDPOINTS.REVIEW_CLASSIFICATION, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 token: authToken,
-                classification_id: splitState.classificationId,
+                classification_id: classificationId,
                 action: 'split',
                 groups: splitState.groups,
             }),
-        }, 120000); // 2 min — each page needs AI classification
+        }, 120000);
 
-        const result = await resp.json();
-        hideLoading();
-
-        if (result.ok) {
-            showAIToast('הפיצול התחיל — המסמכים החדשים יופיעו בעוד מספר שניות', 'success', {
-                label: 'רענן',
-                onClick: () => loadAIClassifications(),
-            });
-            await loadAIClassifications();
-        } else {
-            showModal('error', 'שגיאה בפיצול', result.error || 'שגיאה לא ידועה');
+        const splitResult = await splitResp.json();
+        if (!splitResult.ok) {
+            throw new Error(splitResult.error || 'Split failed');
         }
+
+        updateStep(0, 'done', `${splitResult.segments.length} קבצים הועלו`);
+        updateProgress(1);
+
+        // Phase 2: Classify each segment sequentially
+        let classified = 0;
+        let failed = 0;
+        for (let i = 0; i < splitResult.segments.length; i++) {
+            const seg = splitResult.segments[i];
+            const stepIdx = i + 1;
+            updateStep(stepIdx, 'active', 'מסווג...');
+
+            try {
+                const clsResp = await fetchWithTimeout(ENDPOINTS.REVIEW_CLASSIFICATION, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        token: authToken,
+                        classification_id: classificationId,
+                        action: 'classify-segment',
+                        segment: seg,
+                    }),
+                }, 60000);
+
+                const clsResult = await clsResp.json();
+                if (clsResult.ok && clsResult.classified) {
+                    updateStep(stepIdx, 'done', clsResult.matched_doc_name || 'סווג בהצלחה');
+                    classified++;
+                } else if (clsResult.ok) {
+                    updateStep(stepIdx, 'done', 'לא סווג — ניתן לשייך ידנית');
+                    classified++;
+                } else {
+                    updateStep(stepIdx, 'failed', clsResult.error || 'שגיאה');
+                    failed++;
+                }
+            } catch (err) {
+                updateStep(stepIdx, 'failed', err.message || 'שגיאה');
+                failed++;
+            }
+            updateProgress(1 + i + 1);
+        }
+
+        // Phase 3: Finalize — delete original
+        await fetchWithTimeout(ENDPOINTS.REVIEW_CLASSIFICATION, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                token: authToken,
+                classification_id: classificationId,
+                action: 'finalize-split',
+            }),
+        }, 15000);
+
+        // Show summary
+        const summaryText = failed > 0
+            ? `הפיצול הושלם: ${classified} סווגו, ${failed} נכשלו`
+            : `הפיצול הושלם: ${classified} מסמכים סווגו בהצלחה`;
+
+        document.getElementById('splitCancelBtn').disabled = false;
+        document.getElementById('splitCancelBtn').textContent = 'סגור';
+
+        showAIToast(summaryText, failed > 0 ? 'warning' : 'success');
+        await loadAIClassifications();
+
     } catch (err) {
-        hideLoading();
+        // Phase 1 failed — original reverted to pending by backend
+        updateStep(0, 'failed', err.message);
+        document.getElementById('splitCancelBtn').disabled = false;
         showModal('error', 'שגיאה בפיצול', err.message);
     }
 }
