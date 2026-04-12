@@ -542,6 +542,7 @@ function updateReviewQueueUI() {
 }
 
 async function loadDashboard(silent = false) {
+    if (!authToken) return; // Not logged in — prevent unauthorized API call + reload loop
     // DL-247: SWR — skip if data is fresh, otherwise fetch silently
     const isFresh = dashboardLoaded && (Date.now() - dashboardLoadedAt < STALE_AFTER_MS);
     if (silent && isFresh) return;
@@ -1864,6 +1865,7 @@ async function addSecondFilingType(reportId) {
 let pendingClients = [];
 
 async function loadPendingClients(silent = false) {
+    if (!authToken) return;
     // DL-247: SWR — skip if fresh, otherwise fetch silently
     const isFresh = pendingClientsLoaded && (Date.now() - pendingClientsLoadedAt < STALE_AFTER_MS);
     if (silent && isFresh) return;
@@ -2704,6 +2706,7 @@ async function loadDocPreview(recordId) {
 }
 
 async function loadAIClassifications(silent = false) {
+    if (!authToken) return;
     // DL-247: SWR — skip if fresh, otherwise fetch silently
     const isFresh = aiReviewLoaded && (Date.now() - aiReviewLoadedAt < STALE_AFTER_MS);
     if (silent && isFresh) return;
@@ -4545,6 +4548,7 @@ let reminderDefaultMax = null; // null = unlimited
 let activeCardFilter = 'scheduled';
 
 async function loadReminders(silent = false) {
+    if (!authToken) return;
     // DL-247: SWR — skip if fresh (POST-based, no deduplicatedFetch)
     const isFresh = reminderLoaded && (Date.now() - reminderLoadedAt < STALE_AFTER_MS);
     if (silent && isFresh) return;
@@ -6602,6 +6606,7 @@ function initQuestionnaireYearFilter() {
 }
 
 async function loadQuestionnaires(silent = false) {
+    if (!authToken) return;
     initQuestionnaireYearFilter();
     // DL-247: SWR — skip if fresh, otherwise fetch silently
     const isFresh = questionnaireLoaded && (Date.now() - questionnaireLoadedAt < STALE_AFTER_MS);
