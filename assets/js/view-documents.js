@@ -563,11 +563,18 @@ function updateFilingBadge() {
 
 async function discoverSiblingReports() {
     try {
-        const tokenParam = clientToken ? `&token=${encodeURIComponent(clientToken)}` : '';
-        const resp = await fetchWithTimeout(
-            `${ENDPOINTS.GET_CLIENT_REPORTS}?report_id=${encodeURIComponent(reportId)}${tokenParam}`,
-            {}, FETCH_TIMEOUTS?.load || 15000
-        );
+        let url, fetchOptions = {};
+        if (adminToken && !clientToken) {
+            // Admin mode — need client_id, extract from loaded data
+            const cid = currentData?.client_id;
+            if (!cid) return;
+            url = `${ENDPOINTS.GET_CLIENT_REPORTS}?client_id=${encodeURIComponent(cid)}`;
+            fetchOptions = { headers: { 'Authorization': `Bearer ${adminToken}` } };
+        } else {
+            const tokenParam = clientToken ? `&token=${encodeURIComponent(clientToken)}` : '';
+            url = `${ENDPOINTS.GET_CLIENT_REPORTS}?report_id=${encodeURIComponent(reportId)}${tokenParam}`;
+        }
+        const resp = await fetchWithTimeout(url, fetchOptions, FETCH_TIMEOUTS?.load || 15000);
         const data = await resp.json();
         if (!data.ok || !data.reports || data.reports.length <= 1) return;
 
@@ -624,17 +631,21 @@ window.switchFilingTab = function(newReportId) {
 
 async function loadSiblingDocs(siblingReportId) {
     const token = siblingTokens[siblingReportId];
-    if (!token) return;
+    if (!token && !adminToken) return;
 
     // Show loading
     document.getElementById('results').style.display = 'none';
     document.getElementById('loading').style.display = 'block';
 
     try {
-        const resp = await fetchWithTimeout(
-            `${ENDPOINTS.GET_CLIENT_DOCUMENTS}?report_id=${encodeURIComponent(siblingReportId)}&token=${encodeURIComponent(token)}`,
-            {}, FETCH_TIMEOUTS?.load || 15000
-        );
+        let url, fetchOptions = {};
+        if (adminToken && !token) {
+            url = `${ENDPOINTS.GET_CLIENT_DOCUMENTS}?report_id=${encodeURIComponent(siblingReportId)}&mode=office`;
+            fetchOptions = { headers: { 'Authorization': `Bearer ${adminToken}` } };
+        } else {
+            url = `${ENDPOINTS.GET_CLIENT_DOCUMENTS}?report_id=${encodeURIComponent(siblingReportId)}&token=${encodeURIComponent(token)}`;
+        }
+        const resp = await fetchWithTimeout(url, fetchOptions, FETCH_TIMEOUTS?.load || 15000);
         const data = await resp.json();
 
         if (!data.ok) {
