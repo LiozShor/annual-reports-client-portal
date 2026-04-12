@@ -2762,7 +2762,7 @@ async function loadAIClassifications(silent = false) {
         syncAIBadge(badge, uniqueClients);
     } catch (error) {
 
-        console.error('AI review load failed');
+        console.error('AI review load failed', error);
         if (!silent) {
             const container = document.getElementById('aiCardsContainer');
             container.innerHTML = `
