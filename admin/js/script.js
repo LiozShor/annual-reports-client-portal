@@ -3,9 +3,12 @@
 
 // Safe Lucide icon replacement — avoids "No elements found" error when
 // no unprocessed [data-lucide] elements exist in the DOM
-function safeCreateIcons(opts) {
+function safeCreateIcons(rootOrOpts) {
     if (typeof lucide === 'undefined') return;
-    try { lucide.createIcons(opts); } catch (_) { /* no unprocessed icons */ }
+    try {
+        const opts = rootOrOpts instanceof Element ? { root: rootOrOpts } : rootOrOpts;
+        lucide.createIcons(opts);
+    } catch (_) { /* no unprocessed icons */ }
 }
 
 const SESSION_FLAG_KEY = 'admin_session_active';
@@ -23,6 +26,64 @@ let pendingClientsLoaded = false;
 let dashboardLoadedAt = 0;
 let pendingClientsLoadedAt = 0;
 const STALE_AFTER_MS = 30000; // 30s — skip re-fetch if data is fresh
+
+// DL-256: Pagination state
+let _clientsPage = 1;
+let _qaPage = 1;
+let _reminderPage = 1;
+let _aiPage = 1;
+const PAGE_SIZE = 50;
+
+// DL-256: Shared pagination renderer
+function renderPagination(containerId, totalItems, currentPage, pageSize, onPageChange) {
+    let container = document.getElementById(containerId);
+    if (!container) {
+        // Auto-create pagination container if not in DOM
+        const parent = document.getElementById(containerId.replace('Pagination', 'TableContainer'))
+            || document.getElementById(containerId.replace('Pagination', 'Container'));
+        if (parent) {
+            container = document.createElement('div');
+            container.id = containerId;
+            parent.parentNode.insertBefore(container, parent.nextSibling);
+        } else return;
+    }
+    const totalPages = Math.ceil(totalItems / pageSize);
+    if (totalPages <= 1) { container.innerHTML = ''; return; }
+
+    const start = (currentPage - 1) * pageSize + 1;
+    const end = Math.min(currentPage * pageSize, totalItems);
+
+    // Build page numbers with ellipsis
+    let pages = [];
+    if (totalPages <= 7) {
+        for (let i = 1; i <= totalPages; i++) pages.push(i);
+    } else {
+        pages.push(1);
+        if (currentPage > 3) pages.push('…');
+        for (let i = Math.max(2, currentPage - 1); i <= Math.min(totalPages - 1, currentPage + 1); i++) pages.push(i);
+        if (currentPage < totalPages - 2) pages.push('…');
+        pages.push(totalPages);
+    }
+
+    let html = '<div class="pagination-bar" dir="rtl">';
+    html += `<span class="pagination-info">מציג ${start}-${end} מתוך ${totalItems}</span>`;
+    html += '<div class="pagination-buttons">';
+    html += `<button class="pagination-btn" ${currentPage === 1 ? 'disabled' : ''} data-page="${currentPage - 1}">הקודם «</button>`;
+    for (const p of pages) {
+        if (p === '…') {
+            html += '<span class="pagination-ellipsis">…</span>';
+        } else {
+            html += `<button class="pagination-btn${p === currentPage ? ' active' : ''}" data-page="${p}">${p}</button>`;
+        }
+    }
+    html += `<button class="pagination-btn" ${currentPage === totalPages ? 'disabled' : ''} data-page="${currentPage + 1}">» הבא</button>`;
+    html += '</div></div>';
+
+    container.innerHTML = html;
+    container.querySelectorAll('.pagination-btn:not([disabled])').forEach(btn => {
+        btn.addEventListener('click', () => onPageChange(Number(btn.dataset.page)));
+    });
+}
 
 // DL-255: Debounce utility for search inputs
 function debounce(fn, ms = 150) {
@@ -562,7 +623,7 @@ async function loadDashboard(silent = false) {
 
     try {
         const year = document.getElementById('yearFilter')?.value || '2025';
-        const response = await fetchWithTimeout(`${ENDPOINTS.ADMIN_DASHBOARD}?year=${year}&_t=${Date.now()}`, { headers: { 'Authorization': `Bearer ${authToken}` } }, FETCH_TIMEOUTS.load);
+        const response = await fetchWithTimeout(`${ENDPOINTS.ADMIN_DASHBOARD}?year=${year}&_t=${Date.now()}`, { headers: { 'Authorization': `Bearer ${authToken}` } }, FETCH_TIMEOUTS.slow); // DL-254: 20s for 579+ clients
         const data = await response.json();
 
 
@@ -813,23 +874,19 @@ function renderClientsTable(clients) {
 
     html += cards + '</div>';
     container.innerHTML = html;
-    safeCreateIcons();
+    safeCreateIcons(container);
 }
 
-let _clientsSortKey = ''; // DL-255: track sort to detect when full rebuild needed
-let _clientsBaseKey = ''; // DL-255: track entity+archive to detect base set changes
-function filterClients() {
+let _filteredClients = []; // DL-256: filtered+sorted client list for pagination
+function filterClients(keepPage) {
     resetClientBulkSelection();
     const search = document.getElementById('searchInput').value.toLowerCase();
     const stage = document.getElementById('stageFilter').value;
     const year = document.getElementById('yearFilter').value;
 
-    // Base set: entity type + archive mode (these require full rebuild when changed)
-    let base = clientsData.filter(c => (c.filing_type || 'annual_report') === activeEntityTab);
-    base = base.filter(c => showArchivedMode ? c.is_active === false : c.is_active !== false);
+    let filtered = clientsData.filter(c => (c.filing_type || 'annual_report') === activeEntityTab);
+    filtered = filtered.filter(c => showArchivedMode ? c.is_active === false : c.is_active !== false);
 
-    // Apply search/stage/year filters on top
-    let filtered = base;
     if (search) {
         filtered = filtered.filter(c =>
             c.name?.toLowerCase().includes(search) ||
@@ -843,30 +900,19 @@ function filterClients() {
         filtered = filtered.filter(c => String(c.year) === year);
     }
 
-    const sortKey = `${currentSort.column}:${currentSort.direction}`;
-    const baseKey = `${activeEntityTab}:${showArchivedMode}`;
-    const container = document.getElementById('clientsTableContainer');
-    const tableExists = dashboardLoaded && container.querySelector('table');
-    const needsRebuild = !tableExists || _clientsSortKey !== sortKey || _clientsBaseKey !== baseKey;
+    _filteredClients = sortClients(filtered);
+    if (!keepPage) _clientsPage = 1;
 
-    if (needsRebuild) {
-        // DL-255: Full rebuild — render ALL base rows (sorted), then hide/show for filters
-        _clientsSortKey = sortKey;
-        _clientsBaseKey = baseKey;
-        renderClientsTable(sortClients(base));
-    }
-
-    // DL-255: Hide/show — toggle visibility for search/stage/year filters
-    if (container.querySelector('table')) {
-        const visibleIds = new Set(filtered.map(c => c.report_id));
-        container.querySelectorAll('tr[data-report-id]').forEach(r => {
-            r.style.display = visibleIds.has(r.dataset.reportId) ? '' : 'none';
-        });
-        container.querySelectorAll('li.mobile-card[data-report-id]').forEach(c => {
-            c.style.display = visibleIds.has(c.dataset.reportId) ? '' : 'none';
-        });
-    }
+    const pageSlice = _filteredClients.slice((_clientsPage - 1) * PAGE_SIZE, _clientsPage * PAGE_SIZE);
+    renderClientsTable(pageSlice);
+    renderPagination('clientsPagination', _filteredClients.length, _clientsPage, PAGE_SIZE, goToClientsPage);
     updateActiveFilterCount();
+}
+
+function goToClientsPage(page) {
+    _clientsPage = page;
+    filterClients(true);
+    document.getElementById('clientsTableContainer')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 // DL-214: Mobile collapsible filter bar
@@ -2812,7 +2858,8 @@ function updateAIStats(stats) {
     // Stats bar removed — no-op, kept for compatibility
 }
 
-function applyAIFilters() {
+let _filteredAI = []; // DL-256: filtered AI items for pagination
+function applyAIFilters(keepPage) {
     const searchText = (document.getElementById('aiSearchInput').value || '').trim().toLowerCase();
     const confidenceFilter = document.getElementById('aiConfidenceFilter')?.value || '';
     const typeFilter = document.getElementById('aiTypeFilter')?.value || '';
@@ -2854,7 +2901,18 @@ function applyAIFilters() {
         });
     }
 
-    renderAICards(filtered);
+    _filteredAI = filtered;
+    if (!keepPage) _aiPage = 1;
+
+    const pageSlice = _filteredAI.slice((_aiPage - 1) * PAGE_SIZE, _aiPage * PAGE_SIZE);
+    renderAICards(pageSlice);
+    renderPagination('aiPagination', _filteredAI.length, _aiPage, PAGE_SIZE, goToAIPage);
+}
+
+function goToAIPage(page) {
+    _aiPage = page;
+    applyAIFilters(true);
+    document.getElementById('aiCardsContainer')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 // Client/spouse template pairs — same document type, different person
@@ -2939,7 +2997,7 @@ function renderAICards(items) {
                 </div>
             `;
         }
-        safeCreateIcons();
+        safeCreateIcons(container);
         return;
     }
 
@@ -3155,7 +3213,7 @@ function renderAICards(items) {
         });
     });
 
-    safeCreateIcons();
+    safeCreateIcons(container);
 
     // DL-210: Show review-done prompt for clients where all items are already reviewed
     for (const [clientName, clientItems] of Object.entries(groups)) {
@@ -4692,7 +4750,8 @@ document.addEventListener('keydown', (e) => {
     }
 });
 
-function filterReminders() {
+let _filteredReminders = []; // DL-256: filtered reminder list for pagination
+function filterReminders(keepPage) {
     const search = (document.getElementById('reminderSearchInput').value || '').trim().toLowerCase();
 
     let filtered = remindersData.filter(r => r.is_active !== false);
@@ -4721,11 +4780,22 @@ function filterReminders() {
         return da.localeCompare(db);
     };
 
-    // Split into Type A (stage 2) and Type B (stage 4)
-    const typeA = filtered.filter(r => r.stage === 'Waiting_For_Answers').sort(sortFn);
-    const typeB = filtered.filter(r => r.stage === 'Collecting_Docs').sort(sortFn);
+    // Sort combined, then paginate
+    _filteredReminders = filtered.sort(sortFn);
+    if (!keepPage) _reminderPage = 1;
+
+    const pageSlice = _filteredReminders.slice((_reminderPage - 1) * PAGE_SIZE, _reminderPage * PAGE_SIZE);
+    const typeA = pageSlice.filter(r => r.stage === 'Waiting_For_Answers');
+    const typeB = pageSlice.filter(r => r.stage === 'Collecting_Docs');
 
     renderRemindersTable(typeA, typeB);
+    renderPagination('reminderPagination', _filteredReminders.length, _reminderPage, PAGE_SIZE, goToReminderPage);
+}
+
+function goToReminderPage(page) {
+    _reminderPage = page;
+    filterReminders(true);
+    document.getElementById('reminderTableContainer')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 function renderRemindersTable(typeA, typeB) {
@@ -4787,7 +4857,7 @@ function renderRemindersTable(typeA, typeB) {
     html += `</div></div>`;
 
     container.innerHTML = html;
-    safeCreateIcons();
+    safeCreateIcons(container);
 }
 
 function buildReminderTable(items, showDocs) {
@@ -6707,7 +6777,7 @@ function sortQuestionnaires(items) {
     });
 }
 
-function filterQuestionnaires() {
+function filterQuestionnaires(keepPage) {
     const search = (document.getElementById('questionnaireSearchInput')?.value || '').toLowerCase().trim();
 
     questionnaireFilteredData = questionnairesData.filter(item => {
@@ -6718,7 +6788,17 @@ function filterQuestionnaires() {
     });
 
     questionnaireFilteredData = sortQuestionnaires(questionnaireFilteredData);
-    renderQuestionnairesTable(questionnaireFilteredData);
+    if (!keepPage) _qaPage = 1;
+
+    const pageSlice = questionnaireFilteredData.slice((_qaPage - 1) * PAGE_SIZE, _qaPage * PAGE_SIZE);
+    renderQuestionnairesTable(pageSlice);
+    renderPagination('questionnairePagination', questionnaireFilteredData.length, _qaPage, PAGE_SIZE, goToQaPage);
+}
+
+function goToQaPage(page) {
+    _qaPage = page;
+    filterQuestionnaires(true);
+    document.getElementById('questionnaireTableContainer')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 function renderQuestionnairesTable(items) {
@@ -6843,7 +6923,7 @@ function renderQuestionnairesTable(items) {
     cards += '</ul>';
 
     container.innerHTML = `<div class="table-scroll-container" role="region" tabindex="0" aria-label="טבלת שאלונים">${html}${cards}</div>`;
-    safeCreateIcons();
+    safeCreateIcons(container);
 }
 
 // Toggle questionnaire detail in mobile card (DL-214)

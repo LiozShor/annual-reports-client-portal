@@ -6591,6 +6591,65 @@ tr:hover .client-edit-link {
     color: var(--danger-600, #dc2626);
 }
 
+/* DL-256: Pagination bar */
+.pagination-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--sp-3) var(--sp-4);
+    border-top: 1px solid var(--gray-200);
+    background: var(--gray-50);
+    border-radius: 0 0 var(--radius-md) var(--radius-md);
+    gap: var(--sp-3);
+    flex-wrap: wrap;
+}
+.pagination-info {
+    font-size: 0.85rem;
+    color: var(--gray-500);
+    white-space: nowrap;
+}
+.pagination-buttons {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-1);
+    flex-wrap: wrap;
+}
+.pagination-btn {
+    padding: 4px 10px;
+    border: 1px solid var(--gray-200);
+    background: #fff;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    font-size: 0.85rem;
+    color: var(--gray-700);
+    transition: all 0.15s;
+    min-width: 32px;
+    text-align: center;
+}
+.pagination-btn:hover:not([disabled]):not(.active) {
+    background: var(--gray-100);
+    border-color: var(--gray-300);
+}
+.pagination-btn.active {
+    background: var(--primary-600, #2563eb);
+    color: #fff;
+    border-color: var(--primary-600, #2563eb);
+    font-weight: 600;
+}
+.pagination-btn[disabled] {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+.pagination-ellipsis {
+    padding: 4px 6px;
+    color: var(--gray-400);
+    font-size: 0.85rem;
+}
+@media (max-width: 640px) {
+    .pagination-bar { flex-direction: column; gap: var(--sp-2); padding: var(--sp-2); }
+    .pagination-buttons { justify-content: center; }
+}
+
 /* DL-255: Skip rendering off-screen table rows (browser-native optimization) */
 #clientsTableContainer tbody tr,
 #questionnaireTableContainer tbody tr,
