@@ -1157,19 +1157,16 @@ function switchEntityTab(type) {
     if (manualFT) manualFT.value = type;
     if (importFT) importFT.value = type;
 
-    // DL-247: Reload active tab with opacity fade instead of full-screen overlay
+    // DL-247/DL-250: Reload active tab on entity switch — opacity fade for tabs that fetch data
     const activeContent = document.querySelector('.tab-content.active');
     const activeTab = activeContent?.id?.replace('tab-', '');
-    if (activeContent && activeTab !== 'dashboard' && activeTab !== 'ai-review') {
-        activeContent.classList.add('tab-refreshing');
-    }
+    const addRefresh = () => { if (activeContent) activeContent.classList.add('tab-refreshing'); };
     const removeRefresh = () => { if (activeContent) activeContent.classList.remove('tab-refreshing'); };
-    if (activeTab === 'send') loadPendingClients().then(removeRefresh, removeRefresh);
-    else if (activeTab === 'questionnaires') loadQuestionnaires().then(removeRefresh, removeRefresh);
+    if (activeTab === 'send') { addRefresh(); loadPendingClients().then(removeRefresh, removeRefresh); }
+    else if (activeTab === 'questionnaires') { addRefresh(); loadQuestionnaires().then(removeRefresh, removeRefresh); }
+    else if (activeTab === 'reminders') { addRefresh(); loadReminders().then(removeRefresh, removeRefresh); }
     // DL-238: AI Review not reloaded on entity tab switch — always shows all
-    else if (activeTab === 'reminders') loadReminders().then(removeRefresh, removeRefresh);
-    else if (activeTab === 'review') loadDashboard();
-    else if (activeTab === 'dashboard') loadDashboard(); // DL-250: was missing — entity switch on dashboard never reloaded
+    else if (activeTab === 'review' || activeTab === 'dashboard') loadDashboard();
 }
 
 // Close dropdowns/popovers on Escape; Enter on clickable counts triggers click
