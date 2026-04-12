@@ -19,6 +19,7 @@ let CLIENT_CC_EMAIL = '';
 let DOCS_FIRST_SENT_AT = null;
 let REPORT_NOTES = '';
 let CLIENT_NOTES = []; // Parsed JSON array of client communication entries
+let REJECTED_UPLOADS = []; // Parsed JSON array of rejected upload log entries
 
 // Admin auth token — required for this office-only page
 const ADMIN_TOKEN = localStorage.getItem(ADMIN_TOKEN_KEY) || '';
@@ -257,6 +258,13 @@ async function loadDocuments(reportId) {
         } catch (e) { CLIENT_NOTES = []; }
         renderClientNotes();
 
+        // Rejected uploads log
+        try {
+            REJECTED_UPLOADS = JSON.parse(data.rejected_uploads_log || '[]');
+            if (!Array.isArray(REJECTED_UPLOADS)) REJECTED_UPLOADS = [];
+        } catch (e) { REJECTED_UPLOADS = []; }
+        renderRejectedUploads();
+
         // Handle case where report is found but stage is early (no docs yet)
         const stageRank = STAGE_ORDER[data.stage] || 0;
         if (stageRank <= 2) {
@@ -333,6 +341,7 @@ async function loadDocuments(reportId) {
             docsFirstSentAt: DOCS_FIRST_SENT_AT,
             notes: REPORT_NOTES,
             clientNotes: CLIENT_NOTES,
+            rejectedUploads: REJECTED_UPLOADS,
             clientQuestions: data.client_questions
         };
 
@@ -532,6 +541,7 @@ function restoreFromCache(reportId) {
     DOCS_FIRST_SENT_AT = cached.docsFirstSentAt;
     REPORT_NOTES = cached.notes;
     CLIENT_NOTES = cached.clientNotes;
+    REJECTED_UPLOADS = cached.rejectedUploads || [];
 
     // Update header
     const nameEl = document.getElementById('clientName');
@@ -549,6 +559,7 @@ function restoreFromCache(reportId) {
     const notesTextarea = document.getElementById('reportNotesTextarea');
     if (notesTextarea) notesTextarea.value = REPORT_NOTES;
     renderClientNotes();
+    renderRejectedUploads();
 
     // Reset change tracking
     markedForRemoval = new Set();
@@ -2949,6 +2960,100 @@ function deleteClientNote(id) {
             if (ok) showToast('הערה נמחקה', 'success');
         });
     }, 'מחק', true);
+}
+
+// ==================== REJECTED UPLOADS ARCHIVE ====================
+
+function renderRejectedUploads() {
+    const container = document.getElementById('rejectedUploadsList');
+    const countBadge = document.getElementById('rejectedUploadsCount');
+    if (!container) return;
+
+    // Update badge count
+    if (countBadge) {
+        if (REJECTED_UPLOADS.length > 0) {
+            countBadge.textContent = REJECTED_UPLOADS.length;
+            countBadge.style.display = '';
+        } else {
+            countBadge.style.display = 'none';
+        }
+    }
+
+    // Sort newest first by rejected_at
+    const sorted = [...REJECTED_UPLOADS].sort((a, b) => (b.rejected_at || '').localeCompare(a.rejected_at || ''));
+
+    let html = '';
+
+    if (sorted.length === 0) {
+        html = '<div class="ru-empty">\u05d0\u05d9\u05df \u05de\u05e1\u05de\u05db\u05d9\u05dd \u05d1\u05d0\u05e8\u05db\u05d9\u05d5\u05df</div>';
+    } else {
+        for (const entry of sorted) {
+            const rawDate = entry.received_at || entry.rejected_at || '';
+            const dateStr = rawDate.match(/^(\d{4})-(\d{2})-(\d{2})/)
+                ? rawDate.replace(/^(\d{4})-(\d{2})-(\d{2}).*/, '$3/$2/$1')
+                : rawDate;
+            const reasonHtml = entry.reason
+                ? `<span class="ru-reason">${escapeHtml(entry.reason)}</span>`
+                : '';
+            const notesHtml = entry.notes
+                ? `<span class="ru-notes">(${escapeHtml(entry.notes)})</span>`
+                : '';
+
+            html += `<div class="ru-entry" data-ru-id="${escapeAttr(entry.id)}">
+                <div class="ru-icon">
+                    <i data-lucide="file-x" class="icon-sm"></i>
+                </div>
+                <div class="ru-body">
+                    <div class="ru-meta">
+                        <span class="ru-filename">${escapeHtml(entry.filename || '')}</span>
+                        <span class="ru-date">${escapeHtml(dateStr)}</span>
+                    </div>
+                    ${reasonHtml || notesHtml
+                        ? `<div class="ru-detail">${reasonHtml}${notesHtml}</div>`
+                        : ''}
+                </div>
+                <div class="ru-actions">
+                    <button class="ru-delete" onclick="deleteRejectedUpload('${escapeAttr(entry.id)}')" title="\u05de\u05d7\u05e7">
+                        <i data-lucide="trash-2" class="icon-sm"></i>
+                    </button>
+                </div>
+            </div>`;
+        }
+    }
+
+    container.innerHTML = html;
+    if (typeof lucide !== 'undefined') lucide.createIcons({ nameAttr: 'data-lucide', attrs: {} });
+}
+
+async function saveRejectedUploads() {
+    try {
+        const response = await fetchWithTimeout(ENDPOINTS.ADMIN_UPDATE_CLIENT, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${ADMIN_TOKEN}` },
+            body: JSON.stringify({
+                token: ADMIN_TOKEN,
+                report_id: REPORT_ID,
+                action: 'update-rejected-uploads',
+                rejected_uploads_log: JSON.stringify(REJECTED_UPLOADS)
+            })
+        });
+        const result = await response.json();
+        if (!result.ok) throw new Error(result.error || 'Failed');
+        return true;
+    } catch (err) {
+        showToast('\u05e9\u05d2\u05d9\u05d0\u05d4 \u05d1\u05e9\u05de\u05d9\u05e8\u05ea \u05d4\u05d0\u05e8\u05db\u05d9\u05d5\u05df', 'error');
+        return false;
+    }
+}
+
+function deleteRejectedUpload(id) {
+    showConfirmDialog('\u05dc\u05de\u05d7\u05d5\u05e7 \u05e8\u05e9\u05d5\u05de\u05d4 \u05d6\u05d5?', () => {
+        REJECTED_UPLOADS = REJECTED_UPLOADS.filter(e => e.id !== id);
+        renderRejectedUploads();
+        saveRejectedUploads().then(ok => {
+            if (ok) showToast('\u05d4\u05e8\u05e9\u05d5\u05de\u05d4 \u05e0\u05de\u05d7\u05e7\u05d4', 'success');
+        });
+    }, '\u05de\u05d7\u05e7', true);
 }
 
 // ==================== STICKY ACTION BAR ====================
