@@ -599,13 +599,15 @@ async function loadDashboard(silent = false) {
         }
 
         // Load AI review badge count + prefetch other tabs (async, non-blocking) — DL-175
-        loadAIReviewCount();
-        loadReminderCount();
-        if (!pendingClientsLoaded) loadPendingClients(true);
-        if (!aiReviewLoaded) loadAIClassifications(true); // DL-247: prefetch AI review
-        if (!questionnaireLoaded) loadQuestionnaires(true);
-        if (!reminderLoaded) loadReminders(true);
-        updateActiveFilterCount(); // DL-214
+        requestIdleCallback(() => {
+            loadAIReviewCount();
+            loadReminderCount();
+            if (!pendingClientsLoaded) loadPendingClients(true);
+            if (!aiReviewLoaded) loadAIClassifications(true); // DL-247: prefetch AI review
+            if (!questionnaireLoaded) loadQuestionnaires(true);
+            if (!reminderLoaded) loadReminders(true);
+            updateActiveFilterCount(); // DL-214
+        }, { timeout: 2000 });
     } catch (error) {
 
         console.error('Dashboard load failed');
@@ -1179,11 +1181,11 @@ function switchEntityTab(type) {
     const activeTab = activeContent?.id?.replace('tab-', '');
     const addRefresh = () => { if (activeContent) activeContent.classList.add('tab-refreshing'); };
     const removeRefresh = () => { if (activeContent) activeContent.classList.remove('tab-refreshing'); };
-    if (activeTab === 'send') { addRefresh(); loadPendingClients().then(removeRefresh, removeRefresh); }
-    else if (activeTab === 'questionnaires') { addRefresh(); loadQuestionnaires().then(removeRefresh, removeRefresh); }
-    else if (activeTab === 'reminders') { addRefresh(); loadReminders().then(removeRefresh, removeRefresh); }
+    if (activeTab === 'send' && pendingClientsLoadedAt > 0) { addRefresh(); loadPendingClients().then(removeRefresh, removeRefresh); }
+    else if (activeTab === 'questionnaires' && questionnaireLoadedAt > 0) { addRefresh(); loadQuestionnaires().then(removeRefresh, removeRefresh); }
+    else if (activeTab === 'reminders' && reminderLoadedAt > 0) { addRefresh(); loadReminders().then(removeRefresh, removeRefresh); }
     // DL-238: AI Review not reloaded on entity tab switch — always shows all
-    else if (activeTab === 'review' || activeTab === 'dashboard') loadDashboard();
+    else if ((activeTab === 'review' || activeTab === 'dashboard') && dashboardLoadedAt > 0) loadDashboard();
 }
 
 // Close dropdowns/popovers on Escape; Enter on clickable counts triggers click
@@ -1468,7 +1470,7 @@ document.addEventListener('visibilitychange', () => {
 async function loadAIReviewCount() {
     const badge = document.getElementById('aiReviewTabBadge');
     try {
-        const resp = await fetchWithTimeout(`${ENDPOINTS.GET_PENDING_CLASSIFICATIONS}?filing_type=all`, { headers: { 'Authorization': `Bearer ${authToken}` } }, FETCH_TIMEOUTS.quick); // DL-238: combined badge count
+        const resp = await deduplicatedFetch(`${ENDPOINTS.GET_PENDING_CLASSIFICATIONS}?filing_type=all`, { headers: { 'Authorization': `Bearer ${authToken}` } }, FETCH_TIMEOUTS.quick); // DL-238: combined badge count
         const data = await resp.json();
         badge.classList.remove('ai-badge-loading');
         if (data.ok && data.items) {
@@ -2714,7 +2716,7 @@ async function loadAIClassifications(silent = false) {
 
 
     try {
-        const response = await deduplicatedFetch(`${ENDPOINTS.GET_PENDING_CLASSIFICATIONS}?filing_type=all`, { headers: { 'Authorization': `Bearer ${authToken}` } }, FETCH_TIMEOUTS.load); // DL-238: unified view
+        const response = await deduplicatedFetch(`${ENDPOINTS.GET_PENDING_CLASSIFICATIONS}?filing_type=all`, { headers: { 'Authorization': `Bearer ${authToken}` } }, FETCH_TIMEOUTS.slow); // DL-238: unified view
         const data = await response.json();
 
 
@@ -4560,7 +4562,7 @@ async function loadReminders(silent = false) {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ token: authToken, action: 'list', filing_type: activeEntityTab })
-        }, FETCH_TIMEOUTS.load);
+        }, FETCH_TIMEOUTS.slow);
         const data = await response.json();
 
 
