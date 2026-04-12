@@ -1,5 +1,13 @@
 // Configuration — API_BASE, ADMIN_TOKEN_KEY, STAGES, STAGE_NUM_TO_KEY
 // are loaded from shared/constants.js
+
+// Safe Lucide icon replacement — avoids "No elements found" error when
+// no unprocessed [data-lucide] elements exist in the DOM
+function safeCreateIcons(opts) {
+    if (typeof lucide === 'undefined') return;
+    try { lucide.createIcons(opts); } catch (_) { /* no unprocessed icons */ }
+}
+
 const SESSION_FLAG_KEY = 'admin_session_active';
 
 // State
@@ -87,7 +95,7 @@ async function login() {
             document.getElementById('app').classList.add('visible');
             loadDashboard();
             startBackgroundRefresh();
-            if (typeof lucide !== 'undefined') lucide.createIcons();
+            safeCreateIcons();
         } else {
             document.getElementById('loginError').style.display = 'block';
         }
@@ -124,7 +132,7 @@ async function checkAuth() {
         document.getElementById('app').classList.add('visible');
         loadDashboard();
         startBackgroundRefresh();
-        if (typeof lucide !== 'undefined') lucide.createIcons();
+        safeCreateIcons();
         return;
     }
 
@@ -141,7 +149,7 @@ async function checkAuth() {
             document.getElementById('app').classList.add('visible');
             loadDashboard();
             startBackgroundRefresh();
-            if (typeof lucide !== 'undefined') lucide.createIcons();
+            safeCreateIcons();
         } else {
             localStorage.removeItem(ADMIN_TOKEN_KEY);
             sessionStorage.removeItem(SESSION_FLAG_KEY);
@@ -174,7 +182,7 @@ function switchTab(tabName, evt) {
         evt.currentTarget.classList.add('active');
     }
     document.getElementById(`tab-${tabName}`).classList.add('active');
-    if (typeof lucide !== 'undefined') lucide.createIcons();
+    safeCreateIcons();
 
     // Sync bottom nav active state (mobile)
     syncBottomNav(tabName);
@@ -203,7 +211,7 @@ function toggleTabDropdown(event) {
         positionFloating(btn, menu);
         menu.classList.add('open');
         btn.setAttribute('aria-expanded', 'true');
-        if (typeof lucide !== 'undefined') lucide.createIcons();
+        safeCreateIcons();
     }
 }
 
@@ -254,7 +262,7 @@ function toggleBottomNavSubmenu(event) {
         popover.style.left = Math.max(8, rect.left + rect.width / 2 - 90) + 'px';
     }
 
-    if (typeof lucide !== 'undefined') lucide.createIcons();
+    safeCreateIcons();
 }
 
 function toggleBottomNavMore(event) {
@@ -277,7 +285,7 @@ function toggleBottomNavMore(event) {
         popover.style.left = leftPos + 'px';
     }
 
-    if (typeof lucide !== 'undefined') lucide.createIcons();
+    safeCreateIcons();
 }
 
 function closeBottomNavPopovers() {
@@ -358,7 +366,7 @@ function loadMobileDocPreview(recordId) {
     modal.classList.add('show');
     document.body.style.overflow = 'hidden';
 
-    if (typeof lucide !== 'undefined') lucide.createIcons();
+    safeCreateIcons();
 
     // No onedrive_item_id — show error
     if (!item.onedrive_item_id) {
@@ -576,7 +584,7 @@ async function loadDashboard(silent = false) {
         const currentStageFilter = document.getElementById('stageFilter').value;
         toggleStageFilter(currentStageFilter, false); // Pass false to prevent re-filtering
 
-        if (typeof lucide !== 'undefined') lucide.createIcons();
+        safeCreateIcons();
 
         // Update year dropdowns with available years from API
         if (data.available_years && data.available_years.length > 0) {
@@ -616,7 +624,7 @@ function renderClientsTable(clients) {
                 <p>לא נמצאו לקוחות</p>
             </div>
         `;
-        if (typeof lucide !== 'undefined') lucide.createIcons();
+        safeCreateIcons();
         return;
     }
 
@@ -791,7 +799,7 @@ function renderClientsTable(clients) {
 
     html += cards + '</div>';
     container.innerHTML = html;
-    if (typeof lucide !== 'undefined') lucide.createIcons();
+    safeCreateIcons();
 }
 
 function filterClients() {
@@ -999,7 +1007,7 @@ function openStageDropdown(event, reportId, currentStage) {
     positionFloating(event.currentTarget, dropdown);
     dropdown.style.display = 'block';
 
-    if (typeof lucide !== 'undefined') lucide.createIcons();
+    safeCreateIcons();
 
     // Prevent immediate close from the same click event bubbling to document
     requestAnimationFrame(() => {
@@ -1086,7 +1094,7 @@ function updateClientStageInPlace(reportId, newStage) {
     badge.setAttribute('onclick', `openStageDropdown(event, '${escapeAttr(reportId)}', '${escapeAttr(newStage)}')`);
     badge.innerHTML = `<i data-lucide="${stage.icon}" class="icon-sm"></i> ${stage.label} <span class="stage-caret">&#x25BE;</span>`;
 
-    if (typeof lucide !== 'undefined') lucide.createIcons();
+    safeCreateIcons();
 }
 
 function recalculateStats() {
@@ -1345,7 +1353,7 @@ function renderHistoryPopover(popover, history) {
                 <i data-lucide="clock" style="width:20px;height:20px;margin-bottom:8px;opacity:0.4;"></i>
                 <div>לא נשלחו תזכורות</div>
             </div>`;
-        if (typeof lucide !== 'undefined') lucide.createIcons({ attrs: { class: 'icon-sm' } });
+        safeCreateIcons({ attrs: { class: 'icon-sm' } });
         return;
     }
 
@@ -1371,10 +1379,10 @@ function copyToClipboard(text, btn) {
         if (btn) {
             const origHTML = btn.innerHTML;
             btn.innerHTML = '<i data-lucide="check" class="icon-xs"></i>';
-            if (typeof lucide !== 'undefined') lucide.createIcons();
+            safeCreateIcons();
             setTimeout(() => {
                 btn.innerHTML = origHTML;
-                if (typeof lucide !== 'undefined') lucide.createIcons();
+                safeCreateIcons();
             }, 1500);
         }
     }).catch(() => {
@@ -1683,7 +1691,7 @@ function setAddMode(mode) {
         btnManual.disabled = true;
     }
 
-    if (typeof lucide !== 'undefined') lucide.createIcons();
+    safeCreateIcons();
 }
 
 async function addManualClient() {
@@ -1890,7 +1898,7 @@ function renderPendingClients() {
             </div>
         `;
         document.getElementById('sendActions').style.display = 'none';
-        if (typeof lucide !== 'undefined') lucide.createIcons();
+        safeCreateIcons();
         return;
     }
 
@@ -1952,7 +1960,7 @@ function renderPendingClients() {
     container.innerHTML = html;
     document.getElementById('sendActions').style.display = 'block';
     updateSelectedCount();
-    if (typeof lucide !== 'undefined') lucide.createIcons();
+    safeCreateIcons();
 }
 
 const MAX_BULK_SEND = 50;
@@ -2115,7 +2123,7 @@ function renderReviewTable(queue) {
                 <p>אין לקוחות מוכנים להכנה כרגע</p>
             </div>
         `;
-        if (typeof lucide !== 'undefined') lucide.createIcons();
+        safeCreateIcons();
         return;
     }
 
@@ -2224,7 +2232,7 @@ function renderReviewTable(queue) {
 
     html += cards + '</div>';
     container.innerHTML = html;
-    if (typeof lucide !== 'undefined') lucide.createIcons();
+    safeCreateIcons();
 }
 
 let _markCompleteLocked = false;
@@ -2755,7 +2763,7 @@ async function loadAIClassifications(silent = false) {
                     </button>
                 </div>
             `;
-            if (typeof lucide !== 'undefined') lucide.createIcons();
+            safeCreateIcons();
         }
     }
 }
@@ -2891,7 +2899,7 @@ function renderAICards(items) {
                 </div>
             `;
         }
-        if (typeof lucide !== 'undefined') lucide.createIcons();
+        safeCreateIcons();
         return;
     }
 
@@ -3107,7 +3115,7 @@ function renderAICards(items) {
         });
     });
 
-    if (typeof lucide !== 'undefined') lucide.createIcons();
+    safeCreateIcons();
 
     // DL-210: Show review-done prompt for clients where all items are already reviewed
     for (const [clientName, clientItems] of Object.entries(groups)) {
@@ -3477,7 +3485,7 @@ function startReReview(recordId) {
     const actionsDiv = card.querySelector('.ai-card-actions');
     if (actionsDiv) actionsDiv.innerHTML = actionsHtml;
 
-    if (typeof lucide !== 'undefined') lucide.createIcons();
+    safeCreateIcons();
 }
 
 // DL-086: Cancel re-review — re-render the card in reviewed state
@@ -3493,7 +3501,7 @@ function cancelReReview(recordId) {
     tmpDiv.innerHTML = renderReviewedCard(item, item.review_status || 'pending');
     const newCard = tmpDiv.firstElementChild;
     card.replaceWith(newCard);
-    if (typeof lucide !== 'undefined') lucide.createIcons();
+    safeCreateIcons();
 }
 
 function toggleAIAccordion(header) {
@@ -3816,7 +3824,7 @@ function showAIReassignModal(recordId) {
     });
 
     document.getElementById('aiReassignModal').classList.add('show');
-    if (typeof lucide !== 'undefined') lucide.createIcons();
+    safeCreateIcons();
 }
 
 function closeAIReassignModal() {
@@ -3954,7 +3962,7 @@ function transitionCardToReviewed(recordId, newReviewStatus, responseData) {
     }
 
     recalcAIStats();
-    if (typeof lucide !== 'undefined') lucide.createIcons();
+    safeCreateIcons();
 
     // DL-210: Check if all items for this client are now reviewed
     if (item) {
@@ -4016,7 +4024,7 @@ function showClientReviewDonePrompt(clientName) {
         statsEl.innerHTML = `<span class="ai-accordion-stat-badge badge-success">✓ הושלם</span>`;
     }
 
-    if (typeof lucide !== 'undefined') lucide.createIcons();
+    safeCreateIcons();
 }
 
 // DL-210: Remove all reviewed cards for this client from the UI + delete from Airtable
@@ -4053,7 +4061,7 @@ async function dismissClientReview(clientName) {
         if (aiClassificationsData.length === 0) {
             document.getElementById('aiCardsContainer').style.display = 'none';
             document.getElementById('aiEmptyState').style.display = 'block';
-            if (typeof lucide !== 'undefined') lucide.createIcons();
+            safeCreateIcons();
         }
 
         recalcAIStats();
@@ -4085,7 +4093,7 @@ function animateAndRemoveAI(recordId) {
             if (aiClassificationsData.length === 0) {
                 document.getElementById('aiCardsContainer').style.display = 'none';
                 document.getElementById('aiEmptyState').style.display = 'block';
-                if (typeof lucide !== 'undefined') lucide.createIcons();
+                safeCreateIcons();
             }
 
             recalcAIStats();
@@ -4509,7 +4517,7 @@ function showAIToast(message, type, action) {
     }
 
     toast.classList.add('show');
-    if (typeof lucide !== 'undefined') lucide.createIcons();
+    safeCreateIcons();
 
     // Action toasts stay until manually dismissed; plain toasts auto-dismiss
     toast.onmouseenter = null;
@@ -4571,7 +4579,7 @@ async function loadReminders(silent = false) {
                     </button>
                 </div>
             `;
-            if (typeof lucide !== 'undefined') lucide.createIcons();
+            safeCreateIcons();
         }
     }
 }
@@ -4695,7 +4703,7 @@ function renderRemindersTable(typeA, typeB) {
                 <p>${remindersData.length === 0 ? 'אין תזכורות מתוזמנות' : 'אין תוצאות לסינון הנוכחי'}</p>
             </div>
         `;
-        if (typeof lucide !== 'undefined') lucide.createIcons();
+        safeCreateIcons();
         return;
     }
 
@@ -4738,7 +4746,7 @@ function renderRemindersTable(typeA, typeB) {
     html += `</div></div>`;
 
     container.innerHTML = html;
-    if (typeof lucide !== 'undefined') lucide.createIcons();
+    safeCreateIcons();
 }
 
 function buildReminderTable(items, showDocs) {
@@ -5004,7 +5012,7 @@ function updateReminderSelectedCount() {
         rbar.classList.remove('floating-bulk-bar');
         rbar.style.display = 'none';
     }
-    if (typeof lucide !== 'undefined') lucide.createIcons();
+    safeCreateIcons();
 }
 
 function deselectMutedClients() {
@@ -5381,7 +5389,7 @@ function openReminderSettingsModal() {
         reminderDefaultMax != null ? reminderDefaultMax : '';
     document.getElementById('reminderSettingsModal').classList.add('show');
     document.getElementById('settingsDefaultMaxInput').focus();
-    if (typeof lucide !== 'undefined') lucide.createIcons();
+    safeCreateIcons();
 }
 
 function closeReminderSettingsModal() {
@@ -5810,7 +5818,7 @@ function toggleArchiveMode() {
 
     resetClientBulkSelection();
     filterClients();
-    if (typeof lucide !== 'undefined') lucide.createIcons();
+    safeCreateIcons();
 }
 
 // ==================== ROW MENU / CONTEXT MENU ====================
@@ -5914,7 +5922,7 @@ function openClientContextMenu(e) {
     menu.style.visibility = '';
     menu.classList.add('open');
 
-    if (typeof lucide !== 'undefined') lucide.createIcons();
+    safeCreateIcons();
 }
 
 // ==================== BULK ACTIONS (CHECKBOXES) ====================
@@ -5972,7 +5980,7 @@ function updateClientSelectedCount() {
         archiveBtn.innerHTML = '<i data-lucide="archive" class="icon-sm"></i> העבר לארכיון';
         archiveBtn.className = 'btn btn-sm btn-danger';
     }
-    if (typeof lucide !== 'undefined') lucide.createIcons();
+    safeCreateIcons();
 }
 
 function resetClientBulkSelection() {
@@ -6124,7 +6132,7 @@ function showModal(type, title, body, stats = null, action = null) {
     }
 
     document.getElementById('resultModal').classList.add('visible');
-    if (typeof lucide !== 'undefined') lucide.createIcons();
+    safeCreateIcons();
 
     if (type === 'success') {
         setTimeout(() => closeModal(), 3000);
@@ -6220,7 +6228,7 @@ function cancelInlineConfirm(recordId) {
         });
     });
 
-    if (typeof lucide !== 'undefined') lucide.createIcons();
+    safeCreateIcons();
 }
 
 // ==================== CONFIRM DIALOG ====================
@@ -6234,7 +6242,7 @@ function showConfirmDialog(message, onConfirm, confirmText = 'אישור', dange
     btn.textContent = confirmText;
     btn.className = danger ? 'btn confirm-btn-danger' : 'btn btn-primary';
     document.getElementById('confirmDialog').classList.add('show');
-    if (typeof lucide !== 'undefined') lucide.createIcons();
+    safeCreateIcons();
 }
 
 function closeConfirmDialog(confirmed) {
@@ -6288,7 +6296,7 @@ function showApproveConflictDialog(docTitle, existingName, newName, onMerge, onK
     document.getElementById('conflictCancelBtn').addEventListener('click', () => { cleanup(); });
 
     dialog.classList.add('show');
-    if (typeof lucide !== 'undefined') lucide.createIcons();
+    safeCreateIcons();
 }
 
 // ==================== YEAR DROPDOWNS ====================
@@ -6423,7 +6431,7 @@ async function previewYearRollover() {
         `).join('');
 
         document.getElementById('rolloverPreview').classList.add('visible');
-        if (typeof lucide !== 'undefined') lucide.createIcons();
+        safeCreateIcons();
 
     } catch (error) {
         hideLoading();
@@ -6546,7 +6554,7 @@ populateYearDropdowns();
 })();
 
 document.addEventListener('DOMContentLoaded', () => {
-    if (typeof lucide !== 'undefined') lucide.createIcons();
+    safeCreateIcons();
     initOfflineDetection();
 });
 
@@ -6681,7 +6689,7 @@ function renderQuestionnairesTable(items) {
                 <div class="empty-state-icon"><i data-lucide="file-text" class="icon-2xl"></i></div>
                 <p>${questionnairesData.length === 0 ? 'אין שאלונים שהוגשו לשנה זו' : 'לא נמצאו תוצאות לחיפוש'}</p>
             </div>`;
-        if (typeof lucide !== 'undefined') lucide.createIcons();
+        safeCreateIcons();
         return;
     }
 
@@ -6793,7 +6801,7 @@ function renderQuestionnairesTable(items) {
     cards += '</ul>';
 
     container.innerHTML = `<div class="table-scroll-container" role="region" tabindex="0" aria-label="טבלת שאלונים">${html}${cards}</div>`;
-    if (typeof lucide !== 'undefined') lucide.createIcons();
+    safeCreateIcons();
 }
 
 // Toggle questionnaire detail in mobile card (DL-214)
@@ -6806,7 +6814,7 @@ function toggleQuestionnaireCardDetail(id) {
         const icon = toggle.querySelector('i');
         if (icon) {
             icon.setAttribute('data-lucide', detail.classList.contains('open') ? 'chevron-down' : 'chevron-left');
-            if (typeof lucide !== 'undefined') lucide.createIcons();
+            safeCreateIcons();
         }
     }
 }
@@ -6821,7 +6829,7 @@ function toggleQaHideNoAnswers() {
             if (contentEl) contentEl.innerHTML = buildQADetailHTML(questionnaireFilteredData[idx]);
         }
     });
-    if (typeof lucide !== 'undefined') lucide.createIcons();
+    safeCreateIcons();
 }
 
 function buildQADetailHTML(item) {
@@ -6947,7 +6955,7 @@ function toggleQuestionnaireDetail(id) {
         detailRow.style.display = '';
         toggleBtn?.classList.add('expanded');
         mainRow?.classList.add('qa-main-row-sticky');
-        if (typeof lucide !== 'undefined') lucide.createIcons();
+        safeCreateIcons();
     }
 }
 
@@ -7281,7 +7289,7 @@ async function openSplitModal(recordId) {
     document.getElementById('splitRangeError').style.display = 'none';
 
     setSplitMode('all');
-    lucide.createIcons();
+    safeCreateIcons();
 
     try {
         await ensurePdfJs();
