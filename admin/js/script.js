@@ -1647,7 +1647,13 @@ async function performServerImport(clients, year, successMessage, options) {
 
     } catch (error) {
         hideLoading();
-        showModal('error', 'שגיאה', 'שגיאה בשמירת הנתונים: ' + error.message);
+        const isTimeout = error.name === 'TimeoutError' || error.message?.includes('timed out') || error.message?.includes('aborted');
+        if (isTimeout) {
+            showModal('warning', 'תם הזמן',
+                'הבקשה עדיין רצה ברקע — ייתכן שהלקוחות נוספו בהצלחה. רענן את הדף ובדוק לפני שתנסה שוב.');
+        } else {
+            showModal('error', 'שגיאה', 'שגיאה בשמירת הנתונים: ' + error.message);
+        }
         return null;
     }
 }
