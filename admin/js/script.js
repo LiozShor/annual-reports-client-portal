@@ -1118,6 +1118,13 @@ function recalculateStats() {
     }
 }
 
+function updateImportFilingTypeLabel(type) {
+    const label = document.getElementById('importFilingTypeLabel');
+    if (!label) return;
+    label.textContent = FILING_TYPE_LABELS[type] || type;
+    label.className = `ai-filing-type-badge ai-ft-${type}`;
+}
+
 function switchEntityTab(type) {
     activeEntityTab = type;
     sessionStorage.setItem('entityTab', type);
@@ -1151,11 +1158,12 @@ function switchEntityTab(type) {
     questionnaireLoaded = false; questionnaireLoadedAt = 0;
     reminderLoaded = false; reminderLoadedAt = 0;
 
-    // Sync import/add filing type dropdowns
+    // Sync import/add filing type dropdowns + header label
     const manualFT = document.getElementById('manualFilingType');
     const importFT = document.getElementById('importFilingType');
     if (manualFT) manualFT.value = type;
     if (importFT) importFT.value = type;
+    updateImportFilingTypeLabel(type);
 
     // DL-247/DL-250: Reload active tab on entity switch — opacity fade for tabs that fetch data
     const activeContent = document.querySelector('.tab-content.active');
@@ -6543,6 +6551,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // Initialize
+updateImportFilingTypeLabel(activeEntityTab);
 checkAuth();
 
 
