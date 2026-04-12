@@ -1626,7 +1626,7 @@ async function performServerImport(clients, year, successMessage, options) {
                 clients: clients,
                 filing_type: filingType
             })
-        }, FETCH_TIMEOUTS.slow);
+        }, FETCH_TIMEOUTS.batch);
 
         const data = await response.json();
 
