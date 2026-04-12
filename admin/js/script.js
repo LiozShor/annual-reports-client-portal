@@ -1470,7 +1470,7 @@ document.addEventListener('visibilitychange', () => {
 async function loadAIReviewCount() {
     const badge = document.getElementById('aiReviewTabBadge');
     try {
-        const resp = await deduplicatedFetch(`${ENDPOINTS.GET_PENDING_CLASSIFICATIONS}?filing_type=all`, { headers: { 'Authorization': `Bearer ${authToken}` } }, FETCH_TIMEOUTS.quick); // DL-238: combined badge count
+        const resp = await deduplicatedFetch(`${ENDPOINTS.GET_PENDING_CLASSIFICATIONS}?filing_type=all`, { headers: { 'Authorization': `Bearer ${authToken}` } }, FETCH_TIMEOUTS.slow); // DL-254: must match loadAIClassifications timeout (shared via dedup)
         const data = await resp.json();
         badge.classList.remove('ai-badge-loading');
         if (data.ok && data.items) {
