@@ -23,6 +23,16 @@ let pendingClientsLoaded = false;
 let dashboardLoadedAt = 0;
 let pendingClientsLoadedAt = 0;
 const STALE_AFTER_MS = 30000; // 30s — skip re-fetch if data is fresh
+
+// DL-255: Debounce utility for search inputs
+function debounce(fn, ms = 150) {
+    let timer;
+    return (...args) => { clearTimeout(timer); timer = setTimeout(() => fn(...args), ms); };
+}
+const debouncedFilterClients = debounce(filterClients, 150);
+const debouncedFilterReminders = debounce(filterReminders, 150);
+const debouncedApplyAIFilters = debounce(applyAIFilters, 150);
+const debouncedFilterQuestionnaires = debounce(filterQuestionnaires, 150);
 let activeEntityTab = sessionStorage.getItem('entityTab') || 'annual_report';
 
 const FILING_TYPE_LABELS = {
@@ -578,10 +588,11 @@ async function loadDashboard(silent = false) {
         reviewQueueData = data.review_queue || [];
         updateReviewQueueUI();
 
-        // Render table
-        renderClientsTable(clientsData);
+        // DL-255: Reset base key to force full rebuild, then filterClients handles render + hide/show
+        _clientsBaseKey = '';
+        _clientsSortKey = '';
 
-        // Ensure the correct stat card is active based on current filter
+        // Render table via filterClients (builds full base set, applies current filters)
         const currentStageFilter = document.getElementById('stageFilter').value;
         toggleStageFilter(currentStageFilter, false); // Pass false to prevent re-filtering
 
@@ -805,38 +816,56 @@ function renderClientsTable(clients) {
     safeCreateIcons();
 }
 
+let _clientsSortKey = ''; // DL-255: track sort to detect when full rebuild needed
+let _clientsBaseKey = ''; // DL-255: track entity+archive to detect base set changes
 function filterClients() {
     resetClientBulkSelection();
     const search = document.getElementById('searchInput').value.toLowerCase();
     const stage = document.getElementById('stageFilter').value;
     const year = document.getElementById('yearFilter').value;
 
-    let filtered = clientsData;
+    // Base set: entity type + archive mode (these require full rebuild when changed)
+    let base = clientsData.filter(c => (c.filing_type || 'annual_report') === activeEntityTab);
+    base = base.filter(c => showArchivedMode ? c.is_active === false : c.is_active !== false);
 
-    // Filter by entity type
-    filtered.forEach(c => { if (!c.filing_type) console.warn('Missing filing_type for record', c.id || c.report_id); });
-    filtered = filtered.filter(c => (c.filing_type || 'annual_report') === activeEntityTab);
-
-    // Filter by active status based on archive mode
-    filtered = filtered.filter(c => showArchivedMode ? c.is_active === false : c.is_active !== false);
-
+    // Apply search/stage/year filters on top
+    let filtered = base;
     if (search) {
         filtered = filtered.filter(c =>
             c.name?.toLowerCase().includes(search) ||
             c.email?.toLowerCase().includes(search)
         );
     }
-
     if (stage) {
         filtered = filtered.filter(c => c.stage === STAGE_NUM_TO_KEY[stage]);
     }
-
     if (year) {
         filtered = filtered.filter(c => String(c.year) === year);
     }
 
-    filtered = sortClients(filtered);
-    renderClientsTable(filtered);
+    const sortKey = `${currentSort.column}:${currentSort.direction}`;
+    const baseKey = `${activeEntityTab}:${showArchivedMode}`;
+    const container = document.getElementById('clientsTableContainer');
+    const tableExists = dashboardLoaded && container.querySelector('table');
+    const needsRebuild = !tableExists || _clientsSortKey !== sortKey || _clientsBaseKey !== baseKey;
+
+    if (needsRebuild) {
+        // DL-255: Full rebuild — render ALL base rows (sorted), then hide/show for filters
+        _clientsSortKey = sortKey;
+        _clientsBaseKey = baseKey;
+        renderClientsTable(sortClients(base));
+    }
+
+    // DL-255: Hide/show — toggle visibility for search/stage/year filters
+    if (container.querySelector('table')) {
+        const visibleIds = new Set(filtered.map(c => c.report_id));
+        container.querySelectorAll('tr[data-report-id]').forEach(r => {
+            r.style.display = visibleIds.has(r.dataset.reportId) ? '' : 'none';
+        });
+        container.querySelectorAll('li.mobile-card[data-report-id]').forEach(c => {
+            c.style.display = visibleIds.has(c.dataset.reportId) ? '' : 'none';
+        });
+    }
     updateActiveFilterCount();
 }
 

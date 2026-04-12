@@ -175,7 +175,7 @@
                             <div class="filter-group">
                                 <label><i data-lucide="search" class="icon-sm"></i> חיפוש:</label>
                                 <input type="text" id="searchInput" placeholder="חיפוש לפי שם..."
-                                    oninput="filterClients()">
+                                    oninput="debouncedFilterClients()">
                             </div>
                             <div class="filter-group">
                                 <label><i data-lucide="filter" class="icon-sm"></i> סינון:</label>
@@ -599,7 +599,7 @@
                 <div class="reminder-filter-bar">
                     <div class="filter-group">
                         <label><i data-lucide="search" class="icon-sm"></i></label>
-                        <input type="text" id="reminderSearchInput" placeholder="חיפוש לפי שם..." oninput="filterReminders()">
+                        <input type="text" id="reminderSearchInput" placeholder="חיפוש לפי שם..." oninput="debouncedFilterReminders()">
                     </div>
                     <button class="btn btn-sm btn-secondary reminder-settings-btn" onclick="openReminderSettingsModal()">
                         <i data-lucide="settings" class="icon-sm"></i> הגדרות
@@ -649,7 +649,7 @@
                 <div class="ai-filter-bar" style="padding: 8px 12px;">
                     <div class="filter-group" style="max-width: 260px;">
                         <label><i data-lucide="search" class="icon-sm"></i></label>
-                        <input type="text" id="aiSearchInput" placeholder="חיפוש לפי שם לקוח..." oninput="applyAIFilters()" style="padding: 6px 10px; font-size: 13px;">
+                        <input type="text" id="aiSearchInput" placeholder="חיפוש לפי שם לקוח..." oninput="debouncedApplyAIFilters()" style="padding: 6px 10px; font-size: 13px;">
                     </div>
                 </div>
 
@@ -730,7 +730,7 @@
                 <div class="questionnaire-filter-bar">
                     <div class="filter-group">
                         <label><i data-lucide="search" class="icon-sm"></i></label>
-                        <input type="text" id="questionnaireSearchInput" placeholder="חיפוש לפי שם לקוח..." oninput="filterQuestionnaires()">
+                        <input type="text" id="questionnaireSearchInput" placeholder="חיפוש לפי שם לקוח..." oninput="debouncedFilterQuestionnaires()">
                     </div>
                 </div>
 

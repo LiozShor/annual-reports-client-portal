@@ -6590,3 +6590,11 @@ tr:hover .client-edit-link {
 .ru-delete:hover {
     color: var(--danger-600, #dc2626);
 }
+
+/* DL-255: Skip rendering off-screen table rows (browser-native optimization) */
+#clientsTableContainer tbody tr,
+#questionnaireTableContainer tbody tr,
+#reminderTableContainer tbody tr {
+    content-visibility: auto;
+    contain-intrinsic-size: 0 48px;
+}
