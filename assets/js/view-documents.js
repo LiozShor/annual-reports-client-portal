@@ -427,8 +427,8 @@ function renderDocuments() {
                         helpText = helpText.replace(/\{company_name\}/g, matchedCompany);
                         helpText = helpText.replace(/\{company_url\}/g, matchedUrl);
                     } else {
-                        // Graceful fallback: remove link placeholder entirely
-                        helpText = helpText.replace(/<a href="\{company_url\}"[^>]*>\{company_name\}<\/a>/g, '');
+                        // Graceful fallback: remove link placeholder entirely (handles nested <b> tags)
+                        helpText = helpText.replace(/<a href="\{company_url\}"[^>]*>[\s\S]*?\{company_name\}[\s\S]*?<\/a>/g, '');
                         helpText = helpText.replace(/\{company_name\}/g, '');
                         helpText = helpText.replace(/\{company_url\}/g, '#');
                     }
