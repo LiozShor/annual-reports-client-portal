@@ -761,8 +761,9 @@ async function loadRecentMessages() {
         }
 
         container.innerHTML = messages.map(m => {
-            const snippet = (m.raw_snippet || '').substring(0, 200);
-            return `<div class="msg-row" title="${escapeHtml(snippet)}" onclick="window.location.href='document-manager.html?report_id=${encodeURIComponent(m.report_id)}&token=${encodeURIComponent(authToken)}'">
+            const snippet = (m.raw_snippet || '').substring(0, 200).replace(/"/g, '&quot;').replace(/</g, '&lt;');
+            const navParam = m.client_id ? `client_id=${encodeURIComponent(m.client_id)}` : `report_id=${encodeURIComponent(m.report_id)}`;
+            return `<div class="msg-row" title="${snippet}" onclick="window.location.href='../document-manager.html?${navParam}'">
                 <div class="msg-icon"><i data-lucide="mail" class="icon-sm"></i></div>
                 <div class="msg-content">
                     <div class="msg-meta">
