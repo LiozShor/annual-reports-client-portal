@@ -307,92 +307,6 @@
                     </div>
                 </div>
 
-                <!-- Secondary zone: questionnaire, notes, client communications -->
-                <div class="secondary-zone">
-                    <div class="secondary-zone-header">
-                        <i data-lucide="info" class="icon-sm"></i>
-                        <span>מידע נוסף</span>
-                    </div>
-
-                    <!-- Questionnaire section -->
-                    <div class="card-section" id="questionnaireSection">
-                        <button class="collapsible-trigger" id="questionnaireTrigger"
-                            onclick="this.setAttribute('aria-expanded', this.getAttribute('aria-expanded')==='true'?'false':'true'); this.nextElementSibling.classList.toggle('open'); loadQuestionnaireForReport();"
-                            aria-expanded="false">
-                            <span class="flex items-center gap-2">
-                                <i data-lucide="file-text" class="icon-sm"></i>
-                                <span id="questionnaireLabel">השאלון השנתי</span>
-                            </span>
-                            <i data-lucide="chevron-down" class="icon-sm"></i>
-                        </button>
-                        <div class="collapsible-content">
-                            <div style="display:flex; justify-content:flex-end; gap: var(--sp-2); padding: var(--sp-3) var(--sp-4) 0;">
-                                <button id="toggleNoAnswersBtn" class="btn btn-sm btn-ghost" onclick="toggleHideNoAnswers()">
-                                    <i data-lucide="eye" class="icon-sm"></i> הצג תשובות לא
-                                </button>
-                                <button class="btn btn-sm btn-ghost" onclick="printQuestionnaireFromDocManager()">
-                                    <i data-lucide="printer" class="icon-sm"></i> הדפסה
-                                </button>
-                            </div>
-                            <div id="questionnaireContent" style="padding: 0 var(--sp-4) var(--sp-4);"></div>
-                        </div>
-                    </div>
-
-                    <!-- Notes section -->
-                    <div class="card-section" id="notesSection">
-                        <button class="collapsible-trigger" id="notesTrigger"
-                            onclick="this.setAttribute('aria-expanded', this.getAttribute('aria-expanded')==='true'?'false':'true'); this.nextElementSibling.classList.toggle('open');"
-                            aria-expanded="false">
-                            <span class="flex items-center gap-2">
-                                <i data-lucide="sticky-note" class="icon-sm"></i>
-                                <span>הערות פנימיות לדוח</span>
-                            </span>
-                            <i data-lucide="chevron-down" class="icon-sm"></i>
-                        </button>
-                        <div class="collapsible-content">
-                            <div style="padding: var(--sp-4);">
-                                <textarea id="reportNotesTextarea" class="notes-textarea" rows="3" placeholder="הוסף הערות פנימיות לדוח..."></textarea>
-                                <span id="notesSaveIndicator" class="save-indicator"></span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Client communications timeline -->
-                    <div class="card-section" id="clientNotesSection">
-                        <button class="collapsible-trigger" id="clientNotesTrigger"
-                            onclick="this.setAttribute('aria-expanded', this.getAttribute('aria-expanded')==='true'?'false':'true'); this.nextElementSibling.classList.toggle('open');"
-                            aria-expanded="false">
-                            <span class="flex items-center gap-2">
-                                <i data-lucide="mail" class="icon-sm"></i>
-                                <span>הודעות הלקוח</span>
-                                <span id="clientNotesCount" class="badge badge-info" style="display:none;">0</span>
-                            </span>
-                            <i data-lucide="chevron-down" class="icon-sm"></i>
-                        </button>
-                        <div class="collapsible-content">
-                            <div id="clientNotesTimeline" class="client-notes-timeline"></div>
-                        </div>
-                    </div>
-
-                    <!-- Rejected uploads archive -->
-                    <div class="card-section" id="rejectedUploadsSection">
-                        <button class="collapsible-trigger" id="rejectedUploadsTrigger"
-                            onclick="this.setAttribute('aria-expanded', this.getAttribute('aria-expanded')==='true'?'false':'true'); this.nextElementSibling.classList.toggle('open');"
-                            aria-expanded="false">
-                            <span class="flex items-center gap-2">
-                                <i data-lucide="archive" class="icon-sm"></i>
-                                <span>&#x05D0;&#x05E8;&#x05DB;&#x05D9;&#x05D5;&#x05DF; &#x05DE;&#x05E1;&#x05DE;&#x05DB;&#x05D9;&#x05DD; &#x05DC;&#x05D0; &#x05E8;&#x05DC;&#x05D5;&#x05D5;&#x05E0;&#x05D8;&#x05D9;&#x05D9;&#x05DD;</span>
-                                <span id="rejectedUploadsCount" class="badge badge-warning" style="display:none;">0</span>
-                            </span>
-                            <i data-lucide="chevron-down" class="icon-sm"></i>
-                        </button>
-                        <div class="collapsible-content">
-                            <div id="rejectedUploadsList" class="rejected-uploads-list"></div>
-                        </div>
-                    </div>
-
-                </div><!-- /.secondary-zone -->
-
                 <div class="actions-row">
                     <div id="save-reset-row" style="display:none;">
                         <button id="saveChangesBtn" class="btn btn-primary btn-lg" onclick="openConfirmation()">
@@ -409,6 +323,91 @@
                     </div>
                 </div>
             </div>
+
+            <!-- Secondary zone: questionnaire, notes, client communications (outside #content so it shows at all stages) -->
+            <div id="secondaryZone" class="secondary-zone" style="display:none;">
+                <div class="secondary-zone-header">
+                    <i data-lucide="info" class="icon-sm"></i>
+                    <span>מידע נוסף</span>
+                </div>
+
+                <!-- Questionnaire section -->
+                <div class="card-section" id="questionnaireSection">
+                    <button class="collapsible-trigger" id="questionnaireTrigger"
+                        onclick="this.setAttribute('aria-expanded', this.getAttribute('aria-expanded')==='true'?'false':'true'); this.nextElementSibling.classList.toggle('open'); loadQuestionnaireForReport();"
+                        aria-expanded="false">
+                        <span class="flex items-center gap-2">
+                            <i data-lucide="file-text" class="icon-sm"></i>
+                            <span id="questionnaireLabel">השאלון השנתי</span>
+                        </span>
+                        <i data-lucide="chevron-down" class="icon-sm"></i>
+                    </button>
+                    <div class="collapsible-content">
+                        <div style="display:flex; justify-content:flex-end; gap: var(--sp-2); padding: var(--sp-3) var(--sp-4) 0;">
+                            <button id="toggleNoAnswersBtn" class="btn btn-sm btn-ghost" onclick="toggleHideNoAnswers()">
+                                <i data-lucide="eye" class="icon-sm"></i> הצג תשובות לא
+                            </button>
+                            <button class="btn btn-sm btn-ghost" onclick="printQuestionnaireFromDocManager()">
+                                <i data-lucide="printer" class="icon-sm"></i> הדפסה
+                            </button>
+                        </div>
+                        <div id="questionnaireContent" style="padding: 0 var(--sp-4) var(--sp-4);"></div>
+                    </div>
+                </div>
+
+                <!-- Notes section -->
+                <div class="card-section" id="notesSection">
+                    <button class="collapsible-trigger" id="notesTrigger"
+                        onclick="this.setAttribute('aria-expanded', this.getAttribute('aria-expanded')==='true'?'false':'true'); this.nextElementSibling.classList.toggle('open');"
+                        aria-expanded="false">
+                        <span class="flex items-center gap-2">
+                            <i data-lucide="sticky-note" class="icon-sm"></i>
+                            <span>הערות פנימיות לדוח</span>
+                        </span>
+                        <i data-lucide="chevron-down" class="icon-sm"></i>
+                    </button>
+                    <div class="collapsible-content">
+                        <div style="padding: var(--sp-4);">
+                            <textarea id="reportNotesTextarea" class="notes-textarea" rows="3" placeholder="הוסף הערות פנימיות לדוח..."></textarea>
+                            <span id="notesSaveIndicator" class="save-indicator"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Client communications timeline -->
+                <div class="card-section" id="clientNotesSection">
+                    <button class="collapsible-trigger" id="clientNotesTrigger"
+                        onclick="this.setAttribute('aria-expanded', this.getAttribute('aria-expanded')==='true'?'false':'true'); this.nextElementSibling.classList.toggle('open');"
+                        aria-expanded="false">
+                        <span class="flex items-center gap-2">
+                            <i data-lucide="mail" class="icon-sm"></i>
+                            <span>הודעות הלקוח</span>
+                            <span id="clientNotesCount" class="badge badge-info" style="display:none;">0</span>
+                        </span>
+                        <i data-lucide="chevron-down" class="icon-sm"></i>
+                    </button>
+                    <div class="collapsible-content">
+                        <div id="clientNotesTimeline" class="client-notes-timeline"></div>
+                    </div>
+                </div>
+
+                <!-- Rejected uploads archive -->
+                <div class="card-section" id="rejectedUploadsSection">
+                    <button class="collapsible-trigger" id="rejectedUploadsTrigger"
+                        onclick="this.setAttribute('aria-expanded', this.getAttribute('aria-expanded')==='true'?'false':'true'); this.nextElementSibling.classList.toggle('open');"
+                        aria-expanded="false">
+                        <span class="flex items-center gap-2">
+                            <i data-lucide="archive" class="icon-sm"></i>
+                            <span>&#x05D0;&#x05E8;&#x05DB;&#x05D9;&#x05D5;&#x05DF; &#x05DE;&#x05E1;&#x05DE;&#x05DB;&#x05D9;&#x05DD; &#x05DC;&#x05D0; &#x05E8;&#x05DC;&#x05D5;&#x05D5;&#x05E0;&#x05D8;&#x05D9;&#x05D9;&#x05DD;</span>
+                            <span id="rejectedUploadsCount" class="badge badge-warning" style="display:none;">0</span>
+                        </span>
+                        <i data-lucide="chevron-down" class="icon-sm"></i>
+                    </button>
+                    <div class="collapsible-content">
+                        <div id="rejectedUploadsList" class="rejected-uploads-list"></div>
+                    </div>
+                </div>
+            </div><!-- /#secondaryZone -->
 
         </div>
     </div>

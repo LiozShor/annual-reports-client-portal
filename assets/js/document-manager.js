@@ -271,6 +271,7 @@ async function loadDocuments(reportId) {
             if ((!data.groups || data.document_count === 0) && stageRank <= 1) {
                 document.getElementById('loading').style.display = 'none';
                 document.getElementById('not-started-view').style.display = 'block';
+                document.getElementById('secondaryZone').style.display = '';
                 setTimeout(initIcons, 50);
                 return;
             }
@@ -322,6 +323,7 @@ async function loadDocuments(reportId) {
         updateStats();
         document.getElementById('loading').style.display = 'none';
         document.getElementById('content').style.display = 'block';
+        document.getElementById('secondaryZone').style.display = '';
         setTimeout(initIcons, 50);
         initStickyBar();
         // Pre-fetch questionnaire in background so date shows in header before user clicks
@@ -521,6 +523,7 @@ window.switchFilingTab = function(reportId) {
         restoreFromCache(reportId);
     } else {
         document.getElementById('content').style.display = 'none';
+        document.getElementById('secondaryZone').style.display = 'none';
         document.getElementById('loading').style.display = 'block';
         loadDocuments(reportId);
     }
@@ -580,6 +583,7 @@ function restoreFromCache(reportId) {
     initDocumentDropdown();
     displayDocuments();
     updateStats();
+    document.getElementById('secondaryZone').style.display = '';
     setTimeout(initIcons, 50);
     loadQuestionnaireForReport();
 }
