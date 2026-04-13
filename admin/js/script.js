@@ -165,6 +165,7 @@ async function login() {
             sessionStorage.setItem(SESSION_FLAG_KEY, 'true');
             document.getElementById('loginScreen').style.display = 'none';
             document.getElementById('app').classList.add('visible');
+            document.getElementById('bottomNav').classList.add('visible');
             loadDashboard();
             startBackgroundRefresh();
             safeCreateIcons();
@@ -202,6 +203,7 @@ async function checkAuth() {
     if (sessionStorage.getItem(SESSION_FLAG_KEY) === 'true') {
         document.getElementById('loginScreen').style.display = 'none';
         document.getElementById('app').classList.add('visible');
+        document.getElementById('bottomNav').classList.add('visible');
         loadDashboard();
         startBackgroundRefresh();
         safeCreateIcons();
@@ -219,6 +221,7 @@ async function checkAuth() {
             sessionStorage.setItem(SESSION_FLAG_KEY, 'true');
             document.getElementById('loginScreen').style.display = 'none';
             document.getElementById('app').classList.add('visible');
+            document.getElementById('bottomNav').classList.add('visible');
             loadDashboard();
             startBackgroundRefresh();
             safeCreateIcons();
@@ -231,6 +234,15 @@ async function checkAuth() {
         // Token invalid, stay on login
     }
 }
+
+// bfcache guard: if page is restored from cache with expired/missing token, force logout UI
+window.addEventListener('pageshow', (e) => {
+    if (e.persisted && (!authToken || isTokenExpired(authToken))) {
+        document.getElementById('app').classList.remove('visible');
+        document.getElementById('bottomNav').classList.remove('visible');
+        document.getElementById('loginScreen').style.display = '';
+    }
+});
 
 // Enter key to login
 document.getElementById('passwordInput').addEventListener('keypress', (e) => {
@@ -5057,11 +5069,42 @@ function formatDateHe(dateStr) {
     }
 }
 
+function getUniqueReminderCheckedCount() {
+    return new Set(Array.from(document.querySelectorAll('.reminder-checkbox:checked')).map(cb => cb.value)).size;
+}
+
+function syncDuplicateCheckboxes(scope) {
+    // Sync table ↔ mobile card checkboxes sharing the same value
+    const byValue = {};
+    scope.querySelectorAll('.reminder-checkbox').forEach(cb => {
+        if (!byValue[cb.value]) byValue[cb.value] = [];
+        byValue[cb.value].push(cb);
+    });
+    Object.values(byValue).forEach(group => {
+        const checked = group.some(cb => cb.checked);
+        const disabled = group.some(cb => cb.disabled);
+        group.forEach(cb => { cb.checked = checked; cb.disabled = disabled; });
+    });
+}
+
 function toggleReminderSelectAll(masterCb) {
     const table = masterCb.closest('table');
-    table.querySelectorAll('.reminder-checkbox').forEach(cb => cb.checked = masterCb.checked);
-    // Sync section header checkbox
     const section = masterCb.closest('.reminder-section');
+    if (masterCb.checked) {
+        const seen = new Set();
+        let count = getUniqueReminderCheckedCount();
+        table.querySelectorAll('.reminder-checkbox').forEach(cb => {
+            if (!seen.has(cb.value) && count < MAX_BULK_SEND) {
+                seen.add(cb.value);
+                count++;
+            }
+            cb.checked = seen.has(cb.value);
+        });
+    } else {
+        table.querySelectorAll('.reminder-checkbox').forEach(cb => cb.checked = false);
+    }
+    if (section) syncDuplicateCheckboxes(section);
+    // Sync section header checkbox
     if (section) {
         const headerCb = section.querySelector('.reminder-section-select-all');
         if (headerCb) {
@@ -5074,7 +5117,20 @@ function toggleReminderSelectAll(masterCb) {
 
 function toggleSectionSelectAll(headerCb) {
     const section = headerCb.closest('.reminder-section');
-    section.querySelectorAll('.reminder-checkbox').forEach(cb => cb.checked = headerCb.checked);
+    if (headerCb.checked) {
+        const seen = new Set();
+        let count = getUniqueReminderCheckedCount();
+        section.querySelectorAll('.reminder-checkbox').forEach(cb => {
+            if (!seen.has(cb.value) && count < MAX_BULK_SEND) {
+                seen.add(cb.value);
+                count++;
+            }
+            cb.checked = seen.has(cb.value);
+        });
+    } else {
+        section.querySelectorAll('.reminder-checkbox').forEach(cb => cb.checked = false);
+    }
+    syncDuplicateCheckboxes(section);
     // Sync the in-table select-all checkbox too
     const tableSelectAll = section.querySelector('.reminder-select-all');
     if (tableSelectAll) tableSelectAll.checked = headerCb.checked;
@@ -5104,9 +5160,13 @@ function syncMasterCheckboxes() {
 }
 
 function updateReminderSelectedCount() {
-    const checkedIds = Array.from(document.querySelectorAll('.reminder-checkbox:checked')).map(cb => cb.value);
+    const checkedIds = [...new Set(Array.from(document.querySelectorAll('.reminder-checkbox:checked')).map(cb => cb.value))];
     const count = checkedIds.length;
     document.getElementById('reminderSelectedCount').textContent = count;
+    // DL-257: Disable unchecked checkboxes at bulk cap
+    document.querySelectorAll('.reminder-checkbox').forEach(cb => {
+        if (!cb.checked) cb.disabled = count >= MAX_BULK_SEND;
+    });
     syncMasterCheckboxes();
 
     const mutedCount = checkedIds.filter(id => {
@@ -5201,7 +5261,7 @@ document.addEventListener('click', () => {
 });
 
 function reminderBulkAction(action) {
-    const reportIds = Array.from(document.querySelectorAll('.reminder-checkbox:checked')).map(cb => cb.value);
+    const reportIds = [...new Set(Array.from(document.querySelectorAll('.reminder-checkbox:checked')).map(cb => cb.value))];
     if (reportIds.length === 0) return;
 
     if (action === 'send_now') {
@@ -6111,7 +6171,7 @@ function resetClientBulkSelection() {
 }
 
 function cancelReminderSelection() {
-    document.querySelectorAll('.reminder-checkbox, .reminder-select-all').forEach(cb => cb.checked = false);
+    document.querySelectorAll('.reminder-checkbox, .reminder-select-all, .reminder-section-select-all').forEach(cb => { cb.checked = false; cb.disabled = false; cb.indeterminate = false; });
     updateReminderSelectedCount();
 }
 
