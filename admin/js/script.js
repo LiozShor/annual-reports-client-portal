@@ -695,8 +695,8 @@ async function loadDashboard(silent = false) {
         }, { timeout: 2000 });
     } catch (error) {
 
-        console.error('Dashboard load failed');
-        if (!silent) showModal('error', 'שגיאה', 'לא ניתן לטעון את הנתונים', null, { label: 'רענן', onClick: () => location.reload() });
+        console.error('Dashboard load failed', error);
+        if (!silent) showModal('error', 'שגיאה', `לא ניתן לטעון את הנתונים\n\n[${error?.name || 'Error'}] ${error?.message || error}`, null, { label: 'רענן', onClick: () => location.reload() });
     }
 }
 
@@ -4771,7 +4771,7 @@ function filterReminders(keepPage) {
     let filtered = remindersData.filter(r => r.is_active !== false);
 
     if (search) {
-        filtered = filtered.filter(r => (r.name || '').toLowerCase().includes(search));
+        filtered = filtered.filter(r => (String(r.name || '')).toLowerCase().includes(search));
     }
 
     if (activeCardFilter) {
