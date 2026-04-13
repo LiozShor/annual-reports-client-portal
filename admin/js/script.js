@@ -770,7 +770,7 @@ async function loadRecentMessages() {
                         <span class="msg-client">${escapeHtml(m.client_name)}</span>
                         <span class="msg-date">${formatRelativeTime(m.date)}</span>
                     </div>
-                    <div class="msg-summary">🤖 ${escapeHtml(m.summary)}</div>
+                    <div class="msg-summary">${escapeHtml(m.summary)}</div>
                     ${snippetHtml}
                 </div>
             </div>`;
