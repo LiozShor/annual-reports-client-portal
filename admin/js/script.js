@@ -767,7 +767,7 @@ async function loadRecentMessages() {
             return `<div class="msg-row" onclick="window.location.href='../document-manager.html?${navParam}'">
                 <div class="msg-content">
                     <div class="msg-meta">
-                        <span class="msg-client">${escapeHtml(m.client_name)} · ${m.year || ''}</span>
+                        <span class="msg-client">${escapeHtml(m.client_name)}</span>
                         <span class="msg-date">${formatRelativeTime(m.date)}</span>
                     </div>
                     <div class="msg-summary">🤖 ${escapeHtml(m.summary)}</div>
