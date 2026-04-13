@@ -1284,6 +1284,10 @@ function switchEntityTab(type) {
     else if (activeTab === 'reminders' && wasReminderLoaded) { addRefresh(); loadReminders().then(removeRefresh, removeRefresh); }
     // DL-238: AI Review not reloaded on entity tab switch — always shows all
     else if ((activeTab === 'review' || activeTab === 'dashboard') && wasDashboardLoaded) loadDashboard();
+    else {
+        // Debug: show why no reload happened (temporary)
+        showAIToast(`entity-switch debug: tab=${activeTab}, dashLoaded=${wasDashboardLoaded}`, 'warning');
+    }
 }
 
 // Close dropdowns/popovers on Escape; Enter on clickable counts triggers click
