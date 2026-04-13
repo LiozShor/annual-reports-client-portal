@@ -771,7 +771,7 @@ async function loadRecentMessages() {
                         <span class="msg-client">${escapeHtml(m.client_name)} · ${m.year || ''}</span>
                         <span class="msg-date">${formatRelativeTime(m.date)}</span>
                     </div>
-                    <div class="msg-summary"><span class="msg-summary-label">סיכום AI:</span> ${escapeHtml(m.summary)}</div>
+                    <div class="msg-summary">🤖 ${escapeHtml(m.summary)}</div>
                     ${snippetHtml}
                 </div>
             </div>`;
