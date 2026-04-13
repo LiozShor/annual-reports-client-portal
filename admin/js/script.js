@@ -765,7 +765,7 @@ async function loadRecentMessages() {
             const displayText = m.raw_snippet || m.summary || '';
             const noteId = escapeHtml(m.id || '');
             const reportId = escapeHtml(m.report_id || '');
-            return `<div class="msg-row" data-note-id="${noteId}" onclick="window.location.href='../document-manager.html?${navParam}'">
+            return `<div class="msg-row" data-note-id="${noteId}">
                 <div class="msg-content">
                     <div class="msg-meta">
                         <span class="msg-client">${escapeHtml(m.client_name)}</span>
@@ -773,7 +773,10 @@ async function loadRecentMessages() {
                     </div>
                     <div class="msg-summary">"${escapeHtml(displayText)}"</div>
                 </div>
-                <button class="msg-delete-btn" title="מחק/הסתר הודעה" onclick="event.stopPropagation(); showMessageDeleteDialog('${noteId}', '${reportId}')"><i data-lucide="trash-2" class="icon-sm"></i></button>
+                <div class="msg-actions">
+                    <button class="msg-action-btn" title="פתח בניהול מסמכים" onclick="window.location.href='../document-manager.html?${navParam}'"><i data-lucide="external-link" class="icon-sm"></i></button>
+                    <button class="msg-action-btn msg-action-btn--danger" title="מחק/הסתר הודעה" onclick="showMessageDeleteDialog('${noteId}', '${reportId}')"><i data-lucide="trash-2" class="icon-sm"></i></button>
+                </div>
             </div>`;
         }).join('');
         safeCreateIcons(container);

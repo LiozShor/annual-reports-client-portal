@@ -2656,7 +2656,6 @@ tr:hover .client-view-link {
     gap: var(--sp-3);
     padding: var(--sp-3);
     border-radius: var(--radius-md);
-    cursor: pointer;
     transition: background 0.15s;
     border-bottom: 1px solid var(--gray-100);
     align-items: flex-start;
@@ -2730,26 +2729,37 @@ tr:hover .client-view-link {
     color: var(--blue-600, #2563eb);
 }
 
-.msg-delete-btn {
+.msg-actions {
     flex-shrink: 0;
+    display: flex;
+    gap: 2px;
     opacity: 0;
+    transition: opacity 0.15s;
+    margin-top: 2px;
+}
+
+.msg-row:hover .msg-actions {
+    opacity: 1;
+}
+
+.msg-action-btn {
     background: none;
     border: none;
     cursor: pointer;
     padding: 4px;
-    margin-top: 2px;
     border-radius: var(--radius-sm);
     color: var(--gray-400);
-    transition: opacity 0.15s, color 0.15s, background 0.15s;
+    transition: color 0.15s, background 0.15s;
 }
 
-.msg-delete-btn:hover {
+.msg-action-btn:hover {
+    color: var(--blue-600, #2563eb);
+    background: var(--blue-50, #eff6ff);
+}
+
+.msg-action-btn--danger:hover {
     color: var(--red-600, #dc2626);
     background: var(--red-50, #fef2f2);
-}
-
-.msg-row:hover .msg-delete-btn {
-    opacity: 1;
 }
 
 .msg-inline-actions {
