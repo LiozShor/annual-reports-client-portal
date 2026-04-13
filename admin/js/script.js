@@ -771,7 +771,7 @@ async function loadRecentMessages() {
                         <span class="msg-client">${escapeHtml(m.client_name)}</span>
                         <span class="msg-date">${formatRelativeTime(m.date)}</span>
                     </div>
-                    <div class="msg-summary">${escapeHtml(displayText)}</div>
+                    <div class="msg-summary">"${escapeHtml(displayText)}"</div>
                 </div>
                 <button class="msg-delete-btn" title="מחק/הסתר הודעה" onclick="event.stopPropagation(); showMessageDeleteDialog('${noteId}', '${reportId}')"><i data-lucide="trash-2" class="icon-sm"></i></button>
             </div>`;
