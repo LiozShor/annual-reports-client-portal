@@ -762,23 +762,102 @@ async function loadRecentMessages() {
 
         container.innerHTML = messages.map(m => {
             const navParam = m.client_id ? `client_id=${encodeURIComponent(m.client_id)}` : `report_id=${encodeURIComponent(m.report_id)}`;
-            const rawText = (m.raw_snippet || '').replace(/&quot;/g, '"').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&#39;/g, "'");
-            const snippetHtml = rawText ? `<div class="msg-snippet"><span class="msg-snippet-label">טקסט מקורי:</span> "${escapeHtml(rawText)}"</div>` : '';
-            return `<div class="msg-row" onclick="window.location.href='../document-manager.html?${navParam}'">
+            const displayText = m.raw_snippet || m.summary || '';
+            const noteId = escapeHtml(m.id || '');
+            const reportId = escapeHtml(m.report_id || '');
+            return `<div class="msg-row" data-note-id="${noteId}" onclick="window.location.href='../document-manager.html?${navParam}'">
                 <div class="msg-content">
                     <div class="msg-meta">
                         <span class="msg-client">${escapeHtml(m.client_name)}</span>
                         <span class="msg-date">${formatRelativeTime(m.date)}</span>
                     </div>
-                    <div class="msg-summary">${escapeHtml(m.summary)}</div>
-                    ${snippetHtml}
+                    <div class="msg-summary">${escapeHtml(displayText)}</div>
                 </div>
+                <button class="msg-delete-btn" title="מחק/הסתר הודעה" onclick="event.stopPropagation(); showMessageDeleteDialog('${noteId}', '${reportId}')"><i data-lucide="trash-2" class="icon-sm"></i></button>
             </div>`;
         }).join('');
         safeCreateIcons(container);
     } catch (error) {
         console.error('Recent messages load failed', error);
         container.innerHTML = '';
+    }
+}
+
+// DL-263: Two-button dialog for delete/hide message
+function showMessageDeleteDialog(noteId, reportId) {
+    const dialog = document.getElementById('confirmDialog');
+    const msgEl = document.getElementById('confirmDialogMessage');
+    const btnEl = document.getElementById('confirmDialogBtn');
+    const footerEl = btnEl.parentElement;
+    const originalFooterHtml = footerEl.innerHTML;
+
+    msgEl.textContent = 'מה לעשות עם ההודעה?';
+    footerEl.innerHTML = `
+        <div style="display:flex;flex-direction:column;gap:8px;width:100%">
+            <button class="btn confirm-btn-danger" id="msgDeletePermanentBtn">
+                <i data-lucide="trash-2" class="icon-sm"></i> מחק לצמיתות
+            </button>
+            <button class="btn btn-outline" id="msgHideDashboardBtn">
+                <i data-lucide="eye-off" class="icon-sm"></i> הסתר מהדשבורד
+            </button>
+            <button class="btn btn-ghost" id="msgCancelBtn">ביטול</button>
+        </div>
+    `;
+
+    function cleanup() {
+        dialog.classList.remove('show');
+        footerEl.innerHTML = originalFooterHtml;
+    }
+
+    document.getElementById('msgDeletePermanentBtn').addEventListener('click', () => { cleanup(); deleteRecentMessage(noteId, reportId, 'permanent'); });
+    document.getElementById('msgHideDashboardBtn').addEventListener('click', () => { cleanup(); deleteRecentMessage(noteId, reportId, 'hide'); });
+    document.getElementById('msgCancelBtn').addEventListener('click', () => { cleanup(); });
+
+    dialog.classList.add('show');
+    safeCreateIcons();
+}
+
+// DL-263: Delete or hide a message from the dashboard panel
+async function deleteRecentMessage(noteId, reportId, mode) {
+    try {
+        const year = document.getElementById('yearFilter')?.value || '2025';
+        const response = await fetchWithTimeout(ENDPOINTS.ADMIN_UPDATE_CLIENT, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
+            body: JSON.stringify({ token: authToken, report_id: reportId, action: 'delete-client-note', note_id: noteId, mode })
+        });
+        const result = await response.json();
+        if (!result.ok) throw new Error(result.error || 'Failed');
+
+        // Remove row from DOM
+        const row = document.querySelector(`.msg-row[data-note-id="${noteId}"]`);
+        if (row) {
+            row.style.transition = 'opacity 0.3s, max-height 0.3s';
+            row.style.opacity = '0';
+            row.style.maxHeight = '0';
+            row.style.overflow = 'hidden';
+            setTimeout(() => {
+                row.remove();
+                // Update badge count
+                const remaining = document.querySelectorAll('.msg-row').length;
+                const badge = document.getElementById('recentMsgCount');
+                if (badge) {
+                    if (remaining > 0) { badge.textContent = remaining; badge.style.display = ''; }
+                    else { badge.style.display = 'none'; }
+                }
+                if (remaining === 0) {
+                    const container = document.getElementById('recentMessagesContainer');
+                    if (container) {
+                        container.innerHTML = `<div class="msg-empty"><i data-lucide="inbox" class="icon-2xl"></i><p>אין הודעות אחרונות</p></div>`;
+                        safeCreateIcons(container);
+                    }
+                }
+            }, 300);
+        }
+
+        showAIToast(mode === 'permanent' ? 'ההודעה נמחקה לצמיתות' : 'ההודעה הוסתרה מהדשבורד', 'success');
+    } catch (err) {
+        showAIToast('שגיאה: ' + (err.message || 'Unknown error'), 'error');
     }
 }
 
