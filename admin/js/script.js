@@ -2996,11 +2996,8 @@ function renderAICards(items) {
     const container = document.getElementById('aiCardsContainer');
     const emptyState = document.getElementById('aiEmptyState');
 
-    // Preserve accordion open state across re-renders
-    const openAccordions = new Set();
-    container.querySelectorAll('.ai-accordion.open').forEach(el => {
-        openAccordions.add(el.dataset.client);
-    });
+    // Preserve the single open accordion across re-renders
+    const openAccordionClient = container.querySelector('.ai-accordion.open')?.dataset.client || null;
 
     if (!items || items.length === 0) {
         container.innerHTML = '';
@@ -3207,11 +3204,11 @@ function renderAICards(items) {
 
     container.innerHTML = html;
 
-    // Restore accordion open state
-    openAccordions.forEach(clientName => {
-        const el = container.querySelector(`.ai-accordion[data-client="${CSS.escape(clientName)}"]`);
+    // Restore the single open accordion
+    if (openAccordionClient) {
+        const el = container.querySelector(`.ai-accordion[data-client="${CSS.escape(openAccordionClient)}"]`);
         if (el) el.classList.add('open');
-    });
+    }
 
     // Initialize inline comboboxes (unmatched + mismatch fallback)
     container.querySelectorAll('.doc-combobox-container').forEach(el => {
@@ -3627,7 +3624,15 @@ function cancelReReview(recordId) {
 
 function toggleAIAccordion(header) {
     const accordion = header.closest('.ai-accordion');
-    accordion.classList.toggle('open');
+    const isOpen = accordion.classList.contains('open');
+
+    // Close all other accordions — only one open at a time
+    accordion.closest('#aiCardsContainer')
+        .querySelectorAll('.ai-accordion.open')
+        .forEach(el => el.classList.remove('open'));
+
+    // Toggle the clicked one (re-open if it wasn't already open)
+    if (!isOpen) accordion.classList.add('open');
 }
 
 function toggleClientNotes(toggleEl) {
