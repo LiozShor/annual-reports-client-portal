@@ -2756,6 +2756,20 @@ tr:hover .client-view-link {
     opacity: 1;
 }
 
+.msg-inline-actions {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    padding: var(--sp-1) 0;
+}
+
+.msg-inline-actions .btn-sm {
+    font-size: 0.78rem;
+    padding: 4px 10px;
+}
+
 .msg-empty {
     text-align: center;
     padding: var(--sp-6) var(--sp-4);

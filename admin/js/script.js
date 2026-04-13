@@ -783,38 +783,38 @@ async function loadRecentMessages() {
     }
 }
 
-// DL-263: Two-button dialog for delete/hide message
+// DL-263: Inline action buttons replacing message content
 function showMessageDeleteDialog(noteId, reportId) {
-    const dialog = document.getElementById('confirmDialog');
-    const msgEl = document.getElementById('confirmDialogMessage');
-    const btnEl = document.getElementById('confirmDialogBtn');
-    const footerEl = btnEl.parentElement;
-    const originalFooterHtml = footerEl.innerHTML;
+    const row = document.querySelector(`.msg-row[data-note-id="${noteId}"]`);
+    if (!row) return;
 
-    msgEl.textContent = 'מה לעשות עם ההודעה?';
-    footerEl.innerHTML = `
-        <div style="display:flex;flex-direction:column;gap:8px;width:100%">
-            <button class="btn confirm-btn-danger" id="msgDeletePermanentBtn">
+    // Save original content for cancel restore
+    const originalHtml = row.innerHTML;
+    const originalOnclick = row.getAttribute('onclick');
+    row.removeAttribute('onclick');
+    row.style.cursor = 'default';
+
+    row.innerHTML = `
+        <div class="msg-inline-actions">
+            <button class="btn btn-sm confirm-btn-danger" data-action="permanent">
                 <i data-lucide="trash-2" class="icon-sm"></i> מחק לצמיתות
             </button>
-            <button class="btn btn-outline" id="msgHideDashboardBtn">
+            <button class="btn btn-sm btn-outline" data-action="hide">
                 <i data-lucide="eye-off" class="icon-sm"></i> הסתר מהדשבורד
             </button>
-            <button class="btn btn-ghost" id="msgCancelBtn">ביטול</button>
+            <button class="btn btn-sm btn-ghost" data-action="cancel">ביטול</button>
         </div>
     `;
+    safeCreateIcons(row);
 
-    function cleanup() {
-        dialog.classList.remove('show');
-        footerEl.innerHTML = originalFooterHtml;
-    }
-
-    document.getElementById('msgDeletePermanentBtn').addEventListener('click', () => { cleanup(); deleteRecentMessage(noteId, reportId, 'permanent'); });
-    document.getElementById('msgHideDashboardBtn').addEventListener('click', () => { cleanup(); deleteRecentMessage(noteId, reportId, 'hide'); });
-    document.getElementById('msgCancelBtn').addEventListener('click', () => { cleanup(); });
-
-    dialog.classList.add('show');
-    safeCreateIcons();
+    row.querySelector('[data-action="permanent"]').addEventListener('click', () => deleteRecentMessage(noteId, reportId, 'permanent'));
+    row.querySelector('[data-action="hide"]').addEventListener('click', () => deleteRecentMessage(noteId, reportId, 'hide'));
+    row.querySelector('[data-action="cancel"]').addEventListener('click', () => {
+        row.innerHTML = originalHtml;
+        if (originalOnclick) row.setAttribute('onclick', originalOnclick);
+        row.style.cursor = 'pointer';
+        safeCreateIcons(row);
+    });
 }
 
 // DL-263: Delete or hide a message from the dashboard panel
