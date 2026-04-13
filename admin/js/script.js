@@ -684,7 +684,11 @@ async function loadDashboard(silent = false) {
         }
 
         // Load AI review badge count + prefetch other tabs (async, non-blocking) — DL-175
-        requestIdleCallback(() => {
+        // Safari/iOS lacks requestIdleCallback — fall back to setTimeout
+        const deferFn = typeof requestIdleCallback === 'function'
+            ? (cb) => requestIdleCallback(cb, { timeout: 2000 })
+            : (cb) => setTimeout(cb, 100);
+        deferFn(() => {
             loadAIReviewCount();
             loadReminderCount();
             if (!pendingClientsLoaded) loadPendingClients(true);
@@ -692,11 +696,11 @@ async function loadDashboard(silent = false) {
             if (!questionnaireLoaded) loadQuestionnaires(true);
             if (!reminderLoaded) loadReminders(true);
             updateActiveFilterCount(); // DL-214
-        }, { timeout: 2000 });
+        });
     } catch (error) {
 
         console.error('Dashboard load failed', error);
-        if (!silent) showModal('error', 'שגיאה', `לא ניתן לטעון את הנתונים\n\n[${error?.name || 'Error'}] ${error?.message || error}`, null, { label: 'רענן', onClick: () => location.reload() });
+        if (!silent) showModal('error', 'שגיאה', 'לא ניתן לטעון את הנתונים', null, { label: 'רענן', onClick: () => location.reload() });
     }
 }
 
