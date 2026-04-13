@@ -691,6 +691,7 @@ async function loadDashboard(silent = false) {
         deferFn(() => {
             loadAIReviewCount();
             loadReminderCount();
+            loadRecentMessages(); // DL-261: side panel
             if (!pendingClientsLoaded) loadPendingClients(true);
             if (!aiReviewLoaded) loadAIClassifications(true); // DL-247: prefetch AI review
             if (!questionnaireLoaded) loadQuestionnaires(true);
@@ -701,6 +702,81 @@ async function loadDashboard(silent = false) {
 
         console.error('Dashboard load failed', error);
         if (!silent) showModal('error', 'שגיאה', 'לא ניתן לטעון את הנתונים', null, { label: 'רענן', onClick: () => location.reload() });
+    }
+}
+
+// DL-261: Recent client messages side panel
+let recentMessagesLoaded = false;
+
+function formatRelativeTime(dateStr) {
+    if (!dateStr) return '';
+    const diff = Date.now() - new Date(dateStr).getTime();
+    const mins = Math.floor(diff / 60000);
+    const hours = Math.floor(diff / 3600000);
+    const days = Math.floor(diff / 86400000);
+    const rtf = new Intl.RelativeTimeFormat('he', { numeric: 'auto' });
+    if (days > 0) return rtf.format(-days, 'day');
+    if (hours > 0) return rtf.format(-hours, 'hour');
+    if (mins > 0) return rtf.format(-mins, 'minute');
+    return 'עכשיו';
+}
+
+async function loadRecentMessages() {
+    if (!authToken) return;
+    const container = document.getElementById('recentMessagesContainer');
+    if (!container) return;
+
+    try {
+        const year = document.getElementById('yearFilter')?.value || '2025';
+        const response = await fetchWithTimeout(
+            `${ENDPOINTS.ADMIN_RECENT_MESSAGES}?year=${year}&_t=${Date.now()}`,
+            { headers: { 'Authorization': `Bearer ${authToken}` } },
+            FETCH_TIMEOUTS.load
+        );
+        const data = await response.json();
+        if (!data.ok) return;
+
+        const messages = data.messages || [];
+        recentMessagesLoaded = true;
+
+        // Update badge count
+        const badge = document.getElementById('recentMsgCount');
+        if (badge) {
+            if (messages.length > 0) {
+                badge.textContent = messages.length;
+                badge.style.display = '';
+            } else {
+                badge.style.display = 'none';
+            }
+        }
+
+        if (messages.length === 0) {
+            container.innerHTML = `
+                <div class="msg-empty">
+                    <i data-lucide="inbox" class="icon-2xl"></i>
+                    <p>אין הודעות אחרונות</p>
+                </div>`;
+            safeCreateIcons(container);
+            return;
+        }
+
+        container.innerHTML = messages.map(m => {
+            const snippet = (m.raw_snippet || '').substring(0, 200);
+            return `<div class="msg-row" title="${escapeHtml(snippet)}" onclick="window.location.href='document-manager.html?report_id=${encodeURIComponent(m.report_id)}&token=${encodeURIComponent(authToken)}'">
+                <div class="msg-icon"><i data-lucide="mail" class="icon-sm"></i></div>
+                <div class="msg-content">
+                    <div class="msg-meta">
+                        <span class="msg-client">${escapeHtml(m.client_name)} · ${m.year || ''}</span>
+                        <span class="msg-date">${formatRelativeTime(m.date)}</span>
+                    </div>
+                    <div class="msg-summary">${escapeHtml(m.summary)}</div>
+                </div>
+            </div>`;
+        }).join('');
+        safeCreateIcons(container);
+    } catch (error) {
+        console.error('Recent messages load failed', error);
+        container.innerHTML = '';
     }
 }
 

@@ -139,6 +139,9 @@
                     </div>
                 </div>
 
+                <div class="dashboard-split">
+                <!-- Main: Clients Table -->
+                <div class="dashboard-main">
                 <div class="card">
                     <div class="card-header">
                         <h2><i data-lucide="users" class="icon"></i> רשימת לקוחות <span id="headerArchiveLabel"></span></h2>
@@ -271,6 +274,23 @@
                         <div id="clientsPagination"></div>
                     </div>
                 </div>
+                </div><!-- /.dashboard-main -->
+
+                <!-- Side Panel: Recent Client Messages (DL-261) -->
+                <aside class="dashboard-side-panel">
+                    <div class="side-panel-header">
+                        <h3><i data-lucide="mail" class="icon-sm"></i> הודעות אחרונות מלקוחות <span class="badge" id="recentMsgCount" style="display:none"></span></h3>
+                    </div>
+                    <div class="side-panel-body" id="recentMessagesContainer">
+                        <div class="skeleton-loader" id="recentMsgSkeleton">
+                            <div class="skeleton-row"><div class="skeleton skeleton-text" style="width:100%"></div></div>
+                            <div class="skeleton-row"><div class="skeleton skeleton-text" style="width:80%"></div></div>
+                            <div class="skeleton-row"><div class="skeleton skeleton-text" style="width:100%"></div></div>
+                            <div class="skeleton-row"><div class="skeleton skeleton-text" style="width:90%"></div></div>
+                        </div>
+                    </div>
+                </aside>
+                </div><!-- /.dashboard-split -->
             </div>
 
             <!-- Import Tab -->
