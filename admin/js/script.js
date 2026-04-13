@@ -1254,6 +1254,12 @@ function switchEntityTab(type) {
     // Reset bulk selection
     resetClientBulkSelection();
 
+    // Save which tabs were loaded BEFORE invalidating (for reload decision below)
+    const wasDashboardLoaded = dashboardLoaded;
+    const wasPendingLoaded = pendingClientsLoaded;
+    const wasQuestionnaireLoaded = questionnaireLoaded;
+    const wasReminderLoaded = reminderLoaded;
+
     // Invalidate tab caches so they reload with new filing_type
     // DL-238: aiReviewLoaded NOT invalidated — AI Review always shows all filing types
     dashboardLoaded = false; dashboardLoadedAt = 0;
@@ -1273,11 +1279,11 @@ function switchEntityTab(type) {
     const activeTab = activeContent?.id?.replace('tab-', '');
     const addRefresh = () => { if (activeContent) activeContent.classList.add('tab-refreshing'); };
     const removeRefresh = () => { if (activeContent) activeContent.classList.remove('tab-refreshing'); };
-    if (activeTab === 'send' && pendingClientsLoadedAt > 0) { addRefresh(); loadPendingClients().then(removeRefresh, removeRefresh); }
-    else if (activeTab === 'questionnaires' && questionnaireLoadedAt > 0) { addRefresh(); loadQuestionnaires().then(removeRefresh, removeRefresh); }
-    else if (activeTab === 'reminders' && reminderLoadedAt > 0) { addRefresh(); loadReminders().then(removeRefresh, removeRefresh); }
+    if (activeTab === 'send' && wasPendingLoaded) { addRefresh(); loadPendingClients().then(removeRefresh, removeRefresh); }
+    else if (activeTab === 'questionnaires' && wasQuestionnaireLoaded) { addRefresh(); loadQuestionnaires().then(removeRefresh, removeRefresh); }
+    else if (activeTab === 'reminders' && wasReminderLoaded) { addRefresh(); loadReminders().then(removeRefresh, removeRefresh); }
     // DL-238: AI Review not reloaded on entity tab switch — always shows all
-    else if ((activeTab === 'review' || activeTab === 'dashboard') && dashboardLoadedAt > 0) loadDashboard();
+    else if ((activeTab === 'review' || activeTab === 'dashboard') && wasDashboardLoaded) loadDashboard();
 }
 
 // Close dropdowns/popovers on Escape; Enter on clickable counts triggers click
