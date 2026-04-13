@@ -710,15 +710,15 @@ let recentMessagesLoaded = false;
 
 function formatRelativeTime(dateStr) {
     if (!dateStr) return '';
-    const diff = Date.now() - new Date(dateStr).getTime();
-    const mins = Math.floor(diff / 60000);
-    const hours = Math.floor(diff / 3600000);
-    const days = Math.floor(diff / 86400000);
-    const rtf = new Intl.RelativeTimeFormat('he', { numeric: 'auto' });
-    if (days > 0) return rtf.format(-days, 'day');
-    if (hours > 0) return rtf.format(-hours, 'hour');
-    if (mins > 0) return rtf.format(-mins, 'minute');
-    return 'עכשיו';
+    // Date field is date-only (no time), so use day-level precision
+    const today = new Date().toISOString().slice(0, 10);
+    if (dateStr === today) return 'היום';
+    const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+    if (dateStr === yesterday) return 'אתמול';
+    const days = Math.floor((Date.now() - new Date(dateStr + 'T12:00:00').getTime()) / 86400000);
+    if (days < 7) return `לפני ${days} ימים`;
+    if (days < 30) return `לפני ${Math.floor(days / 7)} שבועות`;
+    return dateStr.replace(/^(\d{4})-(\d{2})-(\d{2})/, '$3/$2/$1');
 }
 
 async function loadRecentMessages() {
@@ -762,8 +762,8 @@ async function loadRecentMessages() {
 
         container.innerHTML = messages.map(m => {
             const navParam = m.client_id ? `client_id=${encodeURIComponent(m.client_id)}` : `report_id=${encodeURIComponent(m.report_id)}`;
-            const rawText = (m.raw_snippet || '').replace(/&quot;/g, '"').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>');
-            const snippetHtml = rawText ? `<div class="msg-snippet">${escapeHtml(rawText)}</div>` : '';
+            const rawText = (m.raw_snippet || '').replace(/&quot;/g, '"').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&#39;/g, "'");
+            const snippetHtml = rawText ? `<div class="msg-snippet"><span class="msg-snippet-label">טקסט מקורי:</span> "${escapeHtml(rawText)}"</div>` : '';
             return `<div class="msg-row" onclick="window.location.href='../document-manager.html?${navParam}'">
                 <div class="msg-icon"><i data-lucide="mail" class="icon-sm"></i></div>
                 <div class="msg-content">
@@ -771,7 +771,7 @@ async function loadRecentMessages() {
                         <span class="msg-client">${escapeHtml(m.client_name)} · ${m.year || ''}</span>
                         <span class="msg-date">${formatRelativeTime(m.date)}</span>
                     </div>
-                    <div class="msg-summary">${escapeHtml(m.summary)}</div>
+                    <div class="msg-summary"><span class="msg-summary-label">סיכום AI:</span> ${escapeHtml(m.summary)}</div>
                     ${snippetHtml}
                 </div>
             </div>`;
