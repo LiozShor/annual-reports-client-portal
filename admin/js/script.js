@@ -765,7 +765,6 @@ async function loadRecentMessages() {
             const rawText = (m.raw_snippet || '').replace(/&quot;/g, '"').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&#39;/g, "'");
             const snippetHtml = rawText ? `<div class="msg-snippet"><span class="msg-snippet-label">טקסט מקורי:</span> "${escapeHtml(rawText)}"</div>` : '';
             return `<div class="msg-row" onclick="window.location.href='../document-manager.html?${navParam}'">
-                <div class="msg-icon"><i data-lucide="mail" class="icon-sm"></i></div>
                 <div class="msg-content">
                     <div class="msg-meta">
                         <span class="msg-client">${escapeHtml(m.client_name)} · ${m.year || ''}</span>
