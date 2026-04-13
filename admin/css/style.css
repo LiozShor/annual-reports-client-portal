@@ -2721,10 +2721,6 @@ tr:hover .client-view-link {
     overflow: hidden;
 }
 
-.msg-row:hover .msg-summary {
-    -webkit-line-clamp: unset;
-    display: block;
-}
 
 .msg-summary-label {
     font-weight: 600;
