@@ -2659,7 +2659,7 @@ tr:hover .client-view-link {
     cursor: pointer;
     transition: background 0.15s;
     border-bottom: 1px solid var(--gray-100);
-    position: relative;
+    align-items: flex-start;
 }
 
 .msg-row:last-child {
@@ -2730,14 +2730,13 @@ tr:hover .client-view-link {
 }
 
 .msg-delete-btn {
-    position: absolute;
-    top: 8px;
-    left: 8px;
+    flex-shrink: 0;
     opacity: 0;
     background: none;
     border: none;
     cursor: pointer;
     padding: 4px;
+    margin-top: 2px;
     border-radius: var(--radius-sm);
     color: var(--gray-400);
     transition: opacity 0.15s, color 0.15s, background 0.15s;
