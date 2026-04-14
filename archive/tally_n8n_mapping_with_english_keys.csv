@@ -1,0 +1,93 @@
+﻿N8N_Key,N8N_Key_English_Form,Question_Label_Hebrew,Question_Label_English,Type,required_documents_en,required_documents_he
+question_Ad2ZXW_eda95daa-e622-4fcb-98d6-3f0aa0649680,question_WNRM5Q_21cb2748-23e4-4b6f-acbd-1b0ee32c0afe,report_record_id,report_record_id,HIDDEN_FIELDS,,
+question_Ad2ZXW_07088289-7dc1-4173-97cb-855bc6655b0a,question_WNRM5Q_7bdf1402-3d31-4855-bf97-88a1f48c912d,client_id,client_id,HIDDEN_FIELDS,,
+question_Ad2ZXW_45f853b0-2044-45f0-bca8-4cb0db3c538a,question_WNRM5Q_7da15418-e79a-4265-9726-0f92bdd4a2e9,year,year,HIDDEN_FIELDS,,
+question_Ad2ZXW_12245f33-980a-4def-8656-f87f7ed1f397,question_WNRM5Q_885e9fda-7bb7-4a09-af17-892ad4fe41fa,token,token,HIDDEN_FIELDS,,
+question_Ad2ZXW_5cf54aa8-32b8-47cc-b2c0-a2bcddabb689,question_WNRM5Q_f154cc30-448c-4960-837a-b857542fa97a,full_name,full_name,HIDDEN_FIELDS,,
+question_Ad2ZXW_64644761-68e7-45eb-aac2-18c5471941fa,question_WNRM5Q_dbe5baba-db73-4a05-bd58-eb953a3c308d,email,email,HIDDEN_FIELDS,,
+question_vAekdl,question_R0oJPP,שם ושם משפחה,First and Last Name,INPUT_TEXT,,
+question_K65baX,question_oyR7GM,אימייל,Email,INPUT_EMAIL,,
+question_Lb7l6l,question_GzpJlz,מצב משפחתי בשנת המס,Marital status during the tax year,MULTIPLE_CHOICE,,
+question_67Kv1P,question_J6lJA7,האם גרת ביישוב מזכה בשנת המס?,Did you live in a qualifying settlement during the tax year?,MULTIPLE_CHOICE,IF(YES): Residency_Cert (municipality residency certificate for the tax year),אם כן: אישור תושבות לשנת המס מהרשות המקומית.
+question_7WKvJP,question_g0q7MK,שם היישוב,Settlement name,INPUT_TEXT,,
+question_1ld8p1,question_OzXJGA,שם בן/בת הזוג,Spouse's name,INPUT_TEXT,,
+question_J6p7MK,question_V0PMJl,האם היה שינוי בסטטוס המשפחתי (נישואין/גירושין/התאלמנות/פירוד רשמי) בשנת המס?,Was there a change in marital status during the tax year?,MULTIPLE_CHOICE,IF(YES): ID_Appendix (updated ID appendix; marriage/divorce/separation documents if relevant),"אם כן: ספח ת""ז מעודכן או תעודת נישואין/גירושין/פירוד רשמי (לפי הצורך)."
+question_g0d2vD,question_P69XO0,פירוט + תאריך השינוי,Details + date of change,TEXTAREA,,
+question_8KaOMz,question_487oro,האם יש לך ילדים?,Do you have children?,MULTIPLE_CHOICE,IF(YES): Child_ID_Appendix (updated ID appendix including child details),אם כן: ספח תעודת זהות עדכני כולל פרטי הילד/ה.
+question_y62LzX,question_EXlJWL,האם נולד/ה או הצטרף/ה ילד/ה בשנת המס?,Was a child born or added to the family during the tax year?,MULTIPLE_CHOICE,IF(YES): Child_ID_Appendix (updated ID appendix including child details),אם כן: ספח תעודת זהות עדכני כולל פרטי הילד/ה.
+question_XDJXzL,question_r6OdPL,תאריכי לידה של הילדים שנוספו בשנת המס,Birthdates of children added,TEXTAREA,,
+question_0xBXaB,question_jyo7P9,האם יש ילדים בחינוך מיוחד?,Do you have children in special education?,MULTIPLE_CHOICE,IF(YES): Special_Ed_Approval (placement committee approval),אם כן: אישור ועדת השמה/ועדת שילוב עבור הילד (חינוך מיוחד).
+question_8Ka0Zl,question_a64DYy,האם יש ילדים שבגינם מתקבלת קצבת נכות מביטוח לאומי?,Do you have children for whom you receive disability benefits?,MULTIPLE_CHOICE,IF(YES): Child_Disability_Approval (National Insurance certificate for child disability allowance),אם כן: אישור שנתי לשנת 2025 על תקבולי קצבת נכות מביטוח לאומי עבור הילד/ה
+question_P69RpP,question_kyG76j,האם שילמת דמי מזונות בשנת המס?,Did you pay child support (alimony) during the tax year?,MULTIPLE_CHOICE,,
+question_zqylLM,question_2eAJPb,האם היית שכיר/ה בשנת המס?,Were you employed as a salaried employee during the tax year?,MULTIPLE_CHOICE,IF(YES): Form_106 (one per employer listed in Employer list – yours),אם כן: טופס 106 לשנת 2025 מכל המעסיקים (אחד לכל מעסיק שצוין).
+question_5zjRMZ,question_xpDPY9,רשימת מעסיקים – שלך,Employer list,TEXTAREA,Form_106 (one per employer listed in this list),טופס 106 לשנת 2025 מכל המעסיקים (אחד לכל מעסיק שצוין).
+question_d6arvd,question_ZNOzav,האם בן/בת הזוג היה/הייתה שכיר/ה בשנת המס?,Was your spouse employed as a salaried employee?,MULTIPLE_CHOICE,IF(YES): Form_106_Spouse (one per employer listed in Employer list – spouse),אם כן: טופס 106 לשנת 2025 מכל המעסיקים של בן/בת הזוג (אחד לכל מעסיק שצוין).
+question_YQ08kW,question_N6XJob,רשימת מעסיקים – בן/בת זוג,Employer list,TEXTAREA,Form_106_Spouse (one per employer listed in this list),טופס 106 לשנת 2025 מכל המעסיקים של בן/בת הזוג (אחד לכל מעסיק שצוין).
+question_DNkQMN,question_qdGKVk,האם משכת כספים מחברת ביטוח/קופת גמל/פנסיה/השתלמות בשנת המס?,Did you withdraw funds from insurance/pension/provident fund?,MULTIPLE_CHOICE,IF(YES): Pension_Withdrawal (withdrawal certificate + tax withheld; specify withdrawal type if relevant),אם כן: אישור על משיכת [סוג המשיכה] לשנת 2025 והמס שנוכה בעת המשיכה
+question_lyeQvN,question_QDRJVk,איזה סוג כספים נמשכו?,What type of funds were withdrawn?,CHECKBOXES,,
+question_lyeQvN_95cfdd65-faf6-489d-91be-827c7e613ff9,question_QDRJVk_c9ebfec5-c73a-4b42-bdb3-b39b6c3bcd80,פיצויי פיטורין,Severance pay,CHECKBOXES,,
+question_lyeQvN_3eb5d359-fb98-4151-822c-f6d6bb0cdfdf,question_QDRJVk_746c0c4f-5dbc-48ef-943d-89419ef6bc2e,מענק פרישה,Retirement grant,CHECKBOXES,,
+question_lyeQvN_57f56e42-1d95-49a9-85df-b8c900a70f88,question_QDRJVk_8bcb84a0-96b3-4062-bcf2-4e88bfa74fed,משיכת קרן השתלמות,Study fund withdrawal,CHECKBOXES,,
+,,משיכת קופת גמל להשקעה,,,,
+question_lyeQvN_80db055d-3ed3-4f3d-a41c-2c960bd186fd,question_QDRJVk_e57c9815-7e61-409d-87ef-3e1fc6d1b632,אחר,Other,CHECKBOXES,,
+question_R0Mpk4,question_9WZEQ4,"פירוט ""אחר""",Specify Other,INPUT_TEXT,,
+question_oyeWvO,question_e6r7Ro,האם קיבלת קצבת נכות מביטוח לאומי בשנת המס?,Did you receive disability benefits from National Insurance?,MULTIPLE_CHOICE,IF(YES): NII_Allowance_Cert (annual National Insurance allowance certificate — disability),אם כן: אישור שנתי לשנת 2025 על תקבולי דמי נכות שהתקבלו מביטוח לאומי
+question_XDoYDP,question_vADOy8,האם קיבלת קצבת שארים בשנת המס?,Did you receive survivors' benefits during the tax year?,MULTIPLE_CHOICE,IF(YES): NII_Allowance_Cert (annual National Insurance allowance certificate — survivors),אם כן: אישור שנתי מביטוח לאומי על קצבת שארים שהתקבלה בשנת המס (2025).
+question_8KL8Kl,question_K6xJlK,פירוט קצבת שארים,Survivors' benefit details,TEXTAREA,IF(YES): NII_Allowance_Cert (annual National Insurance allowance certificate — survivors),אם כן: אישור שנתי מביטוח לאומי על קצבת שארים שהתקבלה בשנת המס (2025).
+question_Oz4vkY,question_WNRMzQ,"האם בן/בת הזוג קיבל/ה תקבולים מביטוח לאומי בשנת המס? (אבטלה, דמי לידה, פגיעה בעבודה, מילואים, נכות)",Did your spouse receive payments from National Insurance?,MULTIPLE_CHOICE,IF(YES): NII_Allowance_Cert_Spouse (annual National Insurance allowance certificate; specify allowance type),אם כן: אישור שנתי לשנת 2025 על תקבולי [סוג התקבולים] מביטוח לאומי עבור - [שם בן הזוג]
+question_V0QgDM,question_a64Ddy,אילו תקבולים?,Which payments?,CHECKBOXES,,
+question_V0QgDM_d1dd042d-52e1-4f48-8912-63523221568a,question_a64Ddy_f9046467-b8a9-4eca-91fe-5ab4a985f21f,נכות,Disability,CHECKBOXES,,
+question_V0QgDM_113eb1cc-552a-439c-b1fd-d5e8e99847fb,question_a64Ddy_58417f88-b666-4872-8d5b-a62455fb7e6b,אבטלה,Unemployment,CHECKBOXES,,
+question_V0QgDM_307a7ead-c9dd-41e0-91a5-5ef8ee6322b0,question_a64Ddy_beddf2d4-7d9e-45c2-bcbd-b6a24d19bde5,מילואים,Reserve duty,CHECKBOXES,,
+question_V0QgDM_28c2a45f-9b24-4001-9ba1-ed064436939f,question_a64Ddy_8863c304-7c4f-4097-9f8e-5ee7fa773591,דמי לידה,Maternity benefits,CHECKBOXES,,
+question_V0QgDM_36b1c0b5-6211-498e-bf9a-9e6257d7ab82,question_a64Ddy_1d5f3ce5-66f6-45eb-92d9-4589b461e7af,פגיעה בעבודה,Work injury,CHECKBOXES,,
+question_V0QgDM_47d4e192-0f77-459c-b040-b16703f6fca7,question_a64Ddy_680cd46b-2998-42f9-a7ad-7006e5f24d3b,אחר,Other,CHECKBOXES,,
+question_P61KkB,question_67KON5,"פירוט ""אחר""",Specify Other,INPUT_TEXT,,
+question_0x8vx9,question_LbKJW2,האם בן/בת הזוג קיבל/ה קצבת שארים?,Did your spouse receive a survivors' pension?,MULTIPLE_CHOICE,IF(YES): NII_Allowance_Cert_Spouse (annual National Insurance allowance certificate — survivors),אם כן: אישור שנתי מביטוח לאומי על קצבת שארים של בן/בת הזוג שהתקבלה בשנת המס (2025).
+question_zqMJqk,question_pKo7BE,פירוט,Details,TEXTAREA,,
+question_r6a7v2,question_7WKVxz,היו לך ניירות ערך?,Did you hold securities?,MULTIPLE_CHOICE,IF(YES): Form_867 (one per institution listed in “At which institutions were the securities held?”),אם כן: טופס 867 (אישור ניכוי מס) לשנת המס מהבנק/בית ההשקעות (אחד לכל מוסד שצוין).
+question_48J5zA,question_b7e8dE,באילו מוסדות הוחזקו ניירות ערך?,At which institutions were the securities held?,TEXTAREA,Form_867 (one per institution listed),טופס 867 (אישור ניכוי מס) לשנת המס מהבנק/בית ההשקעות (אחד לכל מוסד שצוין).
+question_xpMKvv,question_kyG7Ej,היו לך פיקדונות/תכניות חיסכון בבנק?,Did you have bank deposits/savings plans?,MULTIPLE_CHOICE,,
+question_ZNE0De,question_vADOY8,באילו בנקים?,At which banks?,TEXTAREA,,
+question_N6lkdO,question_K6xJ1K,האם מכרת מטבעות וירטואליים בשנת המס?,Did you sell virtual currencies during the tax year?,MULTIPLE_CHOICE,IF(YES): Crypto_Report (Form 1399 trades summary for the tax year),אם כן: דוח על הרווחים/הפסדים והמס שנוכה (במידה ונוכה) מ[תיאור הקריפטו]
+question_qdD6vg,question_LbKJp2,פירוט,Details,TEXTAREA,,
+question_QDeLkX,question_pKo7OE,"היו הכנסות מהימורים/הגרלות/פרסים מעל 25,000₪?",Did you have income from gambling/lotteries/prizes over ���������,MULTIPLE_CHOICE,IF(YES): Gambling_Win_Cert (winnings proof + tax withheld),"אם כן: אסמכתאות על הזכייה והמס שנוכה (הימורים/פרסים מעל 25,000 ש""ח)."
+question_9W9VM5,question_1l4JVL,פירוט סכום/מקור,Details of amount/source,TEXTAREA,,
+question_e6Q4vl,question_MbaJR0,"היו לך הכנסות מחו""ל בשנת המס שלא דווחו בעסק?",Did you have foreign income not reported in a business?,MULTIPLE_CHOICE,IF(YES): Foreign_Income_Report (income proof + foreign tax paid; include foreign tax return if filed),"אם כן: אסמכתאות על ההכנסה ועל המס ששולם בחו""ל; אם הוגש דו""ח מס במדינה אחרת — לצרף גם אותו."
+question_WNEy1k,question_J6lJz7,מדינה,Country,INPUT_TEXT,,
+question_a65VvX,question_g0q7GK,סוג הכנסה,Type of income,MULTI_SELECT,,
+question_487oPA,question_e6r79k,"האם הוגש דו""ח מס במדינה בה היו לך הכנסות נוספות?",Was a tax return filed in the country?,MULTIPLE_CHOICE,,
+question_7WLGM0,question_XDoM0V,היו לך הכנסות משכר דירה בישראל בשנת המס?,Did you have rental income from property in Israel?,MULTIPLE_CHOICE,IF(YES): Rent_Contract_Income (lease contract for rented-out property),אם כן: חוזה שכירות של הדירה שהשכרת (הכנסה).
+question_K6xQyA,question_7WKV2z,"שכ""ד חודשי שהתקבל",Monthly rent received,INPUT_TEXT,,
+question_zqya7k,question_67KO25,האם הדירה המושכרת היא הדירה היחידה בבעלותך?,Is the rented property the only property you own?,MULTIPLE_CHOICE,,
+question_Ad2Zye,question_8KLPQo,האם אתה גם שוכר דירה?,Are you also renting a property?,MULTIPLE_CHOICE,IF(YES): Rent_Contract_Expense (lease contract for rented-in residence),אם כן: חוזה שכירות של הדירה ששכרת למגורים (הוצאה).
+question_BXdN0R,question_0x8J6Q,"שכ""ד חודשי",Monthly rental payment,INPUT_NUMBER,,
+question_kyeqvo,question_zqMrDE,האם מכרת נכס מקרקעין בשנת המס?,Did you sell real estate during the tax year?,MULTIPLE_CHOICE,,
+question_vAekKl,question_5z9G1b,פירוט קצר,Brief details,TEXTAREA,,
+question_K65bkX,question_d60DxN,האם יש לך מלאי בעסק?,Do you have business inventory?,MULTIPLE_CHOICE,IF(YES): Inventory_List (inventory count list as of last day of the tax year),אם כן: רשימת ספירת מלאי ליום האחרון של שנת המס.
+question_pKyav8,question_YQGMW0,הפקדת עצמאית לקרן פנסיה (לא דרך משכורת)?,Did you make independent contributions to a pension fund?,MULTIPLE_CHOICE,IF(YES): Insurance_Tax_Cert (one per insurance company listed),אם כן: אישור שנתי למס הכנסה לשנת 2025 (נקרא גם דוח שנתי *מקוצר*) על ההפקדות ל[סוג ההפקדה] ב-[שם החברה]
+question_1ld861,question_DNpJdp,באיזה חברות ביטוח?,At which insurance companies?,TEXTAREA,Insurance_Tax_Cert (one per insurance company listed in this list),אישור מס שנתי או דוח שנתי מקוצר מחברת הביטוח (אחד לכל חברת ביטוח שציינת).
+question_MbNBMk,question_lyO7d6,הפקדת עצמאית לקרן השתלמות?,Did you make independent contributions to a study fund?,MULTIPLE_CHOICE,IF(YES): Insurance_Tax_Cert (one per insurance company listed),אם כן: אישור שנתי למס הכנסה לשנת 2025 (נקרא גם דוח שנתי *מקוצר*) על ההפקדות ל[סוג ההפקדה] ב-[שם החברה]
+question_J6p7oK,question_R0oJ5P,באיזה חברות?,At which companies?,TEXTAREA,Insurance_Tax_Cert (one per insurance company listed in this list),אישור מס שנתי או דוח שנתי מקוצר מחברת הביטוח (אחד לכל חברת ביטוח שציינת).
+question_g0d2zD,question_oyR7MM,הפקדת עצמאית לאובדן כושר עבודה?,Did you make independent contributions to disability insurance?,MULTIPLE_CHOICE,IF(YES): Insurance_Tax_Cert (one per insurance company listed),אם כן: אישור שנתי למס הכנסה לשנת 2025 (נקרא גם דוח שנתי *מקוצר*) על ההפקדות ל[סוג ההפקדה] ב-[שם החברה]
+question_y62L1X,question_GzpJdz,באיזה חברות?,At which companies?,TEXTAREA,Insurance_Tax_Cert (one per insurance company listed in this list),אישור מס שנתי או דוח שנתי מקוצר מחברת הביטוח (אחד לכל חברת ביטוח שציינת).
+question_a64Q7E,question_b7e8xE,הפקדת עצמאית לביטוח חיים?,Did you make independent contributions to life insurance?,MULTIPLE_CHOICE,IF(YES): Insurance_Tax_Cert (one per insurance company listed),אם כן: אישור שנתי למס הכנסה לשנת 2025 (נקרא גם דוח שנתי *מקוצר*) על ההפקדות בביטוח חיים ב-[שם החברה]
+question_67K8aO,question_AdpqLN,באיזה חברות?,At which companies?,TEXTAREA,Insurance_Tax_Cert (one per insurance company listed in this list),אישור מס שנתי או דוח שנתי מקוצר מחברת הביטוח (אחד לכל חברת ביטוח שציינת).
+question_XDJXQL,question_OzXJ5A,האם יש משכנתא פעילה?,Do you have an active mortgage?,MULTIPLE_CHOICE,,
+question_8KaOrz,question_V0PM5l,באיזה חברת ביטוח הביטוח חיים של המשכנתא?,At which insurance company is the mortgage life insurance?,INPUT_TEXT,,
+question_oyR995,question_BXpQkY,האם השתחררת מהצבא או משירות לאומי ב-3 שנים האחרונות?,Were you discharged from military service in the last 3 years?,MULTIPLE_CHOICE,IF(YES): Army_Release_Cert (military/national service release certificate),"אם כן: אישור שחרור משירות סדיר מאתר ""אישורים"" של צה""ל או טופס אישור לסיום השירות הלאומי."
+question_0xBXkB,question_P69X50,האם היו לך במהלך שנת המס הוצאות להנצחת זכרו של קרוב משפחה שהינו חייל או שוטר שנספה במערכה ו.או לזכרו של קרוב משפחה שנספה בפעולות איבה?,Did you have memorial expenses during the tax year?,MULTIPLE_CHOICE,IF(YES): Memorial_Receipts (receipts + proof of relationship),אם כן: קבלות ומסמכים *רלוונטיים* על הוצאות הנצחה.
+question_zqyldM,question_EXlJQL,פירוט קרבה,Details of relationship,TEXTAREA,,
+question_5z9vzN,question_1l4J7L,האם יש לך קרובי משפחה נטולי יכולת שמוחזקים במוסדות ואתה מממן אותם?,Do you have incapacitated family members in institutions?,MULTIPLE_CHOICE,IF(YES): Institution_Approval (official proof + relationship) [REVIEW],אם כן: מסמך רשמי רלוונטי על ההוצאה והקרבה (החזקת קרוב משפחה במוסד).
+question_5zjRVZ,question_r6OdAL,האם סיימת תואר בשנים האחרונות (2023 והלאה)?,Did you complete a degree in recent years?,MULTIPLE_CHOICE,IF(YES): Degree_Cert (degree eligibility certificate),אם כן: אישור זכאות לתואר מ[שם המוסד]
+question_d6arzd,question_487oxo,סוג תואר + שנת סיום,Type of degree + year of completion,INPUT_TEXT,,
+question_YQ089W,question_jyo7Q9,מוסד לימודים,Educational institution,INPUT_TEXT,,
+question_DNkQaN,question_2eAJNb,האם היו שינויים במצב הבריאותי של מישהו בתא המשפחתי שהובילו לפטורים/הקלות במס?,Were there changes in health status leading to tax exemptions?,MULTIPLE_CHOICE,IF(YES): Medical_Committee (official medical exemption/disability documentation) [REVIEW],אם כן: מסמך רשמי רלוונטי על הפטור/נכות (מסמכים רפואיים/ועדה רפואית).
+question_lyeQzN,question_xpDPa9,פירוט,Details,TEXTAREA,,
+question_R0Mpj4,question_ZNOz6v,האם תרמת למוסדות ציבוריים ולא העברת את כל הקבלות (סה״כ מעל 200₪)?,Did you donate to public institutions without all receipts?,MULTIPLE_CHOICE,IF(YES): Donation_Receipts (consolidated receipts — Section 46),"אם כן: קבלות מקוריות מרוכזות על תרומות לפי סעיף 46 (יש לשלוח קבלות רק ממוסדות שלהם יש סעיף 46. ניתן לראות זאת בקבלה. כמו כן, מעל 200 ש""ח)."
+question_Gz9WbL,question_N6XJWb,האם יש לקוחות שניכו לך מס הכנסה במקור בשנת המס?,Did any clients withhold income tax at source?,MULTIPLE_CHOICE,IF(YES): WHT_Approval (one per client listed),"אם כן: אישור שנתי על ניכוי מס במקור/בט""ל מהלקוח (אחד לכל לקוח שצוין)."
+question_Oz4vEY,question_qdGKAk,שמות הלקוחות,Client names,TEXTAREA,,
+question_V0QgNM,question_QDRJ5k,האם יש לקוחות שניכו לך ביטוח לאומי במקור בשנת המס?,Did any clients withhold National Insurance at source?,MULTIPLE_CHOICE,IF(YES): WHT_Approval (one per client listed),"אם כן: אישור שנתי על ניכוי מס במקור/בט""ל מהלקוח (אחד לכל לקוח שצוין)."
+question_P61KrB,question_9WZED4,שמות הלקוחות,Client names,TEXTAREA,,
+question_5zdaod,question_R0zqQl,האם היו הכנסות אחרות בשנת המס שלא צוינו בשאלון ויכולות להיות רלוונטיות?,Were there other income sources in the tax year not mentioned in this questionnaire?,multiple_choice,,
+question_d6YJXA,question_oyA8Z1,אנא פרט את ההכנסות הנוספות,Please describe the additional income sources,text,[your document name in English],[your document name in Hebrew]

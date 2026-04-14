@@ -1,0 +1,93 @@
+%%{ init: { 'theme': 'base' } }%%
+
+graph TD
+
+%% ============================================================
+%% INBOUND DOCUMENT PROCESSING PIPELINE
+%% ============================================================
+
+subgraph INBOUND["Inbound Document Processing — Workers: process-inbound-email"]
+    direction TB
+    EMAIL_IN["Client sends email<br/>to reports@moshe-atsits.co.il"]
+    GRAPH_POLL["MS Graph API<br/>Webhook trigger via n8n"]
+    EXTRACT["Extract Attachments<br/>PDF, images, docs"]
+    AI_CLASS["Claude Haiku<br/>AI Classification<br/>350-line prompt"]
+    CONFIDENCE{"Confidence<br/>check"}
+    HIGH_CONF["High Confidence<br/>Auto-match to template"]
+    LOW_CONF["Low Confidence<br/>Create pending_classification"]
+    SAVE_OD["Save to OneDrive<br/>Client folder structure"]
+    UPDATE_DOC["Update Airtable<br/>document record<br/>status: Received"]
+    ADMIN_REVIEW["Admin Reviews<br/>pending_classifications"]
+    APPROVE_CLASS["Approve / Reject / Reassign<br/>via admin panel"]
+end
+
+EMAIL_IN --> GRAPH_POLL
+GRAPH_POLL --> EXTRACT
+EXTRACT --> AI_CLASS
+AI_CLASS --> CONFIDENCE
+CONFIDENCE -->|"score >= threshold"| HIGH_CONF
+CONFIDENCE -->|"score < threshold"| LOW_CONF
+HIGH_CONF --> SAVE_OD
+HIGH_CONF --> UPDATE_DOC
+LOW_CONF --> ADMIN_REVIEW
+ADMIN_REVIEW --> APPROVE_CLASS
+APPROVE_CLASS -->|"approved"| SAVE_OD
+APPROVE_CLASS -->|"approved"| UPDATE_DOC
+
+%% ============================================================
+%% DOCUMENT GENERATION (SSOT)
+%% ============================================================
+
+subgraph GENERATION["Document Generation — [SUB] Document Service"]
+    direction TB
+    TALLY_SUBMIT["Tally Form Submitted<br/>Webhook triggers WF[02]"]
+    READ_ANSWERS["Read questionnaire answers<br/>from Airtable"]
+    LOAD_TEMPLATES["Load SSOT templates<br/>33 templates from Airtable"]
+    LOAD_MAPPINGS["Load question_mappings<br/>60 rules from Airtable"]
+    APPLY_RULES["Apply mapping rules<br/>Answer values to doc templates"]
+    DEDUP["Deduplicate<br/>Form 867 by institution name"]
+    GEN_DOCS["Generate document records<br/>Create in Airtable"]
+    GEN_HTML["Generate HTML<br/>Office email + client email"]
+    SEND_OFFICE["Send office email<br/>via MS Graph API"]
+end
+
+TALLY_SUBMIT --> READ_ANSWERS
+READ_ANSWERS --> LOAD_TEMPLATES
+READ_ANSWERS --> LOAD_MAPPINGS
+LOAD_TEMPLATES --> APPLY_RULES
+LOAD_MAPPINGS --> APPLY_RULES
+APPLY_RULES --> DEDUP
+DEDUP --> GEN_DOCS
+GEN_DOCS --> GEN_HTML
+GEN_HTML --> SEND_OFFICE
+
+%% ============================================================
+%% DOCUMENT STATUS LIFECYCLE
+%% ============================================================
+
+subgraph LIFECYCLE["Document Status Lifecycle"]
+    direction LR
+    REQUIRED["Required_Missing<br/>Created by generation"]
+    RECEIVED["Received<br/>File uploaded or classified"]
+    WAIVED["Waived<br/>Office marks not needed"]
+    REMOVED["Removed<br/>Office deletes doc"]
+    REQUIRES_FIX["Requires_Fix<br/>Office flags issue"]
+end
+
+REQUIRED -->|"upload / AI classify"| RECEIVED
+REQUIRED -->|"office waives"| WAIVED
+REQUIRED -->|"office removes"| REMOVED
+RECEIVED -->|"office flags"| REQUIRES_FIX
+REQUIRES_FIX -->|"client re-uploads"| RECEIVED
+WAIVED -->|"office reverts"| REQUIRED
+
+%% ============================================================
+%% STYLES
+%% ============================================================
+classDef inbound fill:#fef3c7,stroke:#d97706,stroke-width:2px
+classDef generation fill:#ede9fe,stroke:#7c3aed,stroke-width:2px
+classDef lifecycle fill:#e0f2fe,stroke:#0284c7,stroke-width:2px
+
+class EMAIL_IN,GRAPH_POLL,EXTRACT,AI_CLASS,CONFIDENCE,HIGH_CONF,LOW_CONF,SAVE_OD,UPDATE_DOC,ADMIN_REVIEW,APPROVE_CLASS inbound
+class TALLY_SUBMIT,READ_ANSWERS,LOAD_TEMPLATES,LOAD_MAPPINGS,APPLY_RULES,DEDUP,GEN_DOCS,GEN_HTML,SEND_OFFICE generation
+class REQUIRED,RECEIVED,WAIVED,REMOVED,REQUIRES_FIX lifecycle

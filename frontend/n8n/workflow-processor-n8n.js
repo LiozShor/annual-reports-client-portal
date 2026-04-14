@@ -5,7 +5,7 @@
  * This library contains ALL business logic for processing Tally questionnaires
  * and generating document requirements for the Annual Reports CRM system.
  *
- * Fetch from: https://raw.githubusercontent.com/LiozShor/annual-reports-client-portal/main/workflow-processor-n8n.js
+ * Fetch from: https://raw.githubusercontent.com/LiozShor/annual-reports-client-portal/main/frontend/n8n/workflow-processor-n8n.js
  *
  * SINGLE SOURCE OF TRUTH - All workflow [02] logic lives here!
  *

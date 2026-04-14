@@ -2,7 +2,7 @@
  * DOCUMENT DISPLAY LIBRARY FOR n8n
  * =================================
  *
- * Fetch from: https://raw.githubusercontent.com/LiozShor/annual-reports-client-portal/main/document-display-n8n.js
+ * Fetch from: https://raw.githubusercontent.com/LiozShor/annual-reports-client-portal/main/frontend/n8n/document-display-n8n.js
  */
 
 function formatDocumentName(doc, spouseName = null) {

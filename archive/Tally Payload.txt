@@ -1,0 +1,1100 @@
+// The full raw response from the webhook with the NEW payload data
+const rawWebhookData = [
+  {
+    "headers": {
+      "host": "liozshor.app.n8n.cloud",
+      "user-agent": "Tally Webhooks",
+      "content-length": "19626",
+      "accept": "application/json, text/plain, */*",
+      "content-type": "application/json",
+      "x-is-trusted": "yes"
+    },
+    "params": {},
+    "query": {},
+    "body": {
+      "eventId": "4309c027-4090-4102-829f-b6daccf602a0",
+      "eventType": "FORM_RESPONSE",
+      "createdAt": "2026-01-26T10:57:19.871Z",
+      "data": {
+        "responseId": "aQLyo29",
+        "submissionId": "aQLyo29",
+        "respondentId": "PdOYKAB",
+        "formId": "1AkYKb",
+        "formName": "שאלון שנתי 2025",
+        "createdAt": "2026-01-26T10:57:19.000Z",
+        "fields": [
+          {
+            "key": "question_Ad2ZXW_eda95daa-e622-4fcb-98d6-3f0aa0649680",
+            "label": "report_record_id",
+            "type": "HIDDEN_FIELDS",
+            "value": "reci3TDgN6R42hhTl"
+          },
+          {
+            "key": "question_Ad2ZXW_07088289-7dc1-4173-97cb-855bc6655b0a",
+            "label": "client_id",
+            "type": "HIDDEN_FIELDS",
+            "value": "CPA-XXX"
+          },
+          {
+            "key": "question_Ad2ZXW_45f853b0-2044-45f0-bca8-4cb0db3c538a",
+            "label": "year",
+            "type": "HIDDEN_FIELDS",
+            "value": "2025"
+          },
+          {
+            "key": "question_Ad2ZXW_12245f33-980a-4def-8656-f87f7ed1f397",
+            "label": "questionnaire_token",
+            "type": "HIDDEN_FIELDS",
+            "value": "1234"
+          },
+          {
+            "key": "question_Ad2ZXW_5cf54aa8-32b8-47cc-b2c0-a2bcddabb689",
+            "label": "full_name",
+            "type": "HIDDEN_FIELDS",
+            "value": "לוי יצחק"
+          },
+          {
+            "key": "question_Ad2ZXW_64644761-68e7-45eb-aac2-18c5471941fa",
+            "label": "email",
+            "type": "HIDDEN_FIELDS",
+            "value": "liozshor1@gmail.com"
+          },
+          {
+            "key": "question_vAekdl",
+            "label": "שם ושם משפחה",
+            "type": "INPUT_TEXT",
+            "value": "לוי יצחק"
+          },
+          {
+            "key": "question_K65baX",
+            "label": "אימייל",
+            "type": "INPUT_EMAIL",
+            "value": "liozshor1@gmail.com"
+          },
+          {
+            "key": "question_Lb7l6l",
+            "label": "מצב משפחתי בשנת המס",
+            "type": "MULTIPLE_CHOICE",
+            "value": [
+              "7a974ce4-cff2-4572-a0fc-a266f5c4bdcd"
+            ],
+            "options": [
+              {
+                "id": "f146e2ae-5f45-4f9f-b429-1b4f9cf71562",
+                "text": "רווק/ה"
+              },
+              {
+                "id": "7a974ce4-cff2-4572-a0fc-a266f5c4bdcd",
+                "text": "נשוי/אה"
+              },
+              {
+                "id": "026a9ee1-1d64-4030-b526-010a89bf16aa",
+                "text": "גרוש/ה"
+              },
+              {
+                "id": "6bc95071-59d7-49b3-a3fb-1687255fb8e7",
+                "text": "אלמן/ה"
+              }
+            ]
+          },
+          {
+            "key": "question_67Kv1P",
+            "label": "האם גרת ביישוב מזכה בשנת המס?",
+            "type": "MULTIPLE_CHOICE",
+            "value": [
+              "be188f39-8ae6-4dfe-92b6-8717b7f88a0e"
+            ],
+            "options": [
+              {
+                "id": "be188f39-8ae6-4dfe-92b6-8717b7f88a0e",
+                "text": "כן"
+              },
+              {
+                "id": "458fbe6f-308e-41b4-aa0f-e85ad67e8da3",
+                "text": "לא"
+              }
+            ]
+          },
+          {
+            "key": "question_7WKvJP",
+            "label": "שם היישוב",
+            "type": "INPUT_TEXT",
+            "value": "כרמיאל"
+          },
+          {
+            "key": "question_1ld8p1",
+            "label": "שם בן/בת הזוג",
+            "type": "INPUT_TEXT",
+            "value": "משה"
+          },
+          {
+            "key": "question_J6p7MK",
+            "label": "האם היה שינוי בסטטוס המשפחתי (נישואין/גירושין/התאלמנות/פירוד רשמי) בשנת המס?",
+            "type": "MULTIPLE_CHOICE",
+            "value": [
+              "e174bdb0-4a7b-496c-897f-0002939bcbbe"
+            ],
+            "options": [
+              {
+                "id": "e174bdb0-4a7b-496c-897f-0002939bcbbe",
+                "text": "כן"
+              },
+              {
+                "id": "b2cfd4e5-a658-443a-a97a-1781c815ebf0",
+                "text": "לא"
+              }
+            ]
+          },
+          {
+            "key": "question_g0d2vD",
+            "label": "פירוט + תאריך השינוי",
+            "type": "TEXTAREA",
+            "value": "1.1.11"
+          },
+          {
+            "key": "question_8KaOMz",
+            "label": "האם יש לך ילדים?",
+            "type": "MULTIPLE_CHOICE",
+            "value": [
+              "a3b5d4d6-640f-44bd-86a0-b4245bdf9e13"
+            ],
+            "options": [
+              {
+                "id": "a3b5d4d6-640f-44bd-86a0-b4245bdf9e13",
+                "text": "כן"
+              },
+              {
+                "id": "560dadd1-9dbe-4a43-a231-0c1aa5bf7a14",
+                "text": "לא"
+              }
+            ]
+          },
+          {
+            "key": "question_y62LzX",
+            "label": "האם נולד/ה או הצטרף/ה ילד/ה בשנת המס?",
+            "type": "MULTIPLE_CHOICE",
+            "value": [
+              "96b7dcd6-5304-48e4-9956-462eb1cd4e02"
+            ],
+            "options": [
+              {
+                "id": "96b7dcd6-5304-48e4-9956-462eb1cd4e02",
+                "text": "כן"
+              },
+              {
+                "id": "524a1153-a5da-42b6-9dd0-202c93c1956c",
+                "text": "לא"
+              }
+            ]
+          },
+          {
+            "key": "question_XDJXzL",
+            "label": "תאריכי לידה של הילדים שנוספו בשנת המס",
+            "type": "TEXTAREA",
+            "value": "1.1.1.1"
+          },
+          {
+            "key": "question_0xBXaB",
+            "label": "האם יש ילדים בחינוך מיוחד?",
+            "type": "MULTIPLE_CHOICE",
+            "value": [
+              "b0f4bac1-7a82-4d80-bca9-76cbc31a2bfb"
+            ],
+            "options": [
+              {
+                "id": "b0f4bac1-7a82-4d80-bca9-76cbc31a2bfb",
+                "text": "כן"
+              },
+              {
+                "id": "815efe8e-fef6-456e-99cf-145b2117736b",
+                "text": "לא"
+              }
+            ]
+          },
+          {
+            "key": "question_8Ka0Zl",
+            "label": "האם יש ילדים שבגינם מתקבלת קצבת נכות מביטוח לאומי?",
+            "type": "MULTIPLE_CHOICE",
+            "value": [
+              "4b88c35d-feb4-42ff-a333-c9455b14f52a"
+            ],
+            "options": [
+              {
+                "id": "4b88c35d-feb4-42ff-a333-c9455b14f52a",
+                "text": "כן"
+              },
+              {
+                "id": "c0c84912-0373-4fc5-92c9-35087b0b3224",
+                "text": "לא"
+              }
+            ]
+          },
+          {
+            "key": "question_P69RpP",
+            "label": "האם שילמת דמי מזונות בשנת המס?",
+            "type": "MULTIPLE_CHOICE",
+            "value": [
+              "79968c0e-c0e4-4391-b987-518a650a5084"
+            ],
+            "options": [
+              {
+                "id": "79968c0e-c0e4-4391-b987-518a650a5084",
+                "text": "כן"
+              },
+              {
+                "id": "f01d4bcf-ea8e-4c8a-9fb8-a96aeb17ce7f",
+                "text": "לא"
+              }
+            ]
+          },
+          {
+            "key": "question_zqylLM",
+            "label": "האם היית שכיר/ה בשנת המס?",
+            "type": "MULTIPLE_CHOICE",
+            "value": [
+              "44013eac-2bf9-4ea3-bbc8-308df59f9dc2"
+            ],
+            "options": [
+              {
+                "id": "44013eac-2bf9-4ea3-bbc8-308df59f9dc2",
+                "text": "כן"
+              },
+              {
+                "id": "143c6d86-15df-4738-b2c1-46022d804764",
+                "text": "לא"
+              }
+            ]
+          },
+          {
+            "key": "question_5zjRMZ",
+            "label": "רשימת מעסיקים – שלך",
+            "type": "TEXTAREA",
+            "value": "קפה גרג 1\nקפה קפה 2"
+          },
+          {
+            "key": "question_d6arvd",
+            "label": "האם בן/בת הזוג היה/הייתה שכיר/ה בשנת המס?",
+            "type": "MULTIPLE_CHOICE",
+            "value": [
+              "145f0789-7ab8-4218-bfb2-8807f9eb2699"
+            ],
+            "options": [
+              {
+                "id": "145f0789-7ab8-4218-bfb2-8807f9eb2699",
+                "text": "כן"
+              },
+              {
+                "id": "34f116cd-805a-4ede-82db-a73905213ff8",
+                "text": "לא"
+              }
+            ]
+          },
+          {
+            "key": "question_YQ08kW",
+            "label": "רשימת מעסיקים – בן/בת זוג",
+            "type": "TEXTAREA",
+            "value": "INTEL\nMICROSOFT"
+          },
+          {
+            "key": "question_DNkQMN",
+            "label": "האם משכת כספים מחברת ביטוח/קופת גמל/פנסיה/השתלמות בשנת המס?",
+            "type": "MULTIPLE_CHOICE",
+            "value": [
+              "cb6cad51-1a2c-4f15-9433-465811e807c4"
+            ],
+            "options": [
+              {
+                "id": "cb6cad51-1a2c-4f15-9433-465811e807c4",
+                "text": "כן"
+              },
+              {
+                "id": "b9b3c07f-9bfc-4281-92f3-2181541e6500",
+                "text": "לא"
+              }
+            ]
+          },
+          {
+            "key": "question_lyeQvN",
+            "label": "איזה סוג כספים נמשכו?",
+            "type": "MULTI_SELECT",
+            "value": [
+              "95cfdd65-faf6-489d-91be-827c7e613ff9",
+              "3eb5d359-fb98-4151-822c-f6d6bb0cdfdf",
+              "57f56e42-1d95-49a9-85df-b8c900a70f88",
+              "d6c3d5ca-92e8-44cd-a925-5526d194dacc",
+              "617c4adb-1bbc-49f8-82c0-fb6322c95acb",
+              "32f708ee-cce8-4639-8fbe-9015e7d74e56"
+            ],
+            "options": [
+              {
+                "id": "95cfdd65-faf6-489d-91be-827c7e613ff9",
+                "text": "פיצויי פיטורין"
+              },
+              {
+                "id": "3eb5d359-fb98-4151-822c-f6d6bb0cdfdf",
+                "text": "מענק פרישה"
+              },
+              {
+                "id": "57f56e42-1d95-49a9-85df-b8c900a70f88",
+                "text": "משיכת קרן השתלמות"
+              },
+              {
+                "id": "d6c3d5ca-92e8-44cd-a925-5526d194dacc",
+                "text": "משיכת קרן פנסיה"
+              },
+              {
+                "id": "617c4adb-1bbc-49f8-82c0-fb6322c95acb",
+                "text": "משיכת קופת גמל להשקעה"
+              },
+              {
+                "id": "32f708ee-cce8-4639-8fbe-9015e7d74e56",
+                "text": "אחר"
+              }
+            ]
+          },
+          {
+            "key": "question_R0Mpk4",
+            "label": "פירוט \"אחר\"",
+            "type": "INPUT_TEXT",
+            "value": "משיכת כספים אחרת"
+          },
+          {
+            "key": "question_oyeWvO",
+            "label": "האם קיבלת קצבת נכות מביטוח לאומי בשנת המס?",
+            "type": "MULTIPLE_CHOICE",
+            "value": [
+              "27abe34a-e7e4-4f2e-a5d5-2c8bbfdd9960"
+            ],
+            "options": [
+              {
+                "id": "27abe34a-e7e4-4f2e-a5d5-2c8bbfdd9960",
+                "text": "כן"
+              },
+              {
+                "id": "3d0ab394-6bdd-4d45-b9b7-206a4d5041cd",
+                "text": "לא"
+              }
+            ]
+          },
+          {
+            "key": "question_XDoYDP",
+            "label": "האם קיבלת קצבת שארים בשנת המס?",
+            "type": "MULTIPLE_CHOICE",
+            "value": [
+              "aed4fe2c-42d0-4f36-ba86-72af1e9cb8d4"
+            ],
+            "options": [
+              {
+                "id": "aed4fe2c-42d0-4f36-ba86-72af1e9cb8d4",
+                "text": "כן"
+              },
+              {
+                "id": "eff01efe-ba1b-435b-95c0-9a5112d80a26",
+                "text": "לא"
+              }
+            ]
+          },
+          {
+            "key": "question_8KL8Kl",
+            "label": "פירוט קצבת שארים",
+            "type": "TEXTAREA",
+            "value": "קצבת שארים שלי"
+          },
+          {
+            "key": "question_Oz4vkY",
+            "label": "האם בן/בת הזוג קיבל/ה תקבולים מביטוח לאומי בשנת המס? (אבטלה, דמי לידה, פגיעה בעבודה, מילואים, נכות)",
+            "type": "MULTIPLE_CHOICE",
+            "value": [
+              "3e1e66d7-df27-426a-80f4-d9249ba2494e"
+            ],
+            "options": [
+              {
+                "id": "3e1e66d7-df27-426a-80f4-d9249ba2494e",
+                "text": "כן"
+              },
+              {
+                "id": "15f76d00-f5a2-4878-8698-24f4cfaa206f",
+                "text": "לא"
+              }
+            ]
+          },
+          {
+            "key": "question_V0QgDM",
+            "label": "אילו תקבולים?",
+            "type": "MULTI_SELECT",
+            "value": [
+              "d1dd042d-52e1-4f48-8912-63523221568a",
+              "113eb1cc-552a-439c-b1fd-d5e8e99847fb",
+              "28c2a45f-9b24-4001-9ba1-ed064436939f",
+              "307a7ead-c9dd-41e0-91a5-5ef8ee6322b0",
+              "36b1c0b5-6211-498e-bf9a-9e6257d7ab82",
+              "47d4e192-0f77-459c-b040-b16703f6fca7"
+            ],
+            "options": [
+              {
+                "id": "d1dd042d-52e1-4f48-8912-63523221568a",
+                "text": "נכות"
+              },
+              {
+                "id": "113eb1cc-552a-439c-b1fd-d5e8e99847fb",
+                "text": "אבטלה"
+              },
+              {
+                "id": "307a7ead-c9dd-41e0-91a5-5ef8ee6322b0",
+                "text": "מילואים"
+              },
+              {
+                "id": "28c2a45f-9b24-4001-9ba1-ed064436939f",
+                "text": "דמי לידה"
+              },
+              {
+                "id": "36b1c0b5-6211-498e-bf9a-9e6257d7ab82",
+                "text": "פגיעה בעבודה"
+              },
+              {
+                "id": "47d4e192-0f77-459c-b040-b16703f6fca7",
+                "text": "אחר"
+              }
+            ]
+          },
+          {
+            "key": "question_P61KkB",
+            "label": "פירוט \"אחר\"",
+            "type": "INPUT_TEXT",
+            "value": null
+          },
+          {
+            "key": "question_0x8vx9",
+            "label": "האם בן/בת הזוג קיבל/ה קצבת שארים?",
+            "type": "MULTIPLE_CHOICE",
+            "value": [
+              "921e25be-8eb9-43b8-8194-0ca6f6d4a981"
+            ],
+            "options": [
+              {
+                "id": "921e25be-8eb9-43b8-8194-0ca6f6d4a981",
+                "text": "כן"
+              },
+              {
+                "id": "d87e6f98-f6f5-4f95-89fb-650134185eb4",
+                "text": "לא"
+              }
+            ]
+          },
+          {
+            "key": "question_zqMJqk",
+            "label": "פירוט",
+            "type": "TEXTAREA",
+            "value": "קצבת שארים של בן זוג"
+          },
+          {
+            "key": "question_r6a7v2",
+            "label": "האם היו לך ניירות ערך?",
+            "type": "MULTIPLE_CHOICE",
+            "value": [
+              "22779026-b39c-49cf-b834-c075c296a426"
+            ],
+            "options": [
+              {
+                "id": "22779026-b39c-49cf-b834-c075c296a426",
+                "text": "כן"
+              },
+              {
+                "id": "2b18fac1-fb34-4d93-8bad-e1823670823f",
+                "text": "לא"
+              }
+            ]
+          },
+          {
+            "key": "question_48J5zA",
+            "label": "באילו מוסדות הוחזקו ניירות ערך?",
+            "type": "TEXTAREA",
+            "value": "מוסד ניירות ערך\nמוסד ניירות ערך 2"
+          },
+          {
+            "key": "question_xpMKvv",
+            "label": "האם היו לך פיקדונות/תכניות חיסכון בבנק?",
+            "type": "MULTIPLE_CHOICE",
+            "value": [
+              "faa49fc4-67ab-4345-944b-4146ab790b37"
+            ],
+            "options": [
+              {
+                "id": "faa49fc4-67ab-4345-944b-4146ab790b37",
+                "text": "כן"
+              },
+              {
+                "id": "d211a6a3-6581-4d0a-8ed2-c52dcc9cb44c",
+                "text": "לא"
+              }
+            ]
+          },
+          {
+            "key": "question_ZNE0De",
+            "label": "באילו בנקים?",
+            "type": "TEXTAREA",
+            "value": "פקדון בבנק 1\nפקדון בבנק 2"
+          },
+          {
+            "key": "question_N6lkdO",
+            "label": "האם מכרת מטבעות וירטואליים בשנת המס?",
+            "type": "MULTIPLE_CHOICE",
+            "value": [
+              "05da58ea-6125-4ab0-83b5-10d3f8d337ef"
+            ],
+            "options": [
+              {
+                "id": "05da58ea-6125-4ab0-83b5-10d3f8d337ef",
+                "text": "כן"
+              },
+              {
+                "id": "b825be47-bf75-4045-a7ed-0247fc8bf9ef",
+                "text": "לא"
+              }
+            ]
+          },
+          {
+            "key": "question_qdD6vg",
+            "label": "פירוט",
+            "type": "TEXTAREA",
+            "value": "מטבע וירטואלי 1\nמטבע וירטואלי 2"
+          },
+          {
+            "key": "question_QDeLkX",
+            "label": "האם היו הכנסות מהימורים/הגרלות/פרסים מעל 25,000₪?",
+            "type": "MULTIPLE_CHOICE",
+            "value": [
+              "08ddd7fd-00f3-46d8-a5bf-0df81e35cff6"
+            ],
+            "options": [
+              {
+                "id": "08ddd7fd-00f3-46d8-a5bf-0df81e35cff6",
+                "text": "כן"
+              },
+              {
+                "id": "e0a33325-7087-49cd-973d-450131f04e96",
+                "text": "לא"
+              }
+            ]
+          },
+          {
+            "key": "question_9W9VM5",
+            "label": "פירוט סכום/מקור",
+            "type": "TEXTAREA",
+            "value": "הכנסות לוטו\n"
+          },
+          {
+            "key": "question_e6Q4vl",
+            "label": "האם היו לך הכנסות מחו\"ל בשנת המס שלא דווחו בעסק?",
+            "type": "MULTIPLE_CHOICE",
+            "value": [
+              "026edd37-7881-4cdc-b086-9721e017e794"
+            ],
+            "options": [
+              {
+                "id": "026edd37-7881-4cdc-b086-9721e017e794",
+                "text": "כן"
+              },
+              {
+                "id": "928fb59d-822e-49c3-8ade-81927f0ba5b2",
+                "text": "לא"
+              }
+            ]
+          },
+          {
+            "key": "question_WNEy1k",
+            "label": "מדינה",
+            "type": "INPUT_TEXT",
+            "value": "ארהב"
+          },
+          {
+            "key": "question_a65VvX",
+            "label": "סוג הכנסה",
+            "type": "MULTI_SELECT",
+            "value": [
+              "4af2e9e2-39ea-4718-b336-86b30834cbf3",
+              "397f3620-0f5e-4cda-93c5-b776dd830faf"
+            ],
+            "options": [
+              {
+                "id": "4af2e9e2-39ea-4718-b336-86b30834cbf3",
+                "text": "עסק"
+              },
+              {
+                "id": "397f3620-0f5e-4cda-93c5-b776dd830faf",
+                "text": "משכורת"
+              },
+              {
+                "id": "9e5874fc-113a-4f8a-a665-ed96c8c97889",
+                "text": "רווחי הון"
+              },
+              {
+                "id": "43cb3dea-f25b-4328-9544-add765b91dbd",
+                "text": "אחר"
+              },
+              {
+                "id": "eee49f4a-0f7c-40b0-880a-b1d8a915b7b5",
+                "text": "שכירות"
+              }
+            ]
+          },
+          {
+            "key": "question_487oPA",
+            "label": "האם הוגש דו\"ח מס במדינה בה היו לך הכנסות נוספות?",
+            "type": "MULTIPLE_CHOICE",
+            "value": [
+              "7fcb3fbe-69e3-4279-a0b0-7ace03f7c525"
+            ],
+            "options": [
+              {
+                "id": "7fcb3fbe-69e3-4279-a0b0-7ace03f7c525",
+                "text": "כן"
+              },
+              {
+                "id": "175f9364-5061-4954-a62c-7a0fb4a83518",
+                "text": "לא"
+              }
+            ]
+          },
+          {
+            "key": "question_7WLGM0",
+            "label": "האם היו לך הכנסות משכר דירה בישראל בשנת המס?",
+            "type": "MULTIPLE_CHOICE",
+            "value": [
+              "9294c3c5-ebe6-453d-9e60-edb0dc1cb60b"
+            ],
+            "options": [
+              {
+                "id": "9294c3c5-ebe6-453d-9e60-edb0dc1cb60b",
+                "text": "כן\n"
+              },
+              {
+                "id": "bb6f9833-14ea-4b3d-846d-883a05d5d5b0",
+                "text": "לא\n"
+              }
+            ]
+          },
+          {
+            "key": "question_K6xQyA",
+            "label": "שכ\"ד חודשי שהתקבל",
+            "type": "INPUT_TEXT",
+            "value": "1111"
+          },
+          {
+            "key": "question_zqya7k",
+            "label": "האם הדירה המושכרת היא הדירה היחידה בבעלותך?",
+            "type": "MULTIPLE_CHOICE",
+            "value": [
+              "9e6b26ab-bb61-4d13-bd02-0840bc57996f"
+            ],
+            "options": [
+              {
+                "id": "9e6b26ab-bb61-4d13-bd02-0840bc57996f",
+                "text": "כן"
+              },
+              {
+                "id": "73262ae1-4d82-4b05-a998-96c5d51ff6e8",
+                "text": "לא"
+              }
+            ]
+          },
+          {
+            "key": "question_Ad2Zye",
+            "label": "האם אתה גם שוכר דירה?",
+            "type": "MULTIPLE_CHOICE",
+            "value": [
+              "b0a48317-d97c-4d90-b6a0-8639a3058515"
+            ],
+            "options": [
+              {
+                "id": "b0a48317-d97c-4d90-b6a0-8639a3058515",
+                "text": "כן"
+              },
+              {
+                "id": "bd278259-149c-4c50-a482-d4ff2a0a9ef5",
+                "text": "לא"
+              }
+            ]
+          },
+          {
+            "key": "question_BXdN0R",
+            "label": "שכ\"ד חודשי",
+            "type": "INPUT_NUMBER",
+            "value": 11111
+          },
+          {
+            "key": "question_kyeqvo",
+            "label": "האם מכרת נכס מקרקעין בשנת המס?",
+            "type": "MULTIPLE_CHOICE",
+            "value": [
+              "6b19c84a-dd4f-4bee-9ec9-62ab0571376b"
+            ],
+            "options": [
+              {
+                "id": "6b19c84a-dd4f-4bee-9ec9-62ab0571376b",
+                "text": "כן"
+              },
+              {
+                "id": "8e15c85c-f809-4631-8c77-a377d220e58f",
+                "text": "לא"
+              }
+            ]
+          },
+          {
+            "key": "question_vAekKl",
+            "label": "פירוט קצר",
+            "type": "TEXTAREA",
+            "value": "מכירת נכס"
+          },
+          {
+            "key": "question_K65bkX",
+            "label": "האם יש לך מלאי בעסק?",
+            "type": "MULTIPLE_CHOICE",
+            "value": [
+              "0191046b-2f70-4318-a8d4-c82849050524"
+            ],
+            "options": [
+              {
+                "id": "0191046b-2f70-4318-a8d4-c82849050524",
+                "text": "כן"
+              },
+              {
+                "id": "4470c817-85a5-49dc-b7ae-faca80ee9097",
+                "text": "לא"
+              }
+            ]
+          },
+          {
+            "key": "question_pKyav8",
+            "label": "האם הפקדת עצמאית לקרן פנסיה (לא דרך משכורת)?",
+            "type": "MULTIPLE_CHOICE",
+            "value": [
+              "b1b9fe88-b9ee-4811-bb21-3e45b2dfc4b5"
+            ],
+            "options": [
+              {
+                "id": "b1b9fe88-b9ee-4811-bb21-3e45b2dfc4b5",
+                "text": "כן"
+              },
+              {
+                "id": "d274c1c1-b766-4fe7-bee7-a9ea8fa9bfee",
+                "text": "לא"
+              }
+            ]
+          },
+          {
+            "key": "question_1ld861",
+            "label": "באיזה חברות ביטוח?",
+            "type": "TEXTAREA",
+            "value": "הפקדה עצמאית קרן פנסיה 1\nהפקדה עצמאית קרן פנסיה 2"
+          },
+          {
+            "key": "question_MbNBMk",
+            "label": "האם הפקדת עצמאית לקרן השתלמות?",
+            "type": "MULTIPLE_CHOICE",
+            "value": [
+              "a87dcb60-a06c-4ec8-9e41-3221ed5c0f69"
+            ],
+            "options": [
+              {
+                "id": "a87dcb60-a06c-4ec8-9e41-3221ed5c0f69",
+                "text": "כן"
+              },
+              {
+                "id": "89ace79d-f85e-43f0-88fd-191a32313884",
+                "text": "לא"
+              }
+            ]
+          },
+          {
+            "key": "question_J6p7oK",
+            "label": "באיזה חברות?",
+            "type": "TEXTAREA",
+            "value": "הפקדה עצמאית קרן השתלמות 1\nהפקדה עצמאית קרן השתלמות 2"
+          },
+          {
+            "key": "question_g0d2zD",
+            "label": "האם הפקדת עצמאית לאובדן כושר עבודה?",
+            "type": "MULTIPLE_CHOICE",
+            "value": [
+              "4425db32-3b9c-4fff-84f7-7752469e2a32"
+            ],
+            "options": [
+              {
+                "id": "4425db32-3b9c-4fff-84f7-7752469e2a32",
+                "text": "כן"
+              },
+              {
+                "id": "fc7e2569-dd81-4277-91f2-d1bbf9a1131e",
+                "text": "לא"
+              }
+            ]
+          },
+          {
+            "key": "question_y62L1X",
+            "label": "באיזה חברות?",
+            "type": "TEXTAREA",
+            "value": "הפקדה עצמאית אובדן כושר עבודה 1\nהפקדה עצמאית אובדן כושר עבודה 2"
+          },
+          {
+            "key": "question_a64Q7E",
+            "label": "האם הפקדת עצמאית לביטוח חיים?",
+            "type": "MULTIPLE_CHOICE",
+            "value": [
+              "4e09b4e4-0452-4453-a9af-08248cd8bd5d"
+            ],
+            "options": [
+              {
+                "id": "4e09b4e4-0452-4453-a9af-08248cd8bd5d",
+                "text": "כן"
+              },
+              {
+                "id": "5c731832-7c71-4c8e-946f-635b21cb5efd",
+                "text": "לא\n"
+              }
+            ]
+          },
+          {
+            "key": "question_67K8aO",
+            "label": "באיזה חברות?",
+            "type": "TEXTAREA",
+            "value": "הפקדה עצמאית ביטוח חיים 1\nהפקדה עצמאית ביטוח חיים 2"
+          },
+          {
+            "key": "question_XDJXQL",
+            "label": "האם יש משכנתא פעילה?",
+            "type": "MULTIPLE_CHOICE",
+            "value": null,
+            "options": [
+              {
+                "id": "9f5a37d3-f41d-4780-a7bc-534f11f38b68",
+                "text": "כן"
+              },
+              {
+                "id": "9858dd4d-3e10-40b7-8d5f-8db275068489",
+                "text": "לא"
+              }
+            ]
+          },
+          {
+            "key": "question_8KaOrz",
+            "label": "באיזה חברת ביטוח הביטוח חיים של המשכנתא?",
+            "type": "INPUT_TEXT",
+            "value": null
+          },
+          {
+            "key": "question_oyR995",
+            "label": "האם השתחררת מהצבא או משירות לאומי ב-3 שנים האחרונות?",
+            "type": "MULTIPLE_CHOICE",
+            "value": [
+              "45a544ad-ad66-4abc-8301-a3069c7376c5"
+            ],
+            "options": [
+              {
+                "id": "45a544ad-ad66-4abc-8301-a3069c7376c5",
+                "text": "כן"
+              },
+              {
+                "id": "580e3c20-ed27-44ad-85ba-a6e3e759379d",
+                "text": "לא"
+              }
+            ]
+          },
+          {
+            "key": "question_0xBXkB",
+            "label": "האם היו לך במהלך שנת המס הוצאות להנצחת זכרו של קרוב משפחה שהינו חייל או שוטר שנספה במערכה ו.או לזכרו של קרוב משפחה שנספה בפעולות איבה?",
+            "type": "MULTIPLE_CHOICE",
+            "value": [
+              "0cf07fd9-94e4-4828-b62f-b68e8cbcb76a"
+            ],
+            "options": [
+              {
+                "id": "0cf07fd9-94e4-4828-b62f-b68e8cbcb76a",
+                "text": "כן"
+              },
+              {
+                "id": "3d602df1-94a2-4548-9849-6e4a9dacbf68",
+                "text": "לא"
+              }
+            ]
+          },
+          {
+            "key": "question_zqyldM",
+            "label": "פירוט קרבה",
+            "type": "TEXTAREA",
+            "value": "קרבה קרבה"
+          },
+          {
+            "key": "question_5z9vzN",
+            "label": "האם יש לך קרובי משפחה נטולי יכולת שמוחזקים במוסדות ואתה מממן אותם?",
+            "type": "MULTIPLE_CHOICE",
+            "value": [
+              "77c5bd9d-0814-48e7-83b7-df7efa8055e1"
+            ],
+            "options": [
+              {
+                "id": "77c5bd9d-0814-48e7-83b7-df7efa8055e1",
+                "text": "כן"
+              },
+              {
+                "id": "824b3edd-5487-4423-8630-bcb80f57e482",
+                "text": "לא"
+              }
+            ]
+          },
+          {
+            "key": "question_5zjRVZ",
+            "label": "האם סיימת תואר בשנים האחרונות (2023 והלאה)?",
+            "type": "MULTIPLE_CHOICE",
+            "value": [
+              "f294399c-2a35-4377-a5df-38b193e3a416"
+            ],
+            "options": [
+              {
+                "id": "f294399c-2a35-4377-a5df-38b193e3a416",
+                "text": "כן"
+              },
+              {
+                "id": "5f78b079-72ab-4761-aeb7-506802de85af",
+                "text": "לא"
+              }
+            ]
+          },
+          {
+            "key": "question_d6arzd",
+            "label": "סוג תואר + שנת סיום",
+            "type": "INPUT_TEXT",
+            "value": "הנדסת מערכות מידע"
+          },
+          {
+            "key": "question_YQ089W",
+            "label": "מוסד לימודים",
+            "type": "INPUT_TEXT",
+            "value": "בן גוריון"
+          },
+          {
+            "key": "question_DNkQaN",
+            "label": "האם היו שינויים במצב הבריאותי של מישהו בתא המשפחתי שהובילו לפטורים/הקלות במס?",
+            "type": "MULTIPLE_CHOICE",
+            "value": [
+              "c44e4be0-0903-4908-bf31-cb44e4691e84"
+            ],
+            "options": [
+              {
+                "id": "c44e4be0-0903-4908-bf31-cb44e4691e84",
+                "text": "כן"
+              },
+              {
+                "id": "0147e32e-e50a-4caa-a2a7-ed7bece79b4f",
+                "text": "לא"
+              }
+            ]
+          },
+          {
+            "key": "question_lyeQzN",
+            "label": "פירוט",
+            "type": "TEXTAREA",
+            "value": "שינוי במצב בריאותי"
+          },
+          {
+            "key": "question_R0Mpj4",
+            "label": "האם תרמת למוסדות ציבוריים ולא העברת את כל הקבלות (סה״כ מעל 200₪)?",
+            "type": "MULTIPLE_CHOICE",
+            "value": [
+              "9d40dc92-fa17-4b76-8576-39bb5ff9bce5"
+            ],
+            "options": [
+              {
+                "id": "9d40dc92-fa17-4b76-8576-39bb5ff9bce5",
+                "text": "כן"
+              },
+              {
+                "id": "226e23e1-50ea-48aa-ae99-caa1a07172e6",
+                "text": "לא"
+              }
+            ]
+          },
+          {
+            "key": "question_Gz9WbL",
+            "label": "האם יש לקוחות שניכו לך מס הכנסה במקור בשנת המס?",
+            "type": "MULTIPLE_CHOICE",
+            "value": [
+              "afda7c3b-1d8d-44c6-a8ce-2876adc65953"
+            ],
+            "options": [
+              {
+                "id": "afda7c3b-1d8d-44c6-a8ce-2876adc65953",
+                "text": "כן"
+              },
+              {
+                "id": "4a6b3125-1227-4cd6-963b-b14a3ecb39c2",
+                "text": "לא"
+              }
+            ]
+          },
+          {
+            "key": "question_Oz4vEY",
+            "label": "שמות הלקוחות",
+            "type": "TEXTAREA",
+            "value": "לקוח מנכה מס 1\nלקוח מנכה מס 2\n"
+          },
+          {
+            "key": "question_V0QgNM",
+            "label": "האם יש לקוחות שניכו לך ביטוח לאומי במקור בשנת המס?",
+            "type": "MULTIPLE_CHOICE",
+            "value": [
+              "fddd7012-1965-481c-8066-3849c43a3a23"
+            ],
+            "options": [
+              {
+                "id": "fddd7012-1965-481c-8066-3849c43a3a23",
+                "text": "כן"
+              },
+              {
+                "id": "69419d85-d0dc-4906-947b-569972dc5dcb",
+                "text": "לא"
+              }
+            ]
+          },
+          {
+            "key": "question_P61KrB",
+            "label": "שמות הלקוחות",
+            "type": "TEXTAREA",
+            "value": "לקוח מנכה בטל 1\nלקוח מנכה בטל 2"
+          },
+          {
+            "key": "question_5zdaod",
+            "label": "האם היו הכנסות אחרות בשנת המס שלא צוינו בשאלון ויכולות להיות רלוונטיות?\n",
+            "type": "MULTIPLE_CHOICE",
+            "value": [
+              "faf9ab8d-6bfe-493b-ac9a-f15bf44cd887"
+            ],
+            "options": [
+              {
+                "id": "faf9ab8d-6bfe-493b-ac9a-f15bf44cd887",
+                "text": "כן"
+              },
+              {
+                "id": "7f9e9eec-1e64-4fd7-8a4b-41802ca541ed",
+                "text": "לא\n"
+              }
+            ]
+          },
+          {
+            "key": "question_d6YJXA",
+            "label": "אנא פרט את ההכנסות הנוספות\n",
+            "type": "TEXTAREA",
+            "value": "הכנסה נוספת 1\nהכנסה נוספת 2"
+          }
+        ]
+      }
+    },
+    "webhookUrl": "https://liozshor.app.n8n.cloud/webhook/tally-questionnaire-response",
+    "executionMode": "production"
+  }
+];
+
+// Extracting the body to match the structure your previous code expected
+const tallyPayload = rawWebhookData[0].body;
+
+return [{json: tallyPayload}];

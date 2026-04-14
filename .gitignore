@@ -1,2 +1,33 @@
-.claude/
+# Dependencies
+node_modules/
+
+# Secrets — CRITICAL: these files contain API keys
+.env
+.mcp.json
+.claude/settings.local.json
+archive/keys.txt
+docs/wf05-backup-pre-migration-2026-03-26.json
+
+# Build artifacts
+dist/
+.wrangler/
+api/.dev.vars
+
+# Temp files
+tmp/*
+!tmp/.gitkeep
+
+# Claude Code browser cache
+.playwright-mcp/
+
+# Lock files
+package-lock.json
+api/package-lock.json
+
+# Windows
 nul
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/

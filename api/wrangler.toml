@@ -1,0 +1,40 @@
+name = "annual-reports-api"
+main = "src/index.ts"
+compatibility_date = "2025-03-15"
+compatibility_flags = ["nodejs_compat"]  # Required by archive-wasm (DL-260)
+# Deployed at: https://annual-reports-api.liozshor1.workers.dev
+
+[limits]
+subrequests = 10000   # 12-attachment emails need ~300 (fetch + KV ops + redirects)
+cpu_ms = 300000       # 5 min CPU — needed for multi-attachment AI classification
+
+[vars]
+ALLOWED_ORIGIN = "https://liozshor.github.io"
+AIRTABLE_BASE_ID = "appqBL5RWQN9cPOyh"
+ALERT_EMAIL = "liozshor1@gmail.com"
+
+# Secrets (set via `wrangler secret put`):
+# - ADMIN_PASSWORD
+# - SECRET_KEY
+# - CLIENT_SECRET_KEY
+# - AIRTABLE_PAT
+# - MS_GRAPH_CLIENT_ID
+# - MS_GRAPH_CLIENT_SECRET
+# - MS_GRAPH_TENANT_ID
+# - MS_GRAPH_REFRESH_TOKEN
+# - N8N_INTERNAL_KEY          # Phase 5: Worker→n8n internal webhook auth
+# - ANTHROPIC_API_KEY        # Phase 9: Chat agent AI proxy
+
+[[kv_namespaces]]
+binding = "TOKEN_CACHE"
+id = "5e3beec684c04f539939efe42dada1d0"
+
+[[kv_namespaces]]
+binding = "CACHE_KV"
+id = "39bcc73f6c8c4507bc9c5032bf2914cf"
+
+[observability]
+enabled = true
+
+[triggers]
+crons = ["0 5 * * *"]
