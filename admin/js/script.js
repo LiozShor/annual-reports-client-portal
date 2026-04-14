@@ -774,7 +774,7 @@ async function loadRecentMessages() {
                     <div class="msg-summary">"${escapeHtml(displayText)}"</div>
                 </div>
                 <div class="msg-actions">
-                    <button class="msg-action-btn" title="פתח בניהול מסמכים" onclick="window.location.href='../document-manager.html?${navParam}'"><i data-lucide="external-link" class="icon-sm"></i></button>
+                    <button class="msg-action-btn" title="פתח בניהול מסמכים" onclick="window.location.href='../document-manager.html?${navParam}'"><i data-lucide="folder-open" class="icon-xs"></i></button>
                     <button class="msg-action-btn msg-action-btn--danger" title="מחק/הסתר הודעה" onclick="showMessageDeleteDialog('${noteId}', '${reportId}')"><i data-lucide="trash-2" class="icon-sm"></i></button>
                 </div>
             </div>`;
