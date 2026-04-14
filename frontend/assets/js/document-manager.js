@@ -17,6 +17,7 @@ let CLIENT_CC_EMAIL = '';
 // sanitizeDocHtml() loaded from shared/utils.js
 // ENDPOINTS loaded from shared/endpoints.js
 let DOCS_FIRST_SENT_AT = null;
+let QUEUED_SEND_AT = null;
 let REPORT_NOTES = '';
 let CLIENT_NOTES = []; // Parsed JSON array of client communication entries
 let REJECTED_UPLOADS = []; // Parsed JSON array of rejected upload log entries
@@ -241,7 +242,18 @@ async function loadDocuments(reportId) {
             if (stageEl) stageEl.textContent = STAGE_LABELS[data.stage] || data.stage;
         }
         DOCS_FIRST_SENT_AT = data.docs_first_sent_at || null;
+        QUEUED_SEND_AT = data.queued_send_at || null;
         updateSentBadge();
+
+        // DL-272: If email is queued for morning send, lock the button
+        if (QUEUED_SEND_AT) {
+            const sendBtn = document.getElementById('approveSendBtn');
+            if (sendBtn) {
+                sendBtn.innerHTML = '⏰ ישלח ב-08:00';
+                sendBtn.disabled = true;
+                sendBtn.title = 'המייל ישלח אוטומטית בבוקר';
+            }
+        }
 
         // Report notes
         REPORT_NOTES = data.notes || '';
@@ -316,7 +328,16 @@ async function loadDocuments(reportId) {
         noteChanges = new Map();
         nameChanges = new Map();
         const sendBtn = document.getElementById('approveSendBtn');
-        if (sendBtn) { sendBtn.disabled = false; sendBtn.title = ''; }
+        if (sendBtn) {
+            if (QUEUED_SEND_AT) {
+                sendBtn.innerHTML = '⏰ ישלח ב-08:00';
+                sendBtn.disabled = true;
+                sendBtn.title = 'המייל ישלח אוטומטית בבוקר';
+            } else {
+                sendBtn.disabled = false;
+                sendBtn.title = '';
+            }
+        }
 
         initDocumentDropdown();
         displayDocuments();
@@ -341,6 +362,7 @@ async function loadDocuments(reportId) {
             year: YEAR,
             stage: CURRENT_STAGE,
             docsFirstSentAt: DOCS_FIRST_SENT_AT,
+            queuedSendAt: QUEUED_SEND_AT,
             notes: REPORT_NOTES,
             clientNotes: CLIENT_NOTES,
             rejectedUploads: REJECTED_UPLOADS,
@@ -542,6 +564,7 @@ function restoreFromCache(reportId) {
     YEAR = cached.year;
     CURRENT_STAGE = cached.stage;
     DOCS_FIRST_SENT_AT = cached.docsFirstSentAt;
+    QUEUED_SEND_AT = cached.queuedSendAt;
     REPORT_NOTES = cached.notes;
     CLIENT_NOTES = cached.clientNotes;
     REJECTED_UPLOADS = cached.rejectedUploads || [];
@@ -572,7 +595,16 @@ function restoreFromCache(reportId) {
     noteChanges = new Map();
     nameChanges = new Map();
     const sendBtn = document.getElementById('approveSendBtn');
-    if (sendBtn) { sendBtn.disabled = false; sendBtn.title = ''; }
+    if (sendBtn) {
+        if (QUEUED_SEND_AT) {
+            sendBtn.innerHTML = '⏰ ישלח ב-08:00';
+            sendBtn.disabled = true;
+            sendBtn.title = 'המייל ישלח אוטומטית בבוקר';
+        } else {
+            sendBtn.disabled = false;
+            sendBtn.title = '';
+        }
+    }
 
     // Parse questions
     try { clientQuestions = JSON.parse(cached.clientQuestions || '[]'); } catch (e) { clientQuestions = []; }

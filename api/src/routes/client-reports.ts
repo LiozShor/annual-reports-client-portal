@@ -136,6 +136,7 @@ router.get('/get-client-reports', async (c) => {
             docs_total: parseInt(String(f['docs_total'])) || 0,
             docs_received: parseInt(String(f['docs_received_count'])) || 0,
             rejected_uploads_log: (f['rejected_uploads_log'] as string) || '',
+            queued_send_at: (f['queued_send_at'] as string) || null,
           };
 
           // Client mode: generate a token for each report

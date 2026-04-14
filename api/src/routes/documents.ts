@@ -232,6 +232,7 @@ documents.get('/get-client-documents', async (c) => {
         },
         stage: (rf['stage'] as string) || '',
         docs_first_sent_at: (rf['docs_first_sent_at'] as string) || '',
+        queued_send_at: (rf['queued_send_at'] as string) || null,
         year: report.year,
         client_name: report.client_name,
         spouse_name: report.spouse_name,
