@@ -2588,7 +2588,7 @@ function approveAndSendToClient() {
                     if (data.queued) {
                         // DL-264: Off-hours — email queued for morning send
                         setBtnState(sendBtn, 'success', 'בתור לשליחה!');
-                        showAIToast('אושר ✓ ישלח אוטומטית ב-08:00', 'success');
+                        showToast('אושר ✓ ישלח אוטומטית ב-08:00', 'success');
                         setTimeout(() => {
                             if (sendBtn) {
                                 sendBtn.classList.remove('btn-success-flash');
