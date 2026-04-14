@@ -2844,13 +2844,24 @@ function renderClientNotes() {
         </button>
     </div>`;
 
+    // DL-266: Build reply map (office_reply notes keyed by reply_to)
+    const replyMap = {};
+    for (const entry of sorted) {
+        if (entry.type === 'office_reply' && entry.reply_to) {
+            replyMap[entry.reply_to] = entry;
+        }
+    }
+
     if (sorted.length === 0) {
         html += '<div class="cn-empty">אין הודעות מהלקוח</div>';
     } else {
         for (const entry of sorted) {
+            // Skip office_reply entries — they render inside their parent card
+            if (entry.type === 'office_reply' && entry.reply_to) continue;
+
             const isEmail = entry.source === 'email';
-            const iconClass = isEmail ? 'cn-icon--email' : 'cn-icon--manual';
-            const iconName = isEmail ? 'mail' : 'pencil';
+            const iconClass = isEmail ? 'cn-icon--email' : (entry.type === 'office_reply' ? 'cn-icon--reply' : 'cn-icon--manual');
+            const iconName = isEmail ? 'mail' : (entry.type === 'office_reply' ? 'corner-down-left' : 'pencil');
             const rawDate = entry.date || '';
             const dateStr = rawDate.match(/^(\d{4})-(\d{2})-(\d{2})/) ? rawDate.replace(/^(\d{4})-(\d{2})-(\d{2})/, '$3-$2-$1') : rawDate;
             const senderStr = entry.sender_email ? ` · ${escapeHtml(entry.sender_email)}` : '';
@@ -2858,6 +2869,20 @@ function renderClientNotes() {
                 ? `<div class="cn-snippet"><span class="cn-label">טקסט מקורי:</span> "${escapeHtml(entry.raw_snippet)}"</div>`
                 : '';
             const summaryLabel = isEmail ? '<span class="cn-label">סיכום AI:</span> ' : '';
+
+            // DL-266: Render threaded office reply inside parent card
+            const reply = replyMap[entry.id];
+            let replyHtml = '';
+            if (reply) {
+                const replyDate = (reply.date || '').length > 10
+                    ? new Date(reply.date).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })
+                    : (reply.date || '').replace(/^(\d{4})-(\d{2})-(\d{2})/, '$3-$2-$1');
+                replyHtml = `<div class="cn-office-reply">
+                    <div class="cn-reply-label"><i data-lucide="corner-down-left" class="icon-xs"></i> תגובת המשרד</div>
+                    <div class="cn-reply-text">${escapeHtml(reply.summary)}</div>
+                    <div class="cn-reply-date">${replyDate}</div>
+                </div>`;
+            }
 
             html += `<div class="cn-entry" data-cn-id="${escapeAttr(entry.id)}">
                 <div class="cn-icon ${iconClass}">
@@ -2869,6 +2894,7 @@ function renderClientNotes() {
                     </div>
                     <div class="cn-summary">${summaryLabel}${escapeHtml(entry.summary)}</div>
                     ${snippetHtml}
+                    ${replyHtml}
                 </div>
                 <div class="cn-actions">
                     <button onclick="editClientNote('${escapeAttr(entry.id)}')" title="ערוך">

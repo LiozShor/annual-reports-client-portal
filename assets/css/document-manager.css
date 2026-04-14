@@ -1913,6 +1913,42 @@ body {
     max-height: 60px;
 }
 
+/* DL-266: Office reply threaded inside note card */
+.cn-office-reply {
+    margin-top: 6px;
+    padding: 6px 10px;
+    background: var(--blue-50, #eff6ff);
+    border-radius: var(--radius-sm, 4px);
+    border-right: 3px solid var(--brand-500, #3b82f6);
+}
+
+.cn-reply-label {
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: var(--brand-600, #2563eb);
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    margin-bottom: 2px;
+}
+
+.cn-reply-text {
+    font-size: 0.78rem;
+    color: var(--gray-700);
+    line-height: 1.4;
+}
+
+.cn-reply-date {
+    font-size: 0.68rem;
+    color: var(--gray-400);
+    margin-top: 2px;
+}
+
+.cn-icon--reply {
+    background: var(--blue-50, #eff6ff);
+    color: var(--brand-600, #2563eb);
+}
+
 .cn-actions {
     flex-shrink: 0;
     display: flex;
