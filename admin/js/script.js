@@ -774,6 +774,7 @@ async function loadRecentMessages() {
                     <div class="msg-summary">"${escapeHtml(displayText)}"</div>
                 </div>
                 <div class="msg-actions">
+                    <button class="msg-action-btn" title="השב ללקוח" onclick="event.stopPropagation(); showReplyInput('${noteId}', '${reportId}')"><i data-lucide="message-square" class="icon-xs"></i></button>
                     <button class="msg-action-btn" title="פתח בניהול מסמכים" onclick="window.open('../document-manager.html?${navParam}', '_blank')"><i data-lucide="folder-open" class="icon-xs"></i></button>
                     <button class="msg-action-btn msg-action-btn--danger" title="מחק/הסתר הודעה" onclick="showMessageDeleteDialog('${noteId}', '${reportId}')"><i data-lucide="trash-2" class="icon-sm"></i></button>
                 </div>
@@ -861,6 +862,77 @@ async function deleteRecentMessage(noteId, reportId, mode) {
         showAIToast(mode === 'permanent' ? 'ההודעה נמחקה לצמיתות' : 'ההודעה הוסתרה מהדשבורד', 'success');
     } catch (err) {
         showAIToast('שגיאה: ' + (err.message || 'Unknown error'), 'error');
+    }
+}
+
+// DL-266: Show inline reply input below a message
+function showReplyInput(noteId, reportId) {
+    const row = document.querySelector(`.msg-row[data-note-id="${noteId}"]`);
+    if (!row) return;
+    // Don't add twice
+    if (row.querySelector('.msg-reply-zone')) return;
+
+    row.classList.add('expanded');
+    const replyZone = document.createElement('div');
+    replyZone.className = 'msg-reply-zone';
+    replyZone.innerHTML = `
+        <textarea class="msg-reply-textarea" placeholder="הקלד תגובה..." dir="rtl" rows="2"></textarea>
+        <div class="msg-reply-buttons">
+            <button class="btn btn-sm btn-primary msg-reply-send" disabled>
+                <i data-lucide="send" class="icon-xs"></i> שלח תגובה
+            </button>
+            <button class="btn btn-sm btn-ghost msg-reply-cancel">ביטול</button>
+        </div>
+    `;
+    row.appendChild(replyZone);
+    safeCreateIcons(replyZone);
+
+    const textarea = replyZone.querySelector('.msg-reply-textarea');
+    const sendBtn = replyZone.querySelector('.msg-reply-send');
+    const cancelBtn = replyZone.querySelector('.msg-reply-cancel');
+
+    textarea.addEventListener('input', () => {
+        sendBtn.disabled = !textarea.value.trim();
+    });
+    textarea.focus();
+
+    cancelBtn.addEventListener('click', () => {
+        replyZone.remove();
+        row.classList.remove('expanded');
+    });
+
+    sendBtn.addEventListener('click', () => sendReply(noteId, reportId, textarea.value.trim(), sendBtn, replyZone, row));
+}
+
+// DL-266: Send reply comment to client
+async function sendReply(noteId, reportId, commentText, sendBtn, replyZone, row) {
+    if (!commentText) return;
+    sendBtn.disabled = true;
+    sendBtn.innerHTML = '<i data-lucide="loader" class="icon-xs spin"></i> שולח...';
+    safeCreateIcons(sendBtn);
+
+    try {
+        const response = await fetchWithTimeout(ENDPOINTS.ADMIN_SEND_COMMENT, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
+            body: JSON.stringify({ report_id: reportId, comment_text: commentText })
+        }, FETCH_TIMEOUTS.save);
+        const result = await response.json();
+        if (!result.ok) throw new Error(result.error || 'Failed');
+
+        replyZone.remove();
+        row.classList.remove('expanded');
+
+        if (result.queued) {
+            showAIToast('תגובה תישלח ב-08:00', 'success');
+        } else {
+            showAIToast('תגובה נשלחה ✓', 'success');
+        }
+    } catch (err) {
+        sendBtn.disabled = false;
+        sendBtn.innerHTML = '<i data-lucide="send" class="icon-xs"></i> שלח תגובה';
+        safeCreateIcons(sendBtn);
+        showAIToast('שגיאה בשליחת תגובה: ' + (err.message || 'Unknown error'), 'error');
     }
 }
 

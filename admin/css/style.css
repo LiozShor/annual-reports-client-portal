@@ -2711,6 +2711,7 @@ tr:hover .client-view-link {
 
 .msg-row {
     display: flex;
+    flex-wrap: wrap;
     gap: var(--sp-3);
     padding: var(--sp-3);
     border-radius: var(--radius-md);
@@ -2838,6 +2839,68 @@ tr:hover .client-view-link {
 .msg-inline-actions .btn-sm {
     font-size: 0.78rem;
     padding: 4px 10px;
+}
+
+/* DL-266: Inline reply zone */
+.msg-reply-zone {
+    width: 100%;
+    padding: var(--sp-2) 0 0;
+    animation: slideDown 0.2s ease;
+}
+
+@keyframes slideDown {
+    from { opacity: 0; max-height: 0; }
+    to { opacity: 1; max-height: 200px; }
+}
+
+.msg-reply-textarea {
+    width: 100%;
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius-md);
+    padding: var(--sp-2);
+    font-family: inherit;
+    font-size: 0.82rem;
+    line-height: 1.4;
+    resize: vertical;
+    min-height: 48px;
+    max-height: 120px;
+    direction: rtl;
+    color: var(--gray-800);
+    background: var(--white, #fff);
+    transition: border-color 0.15s;
+}
+
+.msg-reply-textarea:focus {
+    outline: none;
+    border-color: var(--brand-500, #3b82f6);
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15);
+}
+
+.msg-reply-textarea::placeholder {
+    color: var(--gray-400);
+}
+
+.msg-reply-buttons {
+    display: flex;
+    gap: var(--sp-2);
+    justify-content: flex-start;
+    margin-top: var(--sp-2);
+}
+
+.msg-reply-send {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.78rem;
+}
+
+.msg-reply-send:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.msg-reply-cancel {
+    font-size: 0.78rem;
 }
 
 .msg-empty {

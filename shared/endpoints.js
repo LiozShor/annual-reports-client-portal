@@ -21,6 +21,7 @@ const ENDPOINTS = {
     ADMIN_DASHBOARD:           `${CF_BASE}/admin-dashboard`,
     ADMIN_PENDING:             `${CF_BASE}/admin-pending`,
     ADMIN_RECENT_MESSAGES:     `${CF_BASE}/admin-recent-messages`,
+    ADMIN_SEND_COMMENT:        `${CF_BASE}/admin-send-comment`,
 
     // --- Client management (migrated to Cloudflare Workers — DL-171) ---
     ADMIN_UPDATE_CLIENT:       `${CF_BASE}/admin-update-client`,
