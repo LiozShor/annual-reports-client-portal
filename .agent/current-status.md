@@ -1,6 +1,16 @@
 # Annual Reports CRM - Current Status
 
-**Last Updated:** 2026-04-14 (Session 9 — DL-272 send-comment port + approve-and-send fix)
+**Last Updated:** 2026-04-14 (Session 10 — WF07 IF node strict type fix)
+
+---
+
+## Session Summary (2026-04-14 — Part 10)
+
+### WF07 Daily Digest — IF Node Type Validation Fix [COMPLETED]
+- **Bug:** "IF Has Client Emails" node in WF07 (`0o6pXPeewCRxEEhd`) failed with "Wrong type: '' is a string but was expecting a boolean" at 20:00 cron run
+- **Root cause:** `typeValidation: "strict"` on the IF node rejected empty string when `$json._hasClients` was undefined/falsy
+- **Fix:** Changed `typeValidation` from `"strict"` to `"loose"` via n8n REST API — matches the "Skip Weekend" IF node pattern in the same workflow
+- No local file changes — fix applied directly to n8n
 
 ---
 
