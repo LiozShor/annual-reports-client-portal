@@ -2841,6 +2841,37 @@ tr:hover .client-view-link {
     padding: 4px 10px;
 }
 
+/* DL-266: Office reply shown inside message card */
+.msg-office-reply {
+    margin-top: var(--sp-2);
+    padding: var(--sp-2) var(--sp-3);
+    background: var(--blue-50, #eff6ff);
+    border-radius: var(--radius-sm);
+    border-right: 3px solid var(--brand-500, #3b82f6);
+}
+
+.msg-reply-label {
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: var(--brand-600, #2563eb);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-bottom: 2px;
+}
+
+.msg-reply-text {
+    font-size: 0.8rem;
+    color: var(--gray-700);
+    line-height: 1.4;
+}
+
+.msg-reply-date {
+    font-size: 0.7rem;
+    color: var(--gray-400);
+    margin-top: 2px;
+}
+
 /* DL-266: Inline reply zone */
 .msg-reply-zone {
     width: 100%;

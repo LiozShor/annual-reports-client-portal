@@ -765,6 +765,13 @@ async function loadRecentMessages() {
             const displayText = m.raw_snippet || m.summary || '';
             const noteId = escapeHtml(m.id || '');
             const reportId = escapeHtml(m.report_id || '');
+            const replyHtml = m.reply
+                ? `<div class="msg-office-reply">
+                    <div class="msg-reply-label"><i data-lucide="corner-down-left" class="icon-xs"></i> תגובת המשרד</div>
+                    <div class="msg-reply-text">${escapeHtml(m.reply.summary)}</div>
+                    <div class="msg-reply-date">${formatRelativeTime(m.reply.date)}</div>
+                  </div>`
+                : '';
             return `<div class="msg-row" data-note-id="${noteId}">
                 <div class="msg-content" onclick="this.parentElement.classList.toggle('expanded')">
                     <div class="msg-meta">
@@ -772,6 +779,7 @@ async function loadRecentMessages() {
                         <span class="msg-date">${formatRelativeTime(m.date)}</span>
                     </div>
                     <div class="msg-summary">"${escapeHtml(displayText)}"</div>
+                    ${replyHtml}
                 </div>
                 <div class="msg-actions">
                     <button class="msg-action-btn" title="השב ללקוח" onclick="event.stopPropagation(); showReplyInput('${noteId}', '${reportId}')"><i data-lucide="message-square" class="icon-xs"></i></button>
@@ -915,7 +923,7 @@ async function sendReply(noteId, reportId, commentText, sendBtn, replyZone, row)
         const response = await fetchWithTimeout(ENDPOINTS.ADMIN_SEND_COMMENT, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
-            body: JSON.stringify({ report_id: reportId, comment_text: commentText })
+            body: JSON.stringify({ report_id: reportId, note_id: noteId, comment_text: commentText })
         }, FETCH_TIMEOUTS.save);
         const result = await response.json();
         if (!result.ok) throw new Error(result.error || 'Failed');
