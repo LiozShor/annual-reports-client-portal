@@ -31,3 +31,7 @@ Thumbs.db
 # IDE
 .vscode/
 .idea/
+
+.dev.vars*
+!.dev.vars.example
+!.env.example
