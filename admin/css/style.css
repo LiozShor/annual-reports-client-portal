@@ -986,20 +986,29 @@ select.field-prefilled {
 
 /* DL-265: Tab refresh overlay with inline spinner (entity tab switch) */
 .tab-content.tab-refreshing {
-    opacity: 0.5;
-    transition: opacity 0.15s ease;
     position: relative;
     pointer-events: none;
 }
 
+/* Dimming overlay — separate from spinner so opacity doesn't affect it */
+.tab-content.tab-refreshing::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: rgba(255, 255, 255, 0.55);
+    z-index: 9;
+    transition: opacity 0.15s ease;
+}
+
+/* Spinner — full opacity, not affected by parent dimming */
 .tab-content.tab-refreshing::after {
     content: '';
     position: absolute;
-    top: 80px;
+    top: 120px;
     left: 50%;
     transform: translateX(-50%);
-    width: 24px;
-    height: 24px;
+    width: 28px;
+    height: 28px;
     border: 3px solid var(--gray-200);
     border-top-color: var(--brand-500);
     border-radius: 50%;
@@ -1009,10 +1018,9 @@ select.field-prefilled {
 
 @media (max-width: 768px) {
     .tab-content.tab-refreshing::after {
-        top: 48px;
-        width: 20px;
-        height: 20px;
-        border-width: 2.5px;
+        top: 60px;
+        width: 24px;
+        height: 24px;
     }
 }
 
