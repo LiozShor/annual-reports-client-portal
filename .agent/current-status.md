@@ -31,7 +31,7 @@
 
 **Follow-up items (next session):**
 1. **Dashboard queued-client visibility** — queued clients in Pending_Approval should show ⏰ badge + grayed row in dashboard table so other users don't double-approve. Remove ugly "(X בתור לשליחה)" from stat card.
-2. **Queued reply timestamp** — dashboard messages panel shows the note's save time (e.g. "20:34") for queued replies, but the email won't send until 08:00. Should show "⏰ 08:00" or "ישלח ב-08:00" instead of the save timestamp.
+2. **Queued reply timestamp** — dashboard messages panel shows the note's save time (e.g. "20:34") for queued replies, but the email won't send until 08:00. Should show "יישלח ב-08:00 ⏰" instead of the save timestamp. Also fix all "ישלח" → "יישלח" and move ⏰ emoji to left side (RTL) across doc-manager button text.
 3. **Verify morning cron** — check at 08:00 Israel time (05:00 UTC) that both queued approve-and-send emails AND queued comment replies actually fire.
 4. **Outlook deferred send** — replace KV+cron queue with MS Graph `PidTagDeferredSendTime` (scheduled send). Simpler architecture, Outlook handles delivery timing. Eliminates `processQueuedEmails`/`processQueuedComments` cron entirely.
 5. **Remove debug console.log** — 3 temporary `console.log` lines in doc-manager approve-and-send handler.
