@@ -1,6 +1,6 @@
 # Annual Reports CRM - Current Status
 
-**Last Updated:** 2026-04-14 (DL-268 AI Review Pagination)
+**Last Updated:** 2026-04-14 (Session 8 — DL-268 + root duplicate cleanup)
 
 ---
 
@@ -10,11 +10,21 @@
 - Pagination now counts **client groups** (25/page) instead of documents (was 50 docs/page)
 - FIFO sort: oldest-waiting client appears first (by earliest `received_at` ascending)
 - Summary bar shows total doc/client counts across ALL pages, not just current page
-- Single file change: `admin/js/script.js`
+- File changed: `frontend/admin/js/script.js`
 - Design log: `.agent/design-logs/ai-review/268-ai-review-pagination.md`
-- Branch: `DL-268-ai-review-pagination`
+- Commits: `4f08176`, `90c0c6e` (sync to frontend/ path)
 
-**Test TODO:**
+### Root-Level Frontend Duplicates Removed [COMPLETED]
+- Deleted 40 root-level files (admin/, assets/, shared/, n8n/, *.html) — 29,725 lines
+- `frontend/` is now the sole canonical location for all frontend files
+- GitHub Pages deploys from `frontend/**` only (`.github/workflows/deploy-pages.yml`)
+- Commit: `63d283e`
+
+### Design-Log Skill Updated
+- Phase D Step 7: auto-merge to main after push (no "merge to main?" question)
+- Merge IS the deploy for testing on GitHub Pages
+
+**Test TODO (DL-268):**
 - [ ] Pagination says "מציג 1-25 מתוך N" where N = client count
 - [ ] Clients ordered oldest-waiting first
 - [ ] Page 2 shows next 25 clients
