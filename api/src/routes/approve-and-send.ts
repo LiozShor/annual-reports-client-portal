@@ -181,7 +181,9 @@ approveAndSend.get('/approve-and-send', async (c) => {
     const existingFirstSent = first(report.fields.docs_first_sent_at);
 
     // DL-264: Queue for morning send if off-hours (8PM-8AM Israel time)
+    console.log('[approve-and-send] isOffHours:', isOffHours(), 'respondJson:', respondJson, 'reportId:', reportId);
     if (isOffHours()) {
+      console.log('[approve-and-send] Entering off-hours queue path');
       const queuePayload = {
         reportId,
         subject,
@@ -206,6 +208,7 @@ approveAndSend.get('/approve-and-send', async (c) => {
         console.error('[approve-and-send] queued_send_at update failed (non-critical):', (e as Error).message);
       }
 
+      console.log('[approve-and-send] Queue complete, returning response. respondJson:', respondJson);
       if (respondJson) return c.json({ ok: true, queued: true, scheduled_for: '08:00' });
       return c.redirect(`${FRONTEND_BASE}/approve-confirm.html?report_id=${reportId}&result=queued`, 302);
     }
@@ -246,7 +249,7 @@ approveAndSend.get('/approve-and-send', async (c) => {
     return c.redirect(`${FRONTEND_BASE}/approve-confirm.html?report_id=${reportId}&result=success`, 302);
 
   } catch (err) {
-    console.error('[approve-and-send] Error:', (err as Error).message);
+    console.error('[approve-and-send] CAUGHT ERROR:', (err as Error).message, (err as Error).stack);
     logError(c.executionCtx, c.env, {
       endpoint: '/webhook/approve-and-send',
       error: err as Error,
