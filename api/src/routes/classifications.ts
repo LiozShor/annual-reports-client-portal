@@ -544,8 +544,8 @@ classifications.post('/review-classification', async (c) => {
 
       const periodLabel = `${missingStartMonth}-${missingEndMonth}/${year}`;
       const templateTitle = templateId === 'T901'
-        ? `חוזה שכירות – דירה מושכרת (הכנסה) **${periodLabel}**`
-        : `חוזה שכירות – דירה שכורה למגורים (הוצאה) **${periodLabel}**`;
+        ? `חוזה שכירות – דירה מושכרת (הכנסה) <b>${periodLabel}</b>`
+        : `חוזה שכירות – דירה שכורה למגורים (הוצאה) <b>${periodLabel}</b>`;
       const docKey = `${reportId}_${templateId}_client_${missingStartMonth}-${missingEndMonth}`;
 
       // Check if this doc already exists (dedup)
