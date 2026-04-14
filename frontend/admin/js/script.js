@@ -595,9 +595,8 @@ function buildMobilePreviewFooter(item, footer) {
             mobileContractBanner = `
             <div class="ai-contract-period-banner" data-record-id="${rid}">
                 <span class="period-label">📅 ${statusText}:
-                    מ:
                     <span class="contract-date-editable" data-field="start" data-value="${escapeAttr(startVal)}" onclick="event.stopPropagation(); editContractDate('${rid}', 'start', this)" title="לחץ לעריכה">${startLabel}</span>
-                    עד:
+                    –
                     <span class="contract-date-editable" data-field="end" data-value="${escapeAttr(endVal)}" onclick="event.stopPropagation(); editContractDate('${rid}', 'end', this)" title="לחץ לעריכה">${endLabel}</span>
                 </span>
                 ${mobileBtns}
@@ -3682,7 +3681,8 @@ function renderAICard(item) {
             // Card-style radio options
             const radiosHtml = sameTypeDocs.map(d => {
                 const docName = d.name_short || d.name || d.template_id;
-                const docLabel = d.name_short || d.name_html || d.name || d.template_id;
+                // DL-271: Prefer name_html for radio labels — includes period suffix from issuer_name
+                const docLabel = d.name_html || d.name_short || d.name || d.template_id;
                 return `
                     <label class="ai-comparison-radio">
                         <input type="radio" name="compare_${escapeAttr(item.id)}"
@@ -3855,11 +3855,10 @@ function renderAICard(item) {
             contractPeriodBannerHtml = `
             <div class="ai-contract-period-banner" data-record-id="${rid}">
                 <span class="period-label">📅 ${statusText}:
-                    מ:
                     <span class="contract-date-editable" data-field="start" data-value="${escapeAttr(startVal)}"
                         onclick="event.stopPropagation(); editContractDate('${rid}', 'start', this)"
                         title="לחץ לעריכה">${startLabel}</span>
-                    עד:
+                    –
                     <span class="contract-date-editable" data-field="end" data-value="${escapeAttr(endVal)}"
                         onclick="event.stopPropagation(); editContractDate('${rid}', 'end', this)"
                         title="לחץ לעריכה">${endLabel}</span>

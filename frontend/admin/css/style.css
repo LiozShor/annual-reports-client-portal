@@ -6703,8 +6703,8 @@ tr:hover .client-edit-link {
 .ai-contract-period-banner {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    gap: var(--sp-3);
+    flex-wrap: wrap;
+    gap: var(--sp-2);
     padding: var(--sp-2) var(--sp-5);
     background: #fffbeb;
     border-top: 1px solid #f59e0b33;
@@ -6715,6 +6715,8 @@ tr:hover .client-edit-link {
     display: flex;
     align-items: center;
     gap: var(--sp-1);
+    white-space: nowrap;
+    flex-shrink: 0;
 }
 .ai-contract-period-banner .btn {
     white-space: nowrap;
