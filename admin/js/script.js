@@ -922,7 +922,7 @@ function renderClientsTable(clients) {
                     <div class="client-name-cell">
                         <strong
                             class="client-link"
-                            onclick="viewClientDocs('${rid}')"
+                            onclick="viewClientDocs('${rid}', true)"
                             title="${escapeHtml(client.email || '')}"
                         >
                             ${escapeHtml(client.name)}
@@ -6437,13 +6437,15 @@ function viewClient(reportId) {
     window.open(`https://liozshor.github.io/annual-reports-client-portal/view-documents.html?report_id=${encodeURIComponent(reportId)}`, '_blank');
 }
 
-function viewClientDocs(reportId) {
+function viewClientDocs(reportId, newTab = false) {
     const client = clientsData.find(c => c.report_id === reportId);
     const clientId = client?.client_id;
     if (clientId) {
         const ft = client.filing_type || activeEntityTab || '';
         const tabParam = ft ? `&tab=${encodeURIComponent(ft)}` : '';
-        window.location.href = `../document-manager.html?client_id=${encodeURIComponent(clientId)}${tabParam}`;
+        const url = `../document-manager.html?client_id=${encodeURIComponent(clientId)}${tabParam}`;
+        if (newTab) window.open(url, '_blank');
+        else window.location.href = url;
     }
 }
 
