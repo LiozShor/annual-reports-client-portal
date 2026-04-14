@@ -1148,6 +1148,11 @@ function toggleStageFilter(stage) {
     }
 
     filterClients();
+
+    // DL-265: On mobile, scroll to the client table after filtering
+    if (window.innerWidth <= 768) {
+        document.getElementById('clientsTableContainer')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
 }
 
 // ==================== SORTING ====================
