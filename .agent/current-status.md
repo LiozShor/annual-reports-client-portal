@@ -1,6 +1,25 @@
 # Annual Reports CRM - Current Status
 
-**Last Updated:** 2026-04-14 (n8n URL Migration to Custom Domain)
+**Last Updated:** 2026-04-14 (DL-268 AI Review Pagination)
+
+---
+
+## Session Summary (2026-04-14 — Part 8)
+
+### DL-268: AI Review Pagination by Client + FIFO Sort [IMPLEMENTED — NEED TESTING]
+- Pagination now counts **client groups** (25/page) instead of documents (was 50 docs/page)
+- FIFO sort: oldest-waiting client appears first (by earliest `received_at` ascending)
+- Summary bar shows total doc/client counts across ALL pages, not just current page
+- Single file change: `admin/js/script.js`
+- Design log: `.agent/design-logs/ai-review/268-ai-review-pagination.md`
+- Branch: `DL-268-ai-review-pagination`
+
+**Test TODO:**
+- [ ] Pagination says "מציג 1-25 מתוך N" where N = client count
+- [ ] Clients ordered oldest-waiting first
+- [ ] Page 2 shows next 25 clients
+- [ ] Filters reset to page 1
+- [ ] Summary bar totals are cross-page
 
 ---
 
