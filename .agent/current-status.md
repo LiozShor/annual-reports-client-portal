@@ -1,6 +1,34 @@
 # Annual Reports CRM - Current Status
 
-**Last Updated:** 2026-04-14 (DL-MONOREPO)
+**Last Updated:** 2026-04-14 (Session Start Enforcement + CORS)
+
+---
+
+## Session Summary (2026-04-14 — Part 6)
+
+### Session Start Enforcement Hooks [IMPLEMENTED]
+- **`session-start-check.sh`** (SessionStart hook) — warns on main/master branch + uncommitted changes + worktree detection
+- **`branch-guard.sh`** (PreToolUse hook) — blocks Edit/Write on main/master (exit 2), runs before all other Edit|Write hooks
+- Both wired in `.claude/settings.json`, tested live (branch-guard blocked a write mid-session)
+- Design log: `.agent/design-logs/infrastructure/DL-SESSION-START-ENFORCEMENT.md`
+- Branch: `feat/session-start-enforcement` (pushed, not yet merged to main)
+
+### Design-Log Skill Updated (Global)
+- Phase A step 0: worktree-aware branch setup — detects parallel sessions, offers `git worktree add`
+- Phase D step 7: worktree cleanup after merge — `git worktree remove` prompt
+- File: `~/.claude/skills/design-log/SKILL.md` (global, not git-tracked)
+
+### Custom Domain CNAME + CORS Fix [DEPLOYED]
+- Created `frontend/CNAME` → `docs.moshe-atsits.com` (committed to main, `88cfeda`)
+- CORS middleware updated to accept comma-separated origins (Hono `string[]`)
+- `wrangler.toml` `ALLOWED_ORIGIN` now includes: `liozshor.github.io`, `docs.moshe-atsits.com` (https + http)
+- Worker deployed (`f24e08a1`)
+
+**TODO:**
+- [ ] Merge `feat/session-start-enforcement` to main (2 commits: hooks + CORS fix)
+- [ ] Verify `docs.moshe-atsits.com` admin login works (CORS resolved)
+- [ ] Set up HTTPS for custom domain (currently included http:// as fallback)
+- [ ] Update `FRONTEND_BASE` constants in Workers code to use custom domain (email links still point to github.io)
 
 ---
 
