@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="he">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="referrer" content="no-referrer">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://unpkg.com; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' https://annual-reports-api.liozshor1.workers.dev https://unpkg.com; font-src 'self'; object-src 'none'; base-uri 'self';">
+    <title>אישור שליחת המסמכים הנדרשים</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📋</text></svg>">
+    <link rel="stylesheet" href="assets/css/design-system.css">
+    <link rel="stylesheet" href="assets/css/common.css">
+    <link rel="stylesheet" href="assets/css/landing.css">
+    <script src="https://unpkg.com/lucide@0.576.0/dist/umd/lucide.min.js" integrity="sha384-b05ba3pt6xaC7F4r130arhf8cF18GH/gKu9JDz/NMf+BhLlBVwIWUdAZSpf1IWRZ" crossorigin="anonymous" defer></script>
+</head>
+
+<body>
+    <div class="landing-wrapper">
+        <div class="container">
+            <header class="header">
+                <div class="header-logo">
+                    <a href="./">
+                        <img src="assets/images/logo.png" alt="משרד רו״ח Client Name" class="site-logo site-logo-lg" width="1010" height="306">
+                    </a>
+                </div>
+                <h1>אישור שליחת המסמכים הנדרשים</h1>
+            </header>
+
+            <div class="content" id="content">
+                <!-- Populated by JS -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Hidden form — GET to webhook (POST causes n8n 500; token is non-sensitive hash, not PII) -->
+    <form id="confirmForm" method="GET" action="https://annual-reports-api.liozshor1.workers.dev/webhook/approve-and-send" style="display:none">
+        <input type="hidden" name="report_id" id="form_report_id">
+        <input type="hidden" name="token" id="form_token">
+        <input type="hidden" name="confirm" value="1">
+    </form>
+
+    <script>
+        const params = new URLSearchParams(window.location.search);
+        const reportId = params.get('report_id');
+        const token = params.get('token');
+        const result = params.get('result');
+        const warning = params.get('warning');
+        const sentAt = params.get('sent_at');
+
+        // Strip params from URL bar
+        if (window.location.search) {
+            history.replaceState(null, '', window.location.pathname);
+        }
+
+        function lucideIcon(name, cls) {
+            return `<i data-lucide="${name}" class="${cls || ''}"></i>`;
+        }
+
+        function reinitIcons() {
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+        }
+
+        function showConfirmState() {
+            document.getElementById('content').innerHTML = `
+                <div class="alert-box">
+                    <div class="ready-icon-wrapper">
+                        ${lucideIcon('send', 'icon-lg')}
+                    </div>
+                    <div class="alert-title">אישור שליחת המסמכים הנדרשים</div>
+                    <p class="alert-text">לחיצה על הכפתור תאשר את הדוח ותשלח אותו ללקוח.</p>
+                </div>
+
+                <div class="actions">
+                    <button class="btn btn-primary btn-lg" id="confirmBtn" onclick="doConfirm()">
+                        <span class="flex items-center justify-center gap-2">
+                            ${lucideIcon('check', 'icon-sm')} אשר ושלח
+                        </span>
+                    </button>
+                </div>
+            `;
+            reinitIcons();
+        }
+
+        function showSuccess() {
+            document.getElementById('content').innerHTML = `
+                <div class="alert-box">
+                    <div class="ready-icon-wrapper">
+                        ${lucideIcon('circle-check', 'icon-lg')}
+                    </div>
+                    <div class="alert-title" style="color:var(--success-700)">רשימת המסמכים נשלחה בהצלחה!</div>
+                    <p class="alert-text">החלון ייסגר אוטומטית בעוד <span id="countdown">5</span> שניות...</p>
+                </div>
+            `;
+            reinitIcons();
+            autoCloseCountdown();
+        }
+
+        function showQueued() {
+            document.getElementById('content').innerHTML = `
+                <div class="alert-box">
+                    <div class="ready-icon-wrapper">
+                        ${lucideIcon('clock', 'icon-lg')}
+                    </div>
+                    <div class="alert-title" style="color:var(--success-700)">האישור התקבל!</div>
+                    <p class="alert-text">רשימת המסמכים תישלח אוטומטית ללקוח בשעה 08:00 בבוקר.</p>
+                </div>
+            `;
+            reinitIcons();
+            autoCloseCountdown();
+        }
+
+        function showAlreadySentWarning(sentAtDate) {
+            var dateStr = '';
+            if (sentAtDate) {
+                try {
+                    var d = new Date(sentAtDate);
+                    dateStr = d.toLocaleDateString('he-IL', { year: 'numeric', month: 'long', day: 'numeric' });
+                } catch (e) {
+                    dateStr = sentAtDate;
+                }
+            }
+            var dateText = dateStr ? ' בתאריך <strong>' + dateStr + '</strong>' : '';
+            document.getElementById('content').innerHTML = `
+                <div class="alert-box">
+                    <div class="alert-icon-wrapper" style="background:var(--warning-50);color:var(--warning-500)">
+                        ${lucideIcon('alert-triangle', 'icon-lg')}
+                    </div>
+                    <div class="alert-title" style="color:var(--warning-700)">המסמכים כבר נשלחו ללקוח</div>
+                    <p class="alert-text">רשימת המסמכים כבר נשלחה ללקוח${dateText}. לחיצה על הכפתור תשלח את הרשימה שוב.</p>
+                </div>
+
+                <div class="actions">
+                    <button class="btn btn-primary btn-lg" id="confirmBtn" onclick="doConfirm()">
+                        <span class="flex items-center justify-center gap-2">
+                            ${lucideIcon('refresh-cw', 'icon-sm')} שלח שוב
+                        </span>
+                    </button>
+                </div>
+            `;
+            reinitIcons();
+        }
+
+        function showError() {
+            document.getElementById('content').innerHTML = `
+                <div class="alert-box" role="alert">
+                    <div class="alert-icon-wrapper" style="background:var(--danger-50);color:var(--danger-500)">
+                        ${lucideIcon('alert-triangle', 'icon-lg')}
+                    </div>
+                    <div class="alert-title" style="color:var(--danger-700)">שגיאה</div>
+                    <p class="alert-text">אירעה שגיאה. אנא נסה שנית או פנה למשרד.</p>
+                </div>
+            `;
+            reinitIcons();
+        }
+
+        function showMissingParams() {
+            document.getElementById('content').innerHTML = `
+                <div class="alert-box" role="alert">
+                    <div class="alert-icon-wrapper" style="background:var(--danger-50);color:var(--danger-500)">
+                        ${lucideIcon('link-2-off', 'icon-lg')}
+                    </div>
+                    <div class="alert-title" style="color:var(--danger-700)">קישור לא תקין</div>
+                    <p class="alert-text">הקישור חסר פרמטרים. אנא השתמש בקישור שנשלח אליך באימייל.</p>
+                </div>
+            `;
+            reinitIcons();
+        }
+
+        function doConfirm() {
+            var btn = document.getElementById('confirmBtn');
+            if (btn) btn.disabled = true;
+
+            document.getElementById('content').innerHTML = `
+                <div class="loading">
+                    <div class="spinner"></div>
+                    <p>שולח...</p>
+                </div>
+            `;
+
+            // Submit via hidden form — avoids CORS entirely
+            document.getElementById('form_report_id').value = reportId;
+            document.getElementById('form_token').value = token;
+            document.getElementById('confirmForm').submit();
+        }
+
+        function autoCloseCountdown() {
+            var seconds = 5;
+            var timer = setInterval(function() {
+                seconds--;
+                var el = document.getElementById('countdown');
+                if (el) el.textContent = seconds;
+                if (seconds <= 0) {
+                    clearInterval(timer);
+                    window.close();
+                }
+            }, 1000);
+        }
+
+        // Route based on state
+        if (result === 'success') {
+            showSuccess();
+        } else if (result === 'queued') {
+            showQueued();
+        } else if (result === 'error') {
+            showError();
+        } else if (!reportId || !token) {
+            showMissingParams();
+        } else if (warning === 'already_sent') {
+            showAlreadySentWarning(sentAt);
+        } else {
+            showConfirmState();
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+        });
+    </script>
+</body>
+
+</html>

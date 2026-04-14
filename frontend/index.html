@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="he">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="referrer" content="no-referrer">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://unpkg.com https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline'; img-src 'self' https://flagcdn.com data:; connect-src 'self' https://liozshor.app.n8n.cloud https://annual-reports-api.liozshor1.workers.dev https://unpkg.com; frame-src https://tally.so; font-src 'self'; object-src 'none'; base-uri 'self';">
+    <title>Questionnaire</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📋</text></svg>">
+    <link rel="stylesheet" href="assets/css/design-system.css">
+    <link rel="stylesheet" href="assets/css/common.css">
+    <link rel="stylesheet" href="assets/css/landing.css">
+    <script src="https://unpkg.com/lucide@0.576.0/dist/umd/lucide.min.js" integrity="sha384-b05ba3pt6xaC7F4r130arhf8cF18GH/gKu9JDz/NMf+BhLlBVwIWUdAZSpf1IWRZ" crossorigin="anonymous" defer></script>
+</head>
+
+<body>
+    <noscript>
+        <div class="noscript-fallback">
+            <h2>JavaScript Required / נדרש JavaScript</h2>
+            <p>דף זה דורש JavaScript כדי לפעול. אנא הפעילו JavaScript בדפדפן או פנו למשרד:</p>
+            <p>This page requires JavaScript. Please enable JavaScript or contact the office:</p>
+            <p><a href="mailto:reports@moshe-atsits.co.il">reports@moshe-atsits.co.il</a></p>
+        </div>
+    </noscript>
+    <div class="landing-wrapper">
+        <div class="container">
+            <header class="header">
+                <div class="header-logo">
+                    <a href="./">
+                        <img src="assets/images/logo.png" alt="משרד רו״ח Client Name" class="site-logo site-logo-lg" width="1010" height="306">
+                    </a>
+                </div>
+                <h1 id="headerTitle"></h1>
+                <p class="header-subtitle">Questionnaire</p>
+            </header>
+
+            <div class="content" id="content">
+                <!-- Skeleton loading -->
+                <div class="skeleton-loader">
+                    <div class="skeleton skeleton-text-lg" style="width: 70%; margin: 0 auto;"></div>
+                    <div class="skeleton skeleton-text" style="width: 90%; margin: var(--sp-3) auto 0;"></div>
+                    <div class="skeleton skeleton-text" style="width: 60%; margin: var(--sp-2) auto 0;"></div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-4); margin-top: var(--sp-6);">
+                        <div class="skeleton skeleton-block" style="height: 100px;"></div>
+                        <div class="skeleton skeleton-block" style="height: 100px;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+
+    <script src="assets/js/error-handler.js"></script>
+    <script src="assets/js/resilient-fetch.js"></script>
+    <script src="shared/constants.js"></script>
+    <script src="shared/endpoints.js"></script>
+    <script src="assets/js/landing.js"></script>
+</body>
+
+</html>
