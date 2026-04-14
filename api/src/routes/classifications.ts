@@ -1401,6 +1401,11 @@ classifications.post('/review-classification', async (c) => {
               // DL-210 Bug 3: general_doc has no HE_TITLE entry — use issuer name directly
               newFilename = sanitizeFilename(targetIssuer) + '.pdf';
             }
+            // DL-271: Append period for T901/T902 reassign
+            const periodForReassign = getRentalPeriodLabel();
+            if (periodForReassign && newFilename) {
+              newFilename = newFilename.replace('.pdf', ` ${periodForReassign.filename}.pdf`);
+            }
           }
         }
 
