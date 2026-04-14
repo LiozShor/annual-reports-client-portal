@@ -1,6 +1,23 @@
 # Annual Reports CRM - Current Status
 
-**Last Updated:** 2026-04-14 (Session Start Enforcement + CORS)
+**Last Updated:** 2026-04-14 (n8n URL Migration to Custom Domain)
+
+---
+
+## Session Summary (2026-04-14 — Part 7)
+
+### n8n Workflow URL Migration [COMPLETED]
+- Migrated all 6 active n8n workflows from `liozshor.github.io/annual-reports-client-portal` to `docs.moshe-atsits.com`
+- 19 total occurrences replaced (URLs in Code nodes + CORS headers)
+- Workflows updated: [SUB] Document Service (4), [06] Reminder Scheduler (4), [API] Send Batch Status (6), [04] Document Edit Handler (2), [MONITOR] Security Alerts (1), [07] Daily Natan Digest (2)
+- CORS: Edit Handler webhook keeps both origins for backward compat; Batch Status respond nodes switched to new domain
+- Also committed `.dev.vars*` gitignore entries
+- Commit: `78a2b59` on main
+
+**TODO (carried forward):**
+- [x] ~~Update n8n workflow URLs to use custom domain~~ (done this session)
+- [ ] Verify `docs.moshe-atsits.com` admin login works (CORS resolved)
+- [ ] Delete root-level duplicate frontend files (separate PR after stability confirmed)
 
 ---
 
