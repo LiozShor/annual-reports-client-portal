@@ -1,6 +1,38 @@
 # Annual Reports CRM - Current Status
 
-**Last Updated:** 2026-04-14 (Session 8 — DL-268 + root duplicate cleanup)
+**Last Updated:** 2026-04-14 (Session 9 — DL-272 send-comment port + approve-and-send fix)
+
+---
+
+## Session Summary (2026-04-14 — Part 9)
+
+### DL-272: Port DL-266 Send-Comment Endpoint + Fix Approve-and-Send [IMPLEMENTED — NEED TESTING]
+- Ported full DL-266 API implementation from old repo (`annual-reports-old` branch `DL-266-reply-to-client-messages`)
+- **New endpoint:** `POST /webhook/admin-send-comment` in `dashboard.ts` — reply to client messages with branded email, off-hours queue, Outlook threading
+- **New email builder:** `buildCommentEmailHtml()` + `buildCommentEmailSubject()` in `email-html.ts`
+- **New MS Graph method:** `replyToMessage()` — two-step createReply+send for Outlook thread continuity
+- **New cron handler:** `processQueuedComments()` in `email-queue.ts` — processes `queued_comment:*` KV keys
+- **Reply map:** GET `/admin-recent-messages` now returns `reply` field per message for threaded display
+- **Bug fix:** `showAIToast` → `showToast` in doc-manager queued handler — this was the actual cause of the off-hours approve-and-send error since DL-264
+- **Bug fix:** `queued_send_at` Airtable update wrapped in try/catch (non-critical)
+- **Persistent button lock:** Doc-manager shows "⏰ ישלח ב-08:00" (disabled) on page load when `queued_send_at` is set
+- **Hook removed:** `banned-frontend-patterns.js` — was blocking debug and not useful enough to keep
+- Design log: `.agent/design-logs/admin-ui/266-reply-to-client-messages.md` (ported from old repo)
+- Worker deployed 4x, all changes merged to main
+
+**Test TODO (DL-272):**
+- [ ] Dashboard → messages panel → reply to a message → email sent (business hours)
+- [ ] Reply off-hours → toast "תגובה תישלח ב-08:00", queued in KV
+- [ ] Approve-and-send off-hours → toast "אושר ✓ ישלח אוטומטית ב-08:00" (green)
+- [ ] Refresh page after queuing → button stays "⏰ ישלח ב-08:00" (disabled)
+- [ ] Morning cron (05:00 UTC) sends queued emails and comments
+- [ ] Threaded reply appears in doc-manager timeline
+- [ ] No regression on existing message panel (expand, delete, hide)
+
+**Follow-up items (next session):**
+1. **Dashboard queued-client visibility** — queued clients in Pending_Approval should show ⏰ badge + grayed row in dashboard table so other users don't double-approve. Remove ugly "(X בתור לשליחה)" from stat card.
+2. **Outlook deferred send** — replace KV+cron queue with MS Graph `PidTagDeferredSendTime` (scheduled send). Simpler architecture, Outlook handles delivery timing. Eliminates `processQueuedEmails`/`processQueuedComments` cron entirely.
+3. **Remove debug console.log** — 3 temporary `console.log` lines in doc-manager approve-and-send handler.
 
 ---
 
