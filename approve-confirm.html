@@ -95,6 +95,20 @@
             autoCloseCountdown();
         }
 
+        function showQueued() {
+            document.getElementById('content').innerHTML = `
+                <div class="alert-box">
+                    <div class="ready-icon-wrapper">
+                        ${lucideIcon('clock', 'icon-lg')}
+                    </div>
+                    <div class="alert-title" style="color:var(--success-700)">האישור התקבל!</div>
+                    <p class="alert-text">רשימת המסמכים תישלח אוטומטית ללקוח בשעה 08:00 בבוקר.</p>
+                </div>
+            `;
+            reinitIcons();
+            autoCloseCountdown();
+        }
+
         function showAlreadySentWarning(sentAtDate) {
             var dateStr = '';
             if (sentAtDate) {
@@ -185,6 +199,8 @@
         // Route based on state
         if (result === 'success') {
             showSuccess();
+        } else if (result === 'queued') {
+            showQueued();
         } else if (result === 'error') {
             showError();
         } else if (!reportId || !token) {

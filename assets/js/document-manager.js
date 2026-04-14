@@ -2392,18 +2392,32 @@ function approveAndSendToClient() {
                 }, FETCH_TIMEOUTS.mutate);
                 const data = await res.json();
                 if (data.ok) {
-                    if (!DOCS_FIRST_SENT_AT) DOCS_FIRST_SENT_AT = new Date().toISOString();
-                    CURRENT_STAGE = data.stage || 'Collecting_Docs';
-                    updateSentBadge();
-                    setBtnState(sendBtn, 'success', 'נשלח!');
-                    setTimeout(() => {
-                        if (sendBtn) {
-                            sendBtn.classList.remove('btn-success-flash');
-                            sendBtn.innerHTML = '✓ נשלח ללקוח';
-                            sendBtn.disabled = true;
-                            sendBtn.title = 'המייל כבר נשלח ללקוח';
-                        }
-                    }, 1500);
+                    if (data.queued) {
+                        // DL-264: Off-hours — email queued for morning send
+                        setBtnState(sendBtn, 'success', 'בתור לשליחה!');
+                        showAIToast('אושר ✓ ישלח אוטומטית ב-08:00', 'success');
+                        setTimeout(() => {
+                            if (sendBtn) {
+                                sendBtn.classList.remove('btn-success-flash');
+                                sendBtn.innerHTML = '⏰ ישלח ב-08:00';
+                                sendBtn.disabled = true;
+                                sendBtn.title = 'המייל ישלח אוטומטית בבוקר';
+                            }
+                        }, 1500);
+                    } else {
+                        if (!DOCS_FIRST_SENT_AT) DOCS_FIRST_SENT_AT = new Date().toISOString();
+                        CURRENT_STAGE = data.stage || 'Collecting_Docs';
+                        updateSentBadge();
+                        setBtnState(sendBtn, 'success', 'נשלח!');
+                        setTimeout(() => {
+                            if (sendBtn) {
+                                sendBtn.classList.remove('btn-success-flash');
+                                sendBtn.innerHTML = '✓ נשלח ללקוח';
+                                sendBtn.disabled = true;
+                                sendBtn.title = 'המייל כבר נשלח ללקוח';
+                            }
+                        }, 1500);
+                    }
                 } else {
                     setBtnState(sendBtn, 'idle');
                     showToast('שגיאה בשליחת המייל. נסה שנית.', 'error');
