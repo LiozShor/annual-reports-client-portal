@@ -3935,8 +3935,28 @@ function renderReviewedCard(item, reviewStatus) {
         } catch { /* ignore parse errors */ }
     }
 
-    // Classification info — use API-resolved short name
-    const displayName = item.matched_short_name || item.matched_template_name || 'לא ידוע';
+    // Classification info — use API-resolved short name + period
+    const displayName = appendContractPeriod(item.matched_short_name || item.matched_template_name || 'לא ידוע', item);
+
+    // DL-271: Request missing period buttons on reviewed rental contract cards
+    let reviewedPeriodBtns = '';
+    if (['T901', 'T902'].includes(item.matched_template_id) && item.contract_period && !item.contract_period.coversFullYear) {
+        const cp = item.contract_period;
+        const rid = escapeAttr(item.id);
+        const startMonth = new Date(cp.startDate).getMonth() + 1;
+        const endMonth = new Date(cp.endDate).getMonth() + 1;
+        const year = item.year || new Date(cp.endDate).getFullYear();
+        let btns = '';
+        if (startMonth > 1) {
+            btns += `<button class="btn btn-outline btn-sm btn-request-period" data-record-id="${rid}" onclick="event.stopPropagation(); requestMissingPeriod('${rid}', 1, ${startMonth - 1}, this)"><i data-lucide="plus" class="icon-sm"></i> בקש חוזה 1-${startMonth - 1}/${year}</button>`;
+        }
+        if (endMonth < 12) {
+            btns += `<button class="btn btn-outline btn-sm btn-request-period" data-record-id="${rid}" onclick="event.stopPropagation(); requestMissingPeriod('${rid}', ${endMonth + 1}, 12, this)"><i data-lucide="plus" class="icon-sm"></i> בקש חוזה ${endMonth + 1}-12/${year}</button>`;
+        }
+        if (btns) {
+            reviewedPeriodBtns = `<div class="ai-contract-period-banner" data-record-id="${rid}">${btns}</div>`;
+        }
+    }
 
     // Change Decision button — all reviewed cards can be re-reviewed (reassign safe via onedrive_item_id)
     const canChangeDecision = true;
@@ -3964,6 +3984,7 @@ function renderReviewedCard(item, reviewStatus) {
                 </div>
                 ${rejectionHtml}
             </div>
+            ${reviewedPeriodBtns}
             <div class="ai-card-actions">
                 ${actionsHtml}
             </div>
