@@ -2733,13 +2733,7 @@ tr:hover .client-view-link {
     flex-shrink: 0;
     display: flex;
     gap: 2px;
-    opacity: 0;
-    transition: opacity 0.15s;
     margin-top: 2px;
-}
-
-.msg-row:hover .msg-actions {
-    opacity: 1;
 }
 
 .msg-action-btn {
