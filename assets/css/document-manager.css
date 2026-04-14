@@ -2189,14 +2189,19 @@ body {
 
 /* ==================== STICKY ACTION BAR ==================== */
 .sticky-action-bar {
-    position: sticky;
+    position: fixed;
     top: 0;
+    left: 0;
+    right: 0;
     z-index: 100;
     background: white;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
     border-bottom: 1px solid var(--gray-200);
-    margin: 0 calc(-1 * var(--sp-6));
-    width: calc(100% + 2 * var(--sp-6));
+}
+
+/* Spacer to prevent content from hiding behind the fixed bar */
+.sticky-action-bar + * {
+    margin-top: 44px;
 }
 
 .sticky-progress-bar {
