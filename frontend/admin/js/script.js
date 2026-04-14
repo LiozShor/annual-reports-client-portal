@@ -568,25 +568,35 @@ function buildMobilePreviewFooter(item, footer) {
         ? `<div class="mobile-preview-client"><i data-lucide="user" class="icon-sm"></i> ${escapeHtml(clientName)}</div>`
         : '';
 
-    // DL-268: Partial contract period banner for mobile preview
+    // DL-270: Contract period banner for mobile preview — editable
     let mobileContractBanner = '';
-    if (['T901', 'T902'].includes(item.matched_template_id) && item.contract_period && !item.contract_period.coversFullYear) {
+    if (['T901', 'T902'].includes(item.matched_template_id)) {
         const cp = item.contract_period;
-        const startMonth = new Date(cp.startDate).getMonth() + 1;
-        const endMonth = new Date(cp.endDate).getMonth() + 1;
-        const year = item.year || new Date(cp.endDate).getFullYear();
-        const existingLabel = `${startMonth}-${endMonth}/${year}`;
-        const missingStart = endMonth + 1;
-        const missingLabel = `${missingStart}-12/${year}`;
-        if (missingStart <= 12) {
+        const rid = escapeAttr(item.id);
+        const year = item.year || new Date().getFullYear();
+        if (cp && cp.coversFullYear) {
+            mobileContractBanner = `<div class="ai-contract-period-banner" style="background:#f0fdf4;border-color:#22c55e33;color:#166534;"><span class="period-label">📅 חוזה שנתי מלא ✓</span></div>`;
+        } else {
+            const hasEnd = cp && cp.endDate;
+            const endMonth = hasEnd ? new Date(cp.endDate).getMonth() + 1 : null;
+            const startMonth = cp && cp.startDate ? new Date(cp.startDate).getMonth() + 1 : null;
+            const startVal = cp && cp.startDate ? cp.startDate.substring(0, 7) : '';
+            const endVal = hasEnd ? cp.endDate.substring(0, 7) : '';
+            const startLabel = startMonth ? `${startMonth}/${year}` : '__/__';
+            const endLabel = endMonth ? `${endMonth}/${year}` : '__/__';
+            const statusText = cp ? 'חוזה חלקי' : 'לא זוהו תאריכים';
+            let requestBtn = '';
+            if (endMonth && endMonth < 12) {
+                requestBtn = `<button class="btn btn-outline btn-sm btn-request-period" data-record-id="${rid}" onclick="event.stopPropagation(); requestRemainingContract('${rid}', this)"><i data-lucide="plus" class="icon-sm"></i> בקש חוזה ${endMonth + 1}-12/${year}</button>`;
+            }
             mobileContractBanner = `
-            <div class="ai-contract-period-banner">
-                <span class="period-label">📅 חוזה חלקי: ${existingLabel}</span>
-                <button class="btn btn-outline btn-sm"
-                    onclick="event.stopPropagation(); requestRemainingContract('${escapeAttr(item.id)}', this)"
-                    title="בקש חוזה לתקופה החסרה">
-                    <i data-lucide="plus" class="icon-sm"></i> בקש חוזה ${missingLabel}
-                </button>
+            <div class="ai-contract-period-banner" data-record-id="${rid}">
+                <span class="period-label">📅 ${statusText}:
+                    <span class="contract-date-editable" data-field="start" data-value="${escapeAttr(startVal)}" onclick="event.stopPropagation(); editContractDate('${rid}', 'start', this)" title="לחץ לעריכה">${startLabel}</span>
+                    –
+                    <span class="contract-date-editable" data-field="end" data-value="${escapeAttr(endVal)}" onclick="event.stopPropagation(); editContractDate('${rid}', 'end', this)" title="לחץ לעריכה">${endLabel}</span>
+                </span>
+                ${requestBtn}
             </div>`;
         }
     }
@@ -3774,25 +3784,56 @@ function renderAICard(item) {
                 </button>
             </div>` : '';
 
-    // DL-268: Partial contract period banner for T901/T902
+    // DL-269/270: Contract period banner for T901/T902 — editable dates
     let contractPeriodBannerHtml = '';
-    if (['T901', 'T902'].includes(item.matched_template_id) && item.contract_period && !item.contract_period.coversFullYear) {
+    if (['T901', 'T902'].includes(item.matched_template_id)) {
         const cp = item.contract_period;
-        const startMonth = new Date(cp.startDate).getMonth() + 1;
-        const endMonth = new Date(cp.endDate).getMonth() + 1;
-        const year = item.year || new Date(cp.endDate).getFullYear();
-        const existingLabel = `${startMonth}-${endMonth}/${year}`;
-        const missingStart = endMonth + 1;
-        const missingLabel = `${missingStart}-12/${year}`;
-        if (missingStart <= 12) {
+        const rid = escapeAttr(item.id);
+        const year = item.year || new Date().getFullYear();
+
+        if (cp && cp.coversFullYear) {
+            // Full year — info only
             contractPeriodBannerHtml = `
-            <div class="ai-contract-period-banner">
-                <span class="period-label">📅 חוזה חלקי: ${existingLabel}</span>
-                <button class="btn btn-outline btn-sm"
-                    onclick="event.stopPropagation(); requestRemainingContract('${escapeAttr(item.id)}', this)"
+            <div class="ai-contract-period-banner" style="background:#f0fdf4;border-color:#22c55e33;color:#166534;">
+                <span class="period-label">📅 חוזה שנתי מלא ✓</span>
+            </div>`;
+        } else {
+            // Partial or no dates — editable
+            const hasStart = cp && cp.startDate;
+            const hasEnd = cp && cp.endDate;
+            const startMonth = hasStart ? new Date(cp.startDate).getMonth() + 1 : null;
+            const endMonth = hasEnd ? new Date(cp.endDate).getMonth() + 1 : null;
+            const startVal = hasStart ? cp.startDate.substring(0, 7) : ''; // YYYY-MM for input
+            const endVal = hasEnd ? cp.endDate.substring(0, 7) : '';
+            const startLabel = startMonth ? `${startMonth}/${year}` : '__/__';
+            const endLabel = endMonth ? `${endMonth}/${year}` : '__/__';
+            const statusText = cp ? 'חוזה חלקי' : 'לא זוהו תאריכים';
+
+            // Missing period calculation
+            let requestBtnHtml = '';
+            if (endMonth && endMonth < 12) {
+                const missingStart = endMonth + 1;
+                const missingLabel = `${missingStart}-12/${year}`;
+                requestBtnHtml = `
+                <button class="btn btn-outline btn-sm btn-request-period" data-record-id="${rid}"
+                    onclick="event.stopPropagation(); requestRemainingContract('${rid}', this)"
                     title="בקש מהלקוח את החוזה לתקופה החסרה">
                     <i data-lucide="plus" class="icon-sm"></i> בקש חוזה ${missingLabel}
-                </button>
+                </button>`;
+            }
+
+            contractPeriodBannerHtml = `
+            <div class="ai-contract-period-banner" data-record-id="${rid}">
+                <span class="period-label">📅 ${statusText}:
+                    <span class="contract-date-editable" data-field="start" data-value="${escapeAttr(startVal)}"
+                        onclick="event.stopPropagation(); editContractDate('${rid}', 'start', this)"
+                        title="לחץ לעריכה">${startLabel}</span>
+                    –
+                    <span class="contract-date-editable" data-field="end" data-value="${escapeAttr(endVal)}"
+                        onclick="event.stopPropagation(); editContractDate('${rid}', 'end', this)"
+                        title="לחץ לעריכה">${endLabel}</span>
+                </span>
+                ${requestBtnHtml}
             </div>`;
         }
     }
@@ -4101,7 +4142,120 @@ async function approveAIClassification(recordId) {
     }, { confirmText: 'נכון', btnClass: 'btn-success' });
 }
 
-// DL-268: Request remaining contract period for partial rental contracts
+// DL-270: Inline click-to-edit contract period dates
+function editContractDate(recordId, field, el) {
+    if (el.querySelector('input')) return; // already editing
+    const currentVal = el.dataset.value || '';
+    const input = document.createElement('input');
+    input.type = 'month';
+    input.value = currentVal;
+    input.className = 'contract-date-input';
+    input.onclick = (e) => e.stopPropagation();
+
+    const finishEdit = () => {
+        const newVal = input.value; // YYYY-MM
+        if (!newVal) {
+            // Cancelled — restore original text
+            el.textContent = currentVal ? `${new Date(currentVal + '-01').getMonth() + 1}/${new Date(currentVal + '-01').getFullYear()}` : '__/__';
+            return;
+        }
+        el.dataset.value = newVal;
+        const m = new Date(newVal + '-01').getMonth() + 1;
+        const y = new Date(newVal + '-01').getFullYear();
+        el.textContent = `${m}/${y}`;
+
+        // Get both dates from the banner
+        const banner = el.closest('.ai-contract-period-banner');
+        if (!banner) return;
+        const spans = banner.querySelectorAll('.contract-date-editable');
+        const startSpan = [...spans].find(s => s.dataset.field === 'start');
+        const endSpan = [...spans].find(s => s.dataset.field === 'end');
+        const startVal = startSpan?.dataset.value || '';
+        const endVal = endSpan?.dataset.value || '';
+
+        if (startVal && endVal) {
+            saveContractPeriod(recordId, startVal + '-01', endVal + '-28'); // day doesn't matter much, backend uses month
+        }
+    };
+
+    input.addEventListener('change', finishEdit);
+    input.addEventListener('blur', () => { if (!input.value && !currentVal) el.textContent = '__/__'; });
+    el.textContent = '';
+    el.appendChild(input);
+    input.focus();
+}
+
+async function saveContractPeriod(recordId, startDate, endDate) {
+    try {
+        // Normalize end date to last day of month
+        const endD = new Date(endDate);
+        const lastDay = new Date(endD.getFullYear(), endD.getMonth() + 1, 0).getDate();
+        const normalizedEnd = `${endDate.substring(0, 8)}${String(lastDay).padStart(2, '0')}`;
+
+        const response = await fetchWithTimeout(ENDPOINTS.REVIEW_CLASSIFICATION, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                token: authToken,
+                classification_id: recordId,
+                action: 'update-contract-period',
+                start_date: startDate,
+                end_date: normalizedEnd
+            })
+        }, FETCH_TIMEOUTS.mutate);
+
+        const data = await response.json();
+        if (!data.ok) {
+            showAIToast(data.error || 'שגיאה בעדכון תאריכים', 'error');
+            return;
+        }
+
+        // Update local data
+        const item = aiClassificationsData.find(i => i.id === recordId);
+        if (item) item.contract_period = data.contract_period;
+
+        // Recalculate request button
+        const banner = document.querySelector(`.ai-contract-period-banner[data-record-id="${recordId}"]`);
+        if (banner && data.contract_period) {
+            const cp = data.contract_period;
+            const endMonth = new Date(cp.endDate).getMonth() + 1;
+            const year = item?.year || new Date(cp.endDate).getFullYear();
+            const existingBtn = banner.querySelector('.btn-request-period');
+
+            if (cp.coversFullYear) {
+                // Switch to full-year style
+                banner.style.background = '#f0fdf4';
+                banner.style.borderColor = '#22c55e33';
+                banner.style.color = '#166534';
+                banner.querySelector('.period-label').textContent = '📅 חוזה שנתי מלא ✓';
+                if (existingBtn) existingBtn.remove();
+            } else if (endMonth < 12) {
+                const missingLabel = `${endMonth + 1}-12/${year}`;
+                if (existingBtn) {
+                    existingBtn.innerHTML = `<i data-lucide="plus" class="icon-sm"></i> בקש חוזה ${missingLabel}`;
+                    existingBtn.disabled = false;
+                    safeCreateIcons();
+                } else {
+                    const btn = document.createElement('button');
+                    btn.className = 'btn btn-outline btn-sm btn-request-period';
+                    btn.dataset.recordId = recordId;
+                    btn.onclick = (e) => { e.stopPropagation(); requestRemainingContract(recordId, btn); };
+                    btn.innerHTML = `<i data-lucide="plus" class="icon-sm"></i> בקש חוזה ${missingLabel}`;
+                    banner.appendChild(btn);
+                    safeCreateIcons();
+                }
+            } else if (existingBtn) {
+                existingBtn.remove();
+            }
+        }
+
+        showAIToast('תאריכי חוזה עודכנו', 'success');
+    } catch (error) {
+        showAIToast(error.message, 'error');
+    }
+}
+
+// DL-269: Request remaining contract period for partial rental contracts
 async function requestRemainingContract(recordId, btn) {
     try {
         if (btn) { btn.disabled = true; btn.innerHTML = '<i data-lucide="loader" class="icon-sm spin"></i> מבקש...'; safeCreateIcons(); }

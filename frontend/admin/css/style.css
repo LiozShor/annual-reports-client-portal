@@ -6730,6 +6730,27 @@ tr:hover .client-edit-link {
     opacity: 0.6;
     pointer-events: none;
 }
+.contract-date-editable {
+    cursor: pointer;
+    border-bottom: 1px dashed #92400e;
+    padding: 0 2px;
+    font-weight: 600;
+    transition: background 0.15s;
+}
+.contract-date-editable:hover {
+    background: #fef3c7;
+    border-radius: 2px;
+}
+.contract-date-input {
+    width: 130px;
+    font-size: 12px;
+    padding: 1px 4px;
+    border: 1px solid #f59e0b;
+    border-radius: 4px;
+    background: #fff;
+    color: #92400e;
+    font-family: inherit;
+}
 
 /* ==================== SPLIT PAGE PREVIEW LIGHTBOX (DL-246) ==================== */
 

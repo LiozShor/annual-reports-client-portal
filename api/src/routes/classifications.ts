@@ -454,7 +454,7 @@ classifications.post('/review-classification', async (c) => {
       return c.json({ ok: false, error: 'Missing classification_id or action' }, 400);
     }
 
-    if (!['approve', 'reject', 'reassign', 'split', 'classify-segment', 'finalize-split', 'request-remaining-contract'].includes(action)) {
+    if (!['approve', 'reject', 'reassign', 'split', 'classify-segment', 'finalize-split', 'request-remaining-contract', 'update-contract-period'].includes(action)) {
       return c.json({ ok: false, error: `Invalid action: ${action}` }, 400);
     }
 
@@ -499,6 +499,33 @@ classifications.post('/review-classification', async (c) => {
     // for typed fields (email, url, dateTime, singleSelect, etc.)
     const stripEmpty = (obj: Record<string, unknown>): Record<string, unknown> =>
       Object.fromEntries(Object.entries(obj).filter(([, v]) => v != null && v !== ''));
+
+    // ---- DL-270: Update contract period dates — early return ----
+    if (action === 'update-contract-period') {
+      const { start_date, end_date } = body as { start_date?: string; end_date?: string };
+      if (!start_date || !end_date) {
+        return c.json({ ok: false, error: 'start_date and end_date are required' }, 400);
+      }
+      // Validate date format
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(start_date) || !/^\d{4}-\d{2}-\d{2}$/.test(end_date)) {
+        return c.json({ ok: false, error: 'Dates must be in YYYY-MM-DD format' }, 400);
+      }
+      const startD = new Date(start_date);
+      const endD = new Date(end_date);
+      if (startD >= endD) {
+        return c.json({ ok: false, error: 'start_date must be before end_date' }, 400);
+      }
+      const coversFullYear = startD.getMonth() === 0 && startD.getDate() === 1 &&
+        endD.getMonth() === 11 && endD.getDate() === 31 &&
+        startD.getFullYear() === endD.getFullYear();
+
+      const contractPeriod = { startDate: start_date, endDate: end_date, coversFullYear };
+      await airtable.updateRecord(TABLES.CLASSIFICATIONS, classification_id, {
+        contract_period: JSON.stringify(contractPeriod),
+      });
+
+      return c.json({ ok: true, action: 'update-contract-period', contract_period: contractPeriod });
+    }
 
     // ---- DL-268: Request remaining contract period — early return ----
     if (action === 'request-remaining-contract') {
