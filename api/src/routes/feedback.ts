@@ -30,7 +30,7 @@ feedback.post('/admin-send-feedback', async (c) => {
 <html dir="rtl" lang="he">
 <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; direction: rtl; text-align: right;">
   <div style="text-align: center; padding: 16px 0 8px;">
-    <img src="https://liozshor.github.io/annual-reports-client-portal/assets/images/logo.png" alt="Moshe Atsits" width="160" style="display:inline-block;border:0;max-width:160px;height:auto;" />
+    <img src="https://docs.moshe-atsits.com/assets/images/logo.png" alt="Moshe Atsits" width="160" style="display:inline-block;border:0;max-width:160px;height:auto;" />
   </div>
   <h2 style="color: #1e40af;">${subject}</h2>
   <div style="background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px; margin: 16px 0;">

@@ -10,7 +10,7 @@ import type { Env } from '../lib/types';
 
 const sendQuestionnaires = new Hono<{ Bindings: Env }>();
 
-const FRONTEND_BASE = 'https://liozshor.github.io/annual-reports-client-portal';
+const FRONTEND_BASE = 'https://docs.moshe-atsits.com';
 const SENDER = 'reports@moshe-atsits.co.il';
 const REPORTS_TABLE = 'tbls7m3hmHC4hhQVy';
 const CLIENTS_TABLE = 'tblFFttFScDRZ7Ah5';

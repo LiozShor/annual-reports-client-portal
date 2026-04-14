@@ -15,7 +15,7 @@ import type { DocItem, CategoryInfo, ClientEmailParams, RejectedUpload } from '.
 
 const approveAndSend = new Hono<{ Bindings: Env }>();
 
-const FRONTEND_BASE = 'https://liozshor.github.io/annual-reports-client-portal';
+const FRONTEND_BASE = 'https://docs.moshe-atsits.com';
 const SENDER = 'reports@moshe-atsits.co.il';
 
 const TABLES = {
