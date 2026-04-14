@@ -1,5 +1,5 @@
 # Design Log 267: Auto-Advance to Review When Zero Docs Remaining
-**Status:** [IMPLEMENTED — NEED TESTING]
+**Status:** [IMPLEMENTED — NEED TESTING] (n8n bug fixed 2026-04-14, backfill applied)
 **Date:** 2026-04-14
 **Related Logs:** DL-158 (zero-docs approve-and-send, DRAFT — superseded), DL-054 (inline stage advancement), DL-161 (stage pipeline migration)
 
@@ -176,4 +176,22 @@ Temporary `POST /webhook/backfill-zero-docs` endpoint:
 * [ ] No duplicate stage transitions (idempotent)
 
 ## 8. Implementation Notes (Post-Code)
-* *To be filled during implementation.*
+
+### Bug Fix: n8n Dead Branch on 0 Docs (2026-04-14)
+
+**Reported by:** Client Name (2025) — questionnaire submitted, 0 docs generated, stuck at stage 2 (`Waiting_For_Answers`).
+
+**Root Cause:** When Document Service returns 0 documents:
+1. "Prepare for Airtable" Code node outputs empty array (0 items)
+2. "Upsert Documents" Airtable node receives nothing → produces no output
+3. "Wait for Both" Merge node (`chooseBranch` mode) stalls — input 0 never arrives
+4. "Update Report Stage" never executes → stage stays at `Waiting_For_Answers`
+
+Additionally, DL-267 section D (n8n auto-advance call after 0-doc generation) was never implemented — but even if it had been, the Merge stall would have prevented the stage update.
+
+**Fixes Applied:**
+1. **`alwaysOutputData: true`** on "Upsert Documents" node (`8363cfde`) — Merge now fires even with 0 docs
+2. **Dynamic stage expression** in "Update Report Stage" node (`13bd8ea8`) — if `document_count === 0`, sets stage to `Review` (not `Pending_Approval`), clears reminder fields, sets `docs_completed_at`. This replaces the need for a separate Worker auto-advance call (section D of original plan).
+3. **Backfill:** Client Name 2025 (`reczZAsgEJDI8rrPi`) updated from `Waiting_For_Answers` → `Review`
+
+**Pattern applied:** n8n Airtable Search + empty branch pattern (memory: `alwaysOutputData: true` on upstream node).
