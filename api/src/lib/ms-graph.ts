@@ -204,6 +204,37 @@ export class MSGraphClient {
     await this.post(path, { message });
   }
 
+  /**
+   * Reply to an existing message in a mailbox (DL-266).
+   * Two-step: createReply (draft) → send. More reliable than direct /reply.
+   * Looks up Graph message ID from Internet Message-ID first.
+   */
+  async replyToMessage(
+    internetMessageId: string,
+    htmlContent: string,
+    fromMailbox: string = 'me',
+  ): Promise<void> {
+    // Step 1: Look up Graph ID from Internet Message-ID
+    const userPath = fromMailbox === 'me' ? '/me' : `/users/${fromMailbox}`;
+    const filter = encodeURIComponent(`internetMessageId eq '${internetMessageId}'`);
+    const lookupPath = `${userPath}/messages?$filter=${filter}&$select=id&$top=1`;
+    const result = await this.get(lookupPath) as { value?: Array<{ id: string }> };
+    if (!result?.value?.[0]?.id) {
+      throw new Error(`[ms-graph] Message not found for internetMessageId: ${internetMessageId}`);
+    }
+    const graphId = result.value[0].id;
+
+    // Step 2: Create draft reply with HTML body
+    const draft = await this.post(`${userPath}/messages/${graphId}/createReply`, {
+      message: {
+        body: { contentType: 'HTML', content: htmlContent },
+      },
+    }) as { id: string };
+
+    // Step 3: Send the draft
+    await this.post(`${userPath}/messages/${draft.id}/send`, undefined);
+  }
+
   async batch(requests: BatchRequest[]): Promise<BatchResponse[]> {
     const token = await getAccessToken(this.env, this.ctx);
     const url = `${GRAPH_BASE}/$batch`;

@@ -1,7 +1,11 @@
 import { Hono } from 'hono';
 import { verifyToken } from '../lib/token';
 import { AirtableClient } from '../lib/airtable';
-import { getCachedOrFetch } from '../lib/cache';
+import { getCachedOrFetch, invalidateCache } from '../lib/cache';
+import { MSGraphClient } from '../lib/ms-graph';
+import { isOffHours } from '../lib/israel-time';
+import { buildCommentEmailHtml, buildCommentEmailSubject } from '../lib/email-html';
+import { logError } from '../lib/error-logger';
 import type { Env } from '../lib/types';
 
 const dashboard = new Hono<{ Bindings: Env }>();
@@ -178,9 +182,21 @@ dashboard.get('/admin-recent-messages', async (c) => {
 
         const clientId = String(getField(f.client_id) || '');
 
+        // DL-266: Collect office replies keyed by reply_to note ID
+        const replyMap = new Map<string, { summary: string; date: string }>();
         for (const note of notes) {
-          if (note.source !== 'email') continue; // DL-262: dashboard shows emails only
+          if (note.type === 'office_reply' && note.reply_to) {
+            replyMap.set(String(note.reply_to), {
+              summary: String(note.summary || ''),
+              date: String(note.date || ''),
+            });
+          }
+        }
+
+        for (const note of notes) {
+          if (note.source !== 'email') continue; // DL-262: dashboard shows client emails
           if (note.hidden_from_dashboard) continue; // DL-263: skip hidden notes
+          const reply = replyMap.get(String(note.id || ''));
           allMessages.push({
             id: note.id || '',
             report_id: record.id,
@@ -192,6 +208,7 @@ dashboard.get('/admin-recent-messages', async (c) => {
             source: note.source || '',
             sender_email: note.sender_email || '',
             raw_snippet: note.raw_snippet || '',
+            reply: reply || null,
           });
         }
       }
@@ -206,6 +223,142 @@ dashboard.get('/admin-recent-messages', async (c) => {
   );
 
   return c.json({ ok: true, messages });
+});
+
+// POST /webhook/admin-send-comment (DL-266)
+const REPORTS_TABLE = 'tbls7m3hmHC4hhQVy';
+const SENDER = 'reports@moshe-atsits.co.il';
+
+dashboard.post('/admin-send-comment', async (c) => {
+  const authHeader = c.req.header('Authorization') || '';
+  const token = authHeader.startsWith('Bearer ')
+    ? authHeader.slice(7) : '';
+  const authResult = await verifyToken(token, c.env.SECRET_KEY);
+  if (!authResult.valid) return c.json({ ok: false, error: 'unauthorized' });
+
+  let body: Record<string, unknown>;
+  try { body = await c.req.json(); } catch { return c.json({ ok: false, error: 'invalid_json' }); }
+
+  const { report_id, note_id, comment_text } = body as { report_id?: string; note_id?: string; comment_text?: string };
+  if (!report_id || !comment_text || typeof comment_text !== 'string' || !comment_text.trim()) {
+    return c.json({ ok: false, error: 'report_id and non-empty comment_text are required' });
+  }
+
+  const airtable = new AirtableClient(c.env.AIRTABLE_BASE_ID, c.env.AIRTABLE_PAT);
+
+  let report: { id: string; fields: Record<string, unknown> };
+  try {
+    report = await airtable.getRecord(REPORTS_TABLE, report_id);
+  } catch {
+    return c.json({ ok: false, error: 'report_not_found' });
+  }
+
+  const first = (v: unknown) => Array.isArray(v) ? v[0] : v;
+  const clientEmail = String(first(report.fields.client_email) || '');
+  const clientName = String(first(report.fields.client_name) || 'לקוח');
+  const year = String(report.fields.year || new Date().getFullYear());
+
+  if (!clientEmail) {
+    return c.json({ ok: false, error: 'no_client_email' });
+  }
+
+  const trimmed = comment_text.trim();
+
+  // Find original message text for quoting in email
+  const notesRaw = report.fields.client_notes as string | undefined;
+  let notes: Array<Record<string, unknown>> = [];
+  if (notesRaw) {
+    try { notes = JSON.parse(notesRaw); } catch { /* start fresh */ }
+  }
+  if (!Array.isArray(notes)) notes = [];
+
+  let originalMessageId = '';
+  if (note_id) {
+    const original = notes.find(n => n.id === note_id);
+    if (original) {
+      originalMessageId = String(original.message_id || '');
+    }
+  }
+
+  // Build HTML for both reply and fallback sendMail
+  const subject = buildCommentEmailSubject(year);
+  const commentHtml = buildCommentEmailHtml({ commentText: trimmed, clientName, year });
+
+  // Build note entry for client_notes
+  const noteEntry = {
+    id: 'reply_' + Date.now(),
+    date: new Date().toISOString(),
+    summary: trimmed,
+    source: 'manual' as const,
+    type: 'office_reply',
+    ...(note_id ? { reply_to: note_id } : {}),
+  };
+
+  notes.push(noteEntry);
+
+  // Save note first (always persists, even if email fails)
+  try {
+    await airtable.updateRecord(REPORTS_TABLE, report_id, {
+      client_notes: JSON.stringify(notes),
+    });
+    invalidateCache(c.env.CACHE_KV, `cache:recent_messages:${year}`);
+  } catch (err) {
+    logError(c.executionCtx, c.env, {
+      endpoint: 'admin-send-comment',
+      error: err as Error,
+      category: 'DEPENDENCY',
+      details: `Failed to save note for ${report_id}`,
+    });
+    return c.json({ ok: false, error: 'save_note_failed' });
+  }
+
+  try {
+    if (isOffHours()) {
+      // Queue for morning delivery
+      const queuePayload = {
+        type: 'comment',
+        reportId: report_id,
+        subject,
+        commentHtml,
+        originalMessageId,
+        toAddress: clientEmail,
+        fromMailbox: SENDER,
+        queuedAt: new Date().toISOString(),
+      };
+      await c.env.CACHE_KV.put(
+        'queued_comment:' + report_id,
+        JSON.stringify(queuePayload),
+        { expirationTtl: 86400 },
+      );
+
+      return c.json({ ok: true, queued: true, scheduled_for: '08:00' });
+    }
+
+    // Business hours — send immediately
+    const graph = new MSGraphClient(c.env, c.executionCtx);
+    let sentViaReply = false;
+    if (originalMessageId) {
+      try {
+        await graph.replyToMessage(originalMessageId, commentHtml, SENDER);
+        sentViaReply = true;
+      } catch (replyErr) {
+        console.error('[send-comment] replyToMessage failed, falling back to sendMail:', (replyErr as Error).message);
+      }
+    }
+    if (!sentViaReply) {
+      await graph.sendMail(subject, commentHtml, clientEmail, SENDER);
+    }
+
+    return c.json({ ok: true, queued: false });
+  } catch (err) {
+    logError(c.executionCtx, c.env, {
+      endpoint: 'admin-send-comment',
+      error: err as Error,
+      category: 'DEPENDENCY',
+      details: `Note saved but email failed for ${clientEmail}`,
+    });
+    return c.json({ ok: true, queued: false, email_failed: true });
+  }
 });
 
 export default dashboard;

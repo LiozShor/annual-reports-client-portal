@@ -2,7 +2,7 @@
 
 Active and pending logs. For completed history, see [ARCHIVE-INDEX.md](ARCHIVE-INDEX.md).
 
-**Total logs:** 179 | **Active:** 81 | **Archived:** 98
+**Total logs:** 180 | **Active:** 82 | **Archived:** 98
 
 ## Folder Structure
 
@@ -22,6 +22,7 @@ Active and pending logs. For completed history, see [ARCHIVE-INDEX.md](ARCHIVE-I
 | # | File | Status | Summary |
 |---|------|--------|---------|
 | 270 | [270-editable-contract-period-dates.md](ai-review/270-editable-contract-period-dates.md) | COMPLETED | Editable contract period dates on AI review card for T901/T902 (DL-269 refinement) |
+| 266 | [266-reply-to-client-messages.md](admin-ui/266-reply-to-client-messages.md) | IMPLEMENTED — NEED TESTING | Reply to client messages from dashboard panel — branded email + off-hours queue |
 | 269 | [269-partial-rental-contract-detection.md](ai-review/269-partial-rental-contract-detection.md) | COMPLETED | AI detects partial rental contracts (T901/T902), banner on review card to request missing period |
 | 268 | [268-ai-review-pagination.md](ai-review/268-ai-review-pagination.md) | IMPLEMENTED — NEED TESTING | AI review: paginate by client groups (25/page) + FIFO sort (oldest-waiting first) |
 | 267 | [267-auto-advance-zero-docs-to-review.md](admin-ui/267-auto-advance-zero-docs-to-review.md) | IMPLEMENTED — NEED TESTING | Auto-advance to Review when docs_missing_count reaches 0 (Pending_Approval or Collecting_Docs) |

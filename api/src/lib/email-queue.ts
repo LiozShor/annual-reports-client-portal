@@ -79,3 +79,42 @@ export async function processQueuedEmails(env: Env, ctx: ExecutionContext): Prom
     console.log(`[email-queue] Sent ${sent}/${list.keys.length} queued emails`);
   }
 }
+
+// DL-266: Process queued comment emails (simpler than approval — just send, no stage transition)
+export async function processQueuedComments(env: Env, ctx: ExecutionContext): Promise<void> {
+  const list = await env.CACHE_KV.list({ prefix: 'queued_comment:' });
+  if (list.keys.length === 0) return;
+
+  console.log(`[email-queue] Processing ${list.keys.length} queued comments`);
+  const graph = new MSGraphClient(env, ctx);
+  let sent = 0;
+
+  for (const key of list.keys) {
+    try {
+      const raw = await env.CACHE_KV.get(key.name, 'json');
+      if (!raw) {
+        await env.CACHE_KV.delete(key.name);
+        continue;
+      }
+      const payload = raw as { subject: string; commentHtml: string; originalMessageId?: string; toAddress: string; fromMailbox: string };
+
+      if (payload.originalMessageId) {
+        await graph.replyToMessage(payload.originalMessageId, payload.commentHtml, payload.fromMailbox);
+      } else {
+        await graph.sendMail(payload.subject, payload.commentHtml, payload.toAddress, payload.fromMailbox);
+      }
+      await env.CACHE_KV.delete(key.name);
+      sent++;
+
+      if (list.keys.indexOf(key) < list.keys.length - 1) {
+        await new Promise(r => setTimeout(r, 1000));
+      }
+    } catch (err) {
+      console.error(`[email-queue] Failed to send comment ${key.name}:`, (err as Error).message);
+    }
+  }
+
+  if (sent > 0) {
+    console.log(`[email-queue] Sent ${sent}/${list.keys.length} queued comments`);
+  }
+}

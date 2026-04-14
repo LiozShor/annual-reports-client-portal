@@ -197,9 +197,14 @@ approveAndSend.get('/approve-and-send', async (c) => {
         JSON.stringify(queuePayload),
         { expirationTtl: 86400 },
       );
-      await airtable.updateRecord(TABLES.REPORTS, reportId, {
-        queued_send_at: new Date().toISOString(),
-      });
+      // queued_send_at is informational — don't let it block the response
+      try {
+        await airtable.updateRecord(TABLES.REPORTS, reportId, {
+          queued_send_at: new Date().toISOString(),
+        });
+      } catch (e) {
+        console.error('[approve-and-send] queued_send_at update failed (non-critical):', (e as Error).message);
+      }
 
       if (respondJson) return c.json({ ok: true, queued: true, scheduled_for: '08:00' });
       return c.redirect(`${FRONTEND_BASE}/approve-confirm.html?report_id=${reportId}&result=queued`, 302);

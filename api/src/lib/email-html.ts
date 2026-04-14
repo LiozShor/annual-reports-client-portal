@@ -535,7 +535,7 @@ export function buildClientEmailSubject(params: ClientEmailParams): string {
 
 // ── Questionnaire Email (from Send Questionnaires workflow) ───────
 
-function questionnaireContactBlock(): string {
+export function contactBlock(): string {
   return '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:24px;">'
     + '<tr><td style="padding:20px 24px;background-color:#f9fafb;border-radius:8px;border:1px solid #e5e7eb;direction:rtl;text-align:right;">'
     + '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">'
@@ -654,7 +654,7 @@ export function buildQuestionnaireEmailHtml(params: QuestionnaireEmailParams): s
     + (showFamilyNote ? familyNoteRow() : '')
     + '<tr><td style="font-family:' + FONT + ';font-size:14px;color:#9ca3af;text-align:center;padding-bottom:24px;">השאלון זמין בעברית ובאנגלית | Questionnaire available in Hebrew and English</td></tr>'
     + afterCta
-    + '<tr><td>' + questionnaireContactBlock() + '</td></tr>'
+    + '<tr><td>' + contactBlock() + '</td></tr>'
     + '<tr><td style="font-family:' + FONT + ';font-size:15px;color:#374151;line-height:1.6;padding-top:24px;">'
     + 'בברכה,<br><strong>צוות משרד רו"ח Client Name</strong>'
     + '</td></tr>'
@@ -670,4 +670,59 @@ export function buildQuestionnaireEmailHtml(params: QuestionnaireEmailParams): s
 export function buildQuestionnaireEmailSubject(year: string, filingType?: string): string {
   const label = filingType === 'capital_statement' ? 'הצהרת הון' : 'דוח שנתי';
   return 'שאלון \u2014 ' + label + ' ' + year;
+}
+
+// ── Comment/Reply Email (DL-266) ──────────────────────────────────
+
+interface CommentEmailParams {
+  commentText: string;
+  clientName: string;
+  year: string;
+}
+
+export function buildCommentEmailHtml(params: CommentEmailParams): string {
+  const { commentText, clientName, year } = params;
+  const escapedComment = commentText
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/\n/g, '<br>');
+
+  return '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="' + BG.outer + '" dir="rtl" style="direction:rtl;text-align:right;font-family:' + FONT + ';">'
+    + '<tr><td align="center" style="padding:32px 16px;">'
+    + '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="' + BG.card + '" style="max-width:600px;margin:0 auto;border-radius:8px;">'
+    // Logo
+    + '<tr><td align="center" bgcolor="' + BG.outer + '" style="background-color:' + BG.outer + ';padding:24px 0 16px;"><img src="' + LOGO_URL + '" alt="Moshe Atsits" width="180" height="auto" style="display:block;border:0;max-width:180px;height:auto;" /></td></tr>'
+    // Blue header bar
+    + '<tr><td style="padding:16px 32px;background-color:' + ACCENT.clientBg + ';border-bottom:3px solid ' + C.brand + ';">'
+    + '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">'
+    + '<tr><td style="font-family:' + FONT + ';font-size:20px;font-weight:bold;color:' + C.brand + ';line-height:1.3;">'
+    + 'הודעה ממשרד רו"ח Client Name \u2014 ' + year
+    + '</td></tr></table></td></tr>'
+    // Body
+    + '<tr><td style="padding:32px;">'
+    + '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">'
+    + '<tr><td style="font-family:' + FONT + ';font-size:16px;color:' + C.body + ';line-height:1.6;padding-bottom:16px;">'
+    + 'שלום ' + clientName + ','
+    + '</td></tr>'
+    + '<tr><td style="font-family:' + FONT + ';font-size:15px;color:' + C.body + ';line-height:1.6;padding-bottom:24px;">'
+    + escapedComment
+    + '</td></tr>'
+    // Contact block
+    + '<tr><td>' + contactBlock() + '</td></tr>'
+    + '<tr><td style="font-family:' + FONT + ';font-size:15px;color:' + C.body + ';line-height:1.6;padding-top:16px;border-top:1px solid ' + C.border + ';">'
+    + 'בברכה,<br><strong>צוות משרד רו"ח Client Name</strong>'
+    + '</td></tr>'
+    + '</table></td></tr>'
+    // Footer
+    + '<tr><td style="padding:16px 32px;background-color:' + BG.altRow + ';border-top:1px solid ' + C.border + ';border-radius:0 0 8px 8px;">'
+    + '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">'
+    + '<tr><td align="center" style="font-family:' + FONT + ';font-size:12px;color:' + C.muted + ';line-height:1.5;">'
+    + 'מייל זה נשלח ממשרד רו"ח Client Name בנוגע לתיק ' + year + ' שלך.'
+    + '</td></tr></table></td></tr>'
+    + '</table></td></tr></table>';
+}
+
+export function buildCommentEmailSubject(year: string): string {
+  return 'הודעה ממשרד רו"ח Client Name \u2014 דוחות ' + year;
 }
