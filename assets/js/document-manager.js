@@ -626,10 +626,12 @@ function showNotesSaveIndicator(type) {
     }
 }
 
-// Populate document dropdown from Airtable templates (SSOT)
+// Populate add-doc searchable combobox from Airtable templates (SSOT)
 function initDocumentDropdown() {
-    const select = document.getElementById('docTypeSelect');
-    let html = '<option value="">-- בחר מסמך מהרשימה --</option>\n';
+    const dropdown = document.getElementById('addDocComboDropdown');
+    const input = document.getElementById('addDocComboInput');
+    const container = document.getElementById('addDocCombobox');
+    if (!dropdown || !input) return;
 
     // Build set of existing active template IDs (no user vars = single instance)
     const existingTemplateIds = new Set();
@@ -652,31 +654,313 @@ function initDocumentDropdown() {
         groups[catId].push(tpl);
     }
 
-    // Build optgroups using category order from API
+    // Build combobox entries data
+    const comboEntries = [];
     for (const cat of apiCategories) {
         const catTemplates = groups[cat.id];
         if (!catTemplates || catTemplates.length === 0) continue;
 
-        let groupHtml = '';
+        const items = [];
         for (const tpl of catTemplates) {
-            // Skip templates that already exist and have no user variables
             const userVars = (tpl.variables || []).filter(v => v !== 'year' && v !== 'spouse_name');
-            if (userVars.length === 0 && existingTemplateIds.has(tpl.template_id)) {
-                continue;
-            }
+            if (userVars.length === 0 && existingTemplateIds.has(tpl.template_id)) continue;
 
             const displayName = stripBold(tpl.name_he
                 .replace(/\{year\}/g, YEAR || 'YYYY')
                 .replace(/\{[^}]+\}/g, '[...]'));
-            groupHtml += `<option value="${tpl.template_id}">${displayName}</option>`;
+            items.push({ tpl, displayName });
         }
-
-        if (groupHtml) {
-            html += `<optgroup label="${cat.emoji} ${cat.name_he}">${groupHtml}</optgroup>`;
+        if (items.length > 0) {
+            comboEntries.push({ cat, items });
         }
     }
 
-    select.innerHTML = html;
+    // Store entries for filtering
+    container._entries = comboEntries;
+
+    // Render full dropdown
+    renderAddDocDropdown(comboEntries, '');
+
+    // Input events
+    input.addEventListener('focus', () => {
+        if (container.classList.contains('disabled')) return;
+        container.classList.add('open');
+        renderAddDocDropdown(comboEntries, input.value.trim());
+    });
+
+    input.addEventListener('input', () => {
+        renderAddDocDropdown(comboEntries, input.value.trim());
+        container.classList.add('open');
+    });
+
+    // Keyboard navigation
+    input.addEventListener('keydown', (e) => {
+        if (!container.classList.contains('open')) {
+            if (e.key === 'ArrowDown' || e.key === 'Enter') {
+                container.classList.add('open');
+                e.preventDefault();
+            }
+            return;
+        }
+        const options = dropdown.querySelectorAll('.add-doc-combobox-option');
+        const current = dropdown.querySelector('.add-doc-combobox-option.highlighted');
+        let idx = Array.from(options).indexOf(current);
+
+        if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            idx = Math.min(idx + 1, options.length - 1);
+            options.forEach(o => o.classList.remove('highlighted'));
+            options[idx]?.classList.add('highlighted');
+            options[idx]?.scrollIntoView({ block: 'nearest' });
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            idx = Math.max(idx - 1, 0);
+            options.forEach(o => o.classList.remove('highlighted'));
+            options[idx]?.classList.add('highlighted');
+            options[idx]?.scrollIntoView({ block: 'nearest' });
+        } else if (e.key === 'Enter') {
+            e.preventDefault();
+            if (current) current.click();
+        } else if (e.key === 'Escape') {
+            container.classList.remove('open');
+            input.blur();
+        }
+    });
+
+    // Close on outside click
+    document.addEventListener('click', (e) => {
+        if (!container.contains(e.target)) {
+            container.classList.remove('open');
+        }
+    });
+}
+
+function renderAddDocDropdown(entries, filter) {
+    const dropdown = document.getElementById('addDocComboDropdown');
+    const normalizedFilter = filter.toLowerCase();
+    let html = '';
+    let totalVisible = 0;
+
+    for (const { cat, items } of entries) {
+        let groupHtml = '';
+        for (const { tpl, displayName } of items) {
+            if (normalizedFilter && !displayName.toLowerCase().includes(normalizedFilter)) continue;
+            groupHtml += `<div class="add-doc-combobox-option" data-template-id="${tpl.template_id}"
+                onclick="onAddDocTemplateSelected('${tpl.template_id}')">${escapeHtml(displayName)}</div>`;
+            totalVisible++;
+        }
+        if (groupHtml) {
+            html += `<div class="add-doc-combobox-category">${cat.emoji} ${cat.name_he}</div>${groupHtml}`;
+        }
+    }
+
+    if (totalVisible === 0) {
+        html = '<div class="add-doc-combobox-empty">לא נמצאו תוצאות</div>';
+    }
+
+    dropdown.innerHTML = html;
+}
+
+// Add-doc wizard state
+let addDocWizardState = 'idle'; // idle | variables | preview
+
+function onAddDocTemplateSelected(templateId) {
+    const tpl = apiTemplates.find(t => t.template_id === templateId);
+    if (!tpl) return;
+
+    const container = document.getElementById('addDocCombobox');
+    container.classList.remove('open');
+
+    const autoVars = ['year', 'spouse_name'];
+    const userVars = (tpl.variables || []).filter(v => !autoVars.includes(v));
+
+    // Pre-fill auto variables
+    const collectedValues = { year: YEAR || '' };
+    if ((tpl.variables || []).includes('spouse_name')) {
+        collectedValues.spouse_name = SPOUSE_NAME || '';
+    }
+
+    pendingTemplate = { tpl, userVars, collectedValues };
+
+    if (userVars.length > 0) {
+        showAddDocVariables(tpl, userVars);
+    } else {
+        showAddDocPreview();
+    }
+}
+
+function showAddDocVariables(tpl, userVars) {
+    addDocWizardState = 'variables';
+    const input = document.getElementById('addDocComboInput');
+    input.disabled = true;
+    input.value = '';
+
+    const displayName = stripBold(tpl.name_he
+        .replace(/\{year\}/g, YEAR || 'YYYY')
+        .replace(/\{[^}]+\}/g, '[...]'));
+
+    document.getElementById('addDocVarHeader').innerHTML =
+        `<i data-lucide="file-text" class="icon-sm"></i> ${escapeHtml(displayName)}`;
+
+    let fieldsHtml = '';
+    for (const varName of userVars) {
+        const label = VAR_LABELS[varName] || varName;
+        fieldsHtml += `
+            <div class="add-doc-var-group">
+                <label for="addDocVar_${varName}">${escapeHtml(label)}</label>
+                <input type="text" id="addDocVar_${varName}" data-var="${varName}" dir="auto"
+                    placeholder="${escapeHtml(label)}">
+            </div>`;
+    }
+    document.getElementById('addDocVarFields').innerHTML = fieldsHtml;
+
+    document.getElementById('addDocVarStep').classList.add('active');
+    document.getElementById('addDocPreviewStep').classList.remove('active');
+
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+
+    // Focus first input
+    const firstInput = document.querySelector('#addDocVarFields input');
+    if (firstInput) setTimeout(() => firstInput.focus(), 50);
+
+    // Enter key in last input triggers Next
+    const inputs = document.querySelectorAll('#addDocVarFields input');
+    inputs.forEach((inp, i) => {
+        inp.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                if (i < inputs.length - 1) {
+                    inputs[i + 1].focus();
+                } else {
+                    addDocWizardNext();
+                }
+            }
+        });
+    });
+}
+
+function addDocWizardNext() {
+    if (!pendingTemplate) return;
+    const { userVars, collectedValues } = pendingTemplate;
+
+    // Collect all variable values
+    let allFilled = true;
+    for (const varName of userVars) {
+        const input = document.getElementById(`addDocVar_${varName}`);
+        const val = input ? input.value.trim() : '';
+        if (!val) {
+            allFilled = false;
+            if (input) {
+                input.style.borderColor = 'var(--danger-500)';
+                input.focus();
+            }
+            break;
+        }
+        input.style.borderColor = '';
+        collectedValues[varName] = val;
+    }
+
+    if (!allFilled) {
+        showAlert('יש למלא את כל השדות', 'error');
+        return;
+    }
+
+    showAddDocPreview();
+}
+
+function showAddDocPreview() {
+    if (!pendingTemplate) return;
+    addDocWizardState = 'preview';
+
+    const { tpl, collectedValues } = pendingTemplate;
+    let displayName = tpl.name_he;
+    for (const [key, val] of Object.entries(collectedValues)) {
+        displayName = displayName.replace(new RegExp(`\\{${key}\\}`, 'g'), val);
+    }
+    displayName = stripBold(displayName);
+
+    // Check for duplicate
+    if (docsToAdd.has(displayName)) {
+        showAlert('מסמך זה כבר נמצא ברשימה', 'error');
+        return;
+    }
+
+    // Find category info
+    const catInfo = apiCategories.find(c => c.id === (tpl.category || 'other'));
+    const catLabel = catInfo ? `${catInfo.emoji} ${catInfo.name_he}` : '';
+    const person = isSpouseDocMode() ? 'בן/בת זוג' : 'לקוח';
+    const personIcon = isSpouseDocMode() ? '👥' : '👤';
+
+    const input = document.getElementById('addDocComboInput');
+    input.disabled = true;
+
+    document.getElementById('addDocPreviewContent').innerHTML = `
+        <div class="add-doc-preview-name">
+            <i data-lucide="file-text" class="icon-sm"></i>
+            ${escapeHtml(displayName)}
+        </div>
+        <div class="add-doc-preview-meta">
+            ${catLabel ? `<span>${catLabel}</span>` : ''}
+            <span>${personIcon} ${person}</span>
+        </div>`;
+
+    document.getElementById('addDocVarStep').classList.remove('active');
+    document.getElementById('addDocPreviewStep').classList.add('active');
+
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function confirmAddDoc() {
+    if (!pendingTemplate) return;
+    const { tpl, collectedValues } = pendingTemplate;
+
+    let displayName = tpl.name_he;
+    for (const [key, val] of Object.entries(collectedValues)) {
+        displayName = displayName.replace(new RegExp(`\\{${key}\\}`, 'g'), val);
+    }
+    displayName = stripBold(displayName);
+
+    if (docsToAdd.has(displayName)) {
+        showAlert('מסמך זה כבר נמצא ברשימה', 'error');
+        resetAddDocWizard();
+        return;
+    }
+
+    docsToAdd.set(displayName, buildDocMeta(tpl, collectedValues));
+    updateSelectedDocs();
+    updateStats();
+    resetAddDocWizard();
+}
+
+function addDocWizardBack(fromStep) {
+    if (fromStep === 'preview') {
+        // If there are user vars, go back to variables step
+        if (pendingTemplate && pendingTemplate.userVars.length > 0) {
+            addDocWizardState = 'variables';
+            document.getElementById('addDocPreviewStep').classList.remove('active');
+            document.getElementById('addDocVarStep').classList.add('active');
+            return;
+        }
+    }
+    // Default: reset to idle
+    resetAddDocWizard();
+}
+
+function resetAddDocWizard() {
+    addDocWizardState = 'idle';
+    pendingTemplate = null;
+
+    const input = document.getElementById('addDocComboInput');
+    if (input) {
+        input.disabled = false;
+        input.value = '';
+    }
+
+    document.getElementById('addDocVarStep').classList.remove('active');
+    document.getElementById('addDocPreviewStep').classList.remove('active');
+
+    const container = document.getElementById('addDocCombobox');
+    if (container) container.classList.remove('open', 'disabled');
 }
 
 // Display documents — renders pre-grouped structure from API (SSOT)
@@ -1348,106 +1632,7 @@ function buildDocMeta(tpl, collectedValues) {
     };
 }
 
-// Handle document selection from dropdown
-document.getElementById('docTypeSelect').addEventListener('change', function (e) {
-    const templateId = e.target.value;
-    if (!templateId) return;
-
-    const tpl = apiTemplates.find(t => t.template_id === templateId);
-    if (!tpl) return;
-
-    // Check if template has variables beyond 'year' and auto-filled ones
-    const autoVars = ['year', 'spouse_name'];
-    const userVars = (tpl.variables || []).filter(v => !autoVars.includes(v));
-
-    // Pre-fill auto variables
-    const collectedValues = { year: YEAR || '' };
-    if ((tpl.variables || []).includes('spouse_name')) {
-        collectedValues.spouse_name = SPOUSE_NAME || '';
-    }
-
-    if (userVars.length > 0) {
-        // Show detail input for the first user variable
-        pendingTemplate = { tpl, userVars, collectedValues };
-        promptNextVariable();
-    } else {
-        // No user variables needed — generate name directly
-        let displayName = tpl.name_he;
-        for (const [key, val] of Object.entries(collectedValues)) {
-            displayName = displayName.replace(new RegExp(`\\{${key}\\}`, 'g'), val);
-        }
-        displayName = stripBold(displayName);
-
-        if (docsToAdd.has(displayName)) {
-            showAlert('מסמך זה כבר נמצא ברשימה', 'error');
-        } else {
-            docsToAdd.set(displayName, buildDocMeta(tpl, collectedValues));
-            updateSelectedDocs();
-            updateStats();
-        }
-        e.target.value = '';
-    }
-});
-
-// Prompt user for the next variable value
-function promptNextVariable() {
-    if (!pendingTemplate) return;
-
-    const { tpl, userVars, collectedValues } = pendingTemplate;
-
-    // Find the first variable not yet collected
-    const nextVar = userVars.find(v => !(v in collectedValues));
-    if (!nextVar) {
-        // All variables collected — generate name
-        let name = tpl.name_he;
-        for (const [key, val] of Object.entries(collectedValues)) {
-            name = name.replace(new RegExp(`\\{${key}\\}`, 'g'), val);
-        }
-        name = stripBold(name);
-
-        if (docsToAdd.has(name)) {
-            showAlert('מסמך זה כבר נמצא ברשימה', 'error');
-        } else {
-            docsToAdd.set(name, buildDocMeta(tpl, collectedValues));
-            updateSelectedDocs();
-            updateStats();
-        }
-
-        document.getElementById('detailInput').classList.remove('show');
-        document.getElementById('docTypeSelect').value = '';
-        pendingTemplate = null;
-        return;
-    }
-
-    // Show input for this variable
-    const label = VAR_LABELS[nextVar] || nextVar;
-    document.getElementById('detailLabel').textContent = label + ':';
-    document.getElementById('detailValue').placeholder = '';
-    document.getElementById('detailValue').value = '';
-    document.getElementById('detailInput').classList.add('show');
-    document.getElementById('detailValue').focus();
-}
-
-// Add document with detail
-function addDocumentWithDetail() {
-    const detail = document.getElementById('detailValue').value.trim();
-
-    if (!detail) {
-        showAlert('יש להזין את הפרטים הנדרשים', 'error');
-        return;
-    }
-
-    if (!pendingTemplate) return;
-
-    const { userVars, collectedValues } = pendingTemplate;
-    const nextVar = userVars.find(v => !(v in collectedValues));
-    if (!nextVar) return;
-
-    collectedValues[nextVar] = detail;
-
-    // Check if more variables needed
-    promptNextVariable();
-}
+// Old dropdown listener removed — replaced by add-doc combobox (DL-267)
 
 // Update selected documents display
 function updateSelectedDocs() {
@@ -2084,9 +2269,7 @@ function resetForm() {
     docsToAdd.clear();
     sendEmailOnSave = false;
     document.getElementById('customDoc').value = '';
-    document.getElementById('detailInput').classList.remove('show');
-    document.getElementById('docTypeSelect').value = '';
-    pendingTemplate = null;
+    resetAddDocWizard();
     nameChanges.clear();
 
     // Reset questions to original state
@@ -2450,19 +2633,8 @@ function updateSentBadge() {
     }
 }
 
-// Close detail input and status dropdown when clicking outside
+// Close status dropdown when clicking outside
 document.addEventListener('click', function (e) {
-    const detailInput = document.getElementById('detailInput');
-    const select = document.getElementById('docTypeSelect');
-
-    if (detailInput.classList.contains('show') &&
-        !detailInput.contains(e.target) &&
-        !select.contains(e.target)) {
-        detailInput.classList.remove('show');
-        select.value = '';
-        pendingTemplate = null;
-    }
-
     // Close status dropdown on outside click
     const dropdown = document.getElementById('statusDropdown');
     if (dropdown && dropdown.style.display === 'block' && !dropdown.contains(e.target)) {

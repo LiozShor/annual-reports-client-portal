@@ -1294,6 +1294,182 @@ body {
     color: var(--danger-700);
 }
 
+/* ==================== ADD-DOC COMBOBOX ==================== */
+.add-doc-combobox {
+    position: relative;
+    width: 100%;
+}
+
+.add-doc-combobox-input {
+    width: 100%;
+    padding: var(--sp-2) var(--sp-3);
+    border: 1px solid var(--gray-300);
+    border-radius: var(--radius-md);
+    font-family: inherit;
+    font-size: var(--text-sm);
+    font-weight: 500;
+    background: white;
+    color: var(--gray-800);
+    direction: rtl;
+    cursor: text;
+    transition: border-color var(--transition-fast);
+    box-sizing: border-box;
+}
+
+.add-doc-combobox-input::placeholder {
+    color: var(--gray-400);
+}
+
+.add-doc-combobox-input:focus {
+    outline: none;
+    border-color: var(--brand-500);
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+}
+
+.add-doc-combobox-dropdown {
+    display: none;
+    position: absolute;
+    top: 100%;
+    right: 0;
+    left: 0;
+    max-height: 300px;
+    overflow-y: auto;
+    background: white;
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-lg);
+    z-index: 100;
+    direction: rtl;
+    margin-top: 4px;
+}
+
+.add-doc-combobox.open .add-doc-combobox-dropdown {
+    display: block;
+}
+
+.add-doc-combobox-category {
+    padding: var(--sp-2) var(--sp-3);
+    font-size: var(--text-xs);
+    font-weight: 700;
+    color: var(--gray-500);
+    background: var(--gray-50);
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    border-bottom: 1px solid var(--gray-100);
+}
+
+.add-doc-combobox-option {
+    padding: var(--sp-2) var(--sp-3) var(--sp-2) var(--sp-5);
+    font-size: var(--text-sm);
+    color: var(--gray-700);
+    cursor: pointer;
+    transition: background 100ms;
+    border-bottom: 1px solid var(--gray-50);
+}
+
+.add-doc-combobox-option:hover,
+.add-doc-combobox-option.highlighted {
+    background: var(--brand-50, #EEF2FF);
+}
+
+.add-doc-combobox-empty {
+    padding: var(--sp-4);
+    text-align: center;
+    color: var(--gray-400);
+    font-size: var(--text-sm);
+}
+
+/* ==================== ADD-DOC WIZARD STEPS ==================== */
+.add-doc-step {
+    display: none;
+    margin-top: var(--sp-3);
+    padding: var(--sp-4);
+    background: var(--gray-50);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--gray-200);
+    animation: slideDown 200ms ease;
+}
+
+.add-doc-step.active {
+    display: block;
+}
+
+.add-doc-step-header {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
+    font-weight: 600;
+    color: var(--gray-800);
+    margin-bottom: var(--sp-3);
+    font-size: var(--text-sm);
+}
+
+.add-doc-var-group {
+    margin-bottom: var(--sp-3);
+}
+
+.add-doc-var-group label {
+    display: block;
+    font-size: var(--text-sm);
+    font-weight: 500;
+    color: var(--gray-600);
+    margin-bottom: var(--sp-1);
+}
+
+.add-doc-var-group input {
+    width: 100%;
+    padding: var(--sp-2) var(--sp-3);
+    border: 1px solid var(--gray-300);
+    border-radius: var(--radius-md);
+    font-family: inherit;
+    font-size: var(--text-sm);
+    direction: rtl;
+}
+
+.add-doc-var-group input:focus {
+    outline: none;
+    border-color: var(--brand-500);
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+}
+
+.add-doc-actions {
+    display: flex;
+    gap: var(--sp-2);
+    justify-content: flex-start;
+    margin-top: var(--sp-3);
+}
+
+/* ==================== ADD-DOC PREVIEW ==================== */
+.add-doc-preview {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-2);
+}
+
+.add-doc-preview-name {
+    font-size: var(--text-base);
+    font-weight: 600;
+    color: var(--gray-800);
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
+}
+
+.add-doc-preview-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--sp-3);
+    font-size: var(--text-sm);
+    color: var(--gray-500);
+}
+
+.add-doc-preview-meta span {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-1);
+}
+
 /* ==================== EMAIL TOGGLE ==================== */
 .email-toggle {
     display: flex;

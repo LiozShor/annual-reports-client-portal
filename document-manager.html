@@ -253,17 +253,41 @@
                     </div>
 
                     <div class="form-group mb-4">
-                        <label class="form-label" for="docTypeSelect">בחר מסמכים להוספה</label>
-                        <select id="docTypeSelect">
-                            <option value="">-- בחר מסמך מהרשימה --</option>
-                        </select>
+                        <label class="form-label">בחר מסמכים להוספה</label>
+                        <div class="add-doc-combobox" id="addDocCombobox">
+                            <input class="add-doc-combobox-input" id="addDocComboInput"
+                                placeholder="🔍 חפש מסמך..." dir="rtl" autocomplete="off">
+                            <div class="add-doc-combobox-dropdown" id="addDocComboDropdown"></div>
+                        </div>
 
-                        <div id="detailInput" class="detail-input">
-                            <label id="detailLabel" class="form-label">פרטים נוספים:</label>
-                            <input type="text" id="detailValue" placeholder="לדוגמה: שם המעסיק, שם הבנק, וכו'">
-                            <button onclick="addDocumentWithDetail()" class="btn btn-success btn-sm mt-2">
-                                <i data-lucide="plus" class="icon-sm"></i> הוסף מסמך
-                            </button>
+                        <!-- Step: Variable inputs (all at once) -->
+                        <div class="add-doc-step" id="addDocVarStep">
+                            <div class="add-doc-step-header" id="addDocVarHeader"></div>
+                            <div id="addDocVarFields"></div>
+                            <div class="add-doc-actions">
+                                <button type="button" class="btn btn-sm" onclick="addDocWizardBack('variables')">
+                                    <i data-lucide="arrow-right" class="icon-sm"></i> חזור
+                                </button>
+                                <button type="button" class="btn btn-primary btn-sm" onclick="addDocWizardNext()">
+                                    הבא <i data-lucide="arrow-left" class="icon-sm"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Step: Preview before adding -->
+                        <div class="add-doc-step" id="addDocPreviewStep">
+                            <div class="add-doc-step-header">
+                                <i data-lucide="eye" class="icon-sm"></i> תצוגה מקדימה
+                            </div>
+                            <div class="add-doc-preview" id="addDocPreviewContent"></div>
+                            <div class="add-doc-actions">
+                                <button type="button" class="btn btn-sm" onclick="addDocWizardBack('preview')">
+                                    <i data-lucide="arrow-right" class="icon-sm"></i> חזור
+                                </button>
+                                <button type="button" class="btn btn-success btn-sm" onclick="confirmAddDoc()">
+                                    <i data-lucide="check" class="icon-sm"></i> הוסף לרשימה
+                                </button>
+                            </div>
                         </div>
                     </div>
 
