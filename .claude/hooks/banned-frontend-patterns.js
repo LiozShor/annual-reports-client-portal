@@ -16,7 +16,7 @@ process.stdin.on('end', () => {
     const filePath = (input.tool_input.file_path || '').replace(/\\/g, '/');
 
     // Only check frontend files
-    if (!filePath.includes('github/annual-reports-client-portal/')) process.exit(0);
+    if (!filePath.includes('frontend/')) process.exit(0);
     if (!/\.(js|html)$/.test(filePath)) process.exit(0);
 
     const content = input.tool_input.content || input.tool_input.new_string || '';

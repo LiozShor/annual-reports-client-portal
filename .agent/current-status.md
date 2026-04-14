@@ -1,6 +1,25 @@
 # Annual Reports CRM - Current Status
 
-**Last Updated:** 2026-04-14 (DL-267)
+**Last Updated:** 2026-04-14 (DL-MONOREPO)
+
+---
+
+## Session Summary (2026-04-14 — Part 5)
+
+### DL-MONOREPO: Git Monorepo Migration [IMPLEMENTED — MONITORING]
+- **What:** Merged outer local-only repo into GitHub repo (`LiozShor/annual-reports-client-portal`). Single repo, single remote, worktrees work natively.
+- **Structure:** `frontend/` = GitHub Pages (deployed via GitHub Actions), `api/` = Cloudflare Workers, `docs/`, `.claude/`, `.agent/` = project tooling
+- **Root frontend files kept** for backward compat — delete in separate PR after 1-2 days stability
+- **Secrets protected:** `.env`, `.mcp.json`, `.claude/settings.local.json`, `archive/keys.txt`, `docs/wf05-backup-*.json` all gitignored. Airtable PAT in design log 112 redacted.
+- **Hooks updated:** 3 hooks had hardcoded `github/annual-reports-client-portal/` → changed to `frontend/`
+- **Path refs updated:** CLAUDE.md, airtable-safety.md, SSOT docs, architecture.md, project-overview.md, cs-hardcoded-audit.md, ssot-verify skill, n8n comment URLs
+
+**TODO:**
+- [ ] Rename local directories after closing this Claude Code session: `mv annual-reports annual-reports-OLD && mv annual-reports-monorepo annual-reports`
+- [ ] Delete root-level duplicate frontend files (separate PR after 1-2 days of stability)
+- [ ] Delete `annual-reports-OLD` after confirming everything works for a week
+- [ ] Test full worktree workflow with a real ticket
+- [ ] Update memory files that reference `github/annual-reports-client-portal/`
 
 ---
 

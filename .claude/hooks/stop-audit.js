@@ -43,7 +43,7 @@ process.stdin.on('end', () => {
 
     // Check frontend files for banned patterns
     const frontendFiles = modifiedFiles.filter(
-      f => f.includes('github/annual-reports-client-portal/') && /\.(js|html)$/.test(f)
+      f => f.includes('frontend/') && /\.(js|html)$/.test(f)
     );
 
     for (const f of frontendFiles) {

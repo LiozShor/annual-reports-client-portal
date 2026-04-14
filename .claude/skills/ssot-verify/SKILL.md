@@ -26,6 +26,6 @@ When fixing doc-generation bugs, always update BOTH:
 | Codebase | Location | Update Method |
 |----------|----------|---------------|
 | n8n Code nodes | `[SUB] Document Service` (hf7DRQ9fLmQqHv3u) | `n8n_update_partial_workflow` |
-| GitHub Pages JS | `github/annual-reports-client-portal/n8n/` | Git commit + push |
+| GitHub Pages JS | `frontend/n8n/` | Git commit + push |
 
 n8n Document Service does NOT fetch JS from GitHub — all logic embedded in Code nodes.

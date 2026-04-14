@@ -12,7 +12,7 @@ process.stdin.on('end', () => {
     const filePath = (input.tool_input.file_path || '').replace(/\\/g, '/');
 
     // Only check files in client portal with relevant extensions
-    if (!filePath.includes('github/annual-reports-client-portal/')) process.exit(0);
+    if (!filePath.includes('frontend/')) process.exit(0);
     if (!/\.(js|html|md)$/.test(filePath)) process.exit(0);
 
     // Get the content being written/edited
