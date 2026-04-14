@@ -933,9 +933,14 @@ async function sendReply(noteId, reportId, commentText, sendBtn, replyZone, row)
 
         if (result.queued) {
             showAIToast('תגובה תישלח ב-08:00', 'success');
+        } else if (result.email_failed) {
+            showAIToast('התגובה נשמרה אך שליחת המייל נכשלה', 'warning');
         } else {
             showAIToast('תגובה נשלחה ✓', 'success');
         }
+
+        // Reload messages panel to show threaded reply
+        loadRecentMessages();
     } catch (err) {
         sendBtn.disabled = false;
         sendBtn.innerHTML = '<i data-lucide="send" class="icon-xs"></i> שלח תגובה';
