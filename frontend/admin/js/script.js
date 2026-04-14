@@ -34,6 +34,7 @@ let _reminderPageA = 1;
 let _reminderPageB = 1;
 let _aiPage = 1;
 const PAGE_SIZE = 50;
+const AI_PAGE_SIZE = 25; // DL-268: AI review paginates by client groups, not documents
 
 // DL-256: Shared pagination renderer
 function renderPagination(containerId, totalItems, currentPage, pageSize, onPageChange) {
@@ -3216,9 +3217,25 @@ function applyAIFilters(keepPage) {
     _filteredAI = filtered;
     if (!keepPage) _aiPage = 1;
 
-    const pageSlice = _filteredAI.slice((_aiPage - 1) * PAGE_SIZE, _aiPage * PAGE_SIZE);
-    renderAICards(pageSlice);
-    renderPagination('aiPagination', _filteredAI.length, _aiPage, PAGE_SIZE, goToAIPage);
+    // DL-268: Group by client, sort FIFO (oldest-waiting first), paginate by client groups
+    const clientGroups = new Map();
+    for (const item of _filteredAI) {
+        const key = item.client_name || 'לא ידוע';
+        if (!clientGroups.has(key)) clientGroups.set(key, []);
+        clientGroups.get(key).push(item);
+    }
+    // Sort groups by earliest received_at ascending (FIFO — longest-waiting client first)
+    const sortedGroups = [...clientGroups.entries()].sort((a, b) => {
+        const aMin = Math.min(...a[1].map(i => new Date(i.received_at || 0).getTime()));
+        const bMin = Math.min(...b[1].map(i => new Date(i.received_at || 0).getTime()));
+        return aMin - bMin;
+    });
+    const totalGroups = sortedGroups.length;
+    const pageGroups = sortedGroups.slice((_aiPage - 1) * AI_PAGE_SIZE, _aiPage * AI_PAGE_SIZE);
+    const pageItems = pageGroups.flatMap(([, items]) => items);
+
+    renderAICards(pageItems, _filteredAI);
+    renderPagination('aiPagination', totalGroups, _aiPage, AI_PAGE_SIZE, goToAIPage);
 }
 
 function goToAIPage(page) {
@@ -3281,7 +3298,7 @@ function quickAssignFromComparison(recordId, templateId, docRecordId, docName) {
     }, { confirmText: 'שייך' });
 }
 
-function renderAICards(items) {
+function renderAICards(items, allFilteredItems) {
     const container = document.getElementById('aiCardsContainer');
     const emptyState = document.getElementById('aiEmptyState');
 
@@ -3321,9 +3338,12 @@ function renderAICards(items) {
         groups[clientName].push(item);
     }
 
-    // Update summary bar
-    const totalPending = items.filter(i => (i.review_status || 'pending') === 'pending').length;
-    const clientsWithPending = Object.entries(groups).filter(([, ci]) => ci.some(i => (i.review_status || 'pending') === 'pending')).length;
+    // DL-268: Summary bar uses all filtered items (across all pages), not just current page slice
+    const allItems = allFilteredItems || items;
+    const allGroups = {};
+    for (const i of allItems) { const cn = i.client_name || 'לא ידוע'; if (!allGroups[cn]) allGroups[cn] = []; allGroups[cn].push(i); }
+    const totalPending = allItems.filter(i => (i.review_status || 'pending') === 'pending').length;
+    const clientsWithPending = Object.entries(allGroups).filter(([, ci]) => ci.some(i => (i.review_status || 'pending') === 'pending')).length;
     const summaryBar = document.getElementById('aiSummaryBar');
     const summaryText = document.getElementById('aiSummaryText');
     if (summaryBar && summaryText) {
@@ -6560,7 +6580,7 @@ function bulkSendQuestionnaires() {
 
 function viewClient(reportId) {
     // Admin token is already in localStorage (same origin) — view-documents.html reads it directly
-    window.open(`https://docs.moshe-atsits.com/view-documents.html?report_id=${encodeURIComponent(reportId)}`, '_blank');
+    window.open(`https://liozshor.github.io/annual-reports-client-portal/view-documents.html?report_id=${encodeURIComponent(reportId)}`, '_blank');
 }
 
 function viewClientDocs(reportId, newTab = false) {
