@@ -568,7 +568,30 @@ function buildMobilePreviewFooter(item, footer) {
         ? `<div class="mobile-preview-client"><i data-lucide="user" class="icon-sm"></i> ${escapeHtml(clientName)}</div>`
         : '';
 
-    footer.innerHTML = clientHeader + classificationHtml + actionsHtml;
+    // DL-268: Partial contract period banner for mobile preview
+    let mobileContractBanner = '';
+    if (['T901', 'T902'].includes(item.matched_template_id) && item.contract_period && !item.contract_period.coversFullYear) {
+        const cp = item.contract_period;
+        const startMonth = new Date(cp.startDate).getMonth() + 1;
+        const endMonth = new Date(cp.endDate).getMonth() + 1;
+        const year = item.year || new Date(cp.endDate).getFullYear();
+        const existingLabel = `${startMonth}-${endMonth}/${year}`;
+        const missingStart = endMonth + 1;
+        const missingLabel = `${missingStart}-12/${year}`;
+        if (missingStart <= 12) {
+            mobileContractBanner = `
+            <div class="ai-contract-period-banner">
+                <span class="period-label">📅 חוזה חלקי: ${existingLabel}</span>
+                <button class="btn btn-outline btn-sm"
+                    onclick="event.stopPropagation(); requestRemainingContract('${escapeAttr(item.id)}', this)"
+                    title="בקש חוזה לתקופה החסרה">
+                    <i data-lucide="plus" class="icon-sm"></i> בקש חוזה ${missingLabel}
+                </button>
+            </div>`;
+        }
+    }
+
+    footer.innerHTML = clientHeader + classificationHtml + mobileContractBanner + actionsHtml;
     footer.style.display = '';
 }
 
@@ -3751,6 +3774,29 @@ function renderAICard(item) {
                 </button>
             </div>` : '';
 
+    // DL-268: Partial contract period banner for T901/T902
+    let contractPeriodBannerHtml = '';
+    if (['T901', 'T902'].includes(item.matched_template_id) && item.contract_period && !item.contract_period.coversFullYear) {
+        const cp = item.contract_period;
+        const startMonth = new Date(cp.startDate).getMonth() + 1;
+        const endMonth = new Date(cp.endDate).getMonth() + 1;
+        const year = item.year || new Date(cp.endDate).getFullYear();
+        const existingLabel = `${startMonth}-${endMonth}/${year}`;
+        const missingStart = endMonth + 1;
+        const missingLabel = `${missingStart}-12/${year}`;
+        if (missingStart <= 12) {
+            contractPeriodBannerHtml = `
+            <div class="ai-contract-period-banner">
+                <span class="period-label">📅 חוזה חלקי: ${existingLabel}</span>
+                <button class="btn btn-outline btn-sm"
+                    onclick="event.stopPropagation(); requestRemainingContract('${escapeAttr(item.id)}', this)"
+                    title="בקש מהלקוח את החוזה לתקופה החסרה">
+                    <i data-lucide="plus" class="icon-sm"></i> בקש חוזה ${missingLabel}
+                </button>
+            </div>`;
+        }
+    }
+
     return `
         <div class="ai-review-card ${cardClass}" data-id="${escapeAttr(item.id)}" ${item.is_unrequested ? 'data-unrequested="true"' : ''}>
             <div class="ai-card-top" onclick="loadDocPreview('${escapeAttr(item.id)}')">
@@ -3773,6 +3819,7 @@ function renderAICard(item) {
                 </div>
             </div>
             ${splitBannerHtml}
+            ${contractPeriodBannerHtml}
             <div class="ai-card-actions">
                 ${actionsHtml}
             </div>
@@ -4052,6 +4099,43 @@ async function approveAIClassification(recordId) {
             showModal('error', 'שגיאה', error.message);
         }
     }, { confirmText: 'נכון', btnClass: 'btn-success' });
+}
+
+// DL-268: Request remaining contract period for partial rental contracts
+async function requestRemainingContract(recordId, btn) {
+    try {
+        if (btn) { btn.disabled = true; btn.innerHTML = '<i data-lucide="loader" class="icon-sm spin"></i> מבקש...'; safeCreateIcons(); }
+
+        const response = await fetchWithTimeout(ENDPOINTS.REVIEW_CLASSIFICATION, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                token: authToken,
+                classification_id: recordId,
+                action: 'request-remaining-contract'
+            })
+        }, FETCH_TIMEOUTS.mutate);
+
+        const data = await response.json();
+        if (!data.ok) {
+            if (btn) { btn.disabled = false; btn.innerHTML = '<i data-lucide="plus" class="icon-sm"></i> בקש חוזה'; safeCreateIcons(); }
+            showModal('error', 'שגיאה', data.error || 'Unknown error');
+            return;
+        }
+
+        // Success — replace button with confirmation
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = '<i data-lucide="check" class="icon-sm"></i> נוסף';
+            btn.classList.remove('btn-outline');
+            btn.classList.add('btn-success');
+            safeCreateIcons();
+        }
+        showAIToast(`נוסף מסמך חסר: חוזה שכירות ${data.period_label}`, 'success');
+    } catch (error) {
+        if (btn) { btn.disabled = false; btn.innerHTML = '<i data-lucide="plus" class="icon-sm"></i> בקש חוזה'; safeCreateIcons(); }
+        showModal('error', 'שגיאה', error.message);
+    }
 }
 
 // DL-222: Re-submit approve with conflict resolution mode

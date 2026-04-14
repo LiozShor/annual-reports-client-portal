@@ -561,6 +561,7 @@ async function processAttachmentWithClassification(
     conversion_failed: conversionFailed,
     conversion_error: conversionError || undefined,
     page_count: pageCount,
+    contract_period: classification?.contractPeriod ? JSON.stringify(classification.contractPeriod) : null,
   };
 
   await pCtx.airtable.createRecords(TABLES.PENDING_CLASSIFICATIONS, [

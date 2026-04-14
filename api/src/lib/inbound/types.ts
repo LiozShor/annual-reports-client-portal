@@ -139,6 +139,7 @@ export interface ClassificationResult {
   matchedDocName: string | null;
   matchQuality: string | null;
   additionalMatches?: AdditionalMatch[];
+  contractPeriod?: { startDate: string; endDate: string; coversFullYear: boolean } | null;
 }
 
 // ---------------------------------------------------------------------------

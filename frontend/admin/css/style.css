@@ -6698,6 +6698,39 @@ tr:hover .client-edit-link {
     color: #fff !important;
 }
 
+/* ==================== PARTIAL CONTRACT PERIOD BANNER (DL-268) ==================== */
+
+.ai-contract-period-banner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--sp-3);
+    padding: var(--sp-2) var(--sp-5);
+    background: #fffbeb;
+    border-top: 1px solid #f59e0b33;
+    font-size: 13px;
+    color: #92400e;
+}
+.ai-contract-period-banner .period-label {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-1);
+}
+.ai-contract-period-banner .btn {
+    white-space: nowrap;
+    flex-shrink: 0;
+    border-color: #f59e0b !important;
+    color: #92400e !important;
+}
+.ai-contract-period-banner .btn:hover {
+    background: #f59e0b !important;
+    color: #fff !important;
+}
+.ai-contract-period-banner .btn:disabled {
+    opacity: 0.6;
+    pointer-events: none;
+}
+
 /* ==================== SPLIT PAGE PREVIEW LIGHTBOX (DL-246) ==================== */
 
 /* Overlay — sits above split modal */

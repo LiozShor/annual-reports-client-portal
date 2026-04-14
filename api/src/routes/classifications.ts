@@ -342,6 +342,9 @@ classifications.get('/get-pending-classifications', async (c) => {
         notes: (f.notes as string) || '',
         reviewed_at: (f.reviewed_at as string) || '',
         page_count: (f.page_count as number) || null,
+        contract_period: (() => {
+          try { return f.contract_period ? JSON.parse(f.contract_period as string) : null; } catch { return null; }
+        })(),
         client_notes: clientNotesMap.get(reportId) || '',
         filing_type: filingTypeMap.get(reportId) || 'annual_report', // DL-238
         // DL-239: Cross-filing-type reassign — include sibling report's docs
@@ -451,7 +454,7 @@ classifications.post('/review-classification', async (c) => {
       return c.json({ ok: false, error: 'Missing classification_id or action' }, 400);
     }
 
-    if (!['approve', 'reject', 'reassign', 'split', 'classify-segment', 'finalize-split'].includes(action)) {
+    if (!['approve', 'reject', 'reassign', 'split', 'classify-segment', 'finalize-split', 'request-remaining-contract'].includes(action)) {
       return c.json({ ok: false, error: `Invalid action: ${action}` }, 400);
     }
 
@@ -496,6 +499,85 @@ classifications.post('/review-classification', async (c) => {
     // for typed fields (email, url, dateTime, singleSelect, etc.)
     const stripEmpty = (obj: Record<string, unknown>): Record<string, unknown> =>
       Object.fromEntries(Object.entries(obj).filter(([, v]) => v != null && v !== ''));
+
+    // ---- DL-268: Request remaining contract period — early return ----
+    if (action === 'request-remaining-contract') {
+      const contractPeriodRaw = clsFields.contract_period as string;
+      if (!contractPeriodRaw) {
+        return c.json({ ok: false, error: 'No contract_period data on this classification' }, 400);
+      }
+      let contractPeriod: { startDate: string; endDate: string; coversFullYear: boolean };
+      try {
+        contractPeriod = JSON.parse(contractPeriodRaw);
+      } catch {
+        return c.json({ ok: false, error: 'Invalid contract_period JSON' }, 400);
+      }
+      if (contractPeriod.coversFullYear) {
+        return c.json({ ok: false, error: 'Contract already covers the full year' }, 400);
+      }
+
+      const templateId = clsFields.matched_template_id as string;
+      if (!templateId || !['T901', 'T902'].includes(templateId)) {
+        return c.json({ ok: false, error: 'Only T901/T902 classifications support this action' }, 400);
+      }
+
+      const reportId = getField(clsFields.report) as string;
+      if (!reportId) {
+        return c.json({ ok: false, error: 'No report linked to this classification' }, 400);
+      }
+
+      // Compute missing period months
+      const endDate = new Date(contractPeriod.endDate);
+      const startDate = new Date(contractPeriod.startDate);
+      const year = clsFields.year as string || String(endDate.getFullYear());
+
+      // Missing period: month after contract ends → December
+      const missingStartMonth = endDate.getMonth() + 2; // getMonth is 0-based, +1 for next month, +1 for 1-based
+      const missingEndMonth = 12;
+      // If contract starts after January, also consider the gap before
+      const gapBeforeStart = startDate.getMonth() + 1 > 1 ? startDate.getMonth() + 1 : 0;
+
+      // Primary gap: after contract end
+      if (missingStartMonth > 12) {
+        return c.json({ ok: false, error: 'Contract ends in December — no remaining period' }, 400);
+      }
+
+      const periodLabel = `${missingStartMonth}-${missingEndMonth}/${year}`;
+      const templateTitle = templateId === 'T901'
+        ? `חוזה שכירות – דירה מושכרת (הכנסה) **${periodLabel}**`
+        : `חוזה שכירות – דירה שכורה למגורים (הוצאה) **${periodLabel}**`;
+      const docKey = `${reportId}_${templateId}_client_${missingStartMonth}-${missingEndMonth}`;
+
+      // Check if this doc already exists (dedup)
+      const existingFormula = `AND({document_key} = '${docKey}')`;
+      const existing = await airtable.listAllRecords(TABLES.DOCUMENTS, { filterByFormula: existingFormula });
+      if (existing.length > 0) {
+        return c.json({ ok: false, error: 'Missing period document already requested' }, 409);
+      }
+
+      const newDocFields: Record<string, unknown> = {
+        report: [reportId],
+        type: templateId,
+        category: 'rental',
+        person: 'client',
+        issuer_name: templateTitle,
+        document_key: docKey,
+        status: 'Required_Missing',
+      };
+      const created = await airtable.createRecords(TABLES.DOCUMENTS, [{ fields: stripEmpty(newDocFields) }]);
+      const newDocId = created[0]?.id || '';
+
+      // Invalidate cache
+      invalidateCache(c.env.CACHE_KV, 'cache:documents_non_waived');
+
+      return c.json({
+        ok: true,
+        action: 'request-remaining-contract',
+        doc_id: newDocId,
+        doc_title: templateTitle.replace(/\*\*/g, ''),
+        period_label: periodLabel,
+      });
+    }
 
     // ---- Split action: early return ----
     // DL-250: Split is now frontend-orchestrated in 3 phases:

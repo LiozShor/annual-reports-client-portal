@@ -339,6 +339,22 @@ const CLASSIFY_TOOL = {
           required: ['template_id', 'evidence', 'issuer_name', 'confidence']
         }
       },
+      contract_period: {
+        anyOf: [
+          {
+            type: 'object',
+            additionalProperties: false,
+            properties: {
+              start_date: { type: 'string', description: 'Contract start date in YYYY-MM-DD format.' },
+              end_date: { type: 'string', description: 'Contract end date in YYYY-MM-DD format.' },
+              covers_full_year: { type: 'boolean', description: 'true if contract covers January 1 through December 31 of the tax year. false if partial.' }
+            },
+            required: ['start_date', 'end_date', 'covers_full_year']
+          },
+          { type: 'null' }
+        ],
+        description: 'For rental contracts (T901/T902 ONLY): extract the contract period dates. Return null for all other document types.'
+      },
       matched_template_id: {
         anyOf: [
           { type: 'string', enum: [...ALL_TEMPLATE_IDS] },
@@ -347,7 +363,7 @@ const CLASSIFY_TOOL = {
         description: 'Template ID to assign. Use the Document Type Reference above. Set to null if confidence < 0.5 or no match found.'
       }
     },
-    required: ['evidence', 'issuer_name', 'confidence', 'additional_matches', 'matched_template_id']
+    required: ['evidence', 'issuer_name', 'confidence', 'additional_matches', 'contract_period', 'matched_template_id']
   },
   cache_control: { type: 'ephemeral' }
 } as const;
@@ -439,6 +455,11 @@ STEP-BY-STEP for every document:
    • T901 (income, client is landlord) or T902 (expense, client is tenant)
    • NEVER classify an Israeli rental contract as T1601 or T1701
    • T1601 is ONLY for income/documents from OUTSIDE Israel
+   • For T901/T902: ALWAYS extract contract_period — find the contract start and end dates.
+     If the contract covers January 1 through December 31 of the same calendar year → covers_full_year: true.
+     If it covers only part of the year (e.g., ends in August, or starts mid-year) → covers_full_year: false.
+     Dates in Hebrew contracts may appear as DD/MM/YYYY, DD.MM.YYYY, or Hebrew month names — normalize to YYYY-MM-DD.
+     For non-rental documents, set contract_period to null.
 
 Commonly confused pairs — pay special attention:
 - T401 (fund WITHDRAWAL — משיכה/פדיון) vs T501 (annual DEPOSIT REPORT — אישור שנתי/דוח מקוצר). Key: withdrawal = T401, deposit/contribution report = T501.
@@ -711,7 +732,7 @@ export async function classifyAttachment(
     };
 
     // Extract tool_use block — map new field names to internal format
-    let input: { template_id: string | null; confidence: number; reason: string; issuer_name: string; additional_matches?: Array<{template_id: string; evidence: string; issuer_name: string; confidence: number}> } | null = null;
+    let input: { template_id: string | null; confidence: number; reason: string; issuer_name: string; additional_matches?: Array<{template_id: string; evidence: string; issuer_name: string; confidence: number}>; contract_period?: { start_date: string; end_date: string; covers_full_year: boolean } | null } | null = null;
 
     const toolBlock = data.content.find((b) => b.type === 'tool_use');
     if (toolBlock?.input) {
@@ -722,6 +743,7 @@ export async function classifyAttachment(
         reason: (inp.evidence as string) ?? '',
         issuer_name: (inp.issuer_name as string) ?? '',
         additional_matches: Array.isArray(inp.additional_matches) ? inp.additional_matches as Array<{template_id: string; evidence: string; issuer_name: string; confidence: number}> : [],
+        contract_period: inp.contract_period as { start_date: string; end_date: string; covers_full_year: boolean } | null ?? null,
       };
     } else {
       // Fallback: try parsing text block as JSON
@@ -778,6 +800,11 @@ export async function classifyAttachment(
       }
     }
 
+    // DL-268: Parse contract period for rental contracts
+    const contractPeriod = input.contract_period
+      ? { startDate: input.contract_period.start_date, endDate: input.contract_period.end_date, coversFullYear: input.contract_period.covers_full_year }
+      : null;
+
     return {
       templateId: input.template_id,
       confidence: input.confidence,
@@ -787,6 +814,7 @@ export async function classifyAttachment(
       matchedDocName,
       matchQuality,
       additionalMatches: additionalMatches.length > 0 ? additionalMatches : undefined,
+      contractPeriod,
     };
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
