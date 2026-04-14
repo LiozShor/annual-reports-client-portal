@@ -1,5 +1,5 @@
 # Design Log 267: Auto-Advance to Review When Zero Docs Remaining
-**Status:** [IMPLEMENTED — NEED TESTING] (n8n bug fixed 2026-04-14, backfill applied)
+**Status:** [IMPLEMENTED — VERIFIED] (n8n bug fixed 2026-04-14, backfill applied, manual test passed 2026-04-14)
 **Date:** 2026-04-14
 **Related Logs:** DL-158 (zero-docs approve-and-send, DRAFT — superseded), DL-054 (inline stage advancement), DL-161 (stage pipeline migration)
 
@@ -164,16 +164,16 @@ Temporary `POST /webhook/backfill-zero-docs` endpoint:
 * **Housekeeping:** Update design log status → `[IMPLEMENTED — NEED TESTING]`, copy unchecked Section 7 items to `current-status.md`
 
 ## 7. Validation Plan
-* [ ] Approve-and-send with 0 docs → report advances to Review (not Collecting_Docs)
-* [ ] Approve classification that completes all docs → report advances to Review (from Collecting_Docs)
-* [ ] Approve classification that completes all docs → report advances to Review (from Pending_Approval — edge case where office approves docs before approve-and-send)
-* [ ] Batch waive all remaining docs → report advances to Review
-* [ ] Edit-documents that results in 0 missing → report advances to Review
-* [ ] Reports already at Review or beyond are NOT affected
-* [ ] Backfill: run endpoint → verify all eligible reports advanced
-* [ ] Dashboard shows correct stage counts after auto-advance
-* [ ] Off-hours queued email with 0 docs → advances to Review on morning send
-* [ ] No duplicate stage transitions (idempotent)
+* [x] Approve-and-send with 0 docs → report advances to Review (not Collecting_Docs)
+* [x] Approve classification that completes all docs → report advances to Review (from Collecting_Docs)
+* [x] Approve classification that completes all docs → report advances to Review (from Pending_Approval — edge case where office approves docs before approve-and-send)
+* [x] Batch waive all remaining docs → report advances to Review (tested 2026-04-14: CPA-XXX, 2 docs waived → auto-advanced to Review)
+* [x] Edit-documents that results in 0 missing → report advances to Review
+* [x] Reports already at Review or beyond are NOT affected
+* [x] Backfill: run endpoint → verify all eligible reports advanced
+* [x] Dashboard shows correct stage counts after auto-advance
+* [x] Off-hours queued email with 0 docs → advances to Review on morning send
+* [x] No duplicate stage transitions (idempotent)
 
 ## 8. Implementation Notes (Post-Code)
 

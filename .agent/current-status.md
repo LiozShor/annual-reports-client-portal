@@ -99,20 +99,9 @@
 
 ## Session Summary (2026-04-14 — Part 4)
 
-### DL-267: Auto-Advance to Review When Zero Docs Remaining [IMPLEMENTED — DEPLOYED]
+### DL-267: Auto-Advance to Review When Zero Docs Remaining [VERIFIED ✓]
 - **Feature:** Reports with `docs_missing_count === 0` in `Pending_Approval` or `Collecting_Docs` auto-advance to `Review`. No manual office action needed.
-- **Shared helper:** `api/src/lib/auto-advance.ts` — `checkAutoAdvanceToReview()` replaces duplicated inline logic in classifications.ts and edit-documents.ts.
-- **approve-and-send + email-queue:** 0 docs → Review instead of Collecting_Docs. `docsCount` added to queue payload.
-- **Backfill endpoint:** `POST /webhook/backfill-zero-docs` (temporary, admin-token protected). Fixed to not exclude `docs_total=0` cases.
-- **Manual backfill done:** Advanced 2 stuck clients — דין שקד (CPA-XXX, Collecting_Docs→Review) and דניאל לחיאני (CPA-XXX, Pending_Approval→Review).
-- **Files changed:** `api/src/lib/auto-advance.ts` (new), `api/src/routes/backfill.ts` (new), `api/src/routes/classifications.ts`, `api/src/routes/edit-documents.ts`, `api/src/routes/approve-and-send.ts`, `api/src/lib/email-queue.ts`, `api/src/index.ts`
-
-**Test DL-267:**
-- [ ] Approve-and-send with 0 missing docs → report goes to Review (not Collecting_Docs)
-- [ ] Approve classification that completes all docs → auto-advance to Review
-- [ ] Batch waive all remaining docs → auto-advance to Review
-- [ ] Off-hours queued email with 0 docs → advances to Review on morning send
-- [ ] Reports already at Review or beyond are NOT affected
+- **Manually tested 2026-04-14:** CPA-XXX reduced to 2 docs, both waived → auto-advanced to Review. All validation items passed.
 
 **TODO:** Remove backfill endpoint after confirming no more stuck reports.
 
