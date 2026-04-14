@@ -592,8 +592,9 @@ function buildMobilePreviewFooter(item, footer) {
             mobileContractBanner = `
             <div class="ai-contract-period-banner" data-record-id="${rid}">
                 <span class="period-label">📅 ${statusText}:
+                    מ:
                     <span class="contract-date-editable" data-field="start" data-value="${escapeAttr(startVal)}" onclick="event.stopPropagation(); editContractDate('${rid}', 'start', this)" title="לחץ לעריכה">${startLabel}</span>
-                    –
+                    עד:
                     <span class="contract-date-editable" data-field="end" data-value="${escapeAttr(endVal)}" onclick="event.stopPropagation(); editContractDate('${rid}', 'end', this)" title="לחץ לעריכה">${endLabel}</span>
                 </span>
                 ${requestBtn}
@@ -3825,10 +3826,11 @@ function renderAICard(item) {
             contractPeriodBannerHtml = `
             <div class="ai-contract-period-banner" data-record-id="${rid}">
                 <span class="period-label">📅 ${statusText}:
+                    מ:
                     <span class="contract-date-editable" data-field="start" data-value="${escapeAttr(startVal)}"
                         onclick="event.stopPropagation(); editContractDate('${rid}', 'start', this)"
                         title="לחץ לעריכה">${startLabel}</span>
-                    –
+                    עד:
                     <span class="contract-date-editable" data-field="end" data-value="${escapeAttr(endVal)}"
                         onclick="event.stopPropagation(); editContractDate('${rid}', 'end', this)"
                         title="לחץ לעריכה">${endLabel}</span>
