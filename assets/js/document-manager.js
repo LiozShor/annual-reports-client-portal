@@ -3088,7 +3088,7 @@ function renderClientNotes() {
     }
 
     container.innerHTML = html;
-    if (typeof lucide !== 'undefined') lucide.createIcons({ nameAttr: 'data-lucide', attrs: {} });
+    try { if (typeof lucide !== 'undefined') lucide.createIcons({ nameAttr: 'data-lucide', attrs: {} }); } catch (_) {}
 }
 
 async function saveClientNotes() {
@@ -3245,7 +3245,7 @@ function renderRejectedUploads() {
     }
 
     container.innerHTML = html;
-    if (typeof lucide !== 'undefined') lucide.createIcons({ nameAttr: 'data-lucide', attrs: {} });
+    try { if (typeof lucide !== 'undefined') lucide.createIcons({ nameAttr: 'data-lucide', attrs: {} }); } catch (_) {}
 }
 
 async function saveRejectedUploads() {

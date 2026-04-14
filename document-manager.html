@@ -301,8 +301,8 @@
                         <div style="display:flex; gap:8px; align-items:center;">
                             <input type="text" id="customDoc" placeholder="לדוגמה: אישור מיוחד מהמוסד לביטוח לאומי..."
                                 onblur="checkCustomDocDuplicate()" onkeydown="if(event.key==='Enter'){event.preventDefault();addCustomDoc()}" style="flex:1;">
-                            <button type="button" class="btn btn-success btn-sm" onclick="addCustomDoc()" id="addCustomDocBtn" title="הוסף מסמך">
-                                <i data-lucide="check" class="icon-sm"></i>
+                            <button type="button" class="btn btn-primary btn-sm" onclick="addCustomDoc()" id="addCustomDocBtn">
+                                <i data-lucide="plus" class="icon-sm"></i> הוסף
                             </button>
                         </div>
                         <div id="customDocWarning" class="alert alert-warning mt-2" style="display:none;">
