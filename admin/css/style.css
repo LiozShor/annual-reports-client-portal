@@ -984,43 +984,67 @@ select.field-prefilled {
     margin: 0 auto var(--sp-5);
 }
 
-/* DL-265: Tab refresh overlay with inline spinner (entity tab switch) */
+/* DL-265: Tab refresh — bouncing dots loader overlay */
 .tab-content.tab-refreshing {
     position: relative;
     pointer-events: none;
 }
 
-/* Dimming overlay — separate from spinner so opacity doesn't affect it */
-.tab-content.tab-refreshing::before {
-    content: '';
+.tab-refresh-loader {
     position: absolute;
     inset: 0;
-    background: rgba(255, 255, 255, 0.55);
-    z-index: 9;
-    transition: opacity 0.15s ease;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding-top: 140px;
+    gap: var(--sp-4);
+    background: rgba(255, 255, 255, 0.6);
+    backdrop-filter: blur(2px);
+    z-index: 10;
+    animation: loaderFadeIn 0.15s ease;
 }
 
-/* Spinner — full opacity, not affected by parent dimming */
-.tab-content.tab-refreshing::after {
-    content: '';
-    position: absolute;
-    top: 120px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 28px;
-    height: 28px;
-    border: 3px solid var(--gray-200);
-    border-top-color: var(--brand-500);
+@keyframes loaderFadeIn {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}
+
+.tab-refresh-loader .loader-text {
+    font-size: var(--text-sm);
+    color: var(--gray-500);
+    font-weight: 500;
+    animation: loaderTextIn 0.25s ease both;
+}
+
+@keyframes loaderTextIn {
+    from { opacity: 0; transform: translateY(-6px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+.tab-refresh-loader .loader-dots {
+    display: flex;
+    gap: 6px;
+}
+
+.tab-refresh-loader .loader-dot {
+    width: 8px;
+    height: 8px;
     border-radius: 50%;
-    animation: spin 0.7s linear infinite;
-    z-index: 10;
+    background: var(--gray-600);
+    animation: dotBounce 0.6s ease-in-out infinite;
+}
+
+.tab-refresh-loader .loader-dot:nth-child(2) { animation-delay: 0.15s; }
+.tab-refresh-loader .loader-dot:nth-child(3) { animation-delay: 0.3s; }
+
+@keyframes dotBounce {
+    0%, 100% { transform: translateY(0); opacity: 0.5; }
+    50%      { transform: translateY(-8px); opacity: 1; }
 }
 
 @media (max-width: 768px) {
-    .tab-content.tab-refreshing::after {
-        top: 60px;
-        width: 24px;
-        height: 24px;
+    .tab-refresh-loader {
+        padding-top: 80px;
     }
 }
 

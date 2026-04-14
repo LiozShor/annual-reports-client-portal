@@ -1379,6 +1379,25 @@ function recalculateStats() {
     if (stage3Card) {
         stage3Card.classList.toggle('needs-attention', counts.stage3 > 0);
     }
+
+    // DL-264: Show queued count on stage 3 card
+    const queuedCount = clientsData.filter(c =>
+        c.queued_send_at &&
+        (c.filing_type || 'annual_report') === activeEntityTab &&
+        c.is_active !== false
+    ).length;
+    let queuedEl = stage3Card?.querySelector('.queued-subtitle');
+    if (queuedCount > 0 && stage3Card) {
+        if (!queuedEl) {
+            queuedEl = document.createElement('div');
+            queuedEl.className = 'queued-subtitle';
+            queuedEl.style.cssText = 'font-size:0.7rem;color:var(--info-600);margin-top:2px;font-weight:500';
+            stage3Card.querySelector('.stat-label')?.appendChild(queuedEl);
+        }
+        queuedEl.textContent = `(${queuedCount} בתור לשליחה)`;
+    } else if (queuedEl) {
+        queuedEl.remove();
+    }
 }
 
 function updateImportFilingTypeLabel(type) {
@@ -1434,11 +1453,23 @@ function switchEntityTab(type) {
     if (importFT) importFT.value = type;
     updateImportFilingTypeLabel(type);
 
-    // DL-265: Reload active tab on entity switch — opacity fade + spinner for all data tabs
+    // DL-265: Reload active tab on entity switch — bouncing dots loader
     const activeContent = document.querySelector('.tab-content.active');
     const activeTab = activeContent?.id?.replace('tab-', '');
-    const addRefresh = () => { if (activeContent) activeContent.classList.add('tab-refreshing'); };
-    const removeRefresh = () => { if (activeContent) activeContent.classList.remove('tab-refreshing'); };
+    const TAB_LOADER_LABELS = { dashboard: 'טוען לוח בקרה…', review: 'טוען לוח בקרה…', send: 'טוען רשימת לקוחות…', questionnaires: 'טוען שאלונים…', reminders: 'טוען תזכורות…' };
+    const addRefresh = () => {
+        if (!activeContent) return;
+        activeContent.classList.add('tab-refreshing');
+        const loader = document.createElement('div');
+        loader.className = 'tab-refresh-loader';
+        loader.innerHTML = `<span class="loader-text">${TAB_LOADER_LABELS[activeTab] || 'טוען…'}</span><div class="loader-dots"><div class="loader-dot"></div><div class="loader-dot"></div><div class="loader-dot"></div></div>`;
+        activeContent.appendChild(loader);
+    };
+    const removeRefresh = () => {
+        if (!activeContent) return;
+        activeContent.classList.remove('tab-refreshing');
+        activeContent.querySelector('.tab-refresh-loader')?.remove();
+    };
     if (activeTab === 'send' && wasPendingLoaded) { addRefresh(); loadPendingClients().then(removeRefresh, removeRefresh); }
     else if (activeTab === 'questionnaires' && wasQuestionnaireLoaded) { addRefresh(); loadQuestionnaires().then(removeRefresh, removeRefresh); }
     else if (activeTab === 'reminders' && wasReminderLoaded) { addRefresh(); loadReminders().then(removeRefresh, removeRefresh); }
