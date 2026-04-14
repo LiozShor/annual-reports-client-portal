@@ -496,7 +496,7 @@ function buildMobilePreviewFooter(item, footer) {
     let actionsHtml = '';
 
     if (state === 'full' || state === 'fuzzy') {
-        const docDisplayName = item.matched_short_name || item.matched_template_name || 'לא ידוע';
+        const docDisplayName = appendContractPeriod(item.matched_short_name || item.matched_template_name || 'לא ידוע', item);
         classificationHtml = `
             <div class="ai-classification-result">
                 <span class="ai-confidence-prefix">🤖 AI חושב שזה:</span>
@@ -523,7 +523,7 @@ function buildMobilePreviewFooter(item, footer) {
             </div>`;
 
     } else if (state === 'issuer-mismatch') {
-        const templateName = item.matched_short_name || item.matched_template_name || item.matched_template_id || '';
+        const templateName = appendContractPeriod(item.matched_short_name || item.matched_template_name || item.matched_template_id || '', item);
         const aiIssuer = item.issuer_name || 'לא ידוע';
         classificationHtml = `
             <div class="ai-classification-result">
@@ -3590,6 +3590,17 @@ function renderAICards(items, allFilteredItems) {
     }
 }
 
+// DL-271: Append rental contract period to display name
+function appendContractPeriod(name, item) {
+    if (!['T901', 'T902'].includes(item.matched_template_id) || !item.contract_period) return name;
+    const cp = item.contract_period;
+    if (cp.coversFullYear) return name;
+    const startM = new Date(cp.startDate).getMonth() + 1;
+    const endM = new Date(cp.endDate).getMonth() + 1;
+    const year = item.year || new Date(cp.endDate).getFullYear();
+    return `${name} ${startM}-${endM}/${year}`;
+}
+
 function renderAICard(item) {
     // DL-086: Check if this item is reviewed (not pending)
     const reviewStatus = item.review_status || 'pending';
@@ -3628,7 +3639,7 @@ function renderAICard(item) {
 
     if (state === 'full') {
         // State A: Full match — green border, short name from API
-        const docDisplayName = item.matched_short_name || item.matched_template_name || 'לא ידוע';
+        const docDisplayName = appendContractPeriod(item.matched_short_name || item.matched_template_name || 'לא ידוע', item);
         classificationHtml = `
             <span class="ai-classification-type">
                 <span class="ai-confidence-prefix">🤖 AI חושב שזה:</span>
@@ -3652,7 +3663,7 @@ function renderAICard(item) {
 
     } else if (state === 'issuer-mismatch') {
         // State B: Issuer mismatch — amber border, type + badge, issuer info, validation area
-        const templateName = item.matched_short_name || item.matched_template_name || item.matched_template_id || '';
+        const templateName = appendContractPeriod(item.matched_short_name || item.matched_template_name || item.matched_template_id || '', item);
         const aiIssuer = item.issuer_name || 'לא ידוע';
 
         // Filter same-type docs (including client/spouse pairs) from missing_docs
@@ -3731,7 +3742,7 @@ function renderAICard(item) {
 
     } else if (state === 'fuzzy') {
         // State C: Fuzzy match — green border, short name from API
-        const docDisplayName = item.matched_short_name || item.matched_template_name || 'לא ידוע';
+        const docDisplayName = appendContractPeriod(item.matched_short_name || item.matched_template_name || 'לא ידוע', item);
         classificationHtml = `
             <span class="ai-classification-type">
                 <span class="ai-confidence-prefix">🤖 AI חושב שזה:</span>
