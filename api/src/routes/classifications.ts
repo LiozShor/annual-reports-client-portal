@@ -527,48 +527,48 @@ classifications.post('/review-classification', async (c) => {
       return c.json({ ok: true, action: 'update-contract-period', contract_period: contractPeriod });
     }
 
-    // ---- DL-268: Request remaining contract period — early return ----
+    // ---- DL-268/271: Request missing contract period — early return ----
     if (action === 'request-remaining-contract') {
-      const contractPeriodRaw = clsFields.contract_period as string;
-      if (!contractPeriodRaw) {
-        return c.json({ ok: false, error: 'No contract_period data on this classification' }, 400);
-      }
-      let contractPeriod: { startDate: string; endDate: string; coversFullYear: boolean };
-      try {
-        contractPeriod = JSON.parse(contractPeriodRaw);
-      } catch {
-        return c.json({ ok: false, error: 'Invalid contract_period JSON' }, 400);
-      }
-      if (contractPeriod.coversFullYear) {
-        return c.json({ ok: false, error: 'Contract already covers the full year' }, 400);
-      }
-
       const templateId = clsFields.matched_template_id as string;
       if (!templateId || !['T901', 'T902'].includes(templateId)) {
         return c.json({ ok: false, error: 'Only T901/T902 classifications support this action' }, 400);
       }
-
       const reportId = getField(clsFields.report) as string;
       if (!reportId) {
         return c.json({ ok: false, error: 'No report linked to this classification' }, 400);
       }
 
-      // Compute missing period months
-      const endDate = new Date(contractPeriod.endDate);
-      const startDate = new Date(contractPeriod.startDate);
-      const year = clsFields.year as string || String(endDate.getFullYear());
+      // Accept explicit months from frontend, or compute from contract_period
+      let missingStartMonth = body.missing_start_month as number | undefined;
+      let missingEndMonth = body.missing_end_month as number | undefined;
 
-      // Missing period: month after contract ends → December
-      const missingStartMonth = endDate.getMonth() + 2; // getMonth is 0-based, +1 for next month, +1 for 1-based
-      const missingEndMonth = 12;
-      // If contract starts after January, also consider the gap before
-      const gapBeforeStart = startDate.getMonth() + 1 > 1 ? startDate.getMonth() + 1 : 0;
-
-      // Primary gap: after contract end
-      if (missingStartMonth > 12) {
-        return c.json({ ok: false, error: 'Contract ends in December — no remaining period' }, 400);
+      if (!missingStartMonth || !missingEndMonth) {
+        // Fallback: compute from contract_period (legacy path)
+        const contractPeriodRaw = clsFields.contract_period as string;
+        if (!contractPeriodRaw) {
+          return c.json({ ok: false, error: 'No contract_period data and no explicit months provided' }, 400);
+        }
+        try {
+          const cp = JSON.parse(contractPeriodRaw);
+          if (cp.coversFullYear) {
+            return c.json({ ok: false, error: 'Contract already covers the full year' }, 400);
+          }
+          const endM = new Date(cp.endDate).getMonth() + 1;
+          if (endM >= 12) {
+            return c.json({ ok: false, error: 'Contract ends in December — no remaining period' }, 400);
+          }
+          missingStartMonth = endM + 1;
+          missingEndMonth = 12;
+        } catch {
+          return c.json({ ok: false, error: 'Invalid contract_period JSON' }, 400);
+        }
       }
 
+      if (missingStartMonth < 1 || missingEndMonth > 12 || missingStartMonth > missingEndMonth) {
+        return c.json({ ok: false, error: 'Invalid month range' }, 400);
+      }
+
+      const year = clsFields.year as string || String(new Date().getFullYear());
       const periodLabel = `${missingStartMonth}-${missingEndMonth}/${year}`;
       const templateTitle = templateId === 'T901'
         ? `חוזה שכירות – דירה מושכרת (הכנסה) <b>${periodLabel}</b>`
@@ -579,7 +579,7 @@ classifications.post('/review-classification', async (c) => {
       const existingFormula = `AND({document_key} = '${docKey}')`;
       const existing = await airtable.listAllRecords(TABLES.DOCUMENTS, { filterByFormula: existingFormula });
       if (existing.length > 0) {
-        return c.json({ ok: false, error: 'Missing period document already requested' }, 409);
+        return c.json({ ok: false, error: 'מסמך לתקופה זו כבר נוסף' }, 409);
       }
 
       const newDocFields: Record<string, unknown> = {
@@ -594,17 +594,35 @@ classifications.post('/review-classification', async (c) => {
       const created = await airtable.createRecords(TABLES.DOCUMENTS, [{ fields: stripEmpty(newDocFields) }]);
       const newDocId = created[0]?.id || '';
 
-      // Invalidate cache
       invalidateCache(c.env.CACHE_KV, 'cache:documents_non_waived');
 
       return c.json({
         ok: true,
         action: 'request-remaining-contract',
         doc_id: newDocId,
-        doc_title: templateTitle.replace(/\*\*/g, ''),
+        doc_title: templateTitle.replace(/<\/?b>/g, ''),
         period_label: periodLabel,
       });
     }
+
+    // ---- DL-271: Helper to compute rental contract period label ----
+    const getRentalPeriodLabel = (): { html: string; filename: string } | null => {
+      const templateId = clsFields.matched_template_id as string;
+      if (!['T901', 'T902'].includes(templateId)) return null;
+      const cpRaw = clsFields.contract_period as string;
+      if (!cpRaw) return null;
+      try {
+        const cp = JSON.parse(cpRaw);
+        if (cp.coversFullYear) return null;
+        const startM = new Date(cp.startDate).getMonth() + 1;
+        const endM = new Date(cp.endDate).getMonth() + 1;
+        const year = (clsFields.year as string) || String(new Date(cp.endDate).getFullYear());
+        return {
+          html: `<b>${startM}-${endM}/${year}</b>`,
+          filename: `${startM}-${endM}-${year}`,
+        };
+      } catch { return null; }
+    };
 
     // ---- Split action: early return ----
     // DL-250: Split is now frontend-orchestrated in 3 phases:
@@ -995,10 +1013,18 @@ classifications.post('/review-classification', async (c) => {
           source_sender_email: sanitizeEmail(clsFields.sender_email),
           uploaded_at: clsFields.received_at || null,
         };
+        // DL-271: Append rental contract period to doc title
+        const periodInfo = getRentalPeriodLabel();
+        if (periodInfo && sourceDoc) {
+          const currentTitle = (sourceDoc.fields as any).issuer_name as string || '';
+          // Strip any existing period suffix (e.g., <b>1-8/2025</b>) before appending new one
+          const stripped = currentTitle.replace(/\s*<b>\d+-\d+\/\d+<\/b>\s*$/, '');
+          docUpdate.issuer_name = `${stripped} ${periodInfo.html}`;
+        }
         const cleaned = stripEmpty(docUpdate);
         console.log('[review-classification] approve docId:', approveDocId, 'fields:', JSON.stringify(cleaned));
         await airtable.updateRecord(TABLES.DOCUMENTS, approveDocId, cleaned);
-        docTitle = sourceDoc ? (sourceDoc.fields as any).issuer_name || '' : '';
+        docTitle = docUpdate.issuer_name as string || (sourceDoc ? (sourceDoc.fields as any).issuer_name || '' : '');
       }
 
     } else if (action === 'reject') {
@@ -1339,6 +1365,11 @@ classifications.post('/review-classification', async (c) => {
               const boldMatch = docName.match(/<b>(.*?)<\/b>/i);
               const issuer = boldMatch ? boldMatch[1] : docName;
               newFilename = sanitizeFilename(fallback + (issuer ? ' \u2013 ' + issuer : '')) + '.pdf';
+            }
+            // DL-271: Append rental contract period to filename
+            const periodForFile = getRentalPeriodLabel();
+            if (periodForFile && newFilename) {
+              newFilename = newFilename.replace('.pdf', ` ${periodForFile.filename}.pdf`);
             }
           }
         } else if (action === 'reject') {

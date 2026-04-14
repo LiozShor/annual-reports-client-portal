@@ -585,9 +585,12 @@ function buildMobilePreviewFooter(item, footer) {
             const startLabel = startMonth ? `${startMonth}/${year}` : '__/__';
             const endLabel = endMonth ? `${endMonth}/${year}` : '__/__';
             const statusText = cp ? 'חוזה חלקי' : 'לא זוהו תאריכים';
-            let requestBtn = '';
+            let mobileBtns = '';
+            if (startMonth && startMonth > 1) {
+                mobileBtns += `<button class="btn btn-outline btn-sm btn-request-period" data-record-id="${rid}" data-gap="before" onclick="event.stopPropagation(); requestMissingPeriod('${rid}', 1, ${startMonth - 1}, this)"><i data-lucide="plus" class="icon-sm"></i> בקש חוזה 1-${startMonth - 1}/${year}</button>`;
+            }
             if (endMonth && endMonth < 12) {
-                requestBtn = `<button class="btn btn-outline btn-sm btn-request-period" data-record-id="${rid}" onclick="event.stopPropagation(); requestRemainingContract('${rid}', this)"><i data-lucide="plus" class="icon-sm"></i> בקש חוזה ${endMonth + 1}-12/${year}</button>`;
+                mobileBtns += `<button class="btn btn-outline btn-sm btn-request-period" data-record-id="${rid}" data-gap="after" onclick="event.stopPropagation(); requestMissingPeriod('${rid}', ${endMonth + 1}, 12, this)"><i data-lucide="plus" class="icon-sm"></i> בקש חוזה ${endMonth + 1}-12/${year}</button>`;
             }
             mobileContractBanner = `
             <div class="ai-contract-period-banner" data-record-id="${rid}">
@@ -597,7 +600,7 @@ function buildMobilePreviewFooter(item, footer) {
                     עד:
                     <span class="contract-date-editable" data-field="end" data-value="${escapeAttr(endVal)}" onclick="event.stopPropagation(); editContractDate('${rid}', 'end', this)" title="לחץ לעריכה">${endLabel}</span>
                 </span>
-                ${requestBtn}
+                ${mobileBtns}
             </div>`;
         }
     }
@@ -3810,16 +3813,24 @@ function renderAICard(item) {
             const endLabel = endMonth ? `${endMonth}/${year}` : '__/__';
             const statusText = cp ? 'חוזה חלקי' : 'לא זוהו תאריכים';
 
-            // Missing period calculation
-            let requestBtnHtml = '';
+            // Missing period calculation — check gaps before start AND after end
+            let requestBtnsHtml = '';
+            if (startMonth && startMonth > 1) {
+                const beforeLabel = `1-${startMonth - 1}/${year}`;
+                requestBtnsHtml += `
+                <button class="btn btn-outline btn-sm btn-request-period" data-record-id="${rid}" data-gap="before"
+                    onclick="event.stopPropagation(); requestMissingPeriod('${rid}', 1, ${startMonth - 1}, this)"
+                    title="בקש חוזה לתקופה שלפני">
+                    <i data-lucide="plus" class="icon-sm"></i> בקש חוזה ${beforeLabel}
+                </button>`;
+            }
             if (endMonth && endMonth < 12) {
-                const missingStart = endMonth + 1;
-                const missingLabel = `${missingStart}-12/${year}`;
-                requestBtnHtml = `
-                <button class="btn btn-outline btn-sm btn-request-period" data-record-id="${rid}"
-                    onclick="event.stopPropagation(); requestRemainingContract('${rid}', this)"
-                    title="בקש מהלקוח את החוזה לתקופה החסרה">
-                    <i data-lucide="plus" class="icon-sm"></i> בקש חוזה ${missingLabel}
+                const afterLabel = `${endMonth + 1}-12/${year}`;
+                requestBtnsHtml += `
+                <button class="btn btn-outline btn-sm btn-request-period" data-record-id="${rid}" data-gap="after"
+                    onclick="event.stopPropagation(); requestMissingPeriod('${rid}', ${endMonth + 1}, 12, this)"
+                    title="בקש חוזה לתקופה שאחרי">
+                    <i data-lucide="plus" class="icon-sm"></i> בקש חוזה ${afterLabel}
                 </button>`;
             }
 
@@ -3835,7 +3846,7 @@ function renderAICard(item) {
                         onclick="event.stopPropagation(); editContractDate('${rid}', 'end', this)"
                         title="לחץ לעריכה">${endLabel}</span>
                 </span>
-                ${requestBtnHtml}
+                ${requestBtnsHtml}
             </div>`;
         }
     }
@@ -4257,8 +4268,8 @@ async function saveContractPeriod(recordId, startDate, endDate) {
     }
 }
 
-// DL-269: Request remaining contract period for partial rental contracts
-async function requestRemainingContract(recordId, btn) {
+// DL-269/271: Request missing contract period (before or after)
+async function requestMissingPeriod(recordId, startMonth, endMonth, btn) {
     try {
         if (btn) { btn.disabled = true; btn.innerHTML = '<i data-lucide="loader" class="icon-sm spin"></i> מבקש...'; safeCreateIcons(); }
 
@@ -4268,7 +4279,9 @@ async function requestRemainingContract(recordId, btn) {
             body: JSON.stringify({
                 token: authToken,
                 classification_id: recordId,
-                action: 'request-remaining-contract'
+                action: 'request-remaining-contract',
+                missing_start_month: startMonth,
+                missing_end_month: endMonth
             })
         }, FETCH_TIMEOUTS.mutate);
 
@@ -4279,7 +4292,6 @@ async function requestRemainingContract(recordId, btn) {
             return;
         }
 
-        // Success — replace button with confirmation
         if (btn) {
             btn.disabled = true;
             btn.innerHTML = '<i data-lucide="check" class="icon-sm"></i> נוסף';
@@ -4293,6 +4305,8 @@ async function requestRemainingContract(recordId, btn) {
         showModal('error', 'שגיאה', error.message);
     }
 }
+// Backwards compat
+function requestRemainingContract(recordId, btn) { requestMissingPeriod(recordId, null, null, btn); }
 
 // DL-222: Re-submit approve with conflict resolution mode
 async function resubmitApprove(recordId, mode, loadingText) {
