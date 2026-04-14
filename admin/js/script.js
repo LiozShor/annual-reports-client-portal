@@ -710,15 +710,23 @@ let recentMessagesLoaded = false;
 
 function formatRelativeTime(dateStr) {
     if (!dateStr) return '';
-    // Date field is date-only (no time), so use day-level precision
+    // Normalize: extract date part and optional time
+    const dateOnly = dateStr.slice(0, 10);
+    const hasTime = dateStr.length > 10 && dateStr.includes('T');
     const today = new Date().toISOString().slice(0, 10);
-    if (dateStr === today) return 'היום';
+    if (dateOnly === today) {
+        if (hasTime) {
+            const d = new Date(dateStr);
+            return d.toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' });
+        }
+        return 'היום';
+    }
     const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
-    if (dateStr === yesterday) return 'אתמול';
-    const days = Math.floor((Date.now() - new Date(dateStr + 'T12:00:00').getTime()) / 86400000);
+    if (dateOnly === yesterday) return 'אתמול';
+    const days = Math.floor((Date.now() - new Date(dateOnly + 'T12:00:00').getTime()) / 86400000);
     if (days < 7) return `לפני ${days} ימים`;
     if (days < 30) return `לפני ${Math.floor(days / 7)} שבועות`;
-    return dateStr.replace(/^(\d{4})-(\d{2})-(\d{2})/, '$3/$2/$1');
+    return dateOnly.replace(/^(\d{4})-(\d{2})-(\d{2})/, '$3/$2/$1');
 }
 
 async function loadRecentMessages() {
