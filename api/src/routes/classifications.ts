@@ -569,7 +569,9 @@ classifications.post('/review-classification', async (c) => {
       }
 
       const year = clsFields.year as string || String(new Date().getFullYear());
-      const periodLabel = `${missingStartMonth}-${missingEndMonth}/${year}`;
+      const startPad = String(missingStartMonth).padStart(2, '0');
+      const endPad = String(missingEndMonth).padStart(2, '0');
+      const periodLabel = `${startPad}.${year}-${endPad}.${year}`;
       const templateTitle = templateId === 'T901'
         ? `חוזה שכירות – דירה מושכרת (הכנסה) <b>${periodLabel}</b>`
         : `חוזה שכירות – דירה שכורה למגורים (הוצאה) <b>${periodLabel}</b>`;
@@ -614,12 +616,12 @@ classifications.post('/review-classification', async (c) => {
       try {
         const cp = JSON.parse(cpRaw);
         if (cp.coversFullYear) return null;
-        const startM = new Date(cp.startDate).getMonth() + 1;
-        const endM = new Date(cp.endDate).getMonth() + 1;
+        const startM = String(new Date(cp.startDate).getMonth() + 1).padStart(2, '0');
+        const endM = String(new Date(cp.endDate).getMonth() + 1).padStart(2, '0');
         const year = (clsFields.year as string) || String(new Date(cp.endDate).getFullYear());
         return {
-          html: `<b>${startM}-${endM}/${year}</b>`,
-          filename: `${startM}-${endM}-${year}`,
+          html: `<b>${startM}.${year}-${endM}.${year}</b>`,
+          filename: `${startM}.${year}-${endM}.${year}`,
         };
       } catch { return null; }
     };

@@ -582,15 +582,15 @@ function buildMobilePreviewFooter(item, footer) {
             const startMonth = cp && cp.startDate ? new Date(cp.startDate).getMonth() + 1 : null;
             const startVal = cp && cp.startDate ? cp.startDate.substring(0, 7) : '';
             const endVal = hasEnd ? cp.endDate.substring(0, 7) : '';
-            const startLabel = startMonth ? `${startMonth}/${year}` : '__/__';
-            const endLabel = endMonth ? `${endMonth}/${year}` : '__/__';
+            const startLabel = startMonth ? `${String(startMonth).padStart(2,'0')}.${year}` : '__.__';
+            const endLabel = endMonth ? `${String(endMonth).padStart(2,'0')}.${year}` : '__.__';
             const statusText = cp ? 'חוזה חלקי' : 'לא זוהו תאריכים';
             let mobileBtns = '';
             if (startMonth && startMonth > 1) {
-                mobileBtns += `<button class="btn btn-outline btn-sm btn-request-period" data-record-id="${rid}" data-gap="before" onclick="event.stopPropagation(); requestMissingPeriod('${rid}', 1, ${startMonth - 1}, this)"><i data-lucide="plus" class="icon-sm"></i> בקש חוזה 1-${startMonth - 1}/${year}</button>`;
+                mobileBtns += `<button class="btn btn-outline btn-sm btn-request-period" data-record-id="${rid}" data-gap="before" onclick="event.stopPropagation(); requestMissingPeriod('${rid}', 1, ${startMonth - 1}, this)"><i data-lucide="plus" class="icon-sm"></i> בקש חוזה ${formatPeriodLabel(1, startMonth - 1, year)}</button>`;
             }
             if (endMonth && endMonth < 12) {
-                mobileBtns += `<button class="btn btn-outline btn-sm btn-request-period" data-record-id="${rid}" data-gap="after" onclick="event.stopPropagation(); requestMissingPeriod('${rid}', ${endMonth + 1}, 12, this)"><i data-lucide="plus" class="icon-sm"></i> בקש חוזה ${endMonth + 1}-12/${year}</button>`;
+                mobileBtns += `<button class="btn btn-outline btn-sm btn-request-period" data-record-id="${rid}" data-gap="after" onclick="event.stopPropagation(); requestMissingPeriod('${rid}', ${endMonth + 1}, 12, this)"><i data-lucide="plus" class="icon-sm"></i> בקש חוזה ${formatPeriodLabel(endMonth + 1, 12, year)}</button>`;
             }
             mobileContractBanner = `
             <div class="ai-contract-period-banner" data-record-id="${rid}">
@@ -3591,14 +3591,21 @@ function renderAICards(items, allFilteredItems) {
 }
 
 // DL-271: Append rental contract period to display name
+// DL-271: Format period label as MM.YYYY-MM.YYYY
+function formatPeriodLabel(startMonth, endMonth, year) {
+    const s = String(startMonth).padStart(2, '0');
+    const e = String(endMonth).padStart(2, '0');
+    return `${s}.${year}-${e}.${year}`;
+}
+
 function appendContractPeriod(name, item) {
     if (!['T901', 'T902'].includes(item.matched_template_id) || !item.contract_period) return name;
     const cp = item.contract_period;
     if (cp.coversFullYear) return name;
-    const startM = new Date(cp.startDate).getMonth() + 1;
-    const endM = new Date(cp.endDate).getMonth() + 1;
+    const startM = String(new Date(cp.startDate).getMonth() + 1).padStart(2, '0');
+    const endM = String(new Date(cp.endDate).getMonth() + 1).padStart(2, '0');
     const year = item.year || new Date(cp.endDate).getFullYear();
-    return `${name} ${startM}-${endM}/${year}`;
+    return `${name} ${formatPeriodLabel(parseInt(startM), parseInt(endM), year)}`;
 }
 
 function renderAICard(item) {
@@ -3820,14 +3827,14 @@ function renderAICard(item) {
             const endMonth = hasEnd ? new Date(cp.endDate).getMonth() + 1 : null;
             const startVal = hasStart ? cp.startDate.substring(0, 7) : ''; // YYYY-MM for input
             const endVal = hasEnd ? cp.endDate.substring(0, 7) : '';
-            const startLabel = startMonth ? `${startMonth}/${year}` : '__/__';
-            const endLabel = endMonth ? `${endMonth}/${year}` : '__/__';
+            const startLabel = startMonth ? `${String(startMonth).padStart(2,'0')}.${year}` : '__.__';
+            const endLabel = endMonth ? `${String(endMonth).padStart(2,'0')}.${year}` : '__.__';
             const statusText = cp ? 'חוזה חלקי' : 'לא זוהו תאריכים';
 
             // Missing period calculation — check gaps before start AND after end
             let requestBtnsHtml = '';
             if (startMonth && startMonth > 1) {
-                const beforeLabel = `1-${startMonth - 1}/${year}`;
+                const beforeLabel = formatPeriodLabel(1, startMonth - 1, year);
                 requestBtnsHtml += `
                 <button class="btn btn-outline btn-sm btn-request-period" data-record-id="${rid}" data-gap="before"
                     onclick="event.stopPropagation(); requestMissingPeriod('${rid}', 1, ${startMonth - 1}, this)"
@@ -3836,7 +3843,7 @@ function renderAICard(item) {
                 </button>`;
             }
             if (endMonth && endMonth < 12) {
-                const afterLabel = `${endMonth + 1}-12/${year}`;
+                const afterLabel = formatPeriodLabel(endMonth + 1, 12, year);
                 requestBtnsHtml += `
                 <button class="btn btn-outline btn-sm btn-request-period" data-record-id="${rid}" data-gap="after"
                     onclick="event.stopPropagation(); requestMissingPeriod('${rid}', ${endMonth + 1}, 12, this)"
@@ -3948,10 +3955,10 @@ function renderReviewedCard(item, reviewStatus) {
         const year = item.year || new Date(cp.endDate).getFullYear();
         let btns = '';
         if (startMonth > 1) {
-            btns += `<button class="btn btn-outline btn-sm btn-request-period" data-record-id="${rid}" onclick="event.stopPropagation(); requestMissingPeriod('${rid}', 1, ${startMonth - 1}, this)"><i data-lucide="plus" class="icon-sm"></i> בקש חוזה 1-${startMonth - 1}/${year}</button>`;
+            btns += `<button class="btn btn-outline btn-sm btn-request-period" data-record-id="${rid}" onclick="event.stopPropagation(); requestMissingPeriod('${rid}', 1, ${startMonth - 1}, this)"><i data-lucide="plus" class="icon-sm"></i> בקש חוזה ${formatPeriodLabel(1, startMonth - 1, year)}</button>`;
         }
         if (endMonth < 12) {
-            btns += `<button class="btn btn-outline btn-sm btn-request-period" data-record-id="${rid}" onclick="event.stopPropagation(); requestMissingPeriod('${rid}', ${endMonth + 1}, 12, this)"><i data-lucide="plus" class="icon-sm"></i> בקש חוזה ${endMonth + 1}-12/${year}</button>`;
+            btns += `<button class="btn btn-outline btn-sm btn-request-period" data-record-id="${rid}" onclick="event.stopPropagation(); requestMissingPeriod('${rid}', ${endMonth + 1}, 12, this)"><i data-lucide="plus" class="icon-sm"></i> בקש חוזה ${formatPeriodLabel(endMonth + 1, 12, year)}</button>`;
         }
         if (btns) {
             reviewedPeriodBtns = `<div class="ai-contract-period-banner" data-record-id="${rid}">${btns}</div>`;
