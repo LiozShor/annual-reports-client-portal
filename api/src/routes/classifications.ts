@@ -1366,10 +1366,17 @@ classifications.post('/review-classification', async (c) => {
               const issuer = boldMatch ? boldMatch[1] : docName;
               newFilename = sanitizeFilename(fallback + (issuer ? ' \u2013 ' + issuer : '')) + '.pdf';
             }
-            // DL-271: Append rental contract period to filename
-            const periodForFile = getRentalPeriodLabel();
-            if (periodForFile && newFilename) {
+          }
+          // DL-271: Always rename T901/T902 with period suffix, even for exact/single match
+          const periodForFile = getRentalPeriodLabel();
+          if (periodForFile) {
+            if (newFilename) {
               newFilename = newFilename.replace('.pdf', ` ${periodForFile.filename}.pdf`);
+            } else {
+              // No rename was planned (exact/single match) — build from HE_TITLE + period
+              const templateId = clsFields.matched_template_id as string;
+              const fallback = HE_TITLE[templateId] || 'חוזה שכירות';
+              newFilename = sanitizeFilename(`${fallback} ${periodForFile.filename}`) + '.pdf';
             }
           }
         } else if (action === 'reject') {
