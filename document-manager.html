@@ -298,9 +298,9 @@
                             <i data-lucide="pen-line" class="icon-sm"></i>
                             מסמך מותאם אישית
                         </label>
-                        <div style="display:flex; gap:8px; align-items:center;">
+                        <div>
                             <input type="text" id="customDoc" placeholder="לדוגמה: אישור מיוחד מהמוסד לביטוח לאומי..."
-                                onblur="checkCustomDocDuplicate()" onkeydown="if(event.key==='Enter'){event.preventDefault();addCustomDoc()}" style="flex:1;">
+                                onblur="checkCustomDocDuplicate()" onkeydown="if(event.key==='Enter'){event.preventDefault();addCustomDoc()}" style="width:100%; margin-bottom:var(--sp-2);">
                             <button type="button" class="btn btn-primary btn-sm" onclick="addCustomDoc()" id="addCustomDocBtn">
                                 <i data-lucide="plus" class="icon-sm"></i> הוסף
                             </button>
