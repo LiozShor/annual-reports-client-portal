@@ -766,7 +766,7 @@ async function loadRecentMessages() {
             const noteId = escapeHtml(m.id || '');
             const reportId = escapeHtml(m.report_id || '');
             return `<div class="msg-row" data-note-id="${noteId}">
-                <div class="msg-content">
+                <div class="msg-content" onclick="this.parentElement.classList.toggle('expanded')">
                     <div class="msg-meta">
                         <span class="msg-client">${escapeHtml(m.client_name)}</span>
                         <span class="msg-date">${formatRelativeTime(m.date)}</span>

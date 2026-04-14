@@ -2718,6 +2718,18 @@ tr:hover .client-view-link {
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
+    cursor: default;
+    transition: all 0.2s;
+}
+
+.msg-row:hover .msg-summary {
+    -webkit-line-clamp: unset;
+    display: block;
+}
+
+.msg-row.expanded .msg-summary {
+    -webkit-line-clamp: unset;
+    display: block;
 }
 
 
