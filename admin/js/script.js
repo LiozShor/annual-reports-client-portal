@@ -1434,7 +1434,7 @@ function switchEntityTab(type) {
     if (importFT) importFT.value = type;
     updateImportFilingTypeLabel(type);
 
-    // DL-247/DL-250: Reload active tab on entity switch — opacity fade for tabs that fetch data
+    // DL-265: Reload active tab on entity switch — opacity fade + spinner for all data tabs
     const activeContent = document.querySelector('.tab-content.active');
     const activeTab = activeContent?.id?.replace('tab-', '');
     const addRefresh = () => { if (activeContent) activeContent.classList.add('tab-refreshing'); };
@@ -1443,7 +1443,7 @@ function switchEntityTab(type) {
     else if (activeTab === 'questionnaires' && wasQuestionnaireLoaded) { addRefresh(); loadQuestionnaires().then(removeRefresh, removeRefresh); }
     else if (activeTab === 'reminders' && wasReminderLoaded) { addRefresh(); loadReminders().then(removeRefresh, removeRefresh); }
     // DL-238: AI Review not reloaded on entity tab switch — always shows all
-    else if ((activeTab === 'review' || activeTab === 'dashboard') && wasDashboardLoaded) loadDashboard();
+    else if ((activeTab === 'review' || activeTab === 'dashboard') && wasDashboardLoaded) { addRefresh(); loadDashboard().then(removeRefresh, removeRefresh); }
 }
 
 // Close dropdowns/popovers on Escape; Enter on clickable counts triggers click
