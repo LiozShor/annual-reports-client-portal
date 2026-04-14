@@ -4325,6 +4325,10 @@ tr.reminder-loading td:last-child {
 
 /* ==================== CONFIRM DIALOG ==================== */
 
+#confirmDialog {
+    z-index: 1100; /* Must stack above other .ai-modal-overlay (z-index:1000) */
+}
+
 .confirm-dialog-panel {
     max-width: 380px !important;
 }

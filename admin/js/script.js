@@ -6179,6 +6179,7 @@ async function openClientDetailModal(reportId) {
     document.getElementById('clientDetailEmail').value = '';
     document.getElementById('clientDetailCcEmail').value = '';
     document.getElementById('clientDetailPhone').value = '';
+    window._clientDetailSnapshot = null; // DL-268: clear stale snapshot
 
     // Show modal with loading state
     document.getElementById('clientDetailLoading').style.display = '';
@@ -6203,6 +6204,14 @@ async function openClientDetailModal(reportId) {
         document.getElementById('clientDetailCcEmail').value = data.client.cc_email || '';
         document.getElementById('clientDetailPhone').value = data.client.phone || '';
 
+        // DL-268: snapshot initial values for dirty tracking + change summary
+        window._clientDetailSnapshot = {
+            name: data.client.name || '',
+            email: data.client.email || '',
+            cc_email: data.client.cc_email || '',
+            phone: data.client.phone || ''
+        };
+
         // Swap loading → fields
         document.getElementById('clientDetailLoading').style.display = 'none';
         document.getElementById('clientDetailFields').style.display = '';
@@ -6213,12 +6222,31 @@ async function openClientDetailModal(reportId) {
 }
 
 function closeClientDetailModal() {
+    // DL-268: dirty check — warn if unsaved changes
+    const snap = window._clientDetailSnapshot;
+    if (snap) {
+        const name = document.getElementById('clientDetailName').value.trim();
+        const email = document.getElementById('clientDetailEmail').value.trim().toLowerCase();
+        const cc_email = document.getElementById('clientDetailCcEmail').value.trim().toLowerCase();
+        const phone = document.getElementById('clientDetailPhone').value.trim();
+        const isDirty = name !== snap.name || email !== snap.email
+            || cc_email !== snap.cc_email || phone !== snap.phone;
+        if (isDirty) {
+            showConfirmDialog('יש שינויים שלא נשמרו. לסגור בלי לשמור?', _doCloseClientDetailModal, 'סגור בלי לשמור', true);
+            return;
+        }
+    }
+    _doCloseClientDetailModal();
+}
+
+function _doCloseClientDetailModal() {
     document.getElementById('clientDetailModal').classList.remove('show');
     document.getElementById('clientDetailReportId').value = '';
     document.getElementById('clientDetailName').value = '';
     document.getElementById('clientDetailEmail').value = '';
     document.getElementById('clientDetailCcEmail').value = '';
     document.getElementById('clientDetailPhone').value = '';
+    window._clientDetailSnapshot = null;
 }
 
 async function saveClientDetails() {
@@ -6237,49 +6265,54 @@ async function saveClientDetails() {
         return;
     }
 
-    const doSave = async () => {
-        document.getElementById('clientDetailSavingOverlay').style.display = '';
-        try {
-    
-            const response = await fetchWithTimeout(ENDPOINTS.ADMIN_UPDATE_CLIENT, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ token: authToken, report_id: reportId, action: 'update', name, email, cc_email, phone })
-            }, FETCH_TIMEOUTS.mutate);
-            const data = await response.json();
+    // DL-268: direct save, no confirmation dialog
+    document.getElementById('clientDetailSavingOverlay').style.display = '';
+    try {
+        const response = await fetchWithTimeout(ENDPOINTS.ADMIN_UPDATE_CLIENT, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ token: authToken, report_id: reportId, action: 'update', name, email, cc_email, phone })
+        }, FETCH_TIMEOUTS.mutate);
+        const data = await response.json();
 
+        if (!data.ok) throw new Error(data.error || 'שגיאה בשמירה');
 
-            if (!data.ok) throw new Error(data.error || 'שגיאה בשמירה');
-
-            // Optimistic update in clientsData
-            const client = clientsData.find(c => c.report_id === reportId);
-            if (client) {
-                client.name = name;
-                client.email = email;
-                client.cc_email = cc_email;
-                client.phone = phone;
-                filterClients();
-            }
-
-            closeClientDetailModal();
-            showAIToast('פרטי הלקוח עודכנו בהצלחה', 'success');
-        } catch (error) {
-            document.getElementById('clientDetailSavingOverlay').style.display = 'none';
-            showAIToast('שגיאה בשמירה: ' + error.message, 'danger');
+        // Optimistic update in clientsData
+        const client = clientsData.find(c => c.report_id === reportId);
+        if (client) {
+            client.name = name;
+            client.email = email;
+            client.cc_email = cc_email;
+            client.phone = phone;
+            filterClients();
         }
-    };
 
-    // If email changed, confirm first
-    const client = clientsData.find(c => c.report_id === reportId);
-    if (client && client.email !== email) {
-        showConfirmDialog(
-            `שינוי כתובת אימייל מ-"${client.email}" ל-"${email}"?\n\nשים לב: הלקוח ישתמש בכתובת החדשה מהפעם הבאה.`,
-            doSave,
-            'שנה אימייל',
-            true
-        );
-    } else {
-        await doSave();
+        // DL-268: build change summary from snapshot
+        const snap = window._clientDetailSnapshot;
+        const fieldLabels = { name: 'שם', email: 'אימייל', cc_email: 'אימייל בן/בת זוג', phone: 'טלפון' };
+        const changes = [];
+        if (snap) {
+            for (const [key, label] of Object.entries(fieldLabels)) {
+                const oldVal = snap[key] || '';
+                const newVal = { name, email, cc_email, phone }[key] || '';
+                if (oldVal !== newVal) {
+                    changes.push(`${label}: ${escapeHtml(oldVal || '—')} ← ${escapeHtml(newVal)}`);
+                }
+            }
+        }
+
+        _doCloseClientDetailModal();
+
+        if (changes.length > 0) {
+            const toastEl = document.getElementById('aiToastText');
+            showAIToast('פרטי הלקוח עודכנו בהצלחה', 'success');
+            toastEl.innerHTML = `פרטי הלקוח עודכנו בהצלחה<br><span style="font-size:0.85em;opacity:0.85">${changes.join('<br>')}</span>`;
+        } else {
+            showAIToast('לא בוצעו שינויים', 'success');
+        }
+    } catch (error) {
+        document.getElementById('clientDetailSavingOverlay').style.display = 'none';
+        showAIToast('שגיאה בשמירה: ' + error.message, 'danger');
     }
 }
 
