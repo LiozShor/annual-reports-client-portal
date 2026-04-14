@@ -678,18 +678,25 @@ function initDocumentDropdown() {
     // Store entries for filtering
     container._entries = comboEntries;
 
+    // Reset wizard state on re-init (report switch)
+    resetAddDocWizard();
+
     // Render full dropdown
     renderAddDocDropdown(comboEntries, '');
 
+    // Only attach listeners once (re-init rebuilds dropdown data via _entries)
+    if (container._listenersAttached) return;
+    container._listenersAttached = true;
+
     // Input events
     input.addEventListener('focus', () => {
-        if (container.classList.contains('disabled')) return;
+        if (input.disabled) return;
         container.classList.add('open');
-        renderAddDocDropdown(comboEntries, input.value.trim());
+        renderAddDocDropdown(container._entries || [], input.value.trim());
     });
 
     input.addEventListener('input', () => {
-        renderAddDocDropdown(comboEntries, input.value.trim());
+        renderAddDocDropdown(container._entries || [], input.value.trim());
         container.classList.add('open');
     });
 
