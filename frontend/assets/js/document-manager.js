@@ -2580,7 +2580,9 @@ function approveAndSendToClient() {
                 const res = await fetchWithTimeout(url, {
                     headers: { 'Authorization': `Bearer ${ADMIN_TOKEN}` }
                 }, FETCH_TIMEOUTS.mutate);
+                showAIToast(`DEBUG: status=${res.status} redirected=${res.redirected}`, 'info');
                 const data = await res.json();
+                showAIToast(`DEBUG: ok=${data.ok} queued=${data.queued} err=${data.error||'none'}`, 'info');
                 if (data.ok) {
                     if (data.queued) {
                         // DL-264: Off-hours — email queued for morning send
@@ -2614,6 +2616,7 @@ function approveAndSendToClient() {
                 }
             } catch (e) {
                 setBtnState(sendBtn, 'idle');
+                showAIToast(`DEBUG CATCH: ${e.message || e}`, 'error');
                 showToast('שגיאה בשליחת המייל. נסה שנית.', 'error');
             }
         },
