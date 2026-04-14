@@ -826,7 +826,7 @@ function buildActionButtonsHTML(params, SECRET) {
 
   const baseUrl = 'https://annual-reports-api.liozshor1.workers.dev/webhook';
   const approveUrl = `${baseUrl}/approve-and-send?report_id=${reportId}&token=${SECRET}`;
-  const editUrl = `https://liozshor.github.io/annual-reports-client-portal/document-manager.html?client_id=${clientId}`;
+  const editUrl = `https://docs.moshe-atsits.com/document-manager.html?client_id=${clientId}`;
 
   return `
 <div style="margin-top:30px;padding:20px;background:#e3f2fd;border-radius:8px;text-align:center;">
