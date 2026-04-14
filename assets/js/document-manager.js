@@ -3282,27 +3282,17 @@ function deleteRejectedUpload(id) {
 // ==================== STICKY ACTION BAR ====================
 
 function initStickyBar() {
-    const statusOverview = document.getElementById('statusOverview');
     const stickyBar = document.getElementById('stickyActionBar');
-    if (!statusOverview || !stickyBar) return;
+    if (!stickyBar) return;
 
-    const observer = new IntersectionObserver((entries) => {
-        const entry = entries[0];
-        // Show sticky bar only when statusOverview is scrolled out of view AND it's displayed
-        if (!entry.isIntersecting && statusOverview.style.display !== 'none') {
-            stickyBar.style.display = '';
-            updateStickyBar();
-        } else {
-            stickyBar.style.display = 'none';
-        }
-    }, { threshold: 0 });
-
-    observer.observe(statusOverview);
+    // Always visible — no IntersectionObserver needed
+    stickyBar.style.display = '';
+    updateStickyBar();
 }
 
 function updateStickyBar() {
     const stickyBar = document.getElementById('stickyActionBar');
-    if (!stickyBar || stickyBar.style.display === 'none') return;
+    if (!stickyBar) return;
 
     const total = currentDocuments.length;
     if (total === 0) return;
