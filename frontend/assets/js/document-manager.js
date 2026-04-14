@@ -2577,12 +2577,13 @@ function approveAndSendToClient() {
             setBtnState(sendBtn, 'loading', 'שולח ללקוח...');
             try {
                 const url = `${ENDPOINTS.APPROVE_AND_SEND}?report_id=${REPORT_ID}&confirm=1&respond=json`;
+                console.log('[approve-and-send] fetching:', url);
                 const res = await fetchWithTimeout(url, {
                     headers: { 'Authorization': `Bearer ${ADMIN_TOKEN}` }
                 }, FETCH_TIMEOUTS.mutate);
-                showAIToast(`DEBUG: status=${res.status} redirected=${res.redirected}`, 'info');
+                console.log('[approve-and-send] status:', res.status, 'redirected:', res.redirected);
                 const data = await res.json();
-                showAIToast(`DEBUG: ok=${data.ok} queued=${data.queued} err=${data.error||'none'}`, 'info');
+                console.log('[approve-and-send] response:', data);
                 if (data.ok) {
                     if (data.queued) {
                         // DL-264: Off-hours — email queued for morning send
@@ -2616,7 +2617,7 @@ function approveAndSendToClient() {
                 }
             } catch (e) {
                 setBtnState(sendBtn, 'idle');
-                showAIToast(`DEBUG CATCH: ${e.message || e}`, 'error');
+                console.error('[approve-and-send] CATCH:', e);
                 showToast('שגיאה בשליחת המייל. נסה שנית.', 'error');
             }
         },
