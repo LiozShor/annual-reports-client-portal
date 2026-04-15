@@ -8,7 +8,8 @@
 
 ### DL-276: Smooth Admin Auth Flow [IMPLEMENTED — NEED TESTING]
 - **Problem:** Navigating to `/admin` showed "tack tack tack" — login screen flash → app appears → dashboard populates.
-- **Fix:** Added auth splash screen (logo + bouncing dots) visible by default via CSS. Both login screen and app hidden until JS decides. Splash fades out (200ms) while target appears. Parallel prefetch: `loadDashboard()` fires alongside token verify in new-tab scenario.
+- **Fix:** Auth splash screen (logo + bouncing dots) visible by default. Both login and app hidden until JS decides. Splash fades out (200ms). Parallel dashboard prefetch on token verify. Login button uses inline bouncing dots instead of full-screen overlay.
+- **Also fixed:** `.github/workflows/deploy-pages.yml` was accidentally gitignored (commit `ae5f66f`), breaking all deploys after that point. Restored workflow + fixed `.gitignore` to exclude `.github/*` but include `.github/workflows/`.
 - Design log: `.agent/design-logs/admin-ui/276-smooth-admin-auth-flow.md`
 
 **Test checklist:**
@@ -16,7 +17,7 @@
 - [ ] Open `/admin` in new tab with valid localStorage token — splash → app
 - [ ] Open `/admin` with no token — splash → login screen
 - [ ] Open `/admin` with expired/invalid token — splash → login screen
-- [ ] Login from login screen — works as before
+- [ ] Login from login screen — inline dots on button, no full-screen overlay
 - [ ] Logout → login screen appears correctly
 - [ ] Dashboard data populated when app appears (parallel prefetch)
 - [ ] Mobile: same behavior on small screens
