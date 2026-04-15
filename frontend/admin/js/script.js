@@ -3528,6 +3528,8 @@ function renderAICards(items, allFilteredItems) {
         if (clientNotesRaw) {
             let cnArr = [];
             try { cnArr = JSON.parse(clientNotesRaw.replace(/[\n\r\t]/g, m => m === '\n' ? '\\n' : m === '\r' ? '\\r' : '\\t')); if (!Array.isArray(cnArr)) cnArr = []; } catch(e) {}
+            // Filter out office replies — only show client messages on AI review
+            cnArr = cnArr.filter(n => n.type !== 'office_reply');
             if (cnArr.length > 0) {
                 const sorted = [...cnArr].sort((a, b) => (b.date || '').localeCompare(a.date || ''));
                 const renderEntry = n => {
