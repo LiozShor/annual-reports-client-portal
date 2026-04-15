@@ -1,12 +1,12 @@
 /**
- * DL-267: Temporary backfill endpoint — advance stuck reports with 0 missing docs.
+ * DL-279: Backfill note sender_email — fix forwarded notes that show
+ * office member email instead of client email.
  * Remove after running once in production.
  */
 
 import { Hono } from 'hono';
 import { verifyToken } from '../lib/token';
 import { AirtableClient } from '../lib/airtable';
-import { checkAutoAdvanceToReview } from '../lib/auto-advance';
 import type { Env } from '../lib/types';
 
 const backfill = new Hono<{ Bindings: Env }>();
@@ -15,7 +15,9 @@ const TABLES = {
   REPORTS: 'tbls7m3hmHC4hhQVy',
 };
 
-backfill.post('/backfill-zero-docs', async (c) => {
+const OFFICE_EMAIL = 'natan@moshe-atsits.co.il';
+
+backfill.post('/backfill-note-sender', async (c) => {
   const token = c.req.header('Authorization')?.replace('Bearer ', '') || c.req.query('token') || '';
   if (!verifyToken(token, c.env.ADMIN_SECRET)) {
     return c.json({ ok: false, error: 'Unauthorized' }, 401);
@@ -23,35 +25,54 @@ backfill.post('/backfill-zero-docs', async (c) => {
 
   const airtable = new AirtableClient(c.env.AIRTABLE_BASE_ID, c.env.AIRTABLE_PAT);
 
-  // Find reports stuck in Pending_Approval or Collecting_Docs with 0 missing docs
+  // Find reports that have client_notes containing natan's email
   const reports = await airtable.listAllRecords(TABLES.REPORTS, {
-    filterByFormula: `AND(
-      OR({stage}='Pending_Approval', {stage}='Collecting_Docs'),
-      {docs_missing_count}=0
-    )`,
-    fields: ['stage', 'docs_missing_count', 'docs_total', 'client_name', 'year'],
+    filterByFormula: `FIND('${OFFICE_EMAIL}', {client_notes})`,
+    fields: ['client_notes', 'client_email', 'client_name'],
   });
 
-  let advanced = 0;
-  const results: Array<{ id: string; name: string; year: string; from: string; advanced: boolean }> = [];
+  let fixed = 0;
+  const results: Array<{ id: string; name: string; notesFixed: number }> = [];
 
   for (const report of reports) {
     const f = report.fields as Record<string, unknown>;
-    const didAdvance = await checkAutoAdvanceToReview(airtable, report.id);
-    results.push({
-      id: report.id,
-      name: (f.client_name as string) || '',
-      year: (f.year as string) || '',
-      from: (f.stage as string) || '',
-      advanced: didAdvance,
-    });
-    if (didAdvance) advanced++;
+    const clientEmail = Array.isArray(f.client_email)
+      ? (f.client_email[0] as string || '').toLowerCase()
+      : ((f.client_email as string) || '').toLowerCase();
+
+    if (!clientEmail) continue;
+
+    let notes: Array<Record<string, unknown>> = [];
+    try {
+      notes = JSON.parse((f.client_notes as string) || '[]');
+      if (!Array.isArray(notes)) continue;
+    } catch { continue; }
+
+    let notesFixed = 0;
+    for (const note of notes) {
+      if (typeof note.sender_email === 'string' && note.sender_email.toLowerCase() === OFFICE_EMAIL) {
+        note.sender_email = clientEmail;
+        notesFixed++;
+      }
+    }
+
+    if (notesFixed > 0) {
+      await airtable.updateRecord(TABLES.REPORTS, report.id, {
+        client_notes: JSON.stringify(notes),
+      });
+      fixed += notesFixed;
+      results.push({
+        id: report.id,
+        name: (f.client_name as string) || '',
+        notesFixed,
+      });
+    }
   }
 
   return c.json({
     ok: true,
-    total_checked: reports.length,
-    advanced,
+    reports_checked: reports.length,
+    notes_fixed: fixed,
     results,
   });
 });
