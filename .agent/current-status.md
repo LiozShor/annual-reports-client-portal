@@ -13,7 +13,7 @@
 - Design log: `.agent/design-logs/reminders/271-reminder-06am-and-pending-filter-bug.md`
 
 **Test TODO (DL-271):**
-- [ ] Tomorrow 08:00 — verify reminder fires at 08:00 (not 06:00), no duplicates
+- [ ] Tomorrow 08:00 (2026-04-16) — verify reminder fires at 08:00 (not 06:00), no duplicates. Client Name (next date 16.04.2026) is due — check what time the "נשלח לאחרונה" timestamp shows
 - [ ] Verify clients with pending classifications are NOT in tomorrow's reminder list
 - [ ] May 1st — verify Monthly Reset runs successfully (or trigger manually)
 
