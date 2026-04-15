@@ -17,6 +17,9 @@ api/.dev.vars
 tmp/*
 !tmp/.gitkeep
 
+# Claude Code worktrees
+.claude/worktrees/
+
 # Claude Code browser cache
 .playwright-mcp/
 
