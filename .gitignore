@@ -31,9 +31,8 @@ skills-lock.json
 # Archive (obsolete files, old plans, superseded docs)
 archive/
 
-# Binary samples and legal docs (not source code)
-docs/Samples/
-docs/DPAS/
+# Documentation (architecture, research, schemas — local reference only)
+docs/
 
 # Local reference data
 data/
