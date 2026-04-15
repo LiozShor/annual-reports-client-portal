@@ -369,6 +369,33 @@ const CLASSIFY_TOOL = {
 } as const;
 
 // ---------------------------------------------------------------------------
+// DL-278: Recovery tool — lightweight template matcher for when classifier
+// returns good evidence but null matched_template_id
+// ---------------------------------------------------------------------------
+
+const RECOVERY_TOOL = {
+  name: 'recover_template',
+  description: 'Match document evidence to the correct template ID from the required documents list.',
+  strict: true,
+  input_schema: {
+    type: 'object',
+    additionalProperties: false,
+    properties: {
+      matched_template_id: {
+        type: 'string',
+        enum: [...ALL_TEMPLATE_IDS],
+        description: 'The template ID that best matches the document evidence.'
+      },
+      confidence: {
+        type: 'number',
+        description: 'Confidence in the match (0.0-1.0).'
+      }
+    },
+    required: ['matched_template_id', 'confidence']
+  }
+} as const;
+
+// ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
@@ -633,6 +660,79 @@ function buildTemplateList(requiredDocs: AirtableRecord<DocFields>[]): string {
 }
 
 // ---------------------------------------------------------------------------
+// DL-278: Recovery agent — re-derive template ID from evidence text
+// ---------------------------------------------------------------------------
+
+async function recoverTemplateId(
+  apiKey: string,
+  evidence: string,
+  issuerName: string,
+  requiredDocs: AirtableRecord<DocFields>[],
+  attachmentName: string,
+): Promise<{ templateId: string; confidence: number } | null> {
+  const templateList = buildTemplateList(requiredDocs);
+
+  const body = {
+    model: 'claude-haiku-4-5-20251001',
+    max_tokens: 128,
+    system: `You are a template matcher for an Israeli CPA firm's document collection system.
+Given the classification evidence (Hebrew text describing a document) and a list of required document templates, pick the BEST matching template ID.
+
+Required documents (not yet received):
+${templateList}
+
+Rules:
+- Pick the template whose type and issuer best match the evidence description.
+- If the evidence mentions טופס 106 → T201 (client) or T202 (spouse).
+- If the evidence mentions טופס 867 or ניירות ערך → T601.
+- If the evidence mentions דוח שנתי מקוצר / אישור שנתי / הפקדות from an insurance company → T501.
+- If the evidence mentions משיכה / פדיון from an insurance company → T401.
+- You MUST pick a template — do not return null.`,
+    messages: [{ role: 'user', content: `Document evidence: ${evidence}\nIssuer: ${issuerName || 'unknown'}\nFilename: ${attachmentName}` }],
+    tools: [RECOVERY_TOOL],
+    tool_choice: { type: 'tool', name: 'recover_template' },
+  };
+
+  const MAX_RETRIES = 2;
+  try {
+    let resp: Response | null = null;
+    for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+      resp = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'x-api-key': apiKey,
+          'anthropic-version': '2023-06-01',
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify(body),
+      });
+      if (resp.status !== 429 || attempt === MAX_RETRIES) break;
+      const delay = 1000 * Math.pow(2, attempt);
+      await new Promise(r => setTimeout(r, delay));
+    }
+
+    if (!resp || !resp.ok) return null;
+
+    const data = (await resp.json()) as {
+      content: Array<{ type: string; input?: Record<string, unknown> }>;
+    };
+
+    const toolBlock = data.content.find((b) => b.type === 'tool_use');
+    if (!toolBlock?.input) return null;
+
+    const templateId = toolBlock.input.matched_template_id as string | undefined;
+    const confidence = (toolBlock.input.confidence as number) ?? 0;
+
+    if (!templateId || confidence < 0.5) return null;
+
+    return { templateId, confidence };
+  } catch (err) {
+    console.warn(`[classifier] Recovery agent failed for "${attachmentName}": ${err instanceof Error ? err.message : err}`);
+    return null;
+  }
+}
+
+// ---------------------------------------------------------------------------
 // classifyAttachment
 // ---------------------------------------------------------------------------
 
@@ -710,8 +810,8 @@ export async function classifyAttachment(
     tool_choice: { type: 'tool', name: 'classify_document' },
   };
 
-  // DL-277: Retry with exponential backoff on 429 rate limit
-  const MAX_RETRIES = 3;
+  // DL-277: Retry with exponential backoff on 429 rate limit (DL-278: bumped 3→5)
+  const MAX_RETRIES = 5;
   async function fetchWithRetry(): Promise<Response> {
     const init: RequestInit = {
       method: 'POST',
@@ -795,6 +895,26 @@ export async function classifyAttachment(
       matchedDocRecordId = match.docId;
       matchedDocName = match.matchedDocName;
       matchQuality = match.matchQuality;
+    }
+
+    // DL-278: Recovery agent — if classifier returned good evidence but null template, try to recover
+    if (!input.template_id && input.confidence >= 0.5 && input.reason.length > 10) {
+      console.warn(`[classifier] Null template with conf=${input.confidence} for "${attachment.name}" — invoking recovery agent`);
+      const recovered = await recoverTemplateId(
+        pCtx.env.ANTHROPIC_API_KEY,
+        input.reason,
+        input.issuer_name,
+        requiredDocs,
+        attachment.name,
+      );
+      if (recovered) {
+        input.template_id = recovered.templateId;
+        const match = findBestDocMatch(recovered.templateId, input.issuer_name, requiredDocs);
+        matchedDocRecordId = match.docId;
+        matchedDocName = match.matchedDocName;
+        matchQuality = match.matchQuality;
+        console.warn(`[classifier] Recovery agent matched: ${recovered.templateId} (conf=${recovered.confidence}) for "${attachment.name}"`);
+      }
     }
 
     // Process additional matches (dual-filing)

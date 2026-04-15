@@ -21,6 +21,7 @@ Active and pending logs. For completed history, see [ARCHIVE-INDEX.md](ARCHIVE-I
 
 | # | File | Status | Summary |
 |---|------|--------|---------|
+| 278 | [278-classification-recovery-agent.md](ai-review/278-classification-recovery-agent.md) | IMPLEMENTED — NEED TESTING | Recovery agent for null template ID — lightweight Haiku re-call when classifier returns good evidence but drops template |
 | 277 | [277-fix-reminder-progress-bar-and-429-retry.md](email/277-fix-reminder-progress-bar-and-429-retry.md) | IMPLEMENTED — NEED TESTING | Fix reminder progress bar math (waived excluded) + 429 retry with backoff + re-classify endpoint |
 | 276 | [276-smooth-admin-auth-flow.md](admin-ui/276-smooth-admin-auth-flow.md) | IMPLEMENTED — NEED TESTING | Smooth admin auth: splash screen + parallel prefetch eliminates login screen flash |
 | 275 | [275-fix-zero-docs-stage-stuck.md](infrastructure/275-fix-zero-docs-stage-stuck.md) | COMPLETED | Fix 0-doc questionnaires stuck at Waiting_For_Answers — restructure WF02 merge node + backfill 6 reports |
