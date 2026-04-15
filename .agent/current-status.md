@@ -1,6 +1,22 @@
 # Annual Reports CRM - Current Status
 
-**Last Updated:** 2026-04-14 (Session 10 — WF07 IF node strict type fix)
+**Last Updated:** 2026-04-15 (Session 11 — Fix negative days in review queue)
+
+---
+
+## Session Summary (2026-04-15 — Part 11)
+
+### Fix Negative/Wrong Days in מוכנים להכנה Tab [COMPLETED]
+- **Bug 1:** `(-1) ימים` showed when `docs_completed_at` was slightly ahead of browser time (timezone offset)
+- **Fix 1:** `Math.max(0, ...)` clamp on `diffDays`
+- **Bug 2:** Yesterday's date showed "היום" instead of "יום אחד" — timestamp diff < 24h but different calendar day
+- **Fix 2:** Compare midnight-to-midnight dates instead of raw timestamps (both desktop table + mobile cards)
+- File changed: `frontend/admin/js/script.js` (lines 2587-2589, 2634-2636)
+- Commits: `5405be8`, `8355dd7` — merged to main
+
+### Skill & Memory Updates
+- `/design-log` Phase 0: added stale worktree cleanup step (`git worktree list`)
+- Memory: `feedback_worktree_cleanup.md` — ExitWorktree won't work for CLI `--worktree`; remove worktree before deleting branch
 
 ---
 
