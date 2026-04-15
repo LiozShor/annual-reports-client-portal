@@ -68,14 +68,7 @@
 - Design log: `.agent/design-logs/admin-ui/266-reply-to-client-messages.md` (ported from old repo)
 - Worker deployed 4x, all changes merged to main
 
-**Test TODO (DL-272):**
-- [ ] Dashboard → messages panel → reply to a message → email sent (business hours)
-- [ ] Reply off-hours → toast "תגובה תישלח ב-08:00", queued in KV
-- [ ] Approve-and-send off-hours → toast "אושר ✓ ישלח אוטומטית ב-08:00" (green)
-- [ ] Refresh page after queuing → button stays "⏰ ישלח ב-08:00" (disabled)
-- [ ] Morning cron (05:00 UTC) sends queued emails and comments
-- [ ] Threaded reply appears in doc-manager timeline
-- [ ] No regression on existing message panel (expand, delete, hide)
+~~**Test DL-272**~~ — NOT TESTED (test plan: `.agent/test-plan-2026-04-15.md` Suite 1)
 
 **Follow-up items (next session):**
 1. **Dashboard queued-client visibility** — queued clients in Pending_Approval should show ⏰ badge + grayed row in dashboard table so other users don't double-approve. Remove ugly "(X בתור לשליחה)" from stat card.
@@ -106,12 +99,7 @@
 - Phase D Step 7: auto-merge to main after push (no "merge to main?" question)
 - Merge IS the deploy for testing on GitHub Pages
 
-**Test TODO (DL-268):**
-- [ ] Pagination says "מציג 1-25 מתוך N" where N = client count
-- [ ] Clients ordered oldest-waiting first
-- [ ] Page 2 shows next 25 clients
-- [ ] Filters reset to page 1
-- [ ] Summary bar totals are cross-page
+~~**Test DL-268**~~ — NOT TESTED (test plan: `.agent/test-plan-2026-04-15.md` Suite 2)
 
 ---
 
@@ -749,78 +737,12 @@ _(empty — no P1 items)_
 
 ## Active TODOs
 
-0. **Test DL-244: Rejected Uploads Visibility** — verify "מסמכים שקיבלנו ממך בעבר" callout appears wherever rejected uploads are listed
-   - [ ] Schema: Field `rejected_uploads_log` exists on Reports table (verified during impl)
-   - [ ] Reject flow: Reject a classification → entry appears in report's `rejected_uploads_log` JSON via Airtable, with correct filename + date + reason
-   - [ ] Reject flow (no reason): Reject without picking a reason → entry has empty `reason_code` but still records filename + date
-   - [ ] approve-and-send (HE-only): Hebrew client with 1 rejected upload → email shows amber callout above missing docs with title + filename + date + reason
-   - [ ] approve-and-send (bilingual): English client → both HE and EN cards show the callout
-   - [ ] approve-and-send (empty): Client with 0 rejected uploads → no callout, no extra spacing
-   - [ ] Type B reminder: Reminder for client in `Collecting_Docs` with rejected uploads → email contains the callout (both HE-only and bilingual paths)
-   - [ ] Client portal: Open view-documents.html as client with rejected uploads → callout appears above doc list, language toggle works
-   - [ ] Doc manager view: Open document-manager → "ארכיון מסמכים לא רלוונטיים" appears under הודעות הלקוח, lists entries with filename/date/reason
-   - [ ] Doc manager delete: Click trash icon → custom confirm dialog (NOT native) → entry removed from UI + Airtable PATCH succeeds + persists on reload
-   - [ ] Stage transition clear: Move report Collecting_Docs → Review via admin-change-stage → field is cleared in Airtable
-   - [ ] Stage transition no-clear: Move from Send_Questionnaire → Waiting_For_Answers → field unchanged
-   - [ ] Idempotency: Reject same classification twice → no duplicate entry (dedup by cls_id)
-   - [ ] Regression DL-081: Doc records still go to `Required_Missing` after reject (not Requires_Fix)
-   - [ ] Hebrew encoding: No garbled characters in any rendered output
-   Design log: `.agent/design-logs/documents/244-rejected-uploads-visibility.md`
-
-1. **Test DL-232: Email & Print Filing Type Audit** — verify all emails show correct filing type for CS clients
-   - [ ] CS approve-and-send (has docs) → subject "דרישת מסמכים — הצהרת הון YYYY", body "הצהרת ההון"
-   - [ ] AR approve-and-send (has docs) → unchanged regression check
-   - [ ] CS Type A reminder → header "שאלון הצהרת הון", body "הצהרת ההון"
-   - [ ] CS Type B reminder (HE) → body "הצהרת ההון"
-   - [ ] CS Type B reminder (EN bilingual) → HE card "הצהרת ההון", EN "capital statement"
-   - [ ] WhatsApp link in any email → generic "שלום, אני צריך/ה עזרה"
-   - [ ] Print CS questionnaire → meta "שנת מס YYYY | הצהרת הון"
-   - [ ] Print AR questionnaire → meta "שנת מס YYYY | דוח שנתי"
-   Design log: `.agent/design-logs/email/232-email-print-filing-type-complete-audit.md`
-
-2. **Test DL-228: Smart Add Second Filing Type** — verify auto-detect, pre-fill, row menu, doc manager
-   - [ ] Email blur: Type email of existing AR client → banner appears with name/stage/CC
-   - [ ] Email blur: Type email of client with BOTH types → no banner
-   - [ ] Email blur: Type new email → no banner
-   - [ ] Banner "Fill" button: Name, CC email, filing type all populated, fields get yellow tint
-   - [ ] Banner "Close" button: Banner dismissed, form unchanged
-   - [ ] Form submit after pre-fill: Report created, toast with "שלח שאלון"
-   - [ ] Desktop "..." menu: "הוסף הצהרת הון" shows for AR-only clients, hidden for dual-type
-   - [ ] Mobile card "..." menu: Same button
-   - [ ] Right-click context menu: Same button
-   - [ ] Menu button click: Creates report, success toast
-   - [ ] Doc manager: Single-type client shows "הוסף [type]" button near tabs
-   - [ ] Doc manager: Click → confirm → report created → page reloads with both tabs
-   - [ ] Tab linking: Click client name from CS tab → doc manager opens with CS tab active
-   - [ ] No regression: Adding brand new client still works
-   Design log: `.agent/design-logs/admin-ui/228-smart-add-second-filing-type.md`
-
-2. **Test DL-225: CS Hardcoded AR Remediation** — verify CS clients see correct text
-   - [ ] View-documents page with CS report: title/h1 show "הצהרת הון" not "Annual Report"
-   - [ ] Landing page with CS report: header shows "שאלון" (generic), form ID resolves correctly
-   - [ ] WF06 Type A reminder for CS client: body says "הצהרת ההון" not "הדוח השנתי"
-   - [ ] WF06 Type B reminder for CS client: HE body says "הצהרת ההון", WhatsApp URL dynamic
-   - [ ] WF07 digest: CS clients show הצ"ה badge, footer says "מערכת דוחות"
-   - [ ] Admin print footer: "מערכת ניהול דוחות" (not "דוחות שנתיים")
-   - [ ] Privacy policy: mentions "הצהרות הון" alongside "דוחות שנתיים"
-   - [ ] Dashboard API: `?filing_type=annual_report` returns only AR clients
-   - [ ] Rollover: CS rollover not blocked by existing AR record in target year
-   Design log: `.agent/design-logs/capital-statements/225-cs-hardcoded-ar-remediation.md`
-
-3. **Test DL-226: Dual-Filing Classification + OneDrive Folders** — verify dual-match and folder structure
-   - [ ] Send securities PDF for client with both AR+CS → two classification records (T601 + CS-T018)
-   - [ ] Verify PDF in both `דוחות שנתיים/זוהו/` and `הצהרות הון/זוהו/`
-   - [ ] Single-filing client: only one record, correct folder
-   - [ ] Unidentified doc: goes to primary report's `ממתינים לזיהוי`
-   - [ ] Approve/reject actions independent per report
-   - [ ] Admin manual upload uses filing-type subfolder
-   Design log: `.agent/design-logs/infrastructure/226-dual-filing-classification-onedrive.md`
-
-4. **Test DL-231: Keep-Both Missing Document Keys** — verify new keep_both docs have identity fields
-   - [ ] Approve keep_both: new "חלק N" doc has `document_key`, `document_uid`, `issuer_key`
-   - [ ] Reassign keep_both: new "חלק N" doc has all three identity fields
-   - [ ] Verify uid format: `{original_key}_partN`
-   Design log: `.agent/design-logs/ai-review/231-keep-both-missing-document-keys.md`
+~~**Test DL-244: Rejected Uploads Visibility**~~ — NOT TESTED (test plan: `.agent/test-plan-2026-04-15.md` Suite 3)
+~~**Test DL-232: Email & Print Filing Type Audit**~~ — NOT TESTED (test plan: Suite 4)
+~~**Test DL-228: Smart Add Second Filing Type**~~ — NOT TESTED (test plan: Suite 5)
+~~**Test DL-225: CS Hardcoded AR Remediation**~~ — NOT TESTED (test plan: Suite 6)
+~~**Test DL-226: Dual-Filing Classification + OneDrive Folders**~~ — NOT TESTED (test plan: Suite 3)
+~~**Test DL-231: Keep-Both Missing Document Keys**~~ — NOT TESTED (test plan: Suite 8)
 
 **DL-182: Capital Statements Tally Forms** — BLOCKED on user conditionals + EN form
 - Phases 1-4 done, **Phase 3 + FILING_CONFIG now complete** (2026-03-28):
@@ -836,16 +758,7 @@ _(empty — no P1 items)_
   5. Agent: Update `form_id_en` in FILING_CONFIG after EN form exists
   6. Both: Publish forms → end-to-end test
 
-**Test DL-222: Email AR/CS Dual-Filing** — regression tests for email subject/body changes
-- [ ] CS approve-and-send (0 docs) → subject has "הצהרת הון" (not "דו״ח שנתי")
-- [ ] AR approve-and-send (0 docs) → subject still has "דו״ח שנתי" (regression)
-- [ ] CS approve-and-send (0 docs) → body says "הצהרת ההון" not "הדו״ח השנתי"
-- [ ] EN CS client (0 docs) → body says "capital statement" not "annual report"
-- [ ] CS approve-and-send (with docs) → subject is generic "דרישת מסמכים" (unchanged)
-- [ ] AR approve-and-send (with docs) → subject unchanged (regression)
-- [ ] WF[02] CS questionnaire → office subject "שאלון הצהרת הון התקבל"
-- [ ] WF[02] AR questionnaire → office subject "שאלון שנתי התקבל" (regression)
-Design log: `.agent/design-logs/email/222-email-ar-cs-audit.md`
+~~**Test DL-222: Email AR/CS Dual-Filing**~~ — NOT TESTED (test plan: `.agent/test-plan-2026-04-15.md` Suite 7)
 
 ~~**Test DL-222c: Multi-PDF Approve Conflict**~~ — ✅ ALL PASSED (2026-03-29)
 Design log: `.agent/design-logs/ai-review/222-multi-pdf-approve-conflict.md`
