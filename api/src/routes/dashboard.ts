@@ -151,17 +151,19 @@ dashboard.get('/admin-recent-messages', async (c) => {
   const q = (c.req.query('q') || '').trim().toLowerCase();
   const airtable = new AirtableClient(c.env.AIRTABLE_BASE_ID, c.env.AIRTABLE_PAT);
 
-  // DL-273: search mode (q present) queries all years; normal mode filters by year
-  const cacheKey = q
-    ? `cache:msg_search:${q.substring(0, 50)}`
+  // DL-273: search mode (q present) returns all years for client-side filtering; normal = by year
+  const isSearch = !!q;
+  const cacheKey = isSearch
+    ? `cache:msg_all_years`
     : `cache:recent_messages:${year}`;
+  const cacheTTL = isSearch ? 1800 : 300; // 30 min for search index, 5 min for recent
 
   const messages = await getCachedOrFetch(
     c.env.CACHE_KV,
     cacheKey,
-    300,
+    cacheTTL,
     async () => {
-      const filterFormula = q
+      const filterByFormula = q
         ? `{client_notes}!=''`
         : `AND({year}=${year},{client_notes}!='')`;
 
@@ -231,15 +233,6 @@ dashboard.get('/admin-recent-messages', async (c) => {
         const tsB = parseInt(String(b.id).replace('cn_', ''), 10) || 0;
         return tsB - tsA;
       });
-
-      // DL-273: filter by search term (server-side text match)
-      if (q) {
-        return allMessages.filter(m =>
-          String(m.client_name).toLowerCase().includes(q) ||
-          String(m.summary).toLowerCase().includes(q) ||
-          String(m.raw_snippet).toLowerCase().includes(q)
-        );
-      }
 
       return allMessages;
     }
