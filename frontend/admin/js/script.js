@@ -4156,8 +4156,9 @@ function toggleAIAccordion(header) {
     // Toggle the clicked one (re-open if it wasn't already open)
     if (!isOpen) {
         accordion.classList.add('open');
-        // DL-278: scroll accordion into view within the master panel
-        setTimeout(() => accordion.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
+        // DL-278: scroll after previous accordion finishes collapsing (300ms transition)
+        // so the layout has settled and scroll position is accurate
+        setTimeout(() => accordion.scrollIntoView({ behavior: 'smooth', block: 'start' }), 320);
     }
 }
 
