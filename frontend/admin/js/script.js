@@ -2586,7 +2586,7 @@ function renderReviewTable(queue) {
         const client = queue[i];
         const completedAt = new Date(client.docs_completed_at);
         const diffMs = now - completedAt;
-        const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+        const diffDays = Math.max(0, Math.floor(diffMs / (1000 * 60 * 60 * 24)));
 
         let waitingClass = '';
         if (diffDays >= 14) waitingClass = 'waiting-urgent';
@@ -2633,7 +2633,7 @@ function renderReviewTable(queue) {
         const client = queue[i];
         const completedAt = new Date(client.docs_completed_at);
         const diffMs = nowCards - completedAt;
-        const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+        const diffDays = Math.max(0, Math.floor(diffMs / (1000 * 60 * 60 * 24)));
         let waitingClass = '';
         if (diffDays >= 14) waitingClass = 'waiting-urgent';
         else if (diffDays >= 7) waitingClass = 'waiting-warn';
