@@ -1,6 +1,21 @@
 # Annual Reports CRM - Current Status
 
-**Last Updated:** 2026-04-14 (Session 10 — WF07 IF node strict type fix)
+**Last Updated:** 2026-04-15 (Session 11 — DL-271 Reminder 06 AM + pending filter + credential fix)
+
+---
+
+## Session Summary (2026-04-15 — Session 11)
+
+### DL-271: Reminder System 3-Bug Fix [IMPLEMENTED — NEED TESTING]
+- **Bug 1 (Fixed):** Cron `0 6 * * *` → `0 8 * * *` — reminders now fire at 08:00 Israel time instead of 06:00
+- **Bug 2 (Fixed):** `Prepare Type B Input` was reading from `$('Filter Eligible')` (pre-filter), bypassing the pending classification filter. Changed to `$('Filter Type B By Pending').all()`. CPA-XXX (Client Name) and CPA-XXX (דני ויינר) were incorrectly reminded.
+- **Bug 3 (Fixed):** Monthly Reset workflow (`pW7WeQDi7eScEIBk`) — all 4 Airtable nodes had stale credential `avbHMwlPAfuabIcq`. Updated to `ODW07LgvsPQySQxh`. Has been failing since April 1st.
+- Design log: `.agent/design-logs/reminders/271-reminder-06am-and-pending-filter-bug.md`
+
+**Test TODO (DL-271):**
+- [ ] Tomorrow 08:00 — verify reminder fires at 08:00 (not 06:00), no duplicates
+- [ ] Verify clients with pending classifications are NOT in tomorrow's reminder list
+- [ ] May 1st — verify Monthly Reset runs successfully (or trigger manually)
 
 ---
 
