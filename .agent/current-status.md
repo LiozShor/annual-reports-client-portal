@@ -1,6 +1,25 @@
 # Annual Reports CRM - Current Status
 
-**Last Updated:** 2026-04-15 (Session 13d — DL-277 progress bar + 429 retry)
+**Last Updated:** 2026-04-15 (Session 13e — DL-278 AI review layout fix)
+
+---
+
+## Session Summary (2026-04-15 — Part 13e)
+
+### DL-278: AI Review Client List — Viewport-Locked Layout [IMPLEMENTED — NEED TESTING]
+- **Problem:** AI review master panel (client accordion list) grew unbounded, extending far below the sticky preview panel.
+- **Fix:** Viewport-locked grid (`height: calc(100vh - 200px)`) with independent scrolling on master panel. Removed `position: sticky` from detail panel (now fills grid height). Accordion content `max-height` changed from `60vh` to `calc(100vh - 350px)` to auto-fit preview height. Mobile breakpoint unsets height lock.
+- CSS-only change in `frontend/admin/css/style.css`.
+- Design log: `.agent/design-logs/ai-review/278-ai-review-client-list-layout.md`
+
+**Test checklist:**
+- [ ] Both panels visible side-by-side without page scroll
+- [ ] Master panel scrolls internally through all client accordions
+- [ ] Opening an accordion shows cards within the panel
+- [ ] Preview panel displays document when clicking preview button
+- [ ] Pagination controls visible at bottom of master scroll
+- [ ] Mobile layout (<768px) still works — single column, no height lock
+- [ ] No regression on other tabs
 
 ---
 

@@ -2,12 +2,12 @@
 
 Active and pending logs. For completed history, see [ARCHIVE-INDEX.md](ARCHIVE-INDEX.md).
 
-**Total logs:** 184 | **Active:** 86 | **Archived:** 98
+**Total logs:** 185 | **Active:** 87 | **Archived:** 98
 
 ## Folder Structure
 
 - `admin-ui/` — Admin UI (29)
-- `ai-review/` — AI Review & Classification (31)
+- `ai-review/` — AI Review & Classification (32)
 - `capital-statements/` — Capital Statements (4)
 - `client-portal/` — Client Portal & Questionnaires (13)
 - `documents/` — Documents & OneDrive (20)
@@ -21,6 +21,7 @@ Active and pending logs. For completed history, see [ARCHIVE-INDEX.md](ARCHIVE-I
 
 | # | File | Status | Summary |
 |---|------|--------|---------|
+| 278 | [278-ai-review-client-list-layout.md](ai-review/278-ai-review-client-list-layout.md) | IMPLEMENTED — NEED TESTING | AI review: viewport-locked split layout with independent scrolling master panel |
 | 277 | [277-fix-reminder-progress-bar-and-429-retry.md](email/277-fix-reminder-progress-bar-and-429-retry.md) | IMPLEMENTED — NEED TESTING | Fix reminder progress bar math (waived excluded) + 429 retry with backoff + re-classify endpoint |
 | 276 | [276-smooth-admin-auth-flow.md](admin-ui/276-smooth-admin-auth-flow.md) | IMPLEMENTED — NEED TESTING | Smooth admin auth: splash screen + parallel prefetch eliminates login screen flash |
 | 275 | [275-fix-zero-docs-stage-stuck.md](infrastructure/275-fix-zero-docs-stage-stuck.md) | COMPLETED | Fix 0-doc questionnaires stuck at Waiting_For_Answers — restructure WF02 merge node + backfill 6 reports |
