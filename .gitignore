@@ -23,10 +23,16 @@ tmp/*
 # Claude Code browser cache
 .playwright-mcp/
 
-# Claude Code internal working files (design logs, session state, advisory board)
+# Claude Code internal working files
 .agent/
+.claude/
+.design-logs/
+.worktreeinclude
 experts/
 skills-lock.json
+
+# GitHub Actions / config
+.github/
 
 # Archive (obsolete files, old plans, superseded docs)
 archive/
