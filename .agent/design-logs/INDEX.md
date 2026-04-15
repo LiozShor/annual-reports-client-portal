@@ -2,12 +2,12 @@
 
 Active and pending logs. For completed history, see [ARCHIVE-INDEX.md](ARCHIVE-INDEX.md).
 
-**Total logs:** 184 | **Active:** 86 | **Archived:** 98
+**Total logs:** 185 | **Active:** 87 | **Archived:** 98
 
 ## Folder Structure
 
 - `admin-ui/` — Admin UI (29)
-- `ai-review/` — AI Review & Classification (31)
+- `ai-review/` — AI Review & Classification (32)
 - `capital-statements/` — Capital Statements (4)
 - `client-portal/` — Client Portal & Questionnaires (13)
 - `documents/` — Documents & OneDrive (20)
@@ -21,7 +21,7 @@ Active and pending logs. For completed history, see [ARCHIVE-INDEX.md](ARCHIVE-I
 
 | # | File | Status | Summary |
 |---|------|--------|---------|
-| 278 | [278-classification-recovery-agent.md](ai-review/278-classification-recovery-agent.md) | IMPLEMENTED — NEED TESTING | Recovery agent for null template ID — lightweight Haiku re-call when classifier returns good evidence but drops template |
+| 278 | [278-ai-review-client-list-layout.md](ai-review/278-ai-review-client-list-layout.md) | IMPLEMENTED — NEED TESTING | AI review: viewport-locked split layout with independent scrolling master panel |
 | 277 | [277-fix-reminder-progress-bar-and-429-retry.md](email/277-fix-reminder-progress-bar-and-429-retry.md) | IMPLEMENTED — NEED TESTING | Fix reminder progress bar math (waived excluded) + 429 retry with backoff + re-classify endpoint |
 | 276 | [276-smooth-admin-auth-flow.md](admin-ui/276-smooth-admin-auth-flow.md) | IMPLEMENTED — NEED TESTING | Smooth admin auth: splash screen + parallel prefetch eliminates login screen flash |
 | 275 | [275-fix-zero-docs-stage-stuck.md](infrastructure/275-fix-zero-docs-stage-stuck.md) | COMPLETED | Fix 0-doc questionnaires stuck at Waiting_For_Answers — restructure WF02 merge node + backfill 6 reports |
@@ -37,7 +37,7 @@ Active and pending logs. For completed history, see [ARCHIVE-INDEX.md](ARCHIVE-I
 | 265 | [265-entity-tab-switch-loading.md](admin-ui/265-entity-tab-switch-loading.md) | IMPLEMENTED — NEED TESTING | Entity tab switch: inline spinner + opacity fade for all data tabs including dashboard |
 | 264 | [264-off-hours-email-queue.md](email/264-off-hours-email-queue.md) | IMPLEMENTED — NEED TESTING | Off-hours (8PM-8AM) approve-and-send emails queued for 8AM morning delivery |
 | 263 | [263-dashboard-messages-delete-and-raw-text.md](admin-ui/263-dashboard-messages-delete-and-raw-text.md) | IMPLEMENTED — NEED TESTING | Dashboard messages: delete/hide option + raw text instead of AI summary |
-| 260 | [260-archive-extraction-inbound-email.md](documents/260-archive-extraction-inbound-email.md) | COMPLETED | Auto-extract ZIP/RAR/7z archives in inbound email pipeline |
+| 260 | [260-archive-extraction-inbound-email.md](documents/260-archive-extraction-inbound-email.md) | IMPLEMENTED — NEEDS TESTING | Auto-extract ZIP/RAR/7z archives in inbound email pipeline |
 | 259 | [259-inbound-notes-all-stages.md](infrastructure/259-inbound-notes-all-stages.md) | IMPLEMENTED — NEED TESTING | Capture client notes & raw attachments at all stages, not just Collecting_Docs/Review |
 | 258 | [258-client-messages-low-stages.md](admin-ui/258-client-messages-low-stages.md) | DONE | Show notes & client messages on low-stage (≤1) doc manager by extracting secondary zone from #content |
 | 257 | [257-reminder-select-all-bug-and-cap.md](reminders/257-reminder-select-all-bug-and-cap.md) | IMPLEMENTED — NEED TESTING | Fix reminder select-all double-counting (table+mobile duplicate checkboxes) + add MAX_BULK_SEND=50 cap |

@@ -1,35 +1,25 @@
 # Annual Reports CRM - Current Status
 
-**Last Updated:** 2026-04-15 (Session 13f — DL-278 classification recovery agent)
-
----
-
-## Session Summary (2026-04-15 — Part 13f)
-
-### DL-278: Classification Recovery Agent [IMPLEMENTED — NEED TESTING]
-- **Problem:** Haiku classifier returns correct evidence + issuer + 0.95 confidence but `matched_template_id: null` in 11% of cases (9/82 pending records). Systemic Haiku structured output bug.
-- **Fix:** Added lightweight recovery agent inside `classifyAttachment()`. When classifier returns null template but high confidence + good evidence, fires a second text-only Haiku call (~200 tokens) with just the evidence + required docs list to recover the template ID.
-- **Also:** Bumped main classifier MAX_RETRIES from 3→5 for 429 resilience.
-- Workers file: `api/src/lib/inbound/document-classifier.ts` (only file changed)
-- Design log: `.agent/design-logs/ai-review/278-classification-recovery-agent.md`
-
-**Test checklist:**
-- [ ] Deploy and re-classify existing 9 broken records via admin panel — verify they now get correct `matched_template_id`
-- [ ] Send test email with a 867 form — check Worker logs for `[classifier] Recovery agent matched:` message
-- [ ] Verify pending classification in Airtable has correct template + document link
-- [ ] Confirm recovery agent does NOT fire on already-working classifications (no extra API calls)
-- [ ] Check Worker logs — no errors from recovery agent
+**Last Updated:** 2026-04-15 (Session 13e — DL-278 AI review layout fix)
 
 ---
 
 ## Session Summary (2026-04-15 — Part 13e)
 
-### DL-260: Fix ZIP Extraction in Inbound Email Pipeline [COMPLETED]
-- **Bug:** ZIP archives uploaded as-is to OneDrive instead of being extracted. The lightweight ZIP parser in `text-extractor.ts` only supported STORED/DEFLATE compression methods and failed on ZIPs with data descriptors (common in tax software like Interactive Brokers).
-- **Fix:** Route all archive formats (ZIP/RAR/7z) through `archive-wasm` (libarchive WASM) instead of the lightweight parser. 1 file changed, 9 insertions, 47 deletions.
-- **Tested with real client (CPA-XXX Client Name):** ZIP with 3 files → extracted, classified (T1701/T1601/T601), renamed with Hebrew short names, uploaded to correct OneDrive folder with provenance notes.
-- Workers deployed: version 2bacebcb
-- Commit: `464b13b` on main
+### DL-278: AI Review Client List — Viewport-Locked Layout [IMPLEMENTED — NEED TESTING]
+- **Problem:** AI review master panel (client accordion list) grew unbounded, extending far below the sticky preview panel.
+- **Fix:** Viewport-locked grid (`height: calc(100vh - 200px)`) with independent scrolling on master panel. Removed `position: sticky` from detail panel (now fills grid height). Accordion content `max-height` changed from `60vh` to `calc(100vh - 350px)` to auto-fit preview height. Mobile breakpoint unsets height lock.
+- CSS-only change in `frontend/admin/css/style.css`.
+- Design log: `.agent/design-logs/ai-review/278-ai-review-client-list-layout.md`
+
+**Test checklist:**
+- [ ] Both panels visible side-by-side without page scroll
+- [ ] Master panel scrolls internally through all client accordions
+- [ ] Opening an accordion shows cards within the panel
+- [ ] Preview panel displays document when clicking preview button
+- [ ] Pagination controls visible at bottom of master scroll
+- [ ] Mobile layout (<768px) still works — single column, no height lock
+- [ ] No regression on other tabs
 
 ---
 

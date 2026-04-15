@@ -1784,7 +1784,7 @@ tr:hover .client-view-link {
 
 .ai-accordion-content {
     padding: var(--sp-4) var(--sp-5);
-    max-height: 60vh;
+    max-height: calc(100vh - 350px);
     overflow-y: auto;
 }
 
@@ -3070,11 +3070,15 @@ tr:hover .client-view-link {
     grid-template-columns: minmax(450px, 520px) 1fr;
     gap: var(--sp-5);
     align-items: start;
+    height: calc(100vh - 200px);
+    overflow: hidden;
 }
 
 .ai-review-master {
     min-height: 0;
     min-width: 0;
+    height: 100%;
+    overflow-y: auto;
 }
 
 .ai-review-master .ai-review-card {
@@ -3083,9 +3087,7 @@ tr:hover .client-view-link {
 }
 
 .ai-review-detail {
-    position: sticky;
-    top: 80px;
-    height: calc(100vh - 100px);
+    height: 100%;
     background: white;
     border: 1px solid var(--gray-200);
     border-radius: var(--radius-lg);
@@ -4284,6 +4286,8 @@ tr.reminder-loading td:last-child {
     /* AI Review responsive */
     .ai-review-split {
         grid-template-columns: 1fr;
+        height: auto;
+        overflow: visible;
     }
 
     .ai-review-detail {
