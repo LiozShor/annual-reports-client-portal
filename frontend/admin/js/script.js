@@ -4154,7 +4154,11 @@ function toggleAIAccordion(header) {
         .forEach(el => el.classList.remove('open'));
 
     // Toggle the clicked one (re-open if it wasn't already open)
-    if (!isOpen) accordion.classList.add('open');
+    if (!isOpen) {
+        accordion.classList.add('open');
+        // DL-278: scroll accordion into view within the master panel
+        setTimeout(() => accordion.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
+    }
 }
 
 function toggleClientNotes(toggleEl) {
