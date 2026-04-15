@@ -710,8 +710,10 @@ export async function classifyAttachment(
     tool_choice: { type: 'tool', name: 'classify_document' },
   };
 
-  try {
-    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+  // DL-277: Retry with exponential backoff on 429 rate limit
+  const MAX_RETRIES = 3;
+  async function fetchWithRetry(): Promise<Response> {
+    const init: RequestInit = {
       method: 'POST',
       headers: {
         'x-api-key': pCtx.env.ANTHROPIC_API_KEY,
@@ -720,7 +722,20 @@ export async function classifyAttachment(
         'content-type': 'application/json',
       },
       body: JSON.stringify(body),
-    });
+    };
+    for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+      const resp = await fetch('https://api.anthropic.com/v1/messages', init);
+      if (resp.status !== 429 || attempt === MAX_RETRIES) return resp;
+      const retryAfter = parseInt(resp.headers.get('retry-after') || '0', 10);
+      const delay = Math.max(retryAfter * 1000, 1000 * Math.pow(2, attempt));
+      console.warn(`[classifier] 429 rate limit for "${attachment.name}" — retry ${attempt + 1}/${MAX_RETRIES} in ${delay}ms`);
+      await new Promise(r => setTimeout(r, delay));
+    }
+    throw new Error('unreachable');
+  }
+
+  try {
+    const resp = await fetchWithRetry();
 
     if (!resp.ok) {
       const errText = await resp.text();

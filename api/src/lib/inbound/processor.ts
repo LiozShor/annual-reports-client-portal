@@ -757,6 +757,10 @@ export async function processInboundEmail(
         for (let i = 0; i < batchResults.length; i++) {
           classificationResults[batch + i] = batchResults[i];
         }
+        // DL-277: 1s delay between classification batches to avoid Anthropic 429 rate limits
+        if (batchEnd < attachments.length) {
+          await new Promise(r => setTimeout(r, 1000));
+        }
       }
 
       // Phase B: Upload and create records sequentially (avoids OneDrive/Airtable rate limits)
