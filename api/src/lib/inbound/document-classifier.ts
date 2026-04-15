@@ -304,69 +304,77 @@ CS-T022 - ת.ז בנקאית חשבון ייפוי כוח (Power of Attorney Ban
 // Anthropic tool definition — strict schema
 // ---------------------------------------------------------------------------
 
-const CLASSIFY_TOOL = {
-  name: 'classify_document',
-  description: 'Classify a tax document received from an Israeli CPA firm client. Read the document content and identify the document type.',
-  strict: true,
-  input_schema: {
-    type: 'object',
-    additionalProperties: false,
-    properties: {
-      evidence: {
-        type: 'string',
-        description: '1-3 sentences IN HEBREW: First identify the document CATEGORY (employment, NII, insurance/pension, banking, rental, etc.), then cite specific text that determines the exact template type. For NII: state the allowance type. For insurance: state if deposit report (T501) vs withdrawal (T401).'
-      },
-      issuer_name: {
-        anyOf: [{ type: 'string' }, { type: 'null' }],
-        description: 'The identifying name used to match this document to a specific required document. RULES: For NII: T302 (spouse allowance) return the BENEFIT TYPE in Hebrew (e.g., אבטלה, מילואים, נכות, דמי לידה, פגיעה בעבודה). T303 (client disability) return null. T305/T306 (survivors) return the survivor details. NEVER return ביטוח לאומי. For Form 106 (T201/T202): return the EMPLOYER name. For Form 867 (T601): return the BANK/BROKER name. For insurance docs (T401/T501): return the INSURANCE COMPANY name. For all others: return the issuing organization name. null if not visible.'
-      },
-      confidence: {
-        type: 'number',
-        description: 'Classification confidence 0.0-1.0. Be honest and calibrated.'
-      },
-      additional_matches: {
-        type: 'array',
-        description: 'If this document ALSO satisfies a requirement for the OTHER filing type (e.g., a securities statement serves both T601 for Annual Report AND CS-T018 for Capital Statement), include the secondary match(es) here. Leave empty ([]) if the document only applies to one filing type.',
-        items: {
-          type: 'object',
-          additionalProperties: false,
-          properties: {
-            template_id: { type: 'string', enum: [...ALL_TEMPLATE_IDS], description: 'Secondary template ID from the OTHER filing type.' },
-            evidence: { type: 'string', description: 'Brief Hebrew evidence for why this document also matches this template.' },
-            issuer_name: { anyOf: [{ type: 'string' }, { type: 'null' }], description: 'Issuer name for the secondary match (same rules as primary).' },
-            confidence: { type: 'number', description: 'Confidence for this secondary match (0.0-1.0).' }
-          },
-          required: ['template_id', 'evidence', 'issuer_name', 'confidence']
-        }
-      },
-      contract_period: {
-        anyOf: [
-          {
+// DL-278: Tool schema built dynamically — enum scoped to client's required template IDs only.
+// The AI can ONLY pick from templates the office assigned to this client.
+function buildClassifyTool(requiredDocs: AirtableRecord<DocFields>[]) {
+  const clientTemplateIds = [...new Set(requiredDocs.map(d => d.fields.type))];
+  // Fallback to full list only if no required docs (shouldn't happen in practice)
+  const templateEnum = clientTemplateIds.length > 0 ? clientTemplateIds : [...ALL_TEMPLATE_IDS];
+
+  return {
+    name: 'classify_document',
+    description: 'Classify a tax document received from an Israeli CPA firm client. Read the document content and identify the document type.',
+    strict: true,
+    input_schema: {
+      type: 'object',
+      additionalProperties: false,
+      properties: {
+        evidence: {
+          type: 'string',
+          description: '1-3 sentences IN HEBREW: First identify the document CATEGORY (employment, NII, insurance/pension, banking, rental, etc.), then cite specific text that determines the exact template type. For NII: state the allowance type. For insurance: state if deposit report (T501) vs withdrawal (T401).'
+        },
+        issuer_name: {
+          anyOf: [{ type: 'string' }, { type: 'null' }],
+          description: 'The identifying name used to match this document to a specific required document. RULES: For NII: T302 (spouse allowance) return the BENEFIT TYPE in Hebrew (e.g., אבטלה, מילואים, נכות, דמי לידה, פגיעה בעבודה). T303 (client disability) return null. T305/T306 (survivors) return the survivor details. NEVER return ביטוח לאומי. For Form 106 (T201/T202): return the EMPLOYER name. For Form 867 (T601): return the BANK/BROKER name. For insurance docs (T401/T501): return the INSURANCE COMPANY name. For all others: return the issuing organization name. null if not visible.'
+        },
+        confidence: {
+          type: 'number',
+          description: 'Classification confidence 0.0-1.0. Be honest and calibrated.'
+        },
+        additional_matches: {
+          type: 'array',
+          description: 'If this document ALSO satisfies a requirement for the OTHER filing type (e.g., a securities statement serves both T601 for Annual Report AND CS-T018 for Capital Statement), include the secondary match(es) here. Leave empty ([]) if the document only applies to one filing type.',
+          items: {
             type: 'object',
             additionalProperties: false,
             properties: {
-              start_date: { type: 'string', description: 'Contract start date in YYYY-MM-DD format.' },
-              end_date: { type: 'string', description: 'Contract end date in YYYY-MM-DD format.' },
-              covers_full_year: { type: 'boolean', description: 'true if contract covers January 1 through December 31 of the tax year. false if partial.' }
+              template_id: { type: 'string', enum: templateEnum, description: 'Secondary template ID from the OTHER filing type.' },
+              evidence: { type: 'string', description: 'Brief Hebrew evidence for why this document also matches this template.' },
+              issuer_name: { anyOf: [{ type: 'string' }, { type: 'null' }], description: 'Issuer name for the secondary match (same rules as primary).' },
+              confidence: { type: 'number', description: 'Confidence for this secondary match (0.0-1.0).' }
             },
-            required: ['start_date', 'end_date', 'covers_full_year']
-          },
-          { type: 'null' }
-        ],
-        description: 'For rental contracts (T901/T902 ONLY): extract the contract period dates. Return null for all other document types.'
+            required: ['template_id', 'evidence', 'issuer_name', 'confidence']
+          }
+        },
+        contract_period: {
+          anyOf: [
+            {
+              type: 'object',
+              additionalProperties: false,
+              properties: {
+                start_date: { type: 'string', description: 'Contract start date in YYYY-MM-DD format.' },
+                end_date: { type: 'string', description: 'Contract end date in YYYY-MM-DD format.' },
+                covers_full_year: { type: 'boolean', description: 'true if contract covers January 1 through December 31 of the tax year. false if partial.' }
+              },
+              required: ['start_date', 'end_date', 'covers_full_year']
+            },
+            { type: 'null' }
+          ],
+          description: 'For rental contracts (T901/T902 ONLY): extract the contract period dates. Return null for all other document types.'
+        },
+        matched_template_id: {
+          anyOf: [
+            { type: 'string', enum: templateEnum },
+            { type: 'null' }
+          ],
+          description: 'Template ID to assign. ONLY choose from the client\'s required documents listed above. Set to null if confidence < 0.5 or the document does not match any required template.'
+        }
       },
-      matched_template_id: {
-        anyOf: [
-          { type: 'string', enum: [...ALL_TEMPLATE_IDS] },
-          { type: 'null' }
-        ],
-        description: 'Template ID to assign. Use the Document Type Reference above. Set to null if confidence < 0.5 or no match found.'
-      }
+      required: ['evidence', 'issuer_name', 'confidence', 'additional_matches', 'contract_period', 'matched_template_id']
     },
-    required: ['evidence', 'issuer_name', 'confidence', 'additional_matches', 'contract_period', 'matched_template_id']
-  },
-  cache_control: { type: 'ephemeral' }
-} as const;
+    cache_control: { type: 'ephemeral' }
+  };
+}
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -470,7 +478,7 @@ Commonly confused pairs — pay special attention:
 - T201 (Form 106 for CLIENT) vs T202 (Form 106 for SPOUSE). Compare the employee name on the form to the client name.
 - Maternity leave (דמי לידה) from NII → always T302, regardless of whether the person is the client or spouse.
 
-Note: If the document does NOT match any of the client's required documents, classify using the Document Type Reference — use the best matching template from the full list.
+Note: If the document does NOT match any of the client's required documents, set matched_template_id to null. Do NOT invent a classification — only match against the required documents listed above.
 
 IMPORTANT — Capital Statement (CS-T*) vs Annual Report (T*) templates:
 - CS-T* templates are for Capital Statement (הצהרת הון) documents — bank IDs, property contracts, vehicle registrations, balance confirmations, pay slips, etc.
@@ -801,7 +809,7 @@ export async function classifyAttachment(
     max_tokens: 512,
     system: buildSystemPrompt(clientName, requiredDocs),
     messages: [{ role: 'user', content }],
-    tools: [CLASSIFY_TOOL],
+    tools: [buildClassifyTool(requiredDocs)],
     tool_choice: { type: 'tool', name: 'classify_document' },
   };
 
