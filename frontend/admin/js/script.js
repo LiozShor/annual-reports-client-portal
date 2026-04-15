@@ -96,6 +96,7 @@ const debouncedFilterClients = debounce(filterClients, 150);
 const debouncedFilterReminders = debounce(filterReminders, 150);
 const debouncedApplyAIFilters = debounce(applyAIFilters, 150);
 const debouncedFilterQuestionnaires = debounce(filterQuestionnaires, 150);
+const debouncedSearchMessages = debounce(searchMessages, 300); // DL-273: longer debounce for API call
 let activeEntityTab = sessionStorage.getItem('entityTab') || 'annual_report';
 
 const FILING_TYPE_LABELS = {
@@ -794,6 +795,46 @@ async function loadRecentMessages() {
         const container = document.getElementById('recentMessagesContainer');
         if (container) container.innerHTML = '';
     }
+}
+
+// DL-273: Search messages across all years
+async function searchMessages() {
+    if (!authToken) return;
+    const q = (document.getElementById('msgSearchInput')?.value || '').trim();
+    const clearBtn = document.getElementById('msgSearchClear');
+    if (clearBtn) clearBtn.style.display = q ? '' : 'none';
+
+    if (!q) {
+        loadRecentMessages(); // restore normal view
+        return;
+    }
+    const container = document.getElementById('recentMessagesContainer');
+    if (!container) return;
+
+    try {
+        const response = await fetchWithTimeout(
+            `${ENDPOINTS.ADMIN_RECENT_MESSAGES}?q=${encodeURIComponent(q)}&_t=${Date.now()}`,
+            { headers: { 'Authorization': `Bearer ${authToken}` } },
+            FETCH_TIMEOUTS.load
+        );
+        const data = await response.json();
+        if (!data.ok) return;
+
+        _allMessages = data.messages || [];
+        _messagesVisible = 10;
+        renderMessages();
+    } catch (error) {
+        console.error('Message search failed', error);
+    }
+}
+
+// DL-273: Clear search and restore recent messages
+function clearMessageSearch() {
+    const input = document.getElementById('msgSearchInput');
+    if (input) input.value = '';
+    const clearBtn = document.getElementById('msgSearchClear');
+    if (clearBtn) clearBtn.style.display = 'none';
+    loadRecentMessages();
 }
 
 // DL-271: Render visible slice of messages with "load more" link

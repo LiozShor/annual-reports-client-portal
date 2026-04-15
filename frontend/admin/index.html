@@ -280,6 +280,15 @@
                 <aside class="dashboard-side-panel">
                     <div class="side-panel-header">
                         <h3><i data-lucide="mail" class="icon-sm"></i> הודעות אחרונות מלקוחות</h3>
+                        <div class="msg-search-wrap">
+                            <input type="text" id="msgSearchInput" class="msg-search-input"
+                                placeholder="חיפוש..." dir="rtl"
+                                oninput="debouncedSearchMessages()">
+                            <button class="msg-search-clear" id="msgSearchClear" style="display:none"
+                                onclick="clearMessageSearch()" title="נקה חיפוש">
+                                <i data-lucide="x" class="icon-xs"></i>
+                            </button>
+                        </div>
                     </div>
                     <div class="side-panel-body" id="recentMessagesContainer">
                         <div class="skeleton-loader" id="recentMsgSkeleton">
