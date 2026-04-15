@@ -20,6 +20,21 @@ tmp/*
 # Claude Code browser cache
 .playwright-mcp/
 
+# Claude Code internal working files (design logs, session state, advisory board)
+.agent/
+experts/
+skills-lock.json
+
+# Archive (obsolete files, old plans, superseded docs)
+archive/
+
+# Binary samples and legal docs (not source code)
+docs/Samples/
+docs/DPAS/
+
+# Local reference data
+data/
+
 # Lock files
 package-lock.json
 api/package-lock.json
