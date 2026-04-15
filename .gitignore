@@ -14,8 +14,7 @@ dist/
 api/.dev.vars
 
 # Temp files
-tmp/*
-!tmp/.gitkeep
+tmp/
 
 # Claude Code worktrees
 .claude/worktrees/
@@ -26,13 +25,19 @@ tmp/*
 # Claude Code internal working files
 .agent/
 .claude/
+.claudeignore
 .design-logs/
 .worktreeinclude
+claude-worktree.cmd
 experts/
 skills-lock.json
+CLAUDE.md
 
 # GitHub Actions / config
 .github/
+
+# SSOT docs (local reference only)
+SSOT_*.md
 
 # Archive (obsolete files, old plans, superseded docs)
 archive/
