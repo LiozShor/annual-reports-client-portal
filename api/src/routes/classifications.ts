@@ -901,9 +901,10 @@ classifications.post('/review-classification', async (c) => {
         matched_doc_name: classification?.matchedDocName || null,
         page_count: classification?.pageCount || (clsFields.page_count as number) || null,
       };
-      if (classification?.matchedDocRecordId) {
-        updateFields.document = [classification.matchedDocRecordId];
-      }
+      // Link to matched doc, or clear stale link if no match
+      updateFields.document = classification?.matchedDocRecordId
+        ? [classification.matchedDocRecordId]
+        : [];
       await airtable.updateRecord(TABLES.CLASSIFICATIONS, classification_id, updateFields);
 
       return c.json({
