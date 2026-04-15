@@ -161,7 +161,7 @@ dashboard.get('/admin-recent-messages', async (c) => {
     cacheKey,
     300,
     async () => {
-      const filterFormula = q
+      const filterByFormula = q
         ? `{client_notes}!=''`
         : `AND({year}=${year},{client_notes}!='')`;
 
