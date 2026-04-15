@@ -33,8 +33,9 @@ experts/
 skills-lock.json
 CLAUDE.md
 
-# GitHub Actions / config
-.github/
+# GitHub config (but keep workflows for deploy)
+.github/*
+!.github/workflows/
 
 # SSOT docs (local reference only)
 SSOT_*.md
