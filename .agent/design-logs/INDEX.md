@@ -21,7 +21,7 @@ Active and pending logs. For completed history, see [ARCHIVE-INDEX.md](ARCHIVE-I
 
 | # | File | Status | Summary |
 |---|------|--------|---------|
-| 275 | [275-fix-zero-docs-stage-stuck.md](infrastructure/275-fix-zero-docs-stage-stuck.md) | IMPLEMENTED — NEED TESTING | Fix 0-doc questionnaires stuck at Waiting_For_Answers — restructure WF02 merge node + backfill 6 reports |
+| 275 | [275-fix-zero-docs-stage-stuck.md](infrastructure/275-fix-zero-docs-stage-stuck.md) | COMPLETED | Fix 0-doc questionnaires stuck at Waiting_For_Answers — restructure WF02 merge node + backfill 6 reports |
 | 274 | [274-dashboard-messages-search.md](admin-ui/274-dashboard-messages-search.md) | COMPLETED | Dashboard messages: search bar across all years with fetch-once client-side filtering |
 | 273 | [273-outlook-deferred-send.md](email/273-outlook-deferred-send.md) | IMPLEMENTED — NEED TESTING | Replace KV+cron email queue with MS Graph PidTagDeferredSendTime deferred delivery |
 | 271 | [271-reminder-06am-and-pending-filter-bug.md](reminders/271-reminder-06am-and-pending-filter-bug.md) | IMPLEMENTED — NEED TESTING | Fix reminder 06 AM timing (cron→08:00), pending classification filter bypass, monthly reset credential |

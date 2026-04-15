@@ -1,5 +1,5 @@
 # Design Log 275: Fix Zero-Document Questionnaires Stuck at Waiting_For_Answers
-**Status:** [IMPLEMENTED — NEED TESTING]
+**Status:** [COMPLETED]
 **Date:** 2026-04-15
 **Related Logs:** DL-158 (zero docs approve-and-send, Draft), DL-267 (auto-advance zero missing docs)
 
