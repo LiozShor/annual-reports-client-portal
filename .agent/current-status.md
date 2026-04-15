@@ -1,6 +1,24 @@
 # Annual Reports CRM - Current Status
 
-**Last Updated:** 2026-04-15 (Session 11 — DL-271 dashboard messages load more + sort fix)
+**Last Updated:** 2026-04-15 (Session 11c — DL-273 fix zero-docs stage stuck)
+
+---
+
+## Session Summary (2026-04-15 — Part 11c)
+
+### DL-273: Fix Zero-Document Questionnaires Stuck at Waiting_For_Answers [IMPLEMENTED — NEED TESTING]
+- **Root cause:** WF02 Merge node (`Wait for Both`) blocked when Document Service returned 0 documents — `Prepare for Airtable` returned 0 items, so `Upsert Documents` never fired, merge never completed, `Update Report Stage` and `Mark Processed` never executed.
+- **Fix:** Removed `Wait for Both` merge node. Connected `Update Report Stage` and `Mark Processed` directly from `Success?` TRUE branch. All 4 downstream operations now fire independently.
+- **Backfill:** Updated 6 reports to stage=Review (CPA-XXX, CPA-XXX, CPA-XXX, CPA-XXX, CPA-XXX, CPA-XXX). Cleared reminder_next_date to prevent Type A reminders. Marked 8 Tally submissions as התקבל.
+- Design log: `.agent/design-logs/infrastructure/273-fix-zero-docs-stage-stuck.md`
+
+**Test TODO (DL-273):**
+- [ ] Submit test questionnaire with all "no" answers → verify stage advances to Review
+- [ ] Submit test questionnaire with some "yes" answers → verify normal flow (Pending_Approval + docs created)
+- [ ] Verify 6 backfilled reports show stage=Review in admin panel
+- [ ] Verify reminder_next_date is null on all 6 backfilled reports
+- [ ] Verify 8 backfilled Tally submissions show סטטוס=התקבל
+- [ ] Verify Update Report Stage node can still access `$('Call Document Service')` expression
 
 ---
 
