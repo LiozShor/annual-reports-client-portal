@@ -801,17 +801,6 @@ function renderMessages() {
     const container = document.getElementById('recentMessagesContainer');
     if (!container) return;
 
-    // Update badge with total count
-    const badge = document.getElementById('recentMsgCount');
-    if (badge) {
-        if (_allMessages.length > 0) {
-            badge.textContent = _allMessages.length;
-            badge.style.display = '';
-        } else {
-            badge.style.display = 'none';
-        }
-    }
-
     if (_allMessages.length === 0) {
         container.innerHTML = `
             <div class="msg-empty">
@@ -856,7 +845,7 @@ function renderMessages() {
     }).join('');
 
     const loadMoreHtml = hasMore
-        ? `<div class="msg-load-more" onclick="_messagesVisible += 10; renderMessages();">הצג עוד ${Math.min(remaining, 10)} מתוך ${remaining}...</div>`
+        ? `<div class="msg-load-more" onclick="_messagesVisible += 10; renderMessages();">הצג עוד...</div>`
         : '';
 
     container.innerHTML = rowsHtml + loadMoreHtml;
