@@ -454,7 +454,7 @@ classifications.post('/review-classification', async (c) => {
       return c.json({ ok: false, error: 'Missing classification_id or action' }, 400);
     }
 
-    if (!['approve', 'reject', 'reassign', 'split', 'classify-segment', 'finalize-split', 'request-remaining-contract', 'update-contract-period'].includes(action)) {
+    if (!['approve', 'reject', 'reassign', 'split', 'classify-segment', 'finalize-split', 'request-remaining-contract', 'update-contract-period', 're-classify'].includes(action)) {
       return c.json({ ok: false, error: `Invalid action: ${action}` }, 400);
     }
 
@@ -831,6 +831,85 @@ classifications.post('/review-classification', async (c) => {
         issuer_name: classification?.issuerName ?? '',
         classified: !!classification,
         renamed_to: finalFilename !== segment.filename ? finalFilename : null,
+      });
+    }
+
+    // DL-277: Re-classify a record that failed (e.g., 429 rate limit)
+    if (action === 're-classify') {
+      const itemId = clsFields.onedrive_item_id as string;
+      if (!itemId) {
+        return c.json({ ok: false, error: 'No onedrive_item_id on record' }, 400);
+      }
+
+      const msGraph = new MSGraphClient(env, c.executionCtx);
+      const reportId = getField(clsFields.report) as string;
+
+      let classification: ClassificationResult | null = null;
+      try {
+        const reportDocs = reportId
+          ? await airtable.listAllRecords(TABLES.DOCUMENTS, {
+              filterByFormula: `FIND('${reportId}', ARRAYJOIN({report_record_id}))`,
+            })
+          : [];
+
+        const fileBytes = await msGraph.getBinary(
+          `/drives/${DRIVE_ID}/items/${itemId}/content`,
+        );
+
+        const filename = (clsFields.attachment_name as string) || 'document.pdf';
+        const attachment: AttachmentInfo = {
+          id: `reclassify-${classification_id}`,
+          name: filename,
+          contentType: clsFields.attachment_content_type as string || 'application/pdf',
+          size: (clsFields.attachment_size as number) || fileBytes.byteLength,
+          content: fileBytes,
+          sha256: (clsFields.file_hash as string) || '',
+        };
+
+        const pCtx: ProcessingContext = {
+          env,
+          ctx: c.executionCtx,
+          messageId: `reclassify-${classification_id}`,
+          airtable,
+          graph: msGraph,
+        };
+
+        classification = await classifyAttachment(
+          pCtx,
+          attachment,
+          reportDocs as any,
+          (clsFields.client_name as string) || '',
+          {
+            subject: `Re-classify ${filename}`,
+            bodyPreview: (clsFields.email_body_text as string) || '',
+            senderName: (clsFields.sender_name as string) || '',
+            senderEmail: (clsFields.sender_email as string) || '',
+          },
+        );
+      } catch (err) {
+        console.error(`[re-classify] Failed for ${classification_id}:`, (err as Error).message);
+        return c.json({ ok: false, error: (err as Error).message }, 500);
+      }
+
+      // Update record with new classification
+      const updateFields: Record<string, unknown> = {
+        ai_confidence: classification?.confidence ?? 0,
+        ai_reason: classification?.evidence || 'Re-classification returned no result',
+        matched_template_id: classification?.templateId || null,
+        issuer_name: classification?.issuerName || null,
+        page_count: classification?.pageCount || (clsFields.page_count as number) || null,
+      };
+      if (classification?.matchedDocRecordId) {
+        updateFields.document = [classification.matchedDocRecordId];
+      }
+      await airtable.updateRecord(TABLES.CLASSIFICATIONS, classification_id, updateFields);
+
+      return c.json({
+        ok: true,
+        classification_id,
+        template_id: classification?.templateId || null,
+        confidence: classification?.confidence ?? 0,
+        issuer_name: classification?.issuerName || null,
       });
     }
 

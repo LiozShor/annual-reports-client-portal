@@ -1,6 +1,23 @@
 # Annual Reports CRM - Current Status
 
-**Last Updated:** 2026-04-15 (Session 13c — DL-276 smooth admin auth flow)
+**Last Updated:** 2026-04-15 (Session 13d — DL-277 progress bar + 429 retry)
+
+---
+
+## Session Summary (2026-04-15 — Part 13d)
+
+### DL-277: Fix Reminder Progress Bar Math & Classification 429 Retry [IMPLEMENTED — NEED TESTING]
+- **Bug A — Progress bar:** Type B reminder email showed "חסרים: 10" when total=11, received=0. Root cause: `_docs_missing` counted only `Required_Missing` docs, but `_docs_total` (Airtable COUNT) included Waived. Fix: `displayTotal = received + missing` — waived excluded from both.
+- **Bug B — Classification 429:** 19 PDFs from CPA-XXX email, 14 failed with Anthropic 429 rate limit. No retry logic existed. Fix: Added `fetchWithRetry()` with 3 retries + exponential backoff in `document-classifier.ts`, plus 1s inter-batch delay in `processor.ts`.
+- **New endpoint:** `re-classify` action on `/webhook/review-classification` — re-downloads PDF from OneDrive, re-runs AI classification, updates Airtable.
+- **CPA-XXX records:** All 15 rate-limited records re-classified successfully. 14 matched templates, 1 unmatched.
+- Workers deployed: version 02329de2
+- Design log: `.agent/design-logs/email/277-fix-reminder-progress-bar-and-429-retry.md`
+
+**Test checklist:**
+- [ ] Trigger Type B reminder for a report with waived docs — verify progress bar excludes waived from both total and missing
+- [ ] Send email with 10+ attachments — verify no 429 errors (retry logic works)
+- [ ] Admin AI review: CPA-XXX's 15 records show proper classifications
 
 ---
 
