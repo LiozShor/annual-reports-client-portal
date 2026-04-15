@@ -1,6 +1,17 @@
 # Annual Reports CRM - Current Status
 
-**Last Updated:** 2026-04-15 (Session 13e — DL-278 AI review layout fix)
+**Last Updated:** 2026-04-15 (Session 13f — DL-279 fix forwarded note sender email)
+
+---
+
+## Session Summary (2026-04-15 — Part 13f)
+
+### DL-279: Fix Forwarded Note Sender Email [COMPLETED]
+- **Problem:** When office member (Natan) forwards a client email to the inbox, the client note showed Natan's email instead of the client's email. Also, spouse (Tal/bigeltal@gmail.com) sent the email but note should show primary client email (Shlomit/bigelmanit@gmail.com).
+- **Fix 1 — processor.ts:** `summarizeAndSaveNote()` now receives `reportClientEmail` (from report's `client_email` lookup field) instead of `metadata.senderEmail`. Falls back to `clientMatch.email` if lookup is empty.
+- **Fix 2 — frontend:** Added `replace(/[\n\r\t]/g, ...)` pre-sanitization before `JSON.parse(client_notes)` in both `document-manager.js` and `admin/js/script.js`. Airtable long text fields can convert `\n` escapes into literal newlines, breaking JSON parse.
+- **Backfill:** Fixed CPA-XXX's note data in Airtable (re-serialized with proper JSON escaping + corrected sender_email). Added `/webhook/backfill-note-sender` temp endpoint.
+- All changes merged to main.
 
 ---
 
