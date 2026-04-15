@@ -894,9 +894,11 @@ classifications.post('/review-classification', async (c) => {
       // Update record with new classification
       const updateFields: Record<string, unknown> = {
         ai_confidence: classification?.confidence ?? 0,
-        ai_reason: classification?.evidence || 'Re-classification returned no result',
+        ai_reason: classification?.reason || 'Re-classification returned no result',
         matched_template_id: classification?.templateId || null,
         issuer_name: classification?.issuerName || null,
+        issuer_match_quality: classification?.matchQuality || null,
+        matched_doc_name: classification?.matchedDocName || null,
         page_count: classification?.pageCount || (clsFields.page_count as number) || null,
       };
       if (classification?.matchedDocRecordId) {
