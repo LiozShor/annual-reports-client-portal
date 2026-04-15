@@ -143,6 +143,28 @@ function isTokenExpired(token) {
     }
 }
 
+// DL-276: Auth splash helpers — eliminate login screen flash
+function _hideSplash() {
+    const splash = document.getElementById('authSplash');
+    if (splash) {
+        splash.classList.add('hidden');
+        setTimeout(() => splash.remove(), 250); // clean up after fade
+    }
+}
+
+function _showAppUI() {
+    _hideSplash();
+    document.getElementById('app').classList.add('visible');
+    document.getElementById('bottomNav').classList.add('visible');
+    startBackgroundRefresh();
+    safeCreateIcons();
+}
+
+function _showLoginUI() {
+    _hideSplash();
+    document.getElementById('loginScreen').classList.add('visible');
+}
+
 async function login() {
     const password = document.getElementById('passwordInput').value;
     if (!password) return;
@@ -165,12 +187,9 @@ async function login() {
             authToken = data.token;
             localStorage.setItem(ADMIN_TOKEN_KEY, authToken);
             sessionStorage.setItem(SESSION_FLAG_KEY, 'true');
-            document.getElementById('loginScreen').style.display = 'none';
-            document.getElementById('app').classList.add('visible');
-            document.getElementById('bottomNav').classList.add('visible');
+            document.getElementById('loginScreen').classList.remove('visible');
+            _showAppUI();
             loadDashboard();
-            startBackgroundRefresh();
-            safeCreateIcons();
         } else {
             document.getElementById('loginError').style.display = 'block';
         }
@@ -189,51 +208,48 @@ function logout() {
     location.reload();
 }
 
-// Check if already logged in
+// DL-276: Auth gate — splash screen visible by default, JS decides login vs. app
 async function checkAuth() {
-    if (!authToken) return;
+    // No token — show login immediately
+    if (!authToken) {
+        _showLoginUI();
+        return;
+    }
 
-    // Reject expired tokens before trusting sessionStorage
+    // Reject expired tokens
     if (isTokenExpired(authToken)) {
         localStorage.removeItem(ADMIN_TOKEN_KEY);
         sessionStorage.removeItem(SESSION_FLAG_KEY);
         authToken = '';
+        _showLoginUI();
         return;
     }
 
-    // If session already active in this browser window, skip API call
+    // Same session — skip API verify, show app + fire dashboard load
     if (sessionStorage.getItem(SESSION_FLAG_KEY) === 'true') {
-        document.getElementById('loginScreen').style.display = 'none';
-        document.getElementById('app').classList.add('visible');
-        document.getElementById('bottomNav').classList.add('visible');
+        _showAppUI();
         loadDashboard();
-        startBackgroundRefresh();
-        safeCreateIcons();
         return;
     }
 
-    // New tab/window - verify token with API
+    // New tab/window — verify token + prefetch dashboard in parallel
     try {
+        const [verifyResult] = await Promise.allSettled([
+            fetchWithTimeout(ENDPOINTS.ADMIN_VERIFY, { headers: { 'Authorization': `Bearer ${authToken}` } }, FETCH_TIMEOUTS.quick).then(r => r.json()),
+            loadDashboard() // optimistic prefetch — uses same stored authToken
+        ]);
 
-        const response = await fetchWithTimeout(ENDPOINTS.ADMIN_VERIFY, { headers: { 'Authorization': `Bearer ${authToken}` } }, FETCH_TIMEOUTS.quick);
-        const data = await response.json();
-
-
-        if (data.ok) {
+        if (verifyResult.status === 'fulfilled' && verifyResult.value.ok) {
             sessionStorage.setItem(SESSION_FLAG_KEY, 'true');
-            document.getElementById('loginScreen').style.display = 'none';
-            document.getElementById('app').classList.add('visible');
-            document.getElementById('bottomNav').classList.add('visible');
-            loadDashboard();
-            startBackgroundRefresh();
-            safeCreateIcons();
+            _showAppUI(); // dashboard data already loaded via parallel prefetch
         } else {
             localStorage.removeItem(ADMIN_TOKEN_KEY);
             sessionStorage.removeItem(SESSION_FLAG_KEY);
             authToken = '';
+            _showLoginUI();
         }
     } catch (error) {
-        // Token invalid, stay on login
+        _showLoginUI();
     }
 }
 
@@ -242,7 +258,7 @@ window.addEventListener('pageshow', (e) => {
     if (e.persisted && (!authToken || isTokenExpired(authToken))) {
         document.getElementById('app').classList.remove('visible');
         document.getElementById('bottomNav').classList.remove('visible');
-        document.getElementById('loginScreen').style.display = '';
+        document.getElementById('loginScreen').classList.add('visible');
     }
 });
 

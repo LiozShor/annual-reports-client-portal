@@ -21,6 +21,7 @@ Active and pending logs. For completed history, see [ARCHIVE-INDEX.md](ARCHIVE-I
 
 | # | File | Status | Summary |
 |---|------|--------|---------|
+| 276 | [276-smooth-admin-auth-flow.md](admin-ui/276-smooth-admin-auth-flow.md) | IMPLEMENTED — NEED TESTING | Smooth admin auth: splash screen + parallel prefetch eliminates login screen flash |
 | 275 | [275-fix-zero-docs-stage-stuck.md](infrastructure/275-fix-zero-docs-stage-stuck.md) | COMPLETED | Fix 0-doc questionnaires stuck at Waiting_For_Answers — restructure WF02 merge node + backfill 6 reports |
 | 274 | [274-dashboard-messages-search.md](admin-ui/274-dashboard-messages-search.md) | COMPLETED | Dashboard messages: search bar across all years with fetch-once client-side filtering |
 | 273 | [273-outlook-deferred-send.md](email/273-outlook-deferred-send.md) | IMPLEMENTED — NEED TESTING | Replace KV+cron email queue with MS Graph PidTagDeferredSendTime deferred delivery |

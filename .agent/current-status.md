@@ -1,6 +1,25 @@
 # Annual Reports CRM - Current Status
 
-**Last Updated:** 2026-04-15 (Session 13b — DL-275 fix zero-docs stage stuck)
+**Last Updated:** 2026-04-15 (Session 13c — DL-276 smooth admin auth flow)
+
+---
+
+## Session Summary (2026-04-15 — Part 13c)
+
+### DL-276: Smooth Admin Auth Flow [IMPLEMENTED — NEED TESTING]
+- **Problem:** Navigating to `/admin` showed "tack tack tack" — login screen flash → app appears → dashboard populates.
+- **Fix:** Added auth splash screen (logo + bouncing dots) visible by default via CSS. Both login screen and app hidden until JS decides. Splash fades out (200ms) while target appears. Parallel prefetch: `loadDashboard()` fires alongside token verify in new-tab scenario.
+- Design log: `.agent/design-logs/admin-ui/276-smooth-admin-auth-flow.md`
+
+**Test checklist:**
+- [ ] Navigate to `/admin` with valid session (same tab) — splash → app, no login flash
+- [ ] Open `/admin` in new tab with valid localStorage token — splash → app
+- [ ] Open `/admin` with no token — splash → login screen
+- [ ] Open `/admin` with expired/invalid token — splash → login screen
+- [ ] Login from login screen — works as before
+- [ ] Logout → login screen appears correctly
+- [ ] Dashboard data populated when app appears (parallel prefetch)
+- [ ] Mobile: same behavior on small screens
 
 ---
 
