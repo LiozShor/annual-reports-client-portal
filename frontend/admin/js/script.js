@@ -2585,8 +2585,9 @@ function renderReviewTable(queue) {
     for (let i = 0; i < queue.length; i++) {
         const client = queue[i];
         const completedAt = new Date(client.docs_completed_at);
-        const diffMs = now - completedAt;
-        const diffDays = Math.max(0, Math.floor(diffMs / (1000 * 60 * 60 * 24)));
+        const todayMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const completedMidnight = new Date(completedAt.getFullYear(), completedAt.getMonth(), completedAt.getDate());
+        const diffDays = Math.max(0, Math.round((todayMidnight - completedMidnight) / (1000 * 60 * 60 * 24)));
 
         let waitingClass = '';
         if (diffDays >= 14) waitingClass = 'waiting-urgent';
@@ -2632,8 +2633,9 @@ function renderReviewTable(queue) {
     for (let i = 0; i < queue.length; i++) {
         const client = queue[i];
         const completedAt = new Date(client.docs_completed_at);
-        const diffMs = nowCards - completedAt;
-        const diffDays = Math.max(0, Math.floor(diffMs / (1000 * 60 * 60 * 24)));
+        const todayMidnightC = new Date(nowCards.getFullYear(), nowCards.getMonth(), nowCards.getDate());
+        const completedMidnightC = new Date(completedAt.getFullYear(), completedAt.getMonth(), completedAt.getDate());
+        const diffDays = Math.max(0, Math.round((todayMidnightC - completedMidnightC) / (1000 * 60 * 60 * 24)));
         let waitingClass = '';
         if (diffDays >= 14) waitingClass = 'waiting-urgent';
         else if (diffDays >= 7) waitingClass = 'waiting-warn';
