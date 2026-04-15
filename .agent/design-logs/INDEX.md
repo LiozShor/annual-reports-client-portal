@@ -21,6 +21,7 @@ Active and pending logs. For completed history, see [ARCHIVE-INDEX.md](ARCHIVE-I
 
 | # | File | Status | Summary |
 |---|------|--------|---------|
+| 273 | [273-outlook-deferred-send.md](email/273-outlook-deferred-send.md) | IMPLEMENTED — NEED TESTING | Replace KV+cron email queue with MS Graph PidTagDeferredSendTime deferred delivery |
 | 271 | [271-reminder-06am-and-pending-filter-bug.md](reminders/271-reminder-06am-and-pending-filter-bug.md) | IMPLEMENTED — NEED TESTING | Fix reminder 06 AM timing (cron→08:00), pending classification filter bypass, monthly reset credential |
 | 272 | [272-dashboard-messages-load-more.md](admin-ui/272-dashboard-messages-load-more.md) | IMPLEMENTED — NEED TESTING | Dashboard messages: "load more" client-side pagination + same-day sort fix |
 | 270 | [270-editable-contract-period-dates.md](ai-review/270-editable-contract-period-dates.md) | COMPLETED | Editable contract period dates on AI review card for T901/T902 (DL-269 refinement) |

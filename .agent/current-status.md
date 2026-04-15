@@ -1,6 +1,36 @@
 # Annual Reports CRM - Current Status
 
-**Last Updated:** 2026-04-15 (Session 11 — DL-271 dashboard messages load more + sort fix)
+**Last Updated:** 2026-04-15 (Session 12 — Outlook deferred send)
+
+---
+
+## Session Summary (2026-04-15 — Part 12)
+
+### DL-273: Replace KV+Cron Queue with MS Graph Deferred Send [IMPLEMENTED — NEED TESTING]
+- **Problem:** Off-hours email queue used KV + daily cron (05:00 UTC). Cron fired at 07:00 Israel in winter (DST). Extra infrastructure for simple "send later".
+- **Solution:** MS Graph `PidTagDeferredSendTime` — Exchange holds email in Outbox until 08:00 Israel. Eliminates cron entirely.
+- **New methods:** `sendMailDeferred()` and `replyToMessageDeferred()` on MSGraphClient (draft→send with extended property)
+- **Key change:** Airtable stage transitions happen immediately on off-hours approval (no longer delayed until cron)
+- **Removed:** `email-queue.ts` (121 lines), `scheduled` handler, cron trigger from wrangler.toml
+- **Files changed:** `ms-graph.ts`, `israel-time.ts`, `approve-and-send.ts`, `dashboard.ts`, `index.ts`, `wrangler.toml`
+- Worker deployed: `a00a4e21-3db8-4ba2-9a09-df00bbef5b53`
+- Design log: `.agent/design-logs/email/273-outlook-deferred-send.md`
+
+### Cleanup: Remove Debug console.log [COMPLETED]
+- Removed 3 debug `console.log` lines from `approve-and-send.ts` (added during DL-272)
+
+**Test DL-273** — test plan in design log Section 7:
+- [ ] Off-hours approve-and-send: email arrives at ~08:00 Israel
+- [ ] Off-hours comment reply (threaded): arrives at ~08:00 in correct thread
+- [ ] Off-hours comment reply (non-threaded): arrives at ~08:00
+- [ ] Business-hours flows: unchanged (immediate send)
+- [ ] UI toast + button show queued state on off-hours approval
+- [ ] Airtable stage advances immediately on off-hours approval
+- [ ] No cron errors in Worker logs
+
+**Follow-up items:**
+1. Consider clearing `queued_send_at` on next dashboard load after 08:00 passes (low priority — cosmetic)
+2. Dashboard queued count on stage 3 card still works but shows count even after client moves to Collecting_Docs
 
 ---
 

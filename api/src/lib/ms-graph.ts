@@ -235,6 +235,73 @@ export class MSGraphClient {
     await this.post(`${userPath}/messages/${draft.id}/send`, undefined);
   }
 
+  /**
+   * Send an email with deferred delivery (DL-273).
+   * Uses PidTagDeferredSendTime — Exchange holds in Outbox until deferredUtc.
+   * Two-step: create draft with extended property → send.
+   */
+  async sendMailDeferred(
+    subject: string,
+    htmlContent: string,
+    toAddress: string,
+    fromMailbox: string,
+    deferredUtc: string,
+    ccAddress?: string,
+  ): Promise<void> {
+    const userPath = fromMailbox === 'me' ? '/me' : `/users/${fromMailbox}`;
+    const message: Record<string, unknown> = {
+      subject,
+      body: { contentType: 'HTML', content: htmlContent },
+      toRecipients: [{ emailAddress: { address: toAddress } }],
+      singleValueExtendedProperties: [
+        { id: 'SystemTime 0x3FEF', value: deferredUtc },
+      ],
+    };
+    if (ccAddress) {
+      message.ccRecipients = [{ emailAddress: { address: ccAddress } }];
+    }
+    const draft = await this.post(`${userPath}/messages`, message) as { id: string };
+    await this.post(`${userPath}/messages/${draft.id}/send`, undefined);
+  }
+
+  /**
+   * Reply to an existing message with deferred delivery (DL-273).
+   * Three-step: createReply → PATCH deferred property → send.
+   */
+  async replyToMessageDeferred(
+    internetMessageId: string,
+    htmlContent: string,
+    fromMailbox: string,
+    deferredUtc: string,
+  ): Promise<void> {
+    const userPath = fromMailbox === 'me' ? '/me' : `/users/${fromMailbox}`;
+    // Step 1: Look up Graph ID from Internet Message-ID
+    const filter = encodeURIComponent(`internetMessageId eq '${internetMessageId}'`);
+    const lookupPath = `${userPath}/messages?$filter=${filter}&$select=id&$top=1`;
+    const result = await this.get(lookupPath) as { value?: Array<{ id: string }> };
+    if (!result?.value?.[0]?.id) {
+      throw new Error(`[ms-graph] Message not found for internetMessageId: ${internetMessageId}`);
+    }
+    const graphId = result.value[0].id;
+
+    // Step 2: Create draft reply
+    const draft = await this.post(`${userPath}/messages/${graphId}/createReply`, {
+      message: {
+        body: { contentType: 'HTML', content: htmlContent },
+      },
+    }) as { id: string };
+
+    // Step 3: PATCH deferred send property onto draft
+    await this.patch(`${userPath}/messages/${draft.id}`, {
+      singleValueExtendedProperties: [
+        { id: 'SystemTime 0x3FEF', value: deferredUtc },
+      ],
+    });
+
+    // Step 4: Send — Exchange holds in Outbox until deferredUtc
+    await this.post(`${userPath}/messages/${draft.id}/send`, undefined);
+  }
+
   async batch(requests: BatchRequest[]): Promise<BatchResponse[]> {
     const token = await getAccessToken(this.env, this.ctx);
     const url = `${GRAPH_BASE}/$batch`;

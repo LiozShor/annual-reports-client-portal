@@ -3,7 +3,7 @@ import { verifyToken } from '../lib/token';
 import { AirtableClient } from '../lib/airtable';
 import { getCachedOrFetch, invalidateCache } from '../lib/cache';
 import { MSGraphClient } from '../lib/ms-graph';
-import { isOffHours } from '../lib/israel-time';
+import { isOffHours, getNext0800Israel } from '../lib/israel-time';
 import { buildCommentEmailHtml, buildCommentEmailSubject } from '../lib/email-html';
 import { logError } from '../lib/error-logger';
 import type { Env } from '../lib/types';
@@ -336,29 +336,28 @@ dashboard.post('/admin-send-comment', async (c) => {
   }
 
   try {
-    if (isOffHours()) {
-      // Queue for morning delivery
-      const queuePayload = {
-        type: 'comment',
-        reportId: report_id,
-        subject,
-        commentHtml,
-        originalMessageId,
-        toAddress: clientEmail,
-        fromMailbox: SENDER,
-        queuedAt: new Date().toISOString(),
-      };
-      await c.env.CACHE_KV.put(
-        'queued_comment:' + report_id,
-        JSON.stringify(queuePayload),
-        { expirationTtl: 86400 },
-      );
+    // DL-273: Deferred send via PidTagDeferredSendTime if off-hours
+    const graph = new MSGraphClient(c.env, c.executionCtx);
+    const offHours = isOffHours();
 
+    if (offHours) {
+      const deferredUtc = getNext0800Israel();
+      let sentViaReply = false;
+      if (originalMessageId) {
+        try {
+          await graph.replyToMessageDeferred(originalMessageId, commentHtml, SENDER, deferredUtc);
+          sentViaReply = true;
+        } catch (replyErr) {
+          console.error('[send-comment] replyToMessageDeferred failed, falling back to sendMailDeferred:', (replyErr as Error).message);
+        }
+      }
+      if (!sentViaReply) {
+        await graph.sendMailDeferred(subject, commentHtml, clientEmail, SENDER, deferredUtc);
+      }
       return c.json({ ok: true, queued: true, scheduled_for: '08:00' });
     }
 
     // Business hours — send immediately
-    const graph = new MSGraphClient(c.env, c.executionCtx);
     let sentViaReply = false;
     if (originalMessageId) {
       try {
