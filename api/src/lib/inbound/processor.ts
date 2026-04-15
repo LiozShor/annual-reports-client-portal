@@ -691,9 +691,9 @@ export async function processInboundEmail(
     allReports.sort((a, b) => b.year - a.year);
     const primaryReport = allReports[0];
 
-    // 9b. Filter to classifiable reports (Collecting_Docs / Review only)
+    // 9b. Filter to classifiable reports (stages 1-4: up to Collecting_Docs)
     const activeReports = allReports.filter(
-      r => r.stage === 'Collecting_Docs' || r.stage === 'Review'
+      r => r.stage === 'Send_Questionnaire' || r.stage === 'Waiting_For_Answers' || r.stage === 'Pending_Approval' || r.stage === 'Collecting_Docs'
     );
 
     // 10. Resolve OneDrive shared folder root
