@@ -1,6 +1,24 @@
 # Annual Reports CRM - Current Status
 
-**Last Updated:** 2026-04-15 (Session 13e — DL-260 ZIP extraction fix)
+**Last Updated:** 2026-04-15 (Session 13f — DL-278 classification recovery agent)
+
+---
+
+## Session Summary (2026-04-15 — Part 13f)
+
+### DL-278: Classification Recovery Agent [IMPLEMENTED — NEED TESTING]
+- **Problem:** Haiku classifier returns correct evidence + issuer + 0.95 confidence but `matched_template_id: null` in 11% of cases (9/82 pending records). Systemic Haiku structured output bug.
+- **Fix:** Added lightweight recovery agent inside `classifyAttachment()`. When classifier returns null template but high confidence + good evidence, fires a second text-only Haiku call (~200 tokens) with just the evidence + required docs list to recover the template ID.
+- **Also:** Bumped main classifier MAX_RETRIES from 3→5 for 429 resilience.
+- Workers file: `api/src/lib/inbound/document-classifier.ts` (only file changed)
+- Design log: `.agent/design-logs/ai-review/278-classification-recovery-agent.md`
+
+**Test checklist:**
+- [ ] Deploy and re-classify existing 9 broken records via admin panel — verify they now get correct `matched_template_id`
+- [ ] Send test email with a 867 form — check Worker logs for `[classifier] Recovery agent matched:` message
+- [ ] Verify pending classification in Airtable has correct template + document link
+- [ ] Confirm recovery agent does NOT fire on already-working classifications (no extra API calls)
+- [ ] Check Worker logs — no errors from recovery agent
 
 ---
 
