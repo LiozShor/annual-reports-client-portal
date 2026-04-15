@@ -8,7 +8,7 @@ import { getCachedOrFetch, invalidateCache } from '../lib/cache';
 import { calcReminderNextDate } from '../lib/reminders';
 import { buildClientEmailHtml, buildClientEmailSubject } from '../lib/email-html';
 import { logError } from '../lib/error-logger';
-import { isOffHours } from '../lib/israel-time';
+import { isOffHours, getNext0800Israel } from '../lib/israel-time';
 import { checkAutoAdvanceToReview } from '../lib/auto-advance';
 import type { Env } from '../lib/types';
 import type { DocItem, CategoryInfo, ClientEmailParams, RejectedUpload } from '../lib/email-html';
@@ -180,41 +180,17 @@ approveAndSend.get('/approve-and-send', async (c) => {
     // Compute existingFirstSent early — needed by both queue and normal paths
     const existingFirstSent = first(report.fields.docs_first_sent_at);
 
-    // DL-264: Queue for morning send if off-hours (8PM-8AM Israel time)
-    if (isOffHours()) {
-      const queuePayload = {
-        reportId,
-        subject,
-        html,
-        toAddress: clientEmail,
-        fromMailbox: SENDER,
-        queuedAt: new Date().toISOString(),
-        existingFirstSent: existingFirstSent || null,
-        docsCount: documents.length, // DL-267: 0 docs → advance to Review on send
-      };
-      await c.env.CACHE_KV.put(
-        'queued_email:' + reportId,
-        JSON.stringify(queuePayload),
-        { expirationTtl: 86400 },
-      );
-      // queued_send_at is informational — don't let it block the response
-      try {
-        await airtable.updateRecord(TABLES.REPORTS, reportId, {
-          queued_send_at: new Date().toISOString(),
-        });
-      } catch (e) {
-        console.error('[approve-and-send] queued_send_at update failed (non-critical):', (e as Error).message);
-      }
-
-      if (respondJson) return c.json({ ok: true, queued: true, scheduled_for: '08:00' });
-      return c.redirect(`${FRONTEND_BASE}/approve-confirm.html?report_id=${reportId}&result=queued`, 302);
+    // Step 5: Send email — deferred if off-hours (DL-273: PidTagDeferredSendTime)
+    const graph = new MSGraphClient(c.env, c.executionCtx);
+    const offHours = isOffHours();
+    if (offHours) {
+      const deferredUtc = getNext0800Israel();
+      await graph.sendMailDeferred(subject, html, clientEmail, SENDER, deferredUtc);
+    } else {
+      await graph.sendMail(subject, html, clientEmail, SENDER);
     }
 
-    // Step 5: Send email (daytime path)
-    const graph = new MSGraphClient(c.env, c.executionCtx);
-    await graph.sendMail(subject, html, clientEmail, SENDER);
-
-    // Step 6: Update Airtable
+    // Step 6: Update Airtable — stage advances immediately regardless of deferred send
     const now = new Date().toISOString();
 
     // DL-267: If 0 docs to send, advance straight to Review
@@ -223,7 +199,7 @@ approveAndSend.get('/approve-and-send', async (c) => {
       stage: targetStage,
       last_progress_check_at: now,
       docs_first_sent_at: existingFirstSent || now,
-      queued_send_at: null,
+      queued_send_at: offHours ? now : null,
     };
     if (targetStage === 'Collecting_Docs') {
       stageFields.reminder_next_date = calcReminderNextDate();
@@ -242,6 +218,10 @@ approveAndSend.get('/approve-and-send', async (c) => {
     invalidateCache(c.env.CACHE_KV, 'cache:documents_non_waived');
 
     // Step 7: Respond
+    if (offHours) {
+      if (respondJson) return c.json({ ok: true, queued: true, scheduled_for: '08:00' });
+      return c.redirect(`${FRONTEND_BASE}/approve-confirm.html?report_id=${reportId}&result=queued`, 302);
+    }
     if (respondJson) return c.json({ ok: true, stage: targetStage });
     return c.redirect(`${FRONTEND_BASE}/approve-confirm.html?report_id=${reportId}&result=success`, 302);
 

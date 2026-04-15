@@ -27,7 +27,6 @@ import createFolders from './routes/create-folders';
 import checkFolders from './routes/check-folders';
 import backfill from './routes/backfill';
 import { logError } from './lib/error-logger';
-import { processQueuedEmails, processQueuedComments } from './lib/email-queue';
 import type { Env } from './lib/types';
 
 const app = new Hono<{ Bindings: Env }>();
@@ -85,8 +84,4 @@ app.onError((err, c) => {
 
 export default {
   fetch: app.fetch,
-  async scheduled(event: ScheduledEvent, env: Env, ctx: ExecutionContext) {
-    await processQueuedEmails(env, ctx);
-    await processQueuedComments(env, ctx);
-  },
 };

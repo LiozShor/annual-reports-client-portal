@@ -35,6 +35,3 @@ id = "39bcc73f6c8c4507bc9c5032bf2914cf"
 
 [observability]
 enabled = true
-
-[triggers]
-crons = ["0 5 * * *"]
