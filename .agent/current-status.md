@@ -1,6 +1,23 @@
 # Annual Reports CRM - Current Status
 
-**Last Updated:** 2026-04-15 (Session 12 — Outlook deferred send)
+**Last Updated:** 2026-04-15 (Session 13 — DL-272 load more + DL-274 search)
+
+---
+
+## Session Summary (2026-04-15 — Part 13)
+
+### DL-272: Dashboard Messages — Load More + Same-Day Sort Fix [COMPLETED]
+- Client-side pagination: API returns all messages (no slice cap), frontend shows 10 at a time with "הצג עוד..." link
+- Sort fix: inbound processor now stores full ISO timestamps; tiebreaker sort using note ID for existing date-only notes
+- Delete/hide synced with in-memory `_allMessages` array
+
+### DL-274: Dashboard Messages — Search Bar [COMPLETED]
+- Search input in panel header with X clear button, debounced 300ms
+- Fetch-once pattern: first search loads ALL messages across all years (cached 30 min in KV), subsequent keystrokes filter instantly client-side
+- Spinner + "מחפש..." shown during initial fetch
+- Variable name bug fix: `filterFormula` → `filterByFormula` (caused 500 on first deploy)
+- Badge count removed from panel header per user feedback
+- Workers deployed 3x this session
 
 ---
 

@@ -1,5 +1,5 @@
 # Design Log 272: Dashboard Messages — Load More + Sort Fix
-**Status:** [IMPLEMENTED — NEED TESTING]
+**Status:** [COMPLETED]
 **Date:** 2026-04-15
 **Related Logs:** DL-261 (recent messages panel), DL-263 (delete/hide + raw text), DL-266 (reply to messages)
 
