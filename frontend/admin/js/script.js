@@ -813,7 +813,7 @@ async function searchMessages() {
     // First search: fetch all messages across all years (API caches in KV for 30 min)
     if (!_searchCache) {
         const container = document.getElementById('recentMessagesContainer');
-        if (container) container.innerHTML = '<div class="msg-empty"><div class="spinner"></div></div>';
+        if (container) container.innerHTML = '<div class="msg-empty"><div class="spinner"></div><p style="margin-top:8px;color:var(--gray-400)">מחפש...</p></div>';
         try {
             const response = await fetchWithTimeout(
                 `${ENDPOINTS.ADMIN_RECENT_MESSAGES}?q=_all&_t=${Date.now()}`,
