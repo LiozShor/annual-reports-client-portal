@@ -1,36 +1,15 @@
 # Annual Reports API (Cloudflare Workers)
 
-Edge API layer for the Annual Reports admin portal, replacing n8n Cloud webhooks for latency-sensitive endpoints.
-
-## Why
-
-Every admin action currently routes through:
-```
-Browser (Israel) → n8n Cloud (Frankfurt) → Airtable (US) → back
-```
-This adds 2-5 seconds per action due to n8n cold start (200-800ms) and geographic round-trips.
-
-Cloudflare Workers run on the edge (Tel Aviv/Haifa for Israeli users), reducing auth to <200ms and data reads to ~400-800ms.
+Edge API for the Annual Reports CRM, serving the admin portal and client portal.
 
 ## Architecture
 
 ```
-┌─────────────┐     ┌──────────────────────┐     ┌───────────┐
-│  Admin       │────▶│  Cloudflare Worker    │────▶│  Airtable │
-│  Portal      │◀────│  (Tel Aviv edge)      │◀────│  (US)     │
-│  (GitHub     │     │                       │     │           │
-│   Pages)     │     │  Auth, Dashboard,     │     └───────────┘
-└─────────────┘     │  Client endpoints     │
-                     └──────────────────────┘
-                              │
-                              │ (async only)
-                              ▼
-                     ┌──────────────────────┐
-                     │  n8n Cloud            │
-                     │  (Frankfurt)          │
-                     │  Emails, Reminders,   │
-                     │  Scheduled jobs       │
-                     └──────────────────────┘
+Browser (Israel)  -->  Cloudflare Worker (Tel Aviv edge)  -->  Airtable (US)
+                                  |
+                                  |--> Microsoft Graph (email, OneDrive)
+                                  |--> Claude API (document classification)
+                                  |--> n8n Cloud (scheduled jobs only)
 ```
 
 ## Setup
@@ -42,31 +21,29 @@ npm install
 
 ### Secrets
 
-Set secrets via Wrangler CLI (never commit these):
+Set via Wrangler CLI (never commit):
 
 ```bash
 wrangler secret put ADMIN_PASSWORD
 wrangler secret put SECRET_KEY
+wrangler secret put CLIENT_SECRET_KEY
 wrangler secret put AIRTABLE_PAT
+wrangler secret put MS_GRAPH_CLIENT_ID
+wrangler secret put MS_GRAPH_CLIENT_SECRET
+wrangler secret put MS_GRAPH_TENANT_ID
+wrangler secret put MS_GRAPH_REFRESH_TOKEN
+wrangler secret put N8N_INTERNAL_KEY
+wrangler secret put APPROVAL_SECRET
+wrangler secret put ANTHROPIC_API_KEY
 ```
 
 ### Local Development
 
-Create `.dev.vars` in the `api/` directory with your secrets:
-
-```
-ADMIN_PASSWORD=your_password
-SECRET_KEY=your_secret_key
-AIRTABLE_PAT=your_airtable_pat
-```
-
-Then run:
+Create `.dev.vars` in `api/` with your secrets, then:
 
 ```bash
-npm run dev
+npm run dev       # http://localhost:8787
 ```
-
-The worker starts at `http://localhost:8787`.
 
 ### Deploy
 
@@ -74,46 +51,27 @@ The worker starts at `http://localhost:8787`.
 npm run deploy
 ```
 
-Deploys to: `https://annual-reports-api.moshe-atsits.workers.dev`
+## Routes
 
-## Migration Status
+27 endpoint modules in `src/routes/`:
 
-| Endpoint | Status | Worker Route | n8n Workflow |
-|----------|--------|--------------|--------------|
-| `admin-auth` | Migrated | `POST /webhook/admin-auth` | `[Admin] Auth & Verify` |
-| `admin-verify` | Migrated | `GET /webhook/admin-verify` | `[Admin] Auth & Verify` |
-| `admin-dashboard` | n8n | — | `[Admin] Dashboard` |
-| `admin-pending` | n8n | — | `[Admin] Pending Clients` |
-| `admin-update-client` | n8n | — | `[API] Admin Update Client` |
-| `admin-toggle-active` | n8n | — | `[API] Admin Toggle Active` |
-| `admin-bulk-import` | n8n | — | `[Admin] Bulk Import` |
-| `admin-change-stage` | n8n | — | `[API] Admin Change Stage` |
-| `admin-mark-complete` | n8n | — | `[Admin] Mark Complete` |
-| `admin-year-rollover` | n8n | — | `[Admin] Year Rollover` |
-| `admin-send-questionnaires` | n8n | — | `[01] Send Questionnaires` |
-| `admin-questionnaires` | n8n | — | `[API] Admin Questionnaires` |
-| `check-existing-submission` | n8n | — | `[API] Check Existing Submission` |
-| `reset-submission` | n8n | — | `[API] Reset Submission` |
-| `get-client-documents` | n8n | — | `[API] Get Client Documents` |
-| `edit-documents` | n8n | — | `[04] Document Edit Handler` |
-| `approve-and-send` | n8n | — | `[3] Approve & Send` |
-| `get-preview-url` | n8n | — | `[API] Get Preview URL` |
-| `get-pending-classifications` | n8n | — | `[API] Get Pending Classifications` |
-| `review-classification` | n8n | — | `[API] Review Classification` |
-| `admin-reminders` | n8n | — | `[API] Reminder Admin` |
+| Category | Endpoints |
+|----------|-----------|
+| **Auth** | auth, submission |
+| **Dashboard** | dashboard, pending, stage, rollover |
+| **Clients** | client, client-reports, import |
+| **Documents** | documents, edit-documents, approve-and-send, upload-document |
+| **AI Classification** | classifications, inbound-email |
+| **Reminders** | reminders, send-questionnaires |
+| **Email** | check-sent-emails |
+| **Portal** | questionnaires, preview, reset |
+| **OneDrive** | check-folders, create-folders |
+| **Other** | chat, feedback, backfill |
 
 ## Adding New Endpoints
 
-1. Copy `src/routes/_template.ts` to `src/routes/my-endpoint.ts`
+1. Copy `src/routes/_template.ts`
 2. Implement the route handler
-3. Mount in `src/index.ts`: `app.route('/webhook', myEndpoint)`
+3. Mount in `src/index.ts`
 4. Deploy: `npm run deploy`
-5. Update `shared/endpoints.js` in the frontend to use the Worker URL for that endpoint
-
-## Token Compatibility
-
-During migration, tokens are cross-compatible between n8n and the Worker:
-- Same HMAC-SHA256 algorithm
-- Same token format: `base64(JSON_payload).hex_signature`
-- Same SECRET_KEY
-- A token generated by n8n can be verified by the Worker, and vice versa
+5. Update `frontend/shared/endpoints.js` to point to the new route
