@@ -748,6 +748,7 @@ async function loadDashboard(silent = false) {
 let recentMessagesLoaded = false;
 let _allMessages = []; // DL-271: full message list for client-side pagination
 let _messagesVisible = 10; // DL-271: how many to show
+let _searchCache = null; // DL-273: cached all-years messages for instant client-side search
 
 function formatRelativeTime(dateStr) {
     if (!dateStr) return '';
@@ -797,10 +798,10 @@ async function loadRecentMessages() {
     }
 }
 
-// DL-273: Search messages across all years
+// DL-273: Search messages — fetch all-years once, then filter client-side
 async function searchMessages() {
     if (!authToken) return;
-    const q = (document.getElementById('msgSearchInput')?.value || '').trim();
+    const q = (document.getElementById('msgSearchInput')?.value || '').trim().toLowerCase();
     const clearBtn = document.getElementById('msgSearchClear');
     if (clearBtn) clearBtn.style.display = q ? '' : 'none';
 
@@ -808,24 +809,34 @@ async function searchMessages() {
         loadRecentMessages(); // restore normal view
         return;
     }
-    const container = document.getElementById('recentMessagesContainer');
-    if (!container) return;
 
-    try {
-        const response = await fetchWithTimeout(
-            `${ENDPOINTS.ADMIN_RECENT_MESSAGES}?q=${encodeURIComponent(q)}&_t=${Date.now()}`,
-            { headers: { 'Authorization': `Bearer ${authToken}` } },
-            FETCH_TIMEOUTS.load
-        );
-        const data = await response.json();
-        if (!data.ok) return;
-
-        _allMessages = data.messages || [];
-        _messagesVisible = 10;
-        renderMessages();
-    } catch (error) {
-        console.error('Message search failed', error);
+    // First search: fetch all messages across all years (API caches in KV for 30 min)
+    if (!_searchCache) {
+        const container = document.getElementById('recentMessagesContainer');
+        if (container) container.innerHTML = '<div class="msg-empty"><div class="spinner"></div><p style="margin-top:8px;color:var(--gray-400)">מחפש...</p></div>';
+        try {
+            const response = await fetchWithTimeout(
+                `${ENDPOINTS.ADMIN_RECENT_MESSAGES}?q=_all&_t=${Date.now()}`,
+                { headers: { 'Authorization': `Bearer ${authToken}` } },
+                FETCH_TIMEOUTS.load
+            );
+            const data = await response.json();
+            if (!data.ok) return;
+            _searchCache = data.messages || [];
+        } catch (error) {
+            console.error('Message search cache load failed', error);
+            return;
+        }
     }
+
+    // Client-side filter — instant for subsequent keystrokes
+    _allMessages = _searchCache.filter(m =>
+        (m.client_name || '').toLowerCase().includes(q) ||
+        (m.summary || '').toLowerCase().includes(q) ||
+        (m.raw_snippet || '').toLowerCase().includes(q)
+    );
+    _messagesVisible = 10;
+    renderMessages();
 }
 
 // DL-273: Clear search and restore recent messages
