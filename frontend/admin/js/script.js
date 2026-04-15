@@ -3535,7 +3535,7 @@ function renderAICards(items, allFilteredItems) {
                     const iconName = isEmail ? 'mail' : 'pencil';
                     const iconClass = isEmail ? 'cn-icon--email' : 'cn-icon--manual';
                     const rawDate = n.date || '';
-                    const dateStr = rawDate.match(/^(\d{4})-(\d{2})-(\d{2})/) ? rawDate.replace(/^(\d{4})-(\d{2})-(\d{2})/, '$3-$2-$1') : rawDate;
+                    const dateStr = rawDate.match(/^(\d{4})-(\d{2})-(\d{2})/) ? rawDate.slice(0, 10).replace(/^(\d{4})-(\d{2})-(\d{2})/, '$3-$2-$1') : rawDate;
                     return `<div class="ai-cn-entry">
                         <i data-lucide="${iconName}" class="icon-sm ${iconClass}"></i>
                         <span class="ai-cn-date">${escapeHtml(dateStr)}</span>
