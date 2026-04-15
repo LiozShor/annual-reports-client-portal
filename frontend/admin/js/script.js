@@ -856,7 +856,7 @@ function renderMessages() {
     }).join('');
 
     const loadMoreHtml = hasMore
-        ? `<div class="msg-load-more" onclick="_messagesVisible += 10; renderMessages();">הצג עוד ${Math.min(remaining, 10)} מתוך ${remaining}...</div>`
+        ? `<div class="msg-load-more" onclick="_messagesVisible += 10; renderMessages();">הצג עוד...</div>`
         : '';
 
     container.innerHTML = rowsHtml + loadMoreHtml;
