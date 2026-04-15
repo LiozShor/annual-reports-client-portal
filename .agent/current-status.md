@@ -1,6 +1,17 @@
 # Annual Reports CRM - Current Status
 
-**Last Updated:** 2026-04-15 (Session 13d — DL-277 progress bar + 429 retry)
+**Last Updated:** 2026-04-15 (Session 13e — DL-260 ZIP extraction fix)
+
+---
+
+## Session Summary (2026-04-15 — Part 13e)
+
+### DL-260: Fix ZIP Extraction in Inbound Email Pipeline [COMPLETED]
+- **Bug:** ZIP archives uploaded as-is to OneDrive instead of being extracted. The lightweight ZIP parser in `text-extractor.ts` only supported STORED/DEFLATE compression methods and failed on ZIPs with data descriptors (common in tax software like Interactive Brokers).
+- **Fix:** Route all archive formats (ZIP/RAR/7z) through `archive-wasm` (libarchive WASM) instead of the lightweight parser. 1 file changed, 9 insertions, 47 deletions.
+- **Tested with real client (CPA-XXX Client Name):** ZIP with 3 files → extracted, classified (T1701/T1601/T601), renamed with Hebrew short names, uploaded to correct OneDrive folder with provenance notes.
+- Workers deployed: version 2bacebcb
+- Commit: `464b13b` on main
 
 ---
 
