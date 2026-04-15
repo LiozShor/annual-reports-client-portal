@@ -265,7 +265,9 @@ async function loadDocuments(reportId) {
 
         // Client communication notes
         try {
-            CLIENT_NOTES = JSON.parse(data.client_notes || '[]');
+            // Airtable long text can turn \n escapes into literal newlines — fix before parse
+            const cnRaw = (data.client_notes || '[]').replace(/[\n\r\t]/g, m => m === '\n' ? '\\n' : m === '\r' ? '\\r' : '\\t');
+            CLIENT_NOTES = JSON.parse(cnRaw);
             if (!Array.isArray(CLIENT_NOTES)) CLIENT_NOTES = [];
         } catch (e) { CLIENT_NOTES = []; }
         renderClientNotes();
