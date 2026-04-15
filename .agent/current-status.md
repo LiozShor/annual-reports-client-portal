@@ -1,6 +1,29 @@
 # Annual Reports CRM - Current Status
 
-**Last Updated:** 2026-04-14 (Session 10 — WF07 IF node strict type fix)
+**Last Updated:** 2026-04-15 (Session 11 — DL-271 dashboard messages load more + sort fix)
+
+---
+
+## Session Summary (2026-04-15 — Part 11)
+
+### DL-271: Dashboard Messages — Load More + Same-Day Sort Fix [IMPLEMENTED — NEED DEPLOY]
+- **Load more:** Client-side pagination — API now returns all messages (no `slice(0, 10)` cap), frontend shows 10 at a time with "הצג עוד..." link
+- **Sort fix:** Inbound processor (`processor.ts:349`) was stripping time from dates (`.split('T')[0]`), causing same-day messages to appear in random order. Now stores full ISO timestamp. Added tiebreaker sort using note ID timestamp for existing date-only notes.
+- **State sync:** Delete/hide now removes from in-memory `_allMessages` array and re-renders (not just DOM manipulation)
+- **Files changed:** `api/src/lib/inbound/processor.ts`, `api/src/routes/dashboard.ts`, `frontend/admin/js/script.js`, `frontend/admin/css/style.css`
+- **Blocked:** Workers deploy failed due to network issue — need to run `npx wrangler deploy` from `api/` directory
+- Design log: `.agent/design-logs/admin-ui/271-dashboard-messages-load-more.md`
+
+**Test TODO (DL-271):**
+- [ ] Deploy Workers: `cd api && npx wrangler deploy`
+- [ ] Dashboard shows first 10 messages, "הצג עוד..." link visible
+- [ ] Click load more → 10 more messages appear, link updates count
+- [ ] Link disappears when all messages shown
+- [ ] Badge shows total count
+- [ ] Same-day messages sorted newest-first
+- [ ] Delete/hide still works after load more
+- [ ] Reply still works after load more
+- [ ] Mobile layout not broken
 
 ---
 
