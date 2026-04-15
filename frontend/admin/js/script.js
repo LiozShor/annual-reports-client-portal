@@ -801,17 +801,6 @@ function renderMessages() {
     const container = document.getElementById('recentMessagesContainer');
     if (!container) return;
 
-    // Update badge with total count
-    const badge = document.getElementById('recentMsgCount');
-    if (badge) {
-        if (_allMessages.length > 0) {
-            badge.textContent = _allMessages.length;
-            badge.style.display = '';
-        } else {
-            badge.style.display = 'none';
-        }
-    }
-
     if (_allMessages.length === 0) {
         container.innerHTML = `
             <div class="msg-empty">
