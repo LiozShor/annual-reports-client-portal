@@ -369,33 +369,6 @@ const CLASSIFY_TOOL = {
 } as const;
 
 // ---------------------------------------------------------------------------
-// DL-278: Recovery tool — lightweight template matcher for when classifier
-// returns good evidence but null matched_template_id
-// ---------------------------------------------------------------------------
-
-const RECOVERY_TOOL = {
-  name: 'recover_template',
-  description: 'Match document evidence to the correct template ID from the required documents list.',
-  strict: true,
-  input_schema: {
-    type: 'object',
-    additionalProperties: false,
-    properties: {
-      matched_template_id: {
-        type: 'string',
-        enum: [...ALL_TEMPLATE_IDS],
-        description: 'The template ID that best matches the document evidence.'
-      },
-      confidence: {
-        type: 'number',
-        description: 'Confidence in the match (0.0-1.0).'
-      }
-    },
-    required: ['matched_template_id', 'confidence']
-  }
-} as const;
-
-// ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
@@ -672,6 +645,32 @@ async function recoverTemplateId(
 ): Promise<{ templateId: string; confidence: number } | null> {
   const templateList = buildTemplateList(requiredDocs);
 
+  // Build a scoped enum — only the client's required template IDs
+  const clientTemplateIds = [...new Set(requiredDocs.map(d => d.fields.type))];
+  if (clientTemplateIds.length === 0) return null;
+
+  const scopedTool = {
+    name: 'recover_template',
+    description: 'Match document evidence to the correct template ID from the required documents list.',
+    strict: true,
+    input_schema: {
+      type: 'object',
+      additionalProperties: false,
+      properties: {
+        matched_template_id: {
+          type: 'string',
+          enum: clientTemplateIds,
+          description: 'The template ID that best matches the document evidence. ONLY choose from the listed options.'
+        },
+        confidence: {
+          type: 'number',
+          description: 'Confidence in the match (0.0-1.0).'
+        }
+      },
+      required: ['matched_template_id', 'confidence']
+    }
+  };
+
   const body = {
     model: 'claude-haiku-4-5-20251001',
     max_tokens: 128,
@@ -683,13 +682,9 @@ ${templateList}
 
 Rules:
 - Pick the template whose type and issuer best match the evidence description.
-- If the evidence mentions טופס 106 → T201 (client) or T202 (spouse).
-- If the evidence mentions טופס 867 or ניירות ערך → T601.
-- If the evidence mentions דוח שנתי מקוצר / אישור שנתי / הפקדות from an insurance company → T501.
-- If the evidence mentions משיכה / פדיון from an insurance company → T401.
-- You MUST pick a template — do not return null.`,
+- You MUST pick a template from the list above — do not return anything else.`,
     messages: [{ role: 'user', content: `Document evidence: ${evidence}\nIssuer: ${issuerName || 'unknown'}\nFilename: ${attachmentName}` }],
-    tools: [RECOVERY_TOOL],
+    tools: [scopedTool],
     tool_choice: { type: 'tool', name: 'recover_template' },
   };
 
