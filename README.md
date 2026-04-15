@@ -19,12 +19,12 @@
 
 Replaces a fully manual tax document collection process with end-to-end automation:
 
-1. **Questionnaires** — Bulk-send dynamic Tally questionnaires to clients. Follow-up questions adapt based on answers.
-2. **Document Generation** — Auto-generates each client's required document list from questionnaire answers (SSOT module).
-3. **Inbound Processing** — AI classifies emailed documents, matches them to requirements, files to OneDrive, updates status.
-4. **Automated Reminders** — Monthly follow-ups for missing questionnaires and incomplete documents.
-5. **Admin Dashboard** — Real-time overview of all clients, stages, AI review queue, reminders, and messaging.
-6. **Client Portal** — Bilingual (Hebrew/English) portal where clients view their document status and upload files.
+1. **Questionnaires** - Bulk-send dynamic Tally questionnaires to clients. Follow-up questions adapt based on answers.
+2. **Document Generation** - Auto-generates each client's required document list from questionnaire answers (SSOT module).
+3. **Inbound Processing** - AI classifies emailed documents, matches them to requirements, files to OneDrive, updates status.
+4. **Automated Reminders** - Monthly follow-ups for missing questionnaires and incomplete documents.
+5. **Admin Dashboard** - Real-time overview of all clients, stages, AI review queue, reminders, and messaging.
+6. **Client Portal** - Bilingual (Hebrew/English) portal where clients view their document status and upload files.
 
 ## Tech Stack
 
@@ -74,11 +74,11 @@ Replaces a fully manual tax document collection process with end-to-end automati
 
 ## Key Concepts
 
-**SSOT (Single Source of Truth)** — Document names, titles, and wording come from one place. What the office sees = what the client receives = what the admin panel shows. No divergence.
+**SSOT (Single Source of Truth)** - Document names, titles, and wording come from one place. What the office sees = what the client receives = what the admin panel shows. No divergence.
 
-**8-Stage Pipeline** — Each client progresses through: Send Questionnaire > Waiting for Answers > Pending Approval > Collecting Docs > Review > Moshe Review > Before Signing > Completed.
+**8-Stage Pipeline** - Each client progresses through: Send Questionnaire > Waiting for Answers > Pending Approval > Collecting Docs > Review > Moshe Review > Before Signing > Completed.
 
-**Bilingual** — All client-facing surfaces support Hebrew and English. Hebrew-first for Hebrew speakers, bilingual for English speakers.
+**Bilingual** - All client-facing surfaces support Hebrew and English. Hebrew-first for Hebrew speakers, bilingual for English speakers.
 
 ## Development
 
@@ -91,7 +91,7 @@ npm install
 npx wrangler dev              # Local dev server on :8787
 
 # Frontend (static files)
-# Served via GitHub Pages — just push to main
+# Served via GitHub Pages - just push to main
 # For local dev, use any static server:
 npx serve frontend
 ```
