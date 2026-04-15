@@ -3089,9 +3089,7 @@ function renderClientNotes() {
             const reply = replyMap[entry.id];
             let replyHtml = '';
             if (reply) {
-                const replyDate = (reply.date || '').length > 10
-                    ? new Date(reply.date).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })
-                    : (reply.date || '').replace(/^(\d{4})-(\d{2})-(\d{2})/, '$3-$2-$1');
+                const replyDate = (reply.date || '').slice(0, 10).replace(/^(\d{4})-(\d{2})-(\d{2})/, '$3-$2-$1');
                 replyHtml = `<div class="cn-office-reply">
                     <div class="cn-reply-label"><i data-lucide="corner-down-left" class="icon-xs"></i> תגובת המשרד</div>
                     <div class="cn-reply-text">${escapeHtml(reply.summary)}</div>
