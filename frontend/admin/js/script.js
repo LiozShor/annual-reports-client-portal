@@ -6940,7 +6940,7 @@ function bulkSendQuestionnaires() {
 
 function viewClient(reportId) {
     // Admin token is already in localStorage (same origin) — view-documents.html reads it directly
-    window.open(`https://liozshor.github.io/annual-reports-client-portal/view-documents.html?report_id=${encodeURIComponent(reportId)}`, '_blank');
+    window.open(`https://docs.moshe-atsits.com/view-documents.html?report_id=${encodeURIComponent(reportId)}`, '_blank');
 }
 
 function viewClientDocs(reportId, newTab = false) {
