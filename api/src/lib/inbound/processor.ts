@@ -255,6 +255,7 @@ async function summarizeAndSaveNote(
   metadata: EmailMetadata,
   report: ActiveReport,
   existingClientNotes: string,
+  clientEmail: string,
 ): Promise<void> {
   try {
     const subject = (metadata.subject || '').trim();
@@ -350,7 +351,7 @@ Rules:
       summary: truncateSummary(summary),
       source: 'email',
       message_id: msgId,
-      sender_email: metadata.senderEmail,
+      sender_email: clientEmail,
       raw_snippet: (cleanText || cleanBody).substring(0, 1000),
     };
     notes.push(entry);
@@ -704,7 +705,7 @@ export async function processInboundEmail(
     const existingClientNotes = reportRecord.fields.client_notes ?? '[]';
 
     // 12. LLM summarize email → save client note (always, any stage)
-    const notePromise = summarizeAndSaveNote(pCtx, metadata, primaryReport, existingClientNotes).catch((err) => {
+    const notePromise = summarizeAndSaveNote(pCtx, metadata, primaryReport, existingClientNotes, clientMatch.email).catch((err) => {
       console.error('[inbound] Note save failed:', (err as Error).message);
     });
 
