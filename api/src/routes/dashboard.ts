@@ -213,12 +213,16 @@ dashboard.get('/admin-recent-messages', async (c) => {
         }
       }
 
-      // Sort by date descending (ISO strings sort lexicographically), return top 10
-      allMessages.sort((a, b) =>
-        String(b.date).localeCompare(String(a.date))
-      );
+      // Sort by date descending; tiebreaker: numeric timestamp from note id (cn_{Date.now()})
+      allMessages.sort((a, b) => {
+        const cmp = String(b.date).localeCompare(String(a.date));
+        if (cmp !== 0) return cmp;
+        const tsA = parseInt(String(a.id).replace('cn_', ''), 10) || 0;
+        const tsB = parseInt(String(b.id).replace('cn_', ''), 10) || 0;
+        return tsB - tsA;
+      });
 
-      return allMessages.slice(0, 10);
+      return allMessages;
     }
   );
 

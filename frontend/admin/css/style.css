@@ -2945,6 +2945,19 @@ tr:hover .client-view-link {
     margin: 0 auto var(--sp-2);
 }
 
+/* DL-271: Load more link */
+.msg-load-more {
+    text-align: center;
+    padding: var(--sp-3);
+    color: var(--primary);
+    cursor: pointer;
+    font-size: var(--text-sm);
+    border-top: 1px solid var(--gray-100);
+}
+.msg-load-more:hover {
+    text-decoration: underline;
+}
+
 /* ==================== AI REVIEW SPLIT VIEW ==================== */
 
 .ai-review-split {

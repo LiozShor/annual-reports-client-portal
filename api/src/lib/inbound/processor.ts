@@ -346,7 +346,7 @@ Rules:
     // Create note entry (matches n8n Build Client Note format)
     const entry = {
       id: `cn_${Date.now()}`,
-      date: new Date().toISOString().split('T')[0],
+      date: new Date().toISOString(),
       summary: truncateSummary(summary),
       source: 'email',
       message_id: msgId,

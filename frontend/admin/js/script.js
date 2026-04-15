@@ -745,6 +745,8 @@ async function loadDashboard(silent = false) {
 
 // DL-261: Recent client messages side panel
 let recentMessagesLoaded = false;
+let _allMessages = []; // DL-271: full message list for client-side pagination
+let _messagesVisible = 10; // DL-271: how many to show
 
 function formatRelativeTime(dateStr) {
     if (!dateStr) return '';
@@ -782,63 +784,83 @@ async function loadRecentMessages() {
         const data = await response.json();
         if (!data.ok) return;
 
-        const messages = data.messages || [];
+        _allMessages = data.messages || [];
+        _messagesVisible = 10;
         recentMessagesLoaded = true;
 
-        // Update badge count
-        const badge = document.getElementById('recentMsgCount');
-        if (badge) {
-            if (messages.length > 0) {
-                badge.textContent = messages.length;
-                badge.style.display = '';
-            } else {
-                badge.style.display = 'none';
-            }
-        }
-
-        if (messages.length === 0) {
-            container.innerHTML = `
-                <div class="msg-empty">
-                    <i data-lucide="inbox" class="icon-2xl"></i>
-                    <p>אין הודעות אחרונות</p>
-                </div>`;
-            safeCreateIcons(container);
-            return;
-        }
-
-        container.innerHTML = messages.map(m => {
-            const navParam = m.client_id ? `client_id=${encodeURIComponent(m.client_id)}` : `report_id=${encodeURIComponent(m.report_id)}`;
-            const displayText = m.raw_snippet || m.summary || '';
-            const noteId = escapeHtml(m.id || '');
-            const reportId = escapeHtml(m.report_id || '');
-            const replyHtml = m.reply
-                ? `<div class="msg-office-reply">
-                    <div class="msg-reply-label"><i data-lucide="corner-down-left" class="icon-xs"></i> תגובת המשרד</div>
-                    <div class="msg-reply-text">${escapeHtml(m.reply.summary)}</div>
-                    <div class="msg-reply-date">${formatRelativeTime(m.reply.date)}</div>
-                  </div>`
-                : '';
-            return `<div class="msg-row" data-note-id="${noteId}">
-                <div class="msg-content" onclick="this.parentElement.classList.toggle('expanded')">
-                    <div class="msg-meta">
-                        <span class="msg-client">${escapeHtml(m.client_name)}</span>
-                        <span class="msg-date">${formatRelativeTime(m.date)}</span>
-                    </div>
-                    <div class="msg-summary">"${escapeHtml(displayText)}"</div>
-                    ${replyHtml}
-                </div>
-                <div class="msg-actions">
-                    <button class="msg-action-btn" title="השב ללקוח" onclick="event.stopPropagation(); showReplyInput('${noteId}', '${reportId}')"><i data-lucide="message-square" class="icon-xs"></i></button>
-                    <button class="msg-action-btn" title="פתח בניהול מסמכים" onclick="window.open('../document-manager.html?${navParam}', '_blank')"><i data-lucide="folder-open" class="icon-xs"></i></button>
-                    <button class="msg-action-btn msg-action-btn--danger" title="מחק/הסתר הודעה" onclick="showMessageDeleteDialog('${noteId}', '${reportId}')"><i data-lucide="trash-2" class="icon-sm"></i></button>
-                </div>
-            </div>`;
-        }).join('');
-        safeCreateIcons(container);
+        renderMessages();
     } catch (error) {
         console.error('Recent messages load failed', error);
-        container.innerHTML = '';
+        const container = document.getElementById('recentMessagesContainer');
+        if (container) container.innerHTML = '';
     }
+}
+
+// DL-271: Render visible slice of messages with "load more" link
+function renderMessages() {
+    const container = document.getElementById('recentMessagesContainer');
+    if (!container) return;
+
+    // Update badge with total count
+    const badge = document.getElementById('recentMsgCount');
+    if (badge) {
+        if (_allMessages.length > 0) {
+            badge.textContent = _allMessages.length;
+            badge.style.display = '';
+        } else {
+            badge.style.display = 'none';
+        }
+    }
+
+    if (_allMessages.length === 0) {
+        container.innerHTML = `
+            <div class="msg-empty">
+                <i data-lucide="inbox" class="icon-2xl"></i>
+                <p>אין הודעות אחרונות</p>
+            </div>`;
+        safeCreateIcons(container);
+        return;
+    }
+
+    const visible = _allMessages.slice(0, _messagesVisible);
+    const hasMore = _messagesVisible < _allMessages.length;
+    const remaining = _allMessages.length - _messagesVisible;
+
+    const rowsHtml = visible.map(m => {
+        const navParam = m.client_id ? `client_id=${encodeURIComponent(m.client_id)}` : `report_id=${encodeURIComponent(m.report_id)}`;
+        const displayText = m.raw_snippet || m.summary || '';
+        const noteId = escapeHtml(m.id || '');
+        const reportId = escapeHtml(m.report_id || '');
+        const replyHtml = m.reply
+            ? `<div class="msg-office-reply">
+                <div class="msg-reply-label"><i data-lucide="corner-down-left" class="icon-xs"></i> תגובת המשרד</div>
+                <div class="msg-reply-text">${escapeHtml(m.reply.summary)}</div>
+                <div class="msg-reply-date">${formatRelativeTime(m.reply.date)}</div>
+              </div>`
+            : '';
+        return `<div class="msg-row" data-note-id="${noteId}">
+            <div class="msg-content" onclick="this.parentElement.classList.toggle('expanded')">
+                <div class="msg-meta">
+                    <span class="msg-client">${escapeHtml(m.client_name)}</span>
+                    <span class="msg-date">${formatRelativeTime(m.date)}</span>
+                </div>
+                <div class="msg-summary">"${escapeHtml(displayText)}"</div>
+                ${replyHtml}
+            </div>
+            <div class="msg-actions">
+                <button class="msg-action-btn" title="השב ללקוח" onclick="event.stopPropagation(); showReplyInput('${noteId}', '${reportId}')"><i data-lucide="message-square" class="icon-xs"></i></button>
+                <button class="msg-action-btn" title="פתח בניהול מסמכים" onclick="window.open('../document-manager.html?${navParam}', '_blank')"><i data-lucide="folder-open" class="icon-xs"></i></button>
+                <button class="msg-action-btn msg-action-btn--danger" title="מחק/הסתר הודעה" onclick="showMessageDeleteDialog('${noteId}', '${reportId}')"><i data-lucide="trash-2" class="icon-sm"></i></button>
+            </div>
+        </div>`;
+    }).join('');
+
+    const loadMoreHtml = hasMore
+        ? `<div class="msg-load-more" onclick="_messagesVisible += 10; renderMessages();">הצג עוד ${Math.min(remaining, 10)} מתוך ${remaining}...</div>`
+        : '';
+
+    container.innerHTML = rowsHtml + loadMoreHtml;
+    safeCreateIcons(container);
 }
 
 // DL-263: Inline action buttons replacing message content
@@ -887,30 +909,15 @@ async function deleteRecentMessage(noteId, reportId, mode) {
         const result = await response.json();
         if (!result.ok) throw new Error(result.error || 'Failed');
 
-        // Remove row from DOM
+        // DL-271: Remove from in-memory array and re-render
+        _allMessages = _allMessages.filter(m => m.id !== noteId);
         const row = document.querySelector(`.msg-row[data-note-id="${noteId}"]`);
         if (row) {
             row.style.transition = 'opacity 0.3s, max-height 0.3s';
             row.style.opacity = '0';
             row.style.maxHeight = '0';
             row.style.overflow = 'hidden';
-            setTimeout(() => {
-                row.remove();
-                // Update badge count
-                const remaining = document.querySelectorAll('.msg-row').length;
-                const badge = document.getElementById('recentMsgCount');
-                if (badge) {
-                    if (remaining > 0) { badge.textContent = remaining; badge.style.display = ''; }
-                    else { badge.style.display = 'none'; }
-                }
-                if (remaining === 0) {
-                    const container = document.getElementById('recentMessagesContainer');
-                    if (container) {
-                        container.innerHTML = `<div class="msg-empty"><i data-lucide="inbox" class="icon-2xl"></i><p>אין הודעות אחרונות</p></div>`;
-                        safeCreateIcons(container);
-                    }
-                }
-            }, 300);
+            setTimeout(() => renderMessages(), 300);
         }
 
         showAIToast(mode === 'permanent' ? 'ההודעה נמחקה לצמיתות' : 'ההודעה הוסתרה מהדשבורד', 'success');

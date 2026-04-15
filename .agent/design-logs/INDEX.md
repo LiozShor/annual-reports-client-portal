@@ -2,7 +2,7 @@
 
 Active and pending logs. For completed history, see [ARCHIVE-INDEX.md](ARCHIVE-INDEX.md).
 
-**Total logs:** 180 | **Active:** 82 | **Archived:** 98
+**Total logs:** 182 | **Active:** 84 | **Archived:** 98
 
 ## Folder Structure
 
@@ -22,6 +22,7 @@ Active and pending logs. For completed history, see [ARCHIVE-INDEX.md](ARCHIVE-I
 | # | File | Status | Summary |
 |---|------|--------|---------|
 | 271 | [271-reminder-06am-and-pending-filter-bug.md](reminders/271-reminder-06am-and-pending-filter-bug.md) | IMPLEMENTED — NEED TESTING | Fix reminder 06 AM timing (cron→08:00), pending classification filter bypass, monthly reset credential |
+| 272 | [272-dashboard-messages-load-more.md](admin-ui/272-dashboard-messages-load-more.md) | IMPLEMENTED — NEED TESTING | Dashboard messages: "load more" client-side pagination + same-day sort fix |
 | 270 | [270-editable-contract-period-dates.md](ai-review/270-editable-contract-period-dates.md) | COMPLETED | Editable contract period dates on AI review card for T901/T902 (DL-269 refinement) |
 | 266 | [266-reply-to-client-messages.md](admin-ui/266-reply-to-client-messages.md) | IMPLEMENTED — NEED TESTING | Reply to client messages from dashboard panel — branded email + off-hours queue |
 | 269 | [269-partial-rental-contract-detection.md](ai-review/269-partial-rental-contract-detection.md) | COMPLETED | AI detects partial rental contracts (T901/T902), banner on review card to request missing period |

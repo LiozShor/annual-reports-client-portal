@@ -1,10 +1,33 @@
 # Annual Reports CRM - Current Status
 
-**Last Updated:** 2026-04-15 (Session 11 — Fix negative days in review queue)
+**Last Updated:** 2026-04-15 (Session 11 — DL-271 dashboard messages load more + sort fix)
 
 ---
 
 ## Session Summary (2026-04-15 — Part 11)
+
+### DL-272: Dashboard Messages — Load More + Same-Day Sort Fix [IMPLEMENTED — NEED DEPLOY]
+- **Load more:** Client-side pagination — API now returns all messages (no `slice(0, 10)` cap), frontend shows 10 at a time with "הצג עוד..." link
+- **Sort fix:** Inbound processor (`processor.ts:349`) was stripping time from dates (`.split('T')[0]`), causing same-day messages to appear in random order. Now stores full ISO timestamp. Added tiebreaker sort using note ID timestamp for existing date-only notes.
+- **State sync:** Delete/hide now removes from in-memory `_allMessages` array and re-renders (not just DOM manipulation)
+- **Files changed:** `api/src/lib/inbound/processor.ts`, `api/src/routes/dashboard.ts`, `frontend/admin/js/script.js`, `frontend/admin/css/style.css`
+- **Blocked:** Workers deploy failed due to network issue — need to run `npx wrangler deploy` from `api/` directory
+- Design log: `.agent/design-logs/admin-ui/272-dashboard-messages-load-more.md`
+
+**Test TODO (DL-272):**
+- [ ] Deploy Workers: `cd api && npx wrangler deploy`
+- [ ] Dashboard shows first 10 messages, "הצג עוד..." link visible
+- [ ] Click load more → 10 more messages appear, link updates count
+- [ ] Link disappears when all messages shown
+- [ ] Badge shows total count
+- [ ] Same-day messages sorted newest-first
+- [ ] Delete/hide still works after load more
+- [ ] Reply still works after load more
+- [ ] Mobile layout not broken
+
+---
+
+## Session Summary (2026-04-15 — Part 11b)
 
 ### Fix Negative/Wrong Days in מוכנים להכנה Tab [COMPLETED]
 - **Bug 1:** `(-1) ימים` showed when `docs_completed_at` was slightly ahead of browser time (timezone offset)
@@ -12,11 +35,10 @@
 - **Bug 2:** Yesterday's date showed "היום" instead of "יום אחד" — timestamp diff < 24h but different calendar day
 - **Fix 2:** Compare midnight-to-midnight dates instead of raw timestamps (both desktop table + mobile cards)
 - File changed: `frontend/admin/js/script.js` (lines 2587-2589, 2634-2636)
-- Commits: `5405be8`, `8355dd7` — merged to main
 
 ### Skill & Memory Updates
 - `/design-log` Phase 0: added stale worktree cleanup step (`git worktree list`)
-- Memory: `feedback_worktree_cleanup.md` — ExitWorktree won't work for CLI `--worktree`; remove worktree before deleting branch
+- Memory: `feedback_worktree_cleanup.md` — ExitWorktree won't work for CLI `--worktree`
 
 ---
 
