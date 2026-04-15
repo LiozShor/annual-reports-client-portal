@@ -40,6 +40,7 @@ interface ReportFields {
   client?: string[];
   notes?: string;
   client_notes?: string;
+  client_email?: string | string[];
   filing_type?: string;
 }
 
@@ -703,9 +704,12 @@ export async function processInboundEmail(
     // 11b. Get existing client_notes from primary report for dedup
     const reportRecord = await airtable.getRecord<ReportFields>(TABLES.REPORTS, primaryReport.reportRecordId);
     const existingClientNotes = reportRecord.fields.client_notes ?? '[]';
+    const reportClientEmail = Array.isArray(reportRecord.fields.client_email)
+      ? (reportRecord.fields.client_email[0] ?? '').toLowerCase()
+      : (reportRecord.fields.client_email ?? '').toLowerCase();
 
     // 12. LLM summarize email → save client note (always, any stage)
-    const notePromise = summarizeAndSaveNote(pCtx, metadata, primaryReport, existingClientNotes, clientMatch.email).catch((err) => {
+    const notePromise = summarizeAndSaveNote(pCtx, metadata, primaryReport, existingClientNotes, reportClientEmail || clientMatch.email).catch((err) => {
       console.error('[inbound] Note save failed:', (err as Error).message);
     });
 
