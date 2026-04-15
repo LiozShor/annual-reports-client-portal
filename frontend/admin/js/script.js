@@ -169,7 +169,12 @@ async function login() {
     const password = document.getElementById('passwordInput').value;
     if (!password) return;
 
-    showLoading('מאמת...');
+    // DL-276: Inline loading on login button instead of heavy overlay
+    const btn = document.querySelector('.login-box .btn-primary');
+    const btnOriginal = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<div class="loader-dots" style="justify-content:center"><div class="loader-dot"></div><div class="loader-dot"></div><div class="loader-dot"></div></div>';
+    document.getElementById('loginError').style.display = 'none';
 
     try {
 
@@ -181,8 +186,6 @@ async function login() {
 
         const data = await response.json();
 
-        hideLoading();
-
         if (data.ok && data.token) {
             authToken = data.token;
             localStorage.setItem(ADMIN_TOKEN_KEY, authToken);
@@ -191,10 +194,13 @@ async function login() {
             _showAppUI();
             loadDashboard();
         } else {
+            btn.disabled = false;
+            btn.innerHTML = btnOriginal;
             document.getElementById('loginError').style.display = 'block';
         }
     } catch (error) {
-        hideLoading();
+        btn.disabled = false;
+        btn.innerHTML = btnOriginal;
         document.getElementById('loginError').textContent = 'שגיאת התחברות';
         document.getElementById('loginError').style.display = 'block';
     }
