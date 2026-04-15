@@ -1,17 +1,17 @@
 /**
  * Archive extraction for inbound email attachments (DL-260).
  *
- * ZIP: lightweight extraction via existing text-extractor (Web APIs only).
- * RAR/7z: extraction via archive-wasm (libarchive WASM, lazy-loaded).
+ * All formats (ZIP/RAR/7z) use archive-wasm (libarchive WASM, lazy-loaded).
+ * The lightweight ZIP parser in text-extractor.ts failed on ZIPs with data
+ * descriptors or non-deflate compression (common in tax software output).
  *
  * Security guards: max file count, max decompressed size, path traversal,
  * no recursive extraction of nested archives.
  */
 
 import type { AttachmentInfo } from './types';
-import { ARCHIVE_EXTENSIONS, ZIP_EXTENSIONS } from './types';
+import { ARCHIVE_EXTENSIONS } from './types';
 import { getFileExtension, computeSha256 } from './attachment-utils';
-import { extractFilesFromZip } from './text-extractor';
 
 // ── Limits (Workers 128MB memory — raw archive + decompressed must fit) ──
 
@@ -82,43 +82,10 @@ function entryBasename(entryPath: string): string {
   return parts[parts.length - 1] || entryPath;
 }
 
-// ── ZIP extraction (lightweight, Web APIs) ──
-
-async function extractZip(
-  data: Uint8Array,
-  archiveName: string,
-  log: ArchiveLogEntry[],
-): Promise<Array<{ name: string; data: Uint8Array }>> {
-  const raw = await extractFilesFromZip(data, '');
-  const safe: Array<{ name: string; data: Uint8Array }> = [];
-  let totalBytes = 0;
-
-  for (const entry of raw) {
-    if (!isSafePath(entry.name)) {
-      log.push({ archive: archiveName, action: 'skipped_traversal', file: entry.name });
-      continue;
-    }
-    if (entry.data.byteLength > MAX_SINGLE_FILE_BYTES) {
-      log.push({ archive: archiveName, action: 'skipped_oversize', file: entry.name, reason: `${(entry.data.byteLength / 1024 / 1024).toFixed(1)}MB > ${MAX_SINGLE_FILE_BYTES / 1024 / 1024}MB limit` });
-      continue;
-    }
-    totalBytes += entry.data.byteLength;
-    if (totalBytes > MAX_TOTAL_DECOMPRESSED_BYTES) {
-      log.push({ archive: archiveName, action: 'limit_reached', reason: `total decompressed exceeds ${MAX_TOTAL_DECOMPRESSED_BYTES / 1024 / 1024}MB` });
-      break;
-    }
-    if (safe.length >= MAX_FILES_PER_ARCHIVE) {
-      log.push({ archive: archiveName, action: 'limit_reached', reason: `>${MAX_FILES_PER_ARCHIVE} files` });
-      break;
-    }
-    // Nested archives pass through as regular files (no recursive extraction)
-    safe.push(entry);
-  }
-
-  return safe;
-}
-
-// ── RAR/7z extraction (archive-wasm, lazy-loaded with env trick) ──
+// ── Archive extraction via archive-wasm (libarchive WASM, lazy-loaded) ──
+// All formats (ZIP/RAR/7z) go through libarchive for robust handling of
+// data descriptors, all compression methods, ZIP64, and Unicode filenames.
+// The lightweight ZIP parser in text-extractor.ts is kept for DOCX/XLSX only.
 
 // Cached extract function — module is only loaded once
 let _cachedExtract: ((data: Uint8Array) => Iterable<{ type: string | null; path: string | null; data: ArrayBuffer | null }>) | null = null;
@@ -289,12 +256,7 @@ export async function expandArchiveAttachments(
       let extracted: Array<{ name: string; data: Uint8Array }>;
       try {
         const data = new Uint8Array(att.content);
-
-        if (ZIP_EXTENSIONS.has(ext)) {
-          extracted = await extractZip(data, att.name, result.log);
-        } else {
-          extracted = await extractWithWasm(data, att.name, result.log);
-        }
+        extracted = await extractWithWasm(data, att.name, result.log);
       } catch (err) {
         console.error(`[archive] Extraction failed for "${att.name}":`, (err as Error).message);
         result.log.push({ archive: att.name, action: 'extract_failed', reason: (err as Error).message });
