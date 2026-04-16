@@ -22,6 +22,7 @@ const ENDPOINTS = {
     ADMIN_PENDING:             `${CF_BASE}/admin-pending`,
     ADMIN_RECENT_MESSAGES:     `${CF_BASE}/admin-recent-messages`,
     ADMIN_SEND_COMMENT:        `${CF_BASE}/admin-send-comment`,
+    ADMIN_COMMENT_PREVIEW:     `${CF_BASE}/admin-comment-preview`,
     ADMIN_QUEUED_EMAILS:       `${CF_BASE}/admin-queued-emails`,
 
     // --- Client management (migrated to Cloudflare Workers — DL-171) ---

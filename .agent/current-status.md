@@ -21,6 +21,8 @@
 - **Branch:** `DL-280-root-fix`
 
 **Test checklist (DL-280 v2) — see Active TODOs below.**
+**Last Updated:** 2026-04-16 (Session — DL-288 Fix stale-flash of queued-subtitle on dashboard load — IMPLEMENTED, NEED TESTING)
+**Last Updated:** 2026-04-16 (Session — DL-288 Recent messages: comment threads + mark-as-handled + Gmail-style expand-compose with live preview — IMPLEMENTED, NEED TESTING)
 
 ---
 
@@ -36,6 +38,49 @@
 **Test checklist (DL-288) — see Active TODOs below.**
 
 **Session note:** Originally planned to work in worktree `claude-session-20260416-145349`, but its git admin directory was pruned mid-session by a concurrent cleanup process. Branch work moved to main repo as `DL-288-queued-subtitle-no-stale-flash`.
+### DL-288: Recent Messages — Comment Threads + Mark-as-Handled + Compose Expand & Preview [IMPLEMENTED — NEED TESTING]
+
+- **Problem:** Three frictions in the dashboard side panel "הודעות אחרונות מלקוחות": (1) `replyMap.set()` in `dashboard.ts:198` overwrote prior office_reply for the same `reply_to`, so 2+ replies on a single client message collapsed to the last one; (2) trash icon framed the action as "delete clutter" instead of "I handled this" — wrong psychology for an inbox-style panel; (3) inline 2-row reply textarea was cramped, and the office sends real branded HTML emails without seeing how they'd look.
+- **Fix:**
+  - **Backend (`dashboard.ts`):** `repliesByOriginal: Map<string, Array<...>>` pushes instead of overwriting; sorted oldest-first per thread. New `POST /admin-comment-preview` route that calls existing `buildCommentEmailHtml` and returns rendered HTML + subject. No KV cache (debounced client-side).
+  - **Frontend (`script.js`):** `renderMessages` loops `m.replies` array (numbered "תגובת המשרד #1/#2/..." when 2+); trash button replaced with green ✓ (`msg-action-btn--success` + `lucide="check"`); `markMessageHandled` calls existing `delete-client-note { mode:'hide' }` directly (no dialog); after successful reply, `showPostReplyPrompt` **appends** a strip below row content (NOT replace) with "סמן כטופל / השאר פתוח" + 8s auto-dismiss; `expandReplyCompose` opens `.ai-modal-overlay > .ai-modal-panel.msg-compose-modal` with 2-pane grid (textarea | iframe preview) and 400ms debounced preview fetch.
+  - **CSS (`style.css`):** New `.msg-action-btn--success`, `.msg-thread-replies` (RTL connector via `border-right`), `.msg-reply-expand-btn`, `.msg-post-reply-prompt`, `.ai-modal-panel.msg-compose-modal` + grid + iframe + mobile @900px stacked.
+  - **Endpoints (`endpoints.js`):** `ADMIN_COMMENT_PREVIEW` constant.
+- **Process:** Subagent-driven development — Wave 1 dispatched 4 implementers in parallel (API/CSS/ENDPOINTS/JS) on disjoint files. Spec review (4×) → quality review (4×). User refinement mid-flow ("the mark as handled prompt will be inline") → re-dispatched JS for append-instead-of-replace. Quality review caught a memory leak (Escape listener only removed via Escape key) + an RTL bug (`right` vs `inset-inline-end`) — both fixed inline.
+- **Design log:** `.agent/design-logs/admin-ui/288-recent-messages-checkmark-thread.md`
+
+**Files changed:**
+```
+api/src/routes/dashboard.ts                # replies array + new /admin-comment-preview
+frontend/shared/endpoints.js               # +ADMIN_COMMENT_PREVIEW
+frontend/admin/css/style.css               # +6 new rule blocks (DL-288 markers)
+frontend/admin/js/script.js                # thread render, check btn, prompt, modal
+.agent/design-logs/admin-ui/288-recent-messages-checkmark-thread.md (new)
+.agent/design-logs/INDEX.md                # +DL-288 row
+.agent/current-status.md                   # this block
+```
+
+**Test Plan — DL-288 (NEED TESTING):**
+N. **Test DL-288: Recent Messages Threads + Checkmark + Expand-Compose** — verify panel UX changes end-to-end on the live admin dashboard
+   - [ ] Send 3 office replies on the same client message → all 3 appear stacked under the original, oldest-first, with thread connector line
+   - [ ] Click ✓ button on a row → row fades out (300ms) + toast "סומן כטופל ✓"
+   - [ ] Refresh page → handled message stays hidden (server `hidden_from_dashboard` flag persisted)
+   - [ ] doc-manager timeline for the same client still shows the hidden message (no regression — DL-263 invariant)
+   - [ ] After sending a reply: inline strip appears appended below row content (original message + new reply still visible) with "סמן כטופל / השאר פתוח" — auto-dismisses at 8s
+   - [ ] Click "סמן כטופל" in post-reply strip → message hides
+   - [ ] Click "השאר פתוח" or wait 8s → panel reloads, new reply visible in thread
+   - [ ] Compact reply box: expand button visible top-right (RTL: visually on the left edge)
+   - [ ] Click expand → modal opens, textarea preserves typed text
+   - [ ] Type in expanded textarea → preview updates within ~400ms, shows logo, blue header bar, "שלום {name}", comment body, contact block, footer
+   - [ ] Empty textarea → preview shows "הקלד הודעה לתצוגה מקדימה" placeholder, not stale HTML
+   - [ ] Click collapse → modal closes, compact textarea has the typed text
+   - [ ] Click send from expanded mode → email sent (or queued off-hours), same pipeline as compact, post-reply prompt appears
+   - [ ] Mobile (<900px): expand modal stacks textarea above preview
+   - [ ] Escape key + overlay click in modal = collapse (preserves text), NOT cancel
+   - [ ] Open + close expand modal 5+ times → no Escape-listener leak (no duplicate Escape behaviour)
+   - [ ] No regression: search bar, load-more, click-to-doc-manager all still work
+   - [ ] No regression: trash icon fully gone — no orphan styles, no console errors
+   Design log: `.agent/design-logs/admin-ui/288-recent-messages-checkmark-thread.md`
 
 ---
 
@@ -1094,6 +1139,13 @@ _(empty — no P1 items)_
 - [ ] Chat widget audit: appears on mobile + desktop after auth, hides on bfcache restore with expired token (migrated from sibling-combinator to `.visible` class)
 - [ ] Real iOS Safari + Android Chrome — verify safe-area inset on notched devices, no flicker during login screen render
 Design log: `.agent/design-logs/admin-ui/280-fix-mobile-bottom-nav-hidden.md`
+**Test DL-290: Reminder "ממתין לסיווג" Card = AI Review Badge** — verify the two surfaces now show matching numbers
+- [ ] Reload admin → note AI Review tab badge number
+- [ ] Open Reminder tab → "ממתין לסיווג" card is within ±1–2 of the badge (small residual allowed for late-stage clients outside reminder scope)
+- [ ] Dual filing-type client (AR + CS both Collecting_Docs with pending) → counts ONCE toward card (previously twice)
+- [ ] Click the "ממתין לסיווג" card → filter still works (pre-existing: surfaces CD-scoped rows only — minor known divergence vs. card count, intentional)
+- [ ] Regression: scheduled / due_this_week / suppressed card filters still work identically
+Design log: `.agent/design-logs/admin-ui/290-pending-classification-count-mismatch.md`
 
 **Test DL-288: Queued-Subtitle Stale Flash** — verify dashboard load has no `(N בתור לשליחה)` flash
 - [ ] Hard-reload `/admin` after 08:00 when no emails are queued → stage-3 card renders clean, no subtitle flash at any point

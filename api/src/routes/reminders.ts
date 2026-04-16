@@ -30,7 +30,7 @@ function buildReminderFilter(filingType?: string): string {
 }
 
 const REMINDER_FIELDS = [
-  'client_name', 'client_email', 'stage', 'year',
+  'client_name', 'client_id', 'client_email', 'stage', 'year',
   'reminder_count', 'reminder_max', 'reminder_next_date',
   'reminder_suppress', 'last_reminder_sent_at', 'reminder_history',
   'docs_total', 'docs_received_count', 'docs_missing_count',
@@ -40,6 +40,7 @@ const REMINDER_FIELDS = [
 
 interface ReminderItem {
   report_id: string;
+  client_id: string;
   name: string;
   email: string;
   stage: string;
@@ -89,6 +90,7 @@ function buildReminderResponse(
 
     return {
       report_id: r.id,
+      client_id: (Array.isArray(f.client_id) ? f.client_id[0] : f.client_id) as string || '',
       name: (Array.isArray(f.client_name) ? f.client_name[0] : f.client_name) as string || '',
       email: (f.client_email as string) || '',
       stage: (f.stage as string) || '',
@@ -114,7 +116,12 @@ function buildReminderResponse(
     due_this_week: mapped.filter(r => r.reminder_next_date && r.reminder_next_date <= weekFromNow && !r.reminder_suppress && !r._exhausted).length,
     suppressed: mapped.filter(r => !!r.reminder_suppress).length,
     exhausted: mapped.filter(r => r._exhausted).length,
-    pending_review: mapped.filter(r => r.pending_count > 0 && r.stage === 'Collecting_Docs').length,
+    pending_review: new Set(
+      mapped
+        .filter(r => r.pending_count > 0)
+        .map(r => r.client_id)
+        .filter(Boolean)
+    ).size,
   };
 
   if (statsOnly) {

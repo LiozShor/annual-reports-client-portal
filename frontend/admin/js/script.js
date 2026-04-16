@@ -915,12 +915,14 @@ function renderMessages() {
         const displayText = m.raw_snippet || m.summary || '';
         const noteId = escapeHtml(m.id || '');
         const reportId = escapeHtml(m.report_id || '');
-        const replyHtml = m.reply
-            ? `<div class="msg-office-reply">
-                <div class="msg-reply-label"><i data-lucide="corner-down-left" class="icon-xs"></i> תגובת המשרד</div>
-                <div class="msg-reply-text">${escapeHtml(m.reply.summary)}</div>
-                <div class="msg-reply-date">${formatRelativeTime(m.reply.date)}</div>
-              </div>`
+        const replies = Array.isArray(m.replies) ? m.replies : [];
+        const repliesHtml = replies.length > 0
+            ? `<div class="msg-thread-replies">${replies.map((r, i) => `
+                <div class="msg-office-reply">
+                    <div class="msg-reply-label"><i data-lucide="corner-down-left" class="icon-xs"></i> ${replies.length > 1 ? `תגובת המשרד #${i + 1}` : 'תגובת המשרד'}</div>
+                    <div class="msg-reply-text">${escapeHtml(r.summary)}</div>
+                    <div class="msg-reply-date">${formatRelativeTime(r.date)}</div>
+                </div>`).join('')}</div>`
             : '';
         return `<div class="msg-row" data-note-id="${noteId}">
             <div class="msg-content" onclick="this.parentElement.classList.toggle('expanded')">
@@ -929,12 +931,12 @@ function renderMessages() {
                     <span class="msg-date">${formatRelativeTime(m.date)}</span>
                 </div>
                 <div class="msg-summary">"${escapeHtml(displayText)}"</div>
-                ${replyHtml}
+                ${repliesHtml}
             </div>
             <div class="msg-actions">
                 <button class="msg-action-btn" title="השב ללקוח" onclick="event.stopPropagation(); showReplyInput('${noteId}', '${reportId}')"><i data-lucide="message-square" class="icon-xs"></i></button>
                 <button class="msg-action-btn" title="פתח בניהול מסמכים" onclick="window.open('../document-manager.html?${navParam}', '_blank')"><i data-lucide="folder-open" class="icon-xs"></i></button>
-                <button class="msg-action-btn msg-action-btn--danger" title="מחק/הסתר הודעה" onclick="showMessageDeleteDialog('${noteId}', '${reportId}')"><i data-lucide="trash-2" class="icon-sm"></i></button>
+                <button class="msg-action-btn msg-action-btn--success" title="סמן כטופל" onclick="markMessageHandled('${noteId}', '${reportId}')"><i data-lucide="check" class="icon-sm"></i></button>
             </div>
         </div>`;
     }).join('');
@@ -947,38 +949,9 @@ function renderMessages() {
     safeCreateIcons(container);
 }
 
-// DL-263: Inline action buttons replacing message content
-function showMessageDeleteDialog(noteId, reportId) {
-    const row = document.querySelector(`.msg-row[data-note-id="${noteId}"]`);
-    if (!row) return;
-
-    // Save original content for cancel restore
-    const originalHtml = row.innerHTML;
-    const originalOnclick = row.getAttribute('onclick');
-    row.removeAttribute('onclick');
-    row.style.cursor = 'default';
-
-    row.innerHTML = `
-        <div class="msg-inline-actions">
-            <button class="btn btn-sm confirm-btn-danger" data-action="permanent">
-                <i data-lucide="trash-2" class="icon-sm"></i> מחק לצמיתות
-            </button>
-            <button class="btn btn-sm btn-outline" data-action="hide">
-                <i data-lucide="eye-off" class="icon-sm"></i> הסתר מהדשבורד
-            </button>
-            <button class="btn btn-sm btn-ghost" data-action="cancel">ביטול</button>
-        </div>
-    `;
-    safeCreateIcons(row);
-
-    row.querySelector('[data-action="permanent"]').addEventListener('click', () => deleteRecentMessage(noteId, reportId, 'permanent'));
-    row.querySelector('[data-action="hide"]').addEventListener('click', () => deleteRecentMessage(noteId, reportId, 'hide'));
-    row.querySelector('[data-action="cancel"]').addEventListener('click', () => {
-        row.innerHTML = originalHtml;
-        if (originalOnclick) row.setAttribute('onclick', originalOnclick);
-        row.style.cursor = 'pointer';
-        safeCreateIcons(row);
-    });
+// DL-288: Mark a recent message as handled (soft-hide, no confirmation)
+function markMessageHandled(noteId, reportId) {
+    deleteRecentMessage(noteId, reportId, 'hide');
 }
 
 // DL-263: Delete or hide a message from the dashboard panel
@@ -1004,7 +977,7 @@ async function deleteRecentMessage(noteId, reportId, mode) {
             setTimeout(() => renderMessages(), 300);
         }
 
-        showAIToast(mode === 'permanent' ? 'ההודעה נמחקה לצמיתות' : 'ההודעה הוסתרה מהדשבורד', 'success');
+        showAIToast(mode === 'permanent' ? 'ההודעה נמחקה לצמיתות' : 'סומן כטופל ✓', 'success');
     } catch (err) {
         showAIToast('שגיאה: ' + (err.message || 'Unknown error'), 'error');
     }
@@ -1021,7 +994,10 @@ function showReplyInput(noteId, reportId) {
     const replyZone = document.createElement('div');
     replyZone.className = 'msg-reply-zone';
     replyZone.innerHTML = `
-        <textarea class="msg-reply-textarea" placeholder="הקלד תגובה..." dir="rtl" rows="2"></textarea>
+        <div class="msg-reply-textarea-wrap" dir="rtl">
+            <textarea class="msg-reply-textarea" placeholder="הקלד תגובה..." dir="rtl" rows="2"></textarea>
+            <button type="button" class="msg-reply-expand-btn" title="הרחב חלון כתיבה"><i data-lucide="maximize-2" class="icon-xs"></i></button>
+        </div>
         <div class="msg-reply-buttons">
             <button class="btn btn-sm btn-primary msg-reply-send" disabled>
                 <i data-lucide="send" class="icon-xs"></i> שלח תגובה
@@ -1035,6 +1011,16 @@ function showReplyInput(noteId, reportId) {
     const textarea = replyZone.querySelector('.msg-reply-textarea');
     const sendBtn = replyZone.querySelector('.msg-reply-send');
     const cancelBtn = replyZone.querySelector('.msg-reply-cancel');
+
+    const expandBtn = replyZone.querySelector('.msg-reply-expand-btn');
+    if (expandBtn) {
+        expandBtn.addEventListener('click', () => {
+            expandReplyCompose(noteId, reportId, textarea.value, (newText) => {
+                textarea.value = newText;
+                sendBtn.disabled = !textarea.value.trim();
+            });
+        });
+    }
 
     textarea.addEventListener('input', () => {
         sendBtn.disabled = !textarea.value.trim();
@@ -1076,14 +1062,231 @@ async function sendReply(noteId, reportId, commentText, sendBtn, replyZone, row)
             showAIToast('תגובה נשלחה ✓', 'success');
         }
 
-        // Reload messages panel to show threaded reply
-        loadRecentMessages();
+        // DL-288: Prompt to mark as handled (skip if email failed — message still needs attention)
+        if (!result.email_failed) {
+            showPostReplyPrompt(noteId, reportId, row);
+        } else {
+            loadRecentMessages();
+        }
     } catch (err) {
         sendBtn.disabled = false;
         sendBtn.innerHTML = '<i data-lucide="send" class="icon-xs"></i> שלח תגובה';
         safeCreateIcons(sendBtn);
         showAIToast('שגיאה בשליחת תגובה: ' + (err.message || 'Unknown error'), 'error');
     }
+}
+
+// DL-288: After a successful reply, prompt the office to mark the message as handled.
+// Replaces row content with an inline strip; auto-dismisses after 8s = "leave open".
+// DL-288: After a successful reply, prompt the office to mark the message as handled.
+// Appends an inline strip BELOW the row's existing content (original message + replies stay visible).
+// Auto-dismisses after 8s = "leave open".
+function showPostReplyPrompt(noteId, reportId, row) {
+    if (!row || !row.parentElement) {
+        loadRecentMessages();
+        return;
+    }
+    // Avoid duplicate prompts on rapid double-replies
+    const existing = row.querySelector('.msg-post-reply-prompt');
+    if (existing) existing.remove();
+
+    const prompt = document.createElement('div');
+    prompt.className = 'msg-post-reply-prompt';
+    prompt.innerHTML = `
+        <div class="msg-prompt-text">נשלח ✓ &nbsp;סמן כטופל?</div>
+        <div class="msg-prompt-actions">
+            <button class="btn btn-sm btn-primary" data-action="handled">סמן כטופל</button>
+            <button class="btn btn-sm btn-ghost" data-action="keep">השאר פתוח</button>
+        </div>
+    `;
+    row.appendChild(prompt);
+    safeCreateIcons(prompt);
+
+    let dismissed = false;
+    const cleanup = (mode) => {
+        if (dismissed) return;
+        dismissed = true;
+        clearTimeout(timer);
+        if (mode === 'handled') {
+            // markMessageHandled fades the whole row out + reloads — no need to remove the prompt first
+            markMessageHandled(noteId, reportId);
+        } else {
+            prompt.remove();
+            loadRecentMessages();
+        }
+    };
+    prompt.querySelector('[data-action="handled"]').addEventListener('click', () => cleanup('handled'));
+    prompt.querySelector('[data-action="keep"]').addEventListener('click', () => cleanup('keep'));
+    const timer = setTimeout(() => cleanup('keep'), 8000);
+}
+
+// DL-288: Gmail-style expanded compose modal with live email preview
+function expandReplyCompose(noteId, reportId, initialText, onCollapse) {
+    // Cleanup any prior modal
+    document.querySelectorAll('.ai-modal-overlay.msg-compose-overlay').forEach(el => el.remove());
+
+    const overlay = document.createElement('div');
+    overlay.className = 'ai-modal-overlay msg-compose-overlay';
+    overlay.innerHTML = `
+        <div class="ai-modal-panel msg-compose-modal" dir="rtl">
+            <div class="msg-compose-header">
+                <div class="msg-compose-title">כתיבת תגובה</div>
+                <button type="button" class="msg-compose-collapse-btn" title="כווץ חזרה"><i data-lucide="minimize-2" class="icon-sm"></i></button>
+            </div>
+            <div class="msg-compose-grid">
+                <div class="msg-compose-pane">
+                    <div class="msg-compose-pane-label">תוכן ההודעה</div>
+                    <textarea class="msg-compose-textarea" dir="rtl" placeholder="הקלד הודעה..."></textarea>
+                </div>
+                <div class="msg-compose-pane">
+                    <div class="msg-compose-pane-label">תצוגה מקדימה</div>
+                    <div class="msg-compose-preview-wrap">
+                        <div class="msg-preview-empty">הקלד הודעה לתצוגה מקדימה</div>
+                    </div>
+                </div>
+            </div>
+            <div class="msg-compose-footer">
+                <button class="btn btn-sm btn-ghost msg-compose-cancel">ביטול</button>
+                <button class="btn btn-sm btn-primary msg-compose-send" disabled>
+                    <i data-lucide="send" class="icon-xs"></i> שלח תגובה
+                </button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(overlay);
+    // Trigger display — .ai-modal-overlay is display:none until .show is added
+    requestAnimationFrame(() => overlay.classList.add('show'));
+    safeCreateIcons(overlay);
+
+    const textarea = overlay.querySelector('.msg-compose-textarea');
+    const previewWrap = overlay.querySelector('.msg-compose-preview-wrap');
+    const sendBtn = overlay.querySelector('.msg-compose-send');
+    const cancelBtn = overlay.querySelector('.msg-compose-cancel');
+    const collapseBtn = overlay.querySelector('.msg-compose-collapse-btn');
+
+    textarea.value = initialText || '';
+    sendBtn.disabled = !textarea.value.trim();
+    textarea.focus();
+    // Move cursor to end
+    textarea.setSelectionRange(textarea.value.length, textarea.value.length);
+
+    let previewTimer = null;
+    let previewSeq = 0;
+    const renderPreview = () => {
+        const text = textarea.value;
+        if (!text.trim()) {
+            previewWrap.innerHTML = '<div class="msg-preview-empty">הקלד הודעה לתצוגה מקדימה</div>';
+            return;
+        }
+        const seq = ++previewSeq;
+        // Loading badge
+        if (!previewWrap.querySelector('iframe')) {
+            previewWrap.innerHTML = '<iframe class="msg-preview-iframe" srcdoc=""></iframe><div class="msg-preview-loading">מעדכן...</div>';
+        } else {
+            let badge = previewWrap.querySelector('.msg-preview-loading');
+            if (!badge) {
+                badge = document.createElement('div');
+                badge.className = 'msg-preview-loading';
+                badge.textContent = 'מעדכן...';
+                previewWrap.appendChild(badge);
+            }
+        }
+        fetchWithTimeout(ENDPOINTS.ADMIN_COMMENT_PREVIEW, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
+            body: JSON.stringify({ report_id: reportId, comment_text: text })
+        }, FETCH_TIMEOUTS.load).then(r => r.json()).then(data => {
+            if (seq !== previewSeq) return; // stale
+            if (data.ok && data.html) {
+                const iframe = previewWrap.querySelector('iframe') || (() => {
+                    previewWrap.innerHTML = '<iframe class="msg-preview-iframe" srcdoc=""></iframe>';
+                    return previewWrap.querySelector('iframe');
+                })();
+                iframe.srcdoc = data.html;
+            }
+            const badge = previewWrap.querySelector('.msg-preview-loading');
+            if (badge) badge.remove();
+        }).catch(err => {
+            console.error('Preview fetch failed', err);
+            const badge = previewWrap.querySelector('.msg-preview-loading');
+            if (badge) badge.remove();
+        });
+    };
+
+    textarea.addEventListener('input', () => {
+        sendBtn.disabled = !textarea.value.trim();
+        clearTimeout(previewTimer);
+        previewTimer = setTimeout(renderPreview, 400);
+    });
+
+    // Initial preview if there's already text
+    if (textarea.value.trim()) renderPreview();
+
+    let escHandler; // declared first so collapse() can clean it up from any path
+    const collapse = () => {
+        clearTimeout(previewTimer);
+        if (escHandler) document.removeEventListener('keydown', escHandler);
+        const text = textarea.value;
+        overlay.classList.remove('show');
+        overlay.remove();
+        if (typeof onCollapse === 'function') onCollapse(text);
+    };
+
+    collapseBtn.addEventListener('click', collapse);
+    cancelBtn.addEventListener('click', collapse); // cancel = collapse, preserves text in compact box
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) collapse(); });
+    escHandler = (e) => { if (e.key === 'Escape') collapse(); };
+    document.addEventListener('keydown', escHandler);
+
+    sendBtn.addEventListener('click', () => {
+        const text = textarea.value.trim();
+        if (!text) return;
+        clearTimeout(previewTimer);
+        // Find the row to pass to sendReply for the post-reply prompt
+        const row = document.querySelector(`.msg-row[data-note-id="${noteId}"]`);
+        if (!row) {
+            overlay.remove();
+            return;
+        }
+        // Make sure the compact reply zone exists with the text, then trigger sendReply
+        // Simplest: directly POST via the same pipeline, then close modal + run post-prompt
+        sendBtn.disabled = true;
+        sendBtn.innerHTML = '<i data-lucide="loader" class="icon-xs spin"></i> שולח...';
+        safeCreateIcons(sendBtn);
+        fetchWithTimeout(ENDPOINTS.ADMIN_SEND_COMMENT, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
+            body: JSON.stringify({ report_id: reportId, note_id: noteId, comment_text: text })
+        }, FETCH_TIMEOUTS.save).then(r => r.json()).then(result => {
+            overlay.remove();
+            document.removeEventListener('keydown', escHandler);
+            // Remove any open inline reply zone for this row to avoid duplicates
+            const replyZone = row.querySelector('.msg-reply-zone');
+            if (replyZone) replyZone.remove();
+            row.classList.remove('expanded');
+
+            if (!result.ok) {
+                showAIToast('שגיאה בשליחת תגובה: ' + (result.error || 'Unknown'), 'error');
+                return;
+            }
+            if (result.queued) {
+                showAIToast('תגובה תישלח ב-08:00', 'success');
+            } else if (result.email_failed) {
+                showAIToast('התגובה נשמרה אך שליחת המייל נכשלה', 'warning');
+            } else {
+                showAIToast('תגובה נשלחה ✓', 'success');
+            }
+            if (!result.email_failed) {
+                showPostReplyPrompt(noteId, reportId, row);
+            } else {
+                loadRecentMessages();
+            }
+        }).catch(err => {
+            overlay.remove();
+            document.removeEventListener('keydown', escHandler);
+            showAIToast('שגיאה בשליחת תגובה: ' + (err.message || 'Unknown'), 'error');
+        });
+    });
 }
 
 function renderClientsTable(clients) {
