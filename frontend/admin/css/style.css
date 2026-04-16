@@ -6042,14 +6042,18 @@ tr:hover .client-edit-link {
 
     /* Bottom nav bar — only show after auth (controlled via JS .visible class).
        :not(.fouc-hidden) is a fail-safe: if JS forgets to remove .fouc-hidden,
-       nav stays hidden (safe default) instead of flashing pre-auth UI. */
+       nav stays hidden (safe default) instead of flashing pre-auth UI.
+       height: calc(60px + env(safe-area-inset-bottom)) ensures the CONTENT area
+       stays 60px even with box-sizing:border-box (padding does not eat into icons).
+       On devices with gesture nav (Android ~34px, iOS ~34px), env() adds extra space
+       below the icons so they're never clipped when safe-area-inset changes on scroll. */
     .bottom-nav.visible:not(.fouc-hidden) {
         display: flex;
         position: fixed;
         bottom: 0;
         left: 0;
         right: 0;
-        height: 60px;
+        height: calc(60px + env(safe-area-inset-bottom, 0px));
         background: white;
         border-top: 1px solid var(--gray-200);
         box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.06);
@@ -6179,9 +6183,10 @@ tr:hover .client-edit-link {
         background: transparent;
     }
 
-    /* Content padding to avoid bottom nav overlap */
+    /* Content padding to avoid bottom nav overlap.
+       Must account for full nav height: 60px content + safe-area-inset + 12px gap. */
     .content {
-        padding-bottom: 72px !important;
+        padding-bottom: calc(72px + env(safe-area-inset-bottom, 0px)) !important;
     }
 
     /* Floating bulk bar moves above bottom nav */
