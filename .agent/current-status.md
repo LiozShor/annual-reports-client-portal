@@ -1065,3 +1065,34 @@ Design log: `.agent/design-logs/infrastructure/223-backfill-filing-type-empty-re
 - Last-sent date shown in floating sticky bar
 - Unsaved changes warning on page leave
 - Friendly "קובץ PDF פגום" instead of raw API errors
+
+
+---
+
+## Session Summary (2026-04-16 — DL-281 Queue View + Outlook as Source of Truth)
+
+### DL-281: Queued Emails Modal + Outbox-Backed Truth [IMPLEMENTED — NEED TESTING]
+- **Problem:** Dashboard `(N בתור לשליחה)` subtitle showed stale counts because `queued_send_at` never auto-clears after 08:00 delivery (DL-273 §8 known gap). Same staleness on doc-manager `ישלח ב-08:00` button. No way to see *which* clients were queued.
+- **Fix:** Switched source of truth from Airtable `queued_send_at` to Outlook Outbox via MS Graph `PidTagDeferredSendTime`. Added `graph_message_id` Airtable field on `annual_reports`. Added `MSGraphClient.listOutboxDeferred(mailbox)` and new `GET /admin-queued-emails` route (60s KV cache). Frontend subtitle is now clickable → opens modal listing genuinely-pending Outbox messages.
+- **Mid-session bug fix:** dropped 12-hour legacy fallback (was surfacing already-delivered records) + added `queuedEmailsLoaded` flag to avoid falling back to broken client-side filter.
+- **Doc-manager fix:** added `isQueuedSendStillPending()` DST-safe helper so the lock button auto-unlocks once 08:00 passes.
+- **Commits:** `81a1b36` (main feature) → `656920c` (legacy-rows fix) → `e58edaa` (doc-manager unlock; rebased onto DL-282)
+- **Files:** `api/src/lib/ms-graph.ts`, `api/src/routes/approve-and-send.ts`, `api/src/routes/dashboard.ts`, `frontend/admin/js/script.js`, `frontend/shared/endpoints.js`, `frontend/assets/js/document-manager.js`, `.agent/design-logs/email/281-queued-emails-outbox-source-of-truth.md`
+- **Airtable:** `annual_reports.graph_message_id` (singleLineText, `fldVd7760NGefZeIw`)
+- **Worker deployed:** version `e493b15e-d568-48ba-a2ff-977a0b1f5d9c`
+- **Verified live:** Pending_Approval count of 60 confirmed correct via Airtable query (30 overnight approvals correctly moved to Collecting_Docs at approval time per DL-273).
+
+### Active TODOs
+N. **Test DL-281: Queue View + Outlook Source of Truth** — verify Outbox-backed list works end-to-end at next off-hours cycle
+   - [ ] Approve a doc-request off-hours → confirm `graph_message_id` written on the report
+   - [ ] Reply to a client message off-hours (threaded path) → confirm `graph_message_id` in note JSON
+   - [ ] Reply non-threaded fallback → same
+   - [ ] Click `(N בתור לשליחה)` → modal lists actually-pending Outbox messages
+   - [ ] Tomorrow 08:00 → modal/count auto-clears as Exchange delivers (no manual refresh needed beyond ~60s cache TTL + page reload)
+   - [ ] Manual Outbox deletion → next dashboard load reflects removal
+   - [ ] Doc-manager send button auto-unlocks for clients whose 08:00 has passed
+   - [ ] Throttling: 20 rapid dashboard loads = 1 Graph call (60s cache)
+   - Design log: `.agent/design-logs/email/281-queued-emails-outbox-source-of-truth.md`
+
+### Worktree cleanup (FS-side, manual)
+- This session's worktree at `C:/Users/liozm/Desktop/moshe/worktrees/claude-session-20260416-072032/` had its git metadata corrupted mid-session (HEAD vanished — likely parallel session pruned it). All work was recovered via copy-to-main-and-commit. Inner files cleared, orphaned `.git/worktrees/claude-session-20260416-072032/` gitdir removed, but the now-empty parent dir is locked by this terminal — `rmdir` after closing this Claude session.
