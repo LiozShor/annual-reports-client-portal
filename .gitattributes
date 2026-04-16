@@ -1,0 +1,4 @@
+# current-status.md is session-state churn — multiple parallel Claude Code
+# sessions (main + worktrees) may each append summaries. Union merge joins
+# both sides' lines so parallel session updates merge without conflicts.
+.agent/current-status.md merge=union

@@ -23,7 +23,8 @@ tmp/
 .playwright-mcp/
 
 # Claude Code internal working files
-.agent/
+# (.agent/ tracked — design logs + current-status.md both travel with repo.
+#  current-status.md uses union merge driver in .gitattributes to avoid conflicts.)
 .claude/
 .claudeignore
 .design-logs/

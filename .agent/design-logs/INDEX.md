@@ -21,6 +21,7 @@ Active and pending logs. For completed history, see [ARCHIVE-INDEX.md](ARCHIVE-I
 
 | # | File | Status | Summary |
 |---|------|--------|---------|
+| 280 | [280-fix-mobile-bottom-nav-hidden.md](admin-ui/280-fix-mobile-bottom-nav-hidden.md) | IMPLEMENTED — NEED TESTING | Fix mobile bottom nav never appearing after login — CSS specificity conflict between inline FOUC guard and `.visible` class gate |
 | 278 | [278-ai-review-client-list-layout.md](ai-review/278-ai-review-client-list-layout.md) | IMPLEMENTED — NEED TESTING | AI review: viewport-locked split layout with independent scrolling master panel |
 | 277 | [277-fix-reminder-progress-bar-and-429-retry.md](email/277-fix-reminder-progress-bar-and-429-retry.md) | IMPLEMENTED — NEED TESTING | Fix reminder progress bar math (waived excluded) + 429 retry with backoff + re-classify endpoint |
 | 276 | [276-smooth-admin-auth-flow.md](admin-ui/276-smooth-admin-auth-flow.md) | IMPLEMENTED — NEED TESTING | Smooth admin auth: splash screen + parallel prefetch eliminates login screen flash |
