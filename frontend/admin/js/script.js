@@ -158,7 +158,13 @@ function _hideSplash() {
 function _showAppUI() {
     _hideSplash();
     document.getElementById('app').classList.add('visible');
-    document.getElementById('bottomNav').classList.add('visible');
+    // DL-280 v2: swap fouc-hidden → visible. Class-based gate (see CSS .bottom-nav.fouc-hidden / .visible:not(.fouc-hidden)).
+    const bn = document.getElementById('bottomNav');
+    bn.classList.remove('fouc-hidden');
+    bn.classList.add('visible');
+    // DL-280 v2: chat widget migrated from sibling-combinator to explicit .visible class.
+    const cw = document.getElementById('chatWidget');
+    if (cw) cw.classList.add('visible');
     startBackgroundRefresh();
     safeCreateIcons();
 }
@@ -266,7 +272,13 @@ async function checkAuth() {
 window.addEventListener('pageshow', (e) => {
     if (e.persisted && (!authToken || isTokenExpired(authToken))) {
         document.getElementById('app').classList.remove('visible');
-        document.getElementById('bottomNav').classList.remove('visible');
+        // DL-280 v2: symmetric inverse — remove .visible, restore .fouc-hidden so nav hides cleanly.
+        const bn = document.getElementById('bottomNav');
+        bn.classList.remove('visible');
+        bn.classList.add('fouc-hidden');
+        // DL-280 v2: hide chat widget on bfcache restore with invalid token.
+        const cw = document.getElementById('chatWidget');
+        if (cw) cw.classList.remove('visible');
         document.getElementById('loginScreen').classList.add('visible');
     }
 });
