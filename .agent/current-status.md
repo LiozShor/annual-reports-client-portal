@@ -860,14 +860,14 @@ Previous session:
 
 ## Priority Queue
 
-**🔴 P1 — Rotate Airtable PAT (secret leaked in design log)**
-- Found hardcoded Airtable PAT in `.agent/design-logs/ai-review/112-webhook-dedup-and-issuer-display.md:94` while preparing to track `.agent/design-logs/` in git.
-- Token value: `patvXzYxSlSUEKx9i.25f38a9e07...` — treat as compromised (has been on disk in a Claude-readable file).
-- **Action needed from user:**
-  1. Airtable → Developer Hub → Personal access tokens → revoke `patvXzYxSlSUEKx9i...` + regenerate
-  2. Update new PAT in: `.env` (`AIRTABLE_API_KEY`), Cloudflare Workers secrets (`AIRTABLE_PAT`), n8n credentials, `archive/keys.txt`
-- **Agent action (blocks `.agent/` reorg commit):** redact line 94 to `'<redacted — see .env AIRTABLE_API_KEY>'` before staging design logs.
-- Context: part of the `.agent/` gitignore reorg (track design-logs, ignore current-status.md).
+_(empty — no P1 items)_
+
+~~**P1 — Rotate Airtable PAT (secret leaked in design log)**~~ — ✅ RESOLVED 2026-04-16
+- Leaked token `patvXzYxSlSUEKx9i.25f38a9e...` found in `.agent/design-logs/ai-review/112-webhook-dedup-and-issuer-display.md:94` (hardcoded in a DL-112 n8n Code node snippet captured in the design log).
+- **Rotated:** User regenerated the token in Airtable. `.env` uses a separate token (`pat2XQGRyzPdycQWr`) — untouched.
+- **n8n updated:** Only one *active* workflow (`QqEIWQlRs1oZzEtNxFUcQ` [02] Questionnaire Response Processing, node `code-clear-reminder`) had the old token hardcoded. Updated via MCP. Send Batch Status (`QREwCScDZvhF9njF`) is disabled, skipped. 3 archived workflows with the old token skipped (dormant + old token now dead anyway).
+- **Redacted:** DL-112 line 94 → `'<redacted — see .env AIRTABLE_API_KEY / n8n credential>'`.
+- **Committed:** `2a9ff3f` (bundled with `.agent/` tracking reorg).
 
 ~~**Bug: AI Review reassign dropdown shows already-approved/assigned docs**~~ — Fixed in DL-224
 
