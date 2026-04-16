@@ -1105,6 +1105,14 @@ _(empty — no P1 items)_
 
 ## Active TODOs
 
+**Test DL-290: Reminder "ממתין לסיווג" Card = AI Review Badge** — verify the two surfaces now show matching numbers
+- [ ] Reload admin → note AI Review tab badge number
+- [ ] Open Reminder tab → "ממתין לסיווג" card is within ±1–2 of the badge (small residual allowed for late-stage clients outside reminder scope)
+- [ ] Dual filing-type client (AR + CS both Collecting_Docs with pending) → counts ONCE toward card (previously twice)
+- [ ] Click the "ממתין לסיווג" card → filter still works (pre-existing: surfaces CD-scoped rows only — minor known divergence vs. card count, intentional)
+- [ ] Regression: scheduled / due_this_week / suppressed card filters still work identically
+Design log: `.agent/design-logs/admin-ui/290-pending-classification-count-mismatch.md`
+
 **Test DL-288: Queued-Subtitle Stale Flash** — verify dashboard load has no `(N בתור לשליחה)` flash
 - [ ] Hard-reload `/admin` after 08:00 when no emails are queued → stage-3 card renders clean, no subtitle flash at any point
 - [ ] Queue an email off-hours → reload → subtitle appears with correct Outbox-backed count after fetch resolves (~200-500ms), no intermediate wrong number
