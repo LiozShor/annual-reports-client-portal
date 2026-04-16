@@ -18,6 +18,33 @@ let CLIENT_CC_EMAIL = '';
 // ENDPOINTS loaded from shared/endpoints.js
 let DOCS_FIRST_SENT_AT = null;
 let QUEUED_SEND_AT = null;
+
+// DL-281: queued_send_at on Airtable doesn't auto-clear after 08:00 delivery
+// (Exchange has no callback). Treat the field as live only while the next
+// 08:00 Israel after the approval is still in the future. DST-safe via the
+// same probe trick as api/src/lib/israel-time.ts.
+function isQueuedSendStillPending(queuedAtIso) {
+    if (!queuedAtIso) return false;
+    const queuedAt = new Date(queuedAtIso);
+    if (isNaN(queuedAt.getTime())) return false;
+    const tz = 'Asia/Jerusalem';
+    const parts = new Intl.DateTimeFormat('en-CA', {
+        timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit', hour: 'numeric', hour12: false,
+    }).formatToParts(queuedAt);
+    const y = parseInt(parts.find(p => p.type === 'year').value, 10);
+    const m = parseInt(parts.find(p => p.type === 'month').value, 10) - 1;
+    const d = parseInt(parts.find(p => p.type === 'day').value, 10);
+    const h = parseInt(parts.find(p => p.type === 'hour').value, 10);
+    const targetDay = h < 8 ? d : d + 1;
+    const probe = new Date(Date.UTC(y, m, targetDay, 8, 0, 0));
+    const probeHourIsrael = parseInt(
+        new Intl.DateTimeFormat('en-US', { timeZone: tz, hour: 'numeric', hour12: false })
+            .formatToParts(probe).find(p => p.type === 'hour').value, 10
+    );
+    const offsetHours = probeHourIsrael - 8;
+    const scheduledMs = Date.UTC(y, m, targetDay, 8 - offsetHours, 0, 0);
+    return Date.now() < scheduledMs;
+}
 let REPORT_NOTES = '';
 let CLIENT_NOTES = []; // Parsed JSON array of client communication entries
 let REJECTED_UPLOADS = []; // Parsed JSON array of rejected upload log entries
@@ -242,7 +269,7 @@ async function loadDocuments(reportId) {
             if (stageEl) stageEl.textContent = STAGE_LABELS[data.stage] || data.stage;
         }
         DOCS_FIRST_SENT_AT = data.docs_first_sent_at || null;
-        QUEUED_SEND_AT = data.queued_send_at || null;
+        QUEUED_SEND_AT = isQueuedSendStillPending(data.queued_send_at) ? data.queued_send_at : null;
         updateSentBadge();
 
         // DL-272: If email is queued for morning send, lock the button
@@ -566,7 +593,7 @@ function restoreFromCache(reportId) {
     YEAR = cached.year;
     CURRENT_STAGE = cached.stage;
     DOCS_FIRST_SENT_AT = cached.docsFirstSentAt;
-    QUEUED_SEND_AT = cached.queuedSendAt;
+    QUEUED_SEND_AT = isQueuedSendStillPending(cached.queuedSendAt) ? cached.queuedSendAt : null;
     REPORT_NOTES = cached.notes;
     CLIENT_NOTES = cached.clientNotes;
     REJECTED_UPLOADS = cached.rejectedUploads || [];
