@@ -7412,3 +7412,303 @@ tr:hover .client-edit-link {
     content-visibility: auto;
     contain-intrinsic-size: 0 48px;
 }
+
+/* ============================================================
+   DL-292: Review & Approve Queue Tab — .pa-* styles
+   ============================================================ */
+
+/* Card variant — amber stage-3 accent border */
+.pa-card {
+    border-inline-start: 3px solid #F59E0B;
+    cursor: pointer;
+    transition: border-color var(--transition-base), box-shadow var(--transition-base);
+}
+
+.pa-card:hover {
+    border-inline-start-color: #D97706;
+}
+
+.pa-card__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: var(--sp-2);
+    margin-bottom: var(--sp-2);
+}
+
+.pa-card__name {
+    font-weight: 700;
+    font-size: var(--text-base);
+    color: var(--gray-900);
+}
+
+.pa-card__meta {
+    display: flex;
+    gap: var(--sp-2);
+    font-size: var(--text-xs);
+    color: var(--gray-400);
+    flex-shrink: 0;
+}
+
+.pa-card__chips-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--sp-1);
+    margin-bottom: var(--sp-2);
+}
+
+.pa-card__notes {
+    font-size: var(--text-xs);
+    color: var(--gray-500);
+    margin-bottom: var(--sp-2);
+    display: flex;
+    align-items: flex-start;
+    gap: 4px;
+}
+
+.pa-card__prior-year {
+    font-size: var(--text-xs);
+    color: var(--gray-400);
+    margin-bottom: var(--sp-3);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.pa-card__actions {
+    display: flex;
+    gap: var(--sp-2);
+    margin-top: var(--sp-3);
+    flex-wrap: wrap;
+}
+
+/* Chips */
+.pa-chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 8px;
+    border-radius: var(--radius-full);
+    font-size: var(--text-xs);
+    font-weight: 500;
+    line-height: 1.4;
+    white-space: nowrap;
+}
+
+.pa-chip--answer {
+    background: var(--info-50, #EFF6FF);
+    color: var(--info-700, #1D4ED8);
+}
+
+.pa-chip--doc {
+    background: var(--gray-100);
+    color: var(--gray-700);
+}
+
+.pa-chip--more {
+    background: var(--gray-200);
+    color: var(--gray-500);
+}
+
+.pa-chip--placeholder {
+    background: var(--gray-100);
+    color: var(--gray-400);
+}
+
+.pa-chip--status-received {
+    background: var(--success-50, #F0FDF4);
+    color: var(--success-700, #15803D);
+}
+
+.pa-chip--status-required_missing,
+.pa-chip--status-required-missing {
+    background: var(--danger-50, #FEF2F2);
+    color: var(--danger-700, #B91C1C);
+}
+
+.pa-chip--status-requires_fix,
+.pa-chip--status-requires-fix {
+    background: var(--warning-50, #FFFBEB);
+    color: var(--warning-700, #B45309);
+}
+
+/* Questions badge on card button */
+.pa-questions-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--brand-500, #6366F1);
+    color: white;
+    font-size: 10px;
+    font-weight: 700;
+    min-width: 16px;
+    height: 16px;
+    border-radius: var(--radius-full);
+    padding: 0 4px;
+    margin-inline-start: 4px;
+}
+
+/* Approve button */
+.pa-btn-approve {
+    background: var(--success-500, #22C55E);
+    color: white;
+    border: none;
+}
+
+.pa-btn-approve:hover {
+    background: var(--success-600, #16A34A);
+}
+
+/* Questions button */
+.pa-btn-questions {
+    background: transparent;
+    border: 1px solid var(--gray-300);
+    color: var(--gray-700);
+}
+
+.pa-btn-questions:hover {
+    background: var(--gray-50);
+    border-color: var(--gray-400);
+}
+
+/* Card slide-out animation on approve */
+@keyframes pa-slide-out {
+    from { opacity: 1; transform: translateX(0); max-height: 400px; }
+    to   { opacity: 0; transform: translateX(-40px); max-height: 0; padding: 0; margin: 0; overflow: hidden; }
+}
+
+.pa-card--sending {
+    animation: pa-slide-out 300ms ease-in forwards;
+    pointer-events: none;
+}
+
+/* Preview panel body sections */
+.pa-preview-section {
+    margin-bottom: var(--sp-5);
+}
+
+.pa-preview-section-title {
+    font-size: var(--text-sm);
+    font-weight: 700;
+    color: var(--gray-700);
+    margin-bottom: var(--sp-3);
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
+    border-bottom: 1px solid var(--gray-100);
+    padding-bottom: var(--sp-2);
+}
+
+.pa-preview-qa {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-2);
+}
+
+.pa-preview-qa-row {
+    display: flex;
+    gap: var(--sp-3);
+    font-size: var(--text-sm);
+}
+
+.pa-preview-qa-label {
+    font-weight: 500;
+    color: var(--gray-600);
+    min-width: 140px;
+    flex-shrink: 0;
+}
+
+.pa-preview-qa-value {
+    color: var(--gray-800);
+}
+
+.pa-preview-docgroup {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-1);
+    margin-bottom: var(--sp-2);
+}
+
+.pa-preview-doc-row {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
+    font-size: var(--text-sm);
+    color: var(--gray-700);
+}
+
+.pa-preview-notes {
+    font-size: var(--text-sm);
+    color: var(--gray-700);
+    white-space: pre-wrap;
+    background: var(--gray-50);
+    border-radius: var(--radius-md);
+    padding: var(--sp-3);
+}
+
+.pa-preview-question {
+    display: flex;
+    gap: var(--sp-2);
+    font-size: var(--text-sm);
+    margin-bottom: var(--sp-2);
+    flex-wrap: wrap;
+}
+
+.pa-preview-qnum {
+    font-weight: 700;
+    color: var(--brand-500, #6366F1);
+    flex-shrink: 0;
+}
+
+.pa-preview-answer {
+    width: 100%;
+    padding-inline-start: var(--sp-5);
+    color: var(--gray-500);
+    font-style: italic;
+}
+
+/* Questions modal items */
+.pa-question-item {
+    display: flex;
+    gap: var(--sp-2);
+    align-items: flex-start;
+    margin-bottom: var(--sp-3);
+    padding-bottom: var(--sp-3);
+    border-bottom: 1px solid var(--gray-100);
+}
+
+.pa-question-item:last-of-type {
+    border-bottom: none;
+}
+
+.pa-question-num {
+    font-weight: 700;
+    color: var(--gray-500);
+    font-size: var(--text-sm);
+    padding-top: 6px;
+    flex-shrink: 0;
+    min-width: 18px;
+}
+
+.pa-question-input {
+    width: 100%;
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius-md);
+    padding: var(--sp-2) var(--sp-3);
+    font-size: var(--text-sm);
+    resize: vertical;
+    font-family: inherit;
+}
+
+.pa-question-answer {
+    font-size: var(--text-xs);
+    color: var(--gray-400);
+    font-style: italic;
+    margin-top: 4px;
+}
+
+/* Mobile: hide preview panel (same as AI review) */
+@media (max-width: 768px) {
+    #paReviewDetail {
+        display: none;
+    }
+}

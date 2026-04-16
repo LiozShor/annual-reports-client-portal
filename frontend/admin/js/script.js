@@ -315,6 +315,8 @@ function switchTab(tabName, evt) {
         loadDashboard(true);
     } else if (tabName === 'send') {
         loadPendingClients(true);
+    } else if (tabName === 'pending-approval') {
+        loadPendingApprovalQueue(true);
     } else if (tabName === 'ai-review') {
         loadAIClassifications(true);
     } else if (tabName === 'reminders') {
@@ -356,7 +358,7 @@ function syncBottomNav(tabName) {
     bottomNav.querySelectorAll('.bottom-nav-item').forEach(btn => btn.classList.remove('active'));
 
     const questGroupTabs = ['send', 'questionnaires'];
-    const moreGroupTabs = ['review', 'reminders'];
+    const moreGroupTabs = ['review', 'reminders', 'pending-approval'];
 
     let dataTab = tabName;
     if (questGroupTabs.includes(tabName)) dataTab = 'questionnaires-group';
@@ -776,6 +778,7 @@ async function loadDashboard(silent = false) {
             }
             if (!pendingClientsLoaded) loadPendingClients(true);
             if (!aiReviewLoaded) loadAIClassifications(true); // DL-247: prefetch AI review
+            if (!pendingApprovalLoaded) loadPendingApprovalQueue(true); // DL-292: prefetch review & approve queue
             if (!questionnaireLoaded) loadQuestionnaires(true);
             if (!reminderLoaded) loadReminders(true);
             updateActiveFilterCount(); // DL-214
@@ -2242,6 +2245,9 @@ function refreshData() {
     } else if (activeTab === 'questionnaires') {
         questionnaireLoadedAt = 0;
         promise = loadQuestionnaires();
+    } else if (activeTab === 'pending-approval') {
+        pendingApprovalLoadedAt = 0;
+        promise = loadPendingApprovalQueue();
     } else {
         dashboardLoadedAt = 0;
         promise = loadDashboard();
@@ -2262,6 +2268,7 @@ function startBackgroundRefresh() {
         else if (activeTab === 'ai-review') { aiReviewLoadedAt = 0; loadAIClassifications(true); }
         else if (activeTab === 'reminders') { reminderLoadedAt = 0; loadReminders(true); }
         else if (activeTab === 'questionnaires') { questionnaireLoadedAt = 0; loadQuestionnaires(true); }
+        else if (activeTab === 'pending-approval') { pendingApprovalLoadedAt = 0; loadPendingApprovalQueue(true); }
     }, 300_000);
 }
 
@@ -5667,6 +5674,413 @@ function showAIToast(message, type, action) {
         toast._dismissTimer = setTimeout(() => {
             toast.classList.remove('show');
         }, 3000);
+    }
+}
+
+// ==================== REVIEW & APPROVE QUEUE (DL-292) ====================
+
+let pendingApprovalData = [];
+let pendingApprovalLoaded = false;
+let pendingApprovalLoadedAt = 0;
+let _paPage = 1;
+const PA_PAGE_SIZE = 20;
+let _activePaReportId = null;
+let _paQuestionsEditState = []; // mutable copy for the questions modal
+let _paQuestionsReportId = null;
+
+function initPaYearFilter() {
+    const sel = document.getElementById('paYearFilter');
+    if (!sel || sel.options.length > 1) return;
+    const latestTaxYear = new Date().getFullYear() - 1;
+    sel.innerHTML = '';
+    for (let y = latestTaxYear; y >= 2025; y--) {
+        const opt = document.createElement('option');
+        opt.value = String(y);
+        opt.textContent = String(y);
+        if (y === latestTaxYear) opt.selected = true;
+        sel.appendChild(opt);
+    }
+}
+
+async function loadPendingApprovalQueue(silent = false) {
+    if (!authToken) return;
+    initPaYearFilter();
+    const isFresh = pendingApprovalLoaded && (Date.now() - pendingApprovalLoadedAt < STALE_AFTER_MS);
+    if (silent && isFresh) return;
+
+    const year = document.getElementById('paYearFilter')?.value || String(new Date().getFullYear() - 1);
+    const filingType = document.getElementById('paFilingTypeFilter')?.value || 'annual_report';
+
+    try {
+        const resp = await deduplicatedFetch(
+            `${ENDPOINTS.ADMIN_PENDING_APPROVAL}?year=${encodeURIComponent(year)}&filing_type=${encodeURIComponent(filingType)}`,
+            { headers: { 'Authorization': `Bearer ${authToken}` } },
+            FETCH_TIMEOUTS.load
+        );
+        const data = await resp.json();
+        if (!data.ok) {
+            if (data.error === 'unauthorized') { logout(); return; }
+            throw new Error(data.error || 'שגיאה בטעינת הנתונים');
+        }
+        pendingApprovalData = data.items || [];
+        pendingApprovalLoaded = true;
+        pendingApprovalLoadedAt = Date.now();
+        _paPage = 1;
+        renderPendingApprovalCards();
+        syncPaBadge(pendingApprovalData.length);
+    } catch (err) {
+        console.error('[pa-queue] load failed', err);
+        if (!silent) {
+            const c = document.getElementById('paCardsContainer');
+            if (c) c.innerHTML = `<div class="empty-state"><p style="color:var(--danger-500);">לא ניתן לטעון את הנתונים. <button class="btn btn-secondary btn-sm" onclick="loadPendingApprovalQueue()">נסה שוב</button></p></div>`;
+        }
+    }
+}
+
+function syncPaBadge(count) {
+    const badge = document.getElementById('pendingApprovalTabBadge');
+    const bottomBadge = document.getElementById('pendingApprovalBottomBadge');
+    if (!badge) return;
+    badge.classList.remove('ai-badge-loading');
+    if (count > 0) {
+        badge.textContent = count;
+        badge.style.display = 'inline-flex';
+        if (bottomBadge) { bottomBadge.textContent = count; bottomBadge.style.display = 'inline-flex'; }
+    } else {
+        badge.style.display = 'none';
+        if (bottomBadge) bottomBadge.style.display = 'none';
+    }
+}
+
+function renderPendingApprovalCards() {
+    const container = document.getElementById('paCardsContainer');
+    const emptyState = document.getElementById('paEmptyState');
+    if (!container) return;
+
+    const items = pendingApprovalData;
+
+    if (items.length === 0) {
+        container.innerHTML = '';
+        if (emptyState) emptyState.style.display = '';
+        renderPagination('paPagination', 0, 1, PA_PAGE_SIZE, () => {});
+        return;
+    }
+    if (emptyState) emptyState.style.display = 'none';
+
+    const pageItems = items.slice((_paPage - 1) * PA_PAGE_SIZE, _paPage * PA_PAGE_SIZE);
+
+    container.innerHTML = pageItems.map(item => buildPaCard(item)).join('');
+    renderPagination('paPagination', items.length, _paPage, PA_PAGE_SIZE, (p) => { _paPage = p; renderPendingApprovalCards(); });
+    safeCreateIcons(container);
+}
+
+function buildPaCard(item) {
+    const escapedName = escapeHtml(item.client_name || '');
+    const relDate = item.submitted_at ? formatRelativeTime(item.submitted_at) : '';
+    const qs = Array.isArray(item.answers_summary) ? item.answers_summary : [];
+    const docs = Array.isArray(item.docs) ? item.docs : [];
+    const questions = Array.isArray(item.client_questions) ? item.client_questions : [];
+    const qCount = questions.filter(q => q && (q.text || '').trim()).length;
+    const isActive = _activePaReportId === item.report_id;
+
+    // Answer chips (first 4)
+    const visibleAnswers = qs.slice(0, 4);
+    const moreAnswers = qs.length > 4 ? qs.length - 4 : 0;
+    const answerChips = visibleAnswers.map(a => `<span class="pa-chip pa-chip--answer" title="${escapeHtml(a.label)}">${escapeHtml(a.value.length > 20 ? a.value.slice(0, 20) + '…' : a.value)}</span>`).join('') +
+        (moreAnswers > 0 ? `<span class="pa-chip pa-chip--more">+${moreAnswers}</span>` : '');
+
+    // Doc chips (first 6)
+    const visibleDocs = docs.slice(0, 6);
+    const moreDocs = docs.length > 6 ? docs.length - 6 : 0;
+    const docChips = visibleDocs.map(d => `<span class="pa-chip pa-chip--doc" title="${escapeHtml(d.short_name_he)}">${d.category_emoji} ${escapeHtml(d.short_name_he.length > 18 ? d.short_name_he.slice(0, 18) + '…' : d.short_name_he)}</span>`).join('') +
+        (moreDocs > 0 ? `<span class="pa-chip pa-chip--more">+${moreDocs}</span>` : '');
+
+    // Notes preview
+    const notesText = (item.notes || item.client_notes || '').trim();
+    const notesHtml = notesText ? `<div class="pa-card__notes"><i data-lucide="message-square" class="icon-xs"></i> ${escapeHtml(notesText.slice(0, 120))}${notesText.length > 120 ? '…' : ''}</div>` : '';
+
+    // Prior-year placeholder
+    const priorYearHtml = `<div class="pa-card__prior-year"><i data-lucide="calendar" class="icon-xs"></i> נתוני שנה קודמת: <span class="pa-chip pa-chip--placeholder">—</span></div>`;
+
+    return `<div class="ai-review-card pa-card${isActive ? ' preview-active' : ''}" data-report-id="${item.report_id}" onclick="loadPaPreview('${item.report_id}')">
+        <div class="pa-card__header">
+            <div class="pa-card__name">${escapedName}</div>
+            <div class="pa-card__meta">
+                <span class="pa-card__id">${escapeHtml(item.client_id || '')}</span>
+                ${relDate ? `<span class="pa-card__date">${escapeHtml(relDate)}</span>` : ''}
+            </div>
+        </div>
+        ${qs.length > 0 ? `<div class="pa-card__chips-row">${answerChips}</div>` : ''}
+        ${docs.length > 0 ? `<div class="pa-card__chips-row">${docChips}</div>` : ''}
+        ${notesHtml}
+        ${priorYearHtml}
+        <div class="pa-card__actions" onclick="event.stopPropagation()">
+            <button class="btn btn-sm btn-outline pa-btn-questions" onclick="openQuestionsForClient('${item.report_id}')">
+                <i data-lucide="message-circle" class="icon-xs"></i> שאל את הלקוח${qCount > 0 ? ` <span class="pa-questions-badge">${qCount}</span>` : ''}
+            </button>
+            <button class="btn btn-sm btn-success pa-btn-approve" onclick="approveAndSendFromQueue('${item.report_id}', '${escapedName}')">
+                <i data-lucide="send" class="icon-xs"></i> אשר ושלח
+            </button>
+        </div>
+    </div>`;
+}
+
+function loadPaPreview(reportId) {
+    if (window.innerWidth <= 768) {
+        loadPaMobilePreview(reportId);
+        return;
+    }
+    const item = pendingApprovalData.find(i => i.report_id === reportId);
+    if (!item) return;
+
+    // Toggle off if same card clicked again
+    if (_activePaReportId === reportId) {
+        _activePaReportId = null;
+        document.querySelectorAll('.pa-card.preview-active').forEach(c => c.classList.remove('preview-active'));
+        document.getElementById('paPreviewHeaderBar').style.display = 'none';
+        document.getElementById('paPreviewBody').style.display = 'none';
+        document.getElementById('paPreviewPlaceholder').style.display = '';
+        return;
+    }
+
+    _activePaReportId = reportId;
+    document.querySelectorAll('.pa-card.preview-active').forEach(c => c.classList.remove('preview-active'));
+    const card = document.querySelector(`.pa-card[data-report-id="${reportId}"]`);
+    if (card) card.classList.add('preview-active');
+
+    // Populate header
+    const header = document.getElementById('paPreviewHeaderBar');
+    document.getElementById('paPreviewClientName').textContent = item.client_name || '';
+    const docMgrLink = document.getElementById('paOpenInDocManager');
+    if (docMgrLink) {
+        docMgrLink.href = `../document-manager.html?report_id=${encodeURIComponent(item.report_id)}&token=${encodeURIComponent(authToken)}`;
+    }
+    header.style.display = '';
+    document.getElementById('paPreviewPlaceholder').style.display = 'none';
+
+    // Build preview body
+    const body = document.getElementById('paPreviewBody');
+    body.style.display = '';
+    body.innerHTML = buildPaPreviewHtml(item);
+    safeCreateIcons(body);
+}
+
+function buildPaPreviewHtml(item) {
+    const qs = Array.isArray(item.answers_summary) ? item.answers_summary : [];
+    const docs = Array.isArray(item.docs) ? item.docs : [];
+    const notesText = [(item.notes || '').trim(), (item.client_notes || '').trim()].filter(Boolean).join('\n\n');
+    const questions = Array.isArray(item.client_questions) ? item.client_questions.filter(q => q && (q.text || '').trim()) : [];
+
+    let html = '';
+
+    // Q&A section
+    if (qs.length > 0) {
+        html += `<div class="pa-preview-section">
+            <h4 class="pa-preview-section-title"><i data-lucide="file-text" class="icon-sm"></i> תשובות שאלון</h4>
+            <div class="pa-preview-qa">
+                ${qs.map(a => `<div class="pa-preview-qa-row"><span class="pa-preview-qa-label">${escapeHtml(a.label)}</span><span class="pa-preview-qa-value">${escapeHtml(a.value)}</span></div>`).join('')}
+            </div>
+        </div>`;
+    }
+
+    // Doc list section
+    if (docs.length > 0) {
+        const grouped = {};
+        for (const d of docs) {
+            const key = d.category_emoji || '📄';
+            if (!grouped[key]) grouped[key] = [];
+            grouped[key].push(d);
+        }
+        html += `<div class="pa-preview-section">
+            <h4 class="pa-preview-section-title"><i data-lucide="folder" class="icon-sm"></i> רשימת מסמכים (${docs.length})</h4>
+            ${Object.entries(grouped).map(([emoji, docList]) =>
+                `<div class="pa-preview-docgroup">
+                    ${docList.map(d => `<div class="pa-preview-doc-row">
+                        <span class="pa-chip pa-chip--status-${(d.status || 'Required_Missing').toLowerCase().replace('_', '-')}">${statusLabel(d.status)}</span>
+                        <span>${emoji} ${escapeHtml(d.short_name_he)}</span>
+                    </div>`).join('')}
+                </div>`
+            ).join('')}
+        </div>`;
+    }
+
+    // Notes section
+    if (notesText) {
+        html += `<div class="pa-preview-section">
+            <h4 class="pa-preview-section-title"><i data-lucide="message-square" class="icon-sm"></i> הערות</h4>
+            <div class="pa-preview-notes">${escapeHtml(notesText)}</div>
+        </div>`;
+    }
+
+    // Questions for client section
+    if (questions.length > 0) {
+        html += `<div class="pa-preview-section">
+            <h4 class="pa-preview-section-title"><i data-lucide="message-circle" class="icon-sm"></i> שאלות ללקוח (${questions.length})</h4>
+            ${questions.map((q, i) => `<div class="pa-preview-question">
+                <span class="pa-preview-qnum">${i + 1}.</span>
+                <span>${escapeHtml(q.text || '')}</span>
+                ${q.answer ? `<div class="pa-preview-answer">↳ ${escapeHtml(q.answer)}</div>` : ''}
+            </div>`).join('')}
+        </div>`;
+    }
+
+    return html || `<div class="preview-placeholder" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--gray-400);gap:var(--sp-3);padding:var(--sp-5);text-align:center;"><p>אין נתוני שאלון לתצוגה</p></div>`;
+}
+
+function statusLabel(status) {
+    const map = { 'Received': '✓', 'Required_Missing': '✗', 'Requires_Fix': '⚠', 'Waived': '−' };
+    return map[status] || status;
+}
+
+function loadPaMobilePreview(reportId) {
+    const item = pendingApprovalData.find(i => i.report_id === reportId);
+    if (!item) return;
+    _activePaReportId = reportId;
+    document.getElementById('paMobileClientName').textContent = item.client_name || '';
+    document.getElementById('paMobilePreviewBody').innerHTML = buildPaPreviewHtml(item);
+    safeCreateIcons(document.getElementById('paMobilePreviewBody'));
+    document.getElementById('paMobilePreviewModal').classList.add('show');
+}
+
+function closePaMobilePreview() {
+    document.getElementById('paMobilePreviewModal').classList.remove('show');
+}
+
+async function approveAndSendFromQueue(reportId, clientName) {
+    const item = pendingApprovalData.find(i => i.report_id === reportId);
+    if (!item) return;
+
+    const sentDate = item.docs_first_sent_at ? new Date(item.docs_first_sent_at).toLocaleDateString('he-IL') : null;
+    const msg = sentDate
+        ? `נשלח כבר ב-${sentDate}. לשלוח שוב ל-${clientName}?`
+        : `לאשר ולשלוח רשימת מסמכים ל-${clientName}?`;
+
+    showConfirmDialog(msg, async () => {
+        // Optimistic slide-out
+        const card = document.querySelector(`.pa-card[data-report-id="${reportId}"]`);
+        if (card) card.classList.add('pa-card--sending');
+
+        try {
+            const resp = await fetchWithTimeout(
+                `${ENDPOINTS.APPROVE_AND_SEND}?report_id=${encodeURIComponent(reportId)}&confirm=1&respond=json`,
+                { headers: { 'Authorization': `Bearer ${authToken}` } },
+                FETCH_TIMEOUTS.mutate
+            );
+            const data = await resp.json();
+
+            if (data.ok) {
+                showAIToast('נשלח ל' + clientName, 'success');
+                // Remove from local list
+                pendingApprovalData = pendingApprovalData.filter(i => i.report_id !== reportId);
+                syncPaBadge(pendingApprovalData.length);
+                // Clear preview if this was the active card
+                if (_activePaReportId === reportId) {
+                    _activePaReportId = null;
+                    document.getElementById('paPreviewHeaderBar').style.display = 'none';
+                    document.getElementById('paPreviewBody').style.display = 'none';
+                    document.getElementById('paPreviewPlaceholder').style.display = '';
+                }
+                renderPendingApprovalCards();
+                // Auto-focus next card
+                const nextItem = pendingApprovalData[0];
+                if (nextItem) setTimeout(() => loadPaPreview(nextItem.report_id), 100);
+            } else {
+                if (card) card.classList.remove('pa-card--sending');
+                showAIToast(data.error || 'שגיאה בשליחה', 'danger');
+            }
+        } catch (err) {
+            if (card) card.classList.remove('pa-card--sending');
+            console.error('[pa-queue] approve failed', err);
+            showAIToast('שגיאה בשליחה', 'danger');
+        }
+    }, sentDate ? 'שלח שוב' : 'אשר ושלח', false);
+}
+
+function openQuestionsForClient(reportId) {
+    const item = pendingApprovalData.find(i => i.report_id === reportId);
+    if (!item) return;
+    _paQuestionsReportId = reportId;
+    _paQuestionsEditState = Array.isArray(item.client_questions)
+        ? item.client_questions.map(q => ({ ...q }))
+        : [];
+    renderPaQuestionsModal();
+    document.getElementById('paQuestionsModal').classList.add('show');
+    safeCreateIcons();
+}
+
+function closePaQuestionsModal() {
+    document.getElementById('paQuestionsModal').classList.remove('show');
+    _paQuestionsReportId = null;
+    _paQuestionsEditState = [];
+}
+
+function renderPaQuestionsModal() {
+    const body = document.getElementById('paQuestionsModalBody');
+    if (!body) return;
+    const qs = _paQuestionsEditState;
+    if (qs.length === 0) {
+        body.innerHTML = `<p style="color:var(--gray-500);margin-bottom:var(--sp-4);">אין שאלות ללקוח עדיין.</p>
+            <button class="btn btn-ghost btn-sm" onclick="addPaQuestion()"><i data-lucide="plus" class="icon-sm"></i> הוסף שאלה</button>`;
+        safeCreateIcons(body);
+        return;
+    }
+    body.innerHTML = qs.map((q, idx) => `<div class="pa-question-item" data-idx="${idx}">
+        <span class="pa-question-num">${idx + 1}</span>
+        <div style="flex:1;display:flex;flex-direction:column;gap:4px;">
+            <textarea class="pa-question-input" rows="2" placeholder="שאלה ללקוח..." oninput="updatePaQuestion(${idx}, 'text', this.value)">${escapeHtml(q.text || '')}</textarea>
+            ${q.answer ? `<div class="pa-question-answer">↳ תשובה: ${escapeHtml(q.answer)}</div>` : ''}
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="deletePaQuestion(${idx})"><i data-lucide="trash-2" class="icon-sm"></i></button>
+    </div>`).join('') +
+    `<button class="btn btn-ghost btn-sm" style="margin-top:var(--sp-3)" onclick="addPaQuestion()"><i data-lucide="plus" class="icon-sm"></i> הוסף שאלה</button>`;
+    safeCreateIcons(body);
+}
+
+function addPaQuestion() {
+    _paQuestionsEditState.push({ id: 'q_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6), text: '', answer: '' });
+    renderPaQuestionsModal();
+}
+
+function deletePaQuestion(idx) {
+    _paQuestionsEditState.splice(idx, 1);
+    renderPaQuestionsModal();
+}
+
+function updatePaQuestion(idx, field, value) {
+    if (_paQuestionsEditState[idx]) _paQuestionsEditState[idx][field] = value;
+}
+
+async function savePaClientQuestions() {
+    const reportId = _paQuestionsReportId;
+    if (!reportId) return;
+    const saveBtn = document.getElementById('paQuestionsModalSaveBtn');
+    if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = 'שומר...'; }
+    try {
+        const resp = await fetchWithTimeout(
+            ENDPOINTS.EDIT_DOCUMENTS,
+            {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
+                body: JSON.stringify({ report_id: reportId, client_questions: _paQuestionsEditState }),
+            },
+            FETCH_TIMEOUTS.mutate
+        );
+        const data = await resp.json();
+        if (data.ok) {
+            // Update local cache
+            const item = pendingApprovalData.find(i => i.report_id === reportId);
+            if (item) item.client_questions = [..._paQuestionsEditState];
+            closePaQuestionsModal();
+            renderPendingApprovalCards();
+            showAIToast('שאלות נשמרו', 'success');
+        } else {
+            showAIToast(data.error || 'שגיאה בשמירה', 'danger');
+        }
+    } catch (err) {
+        console.error('[pa-queue] save questions failed', err);
+        showAIToast('שגיאה בשמירה', 'danger');
+    } finally {
+        if (saveBtn) { saveBtn.disabled = false; saveBtn.innerHTML = '<i data-lucide="save" class="icon-sm"></i> שמור'; safeCreateIcons(saveBtn); }
     }
 }
 
