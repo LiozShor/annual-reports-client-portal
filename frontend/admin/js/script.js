@@ -19,6 +19,7 @@ let clientsData = [];
 let importData = [];
 let existingEmails = new Set();
 let reviewQueueData = [];
+let queuedEmailsData = []; // DL-281: Outbox-backed queued email list (both filing types)
 let showArchivedMode = false;
 let dashboardLoaded = false;
 let pendingClientsLoaded = false;
@@ -155,10 +156,7 @@ function _hideSplash() {
 function _showAppUI() {
     _hideSplash();
     document.getElementById('app').classList.add('visible');
-    // DL-280: clear FOUC-defense inline display:none so `.visible` class rule can take over
-    const bn = document.getElementById('bottomNav');
-    bn.style.display = '';
-    bn.classList.add('visible');
+    document.getElementById('bottomNav').classList.add('visible');
     startBackgroundRefresh();
     safeCreateIcons();
 }
@@ -266,9 +264,7 @@ async function checkAuth() {
 window.addEventListener('pageshow', (e) => {
     if (e.persisted && (!authToken || isTokenExpired(authToken))) {
         document.getElementById('app').classList.remove('visible');
-        const bn = document.getElementById('bottomNav');
-        bn.classList.remove('visible');
-        bn.style.display = 'none';
+        document.getElementById('bottomNav').classList.remove('visible');
         document.getElementById('loginScreen').classList.add('visible');
     }
 });
@@ -758,6 +754,7 @@ async function loadDashboard(silent = false) {
             loadAIReviewCount();
             loadReminderCount();
             loadRecentMessages(); // DL-261: side panel
+            loadQueuedEmails(); // DL-281: Outbox-backed queue view
             if (!pendingClientsLoaded) loadPendingClients(true);
             if (!aiReviewLoaded) loadAIClassifications(true); // DL-247: prefetch AI review
             if (!questionnaireLoaded) loadQuestionnaires(true);
@@ -1591,24 +1588,120 @@ function recalculateStats() {
         stage3Card.classList.toggle('needs-attention', counts.stage3 > 0);
     }
 
-    // DL-264: Show queued count on stage 3 card
-    const queuedCount = clientsData.filter(c =>
-        c.queued_send_at &&
-        (c.filing_type || 'annual_report') === activeEntityTab &&
-        c.is_active !== false
-    ).length;
+    // DL-281: Outbox-backed queued count (source of truth = Outlook, not queued_send_at).
+    // Falls back to legacy client-side filter while queuedEmailsData is still loading.
+    const queuedCount = queuedEmailsData.length > 0
+        ? queuedEmailsData.filter(q => q.filing_type === activeEntityTab).length
+        : clientsData.filter(c =>
+            c.queued_send_at &&
+            (c.filing_type || 'annual_report') === activeEntityTab &&
+            c.is_active !== false
+        ).length;
     let queuedEl = stage3Card?.querySelector('.queued-subtitle');
     if (queuedCount > 0 && stage3Card) {
         if (!queuedEl) {
             queuedEl = document.createElement('div');
             queuedEl.className = 'queued-subtitle';
-            queuedEl.style.cssText = 'font-size:0.7rem;color:var(--info-600);margin-top:2px;font-weight:500';
+            queuedEl.style.cssText = 'font-size:0.7rem;color:var(--info-600);margin-top:2px;font-weight:500;cursor:pointer;text-decoration:underline dotted;text-underline-offset:2px';
+            queuedEl.setAttribute('role', 'button');
+            queuedEl.setAttribute('tabindex', '0');
+            queuedEl.setAttribute('title', 'לחץ לצפייה ברשימה');
+            queuedEl.addEventListener('click', (e) => { e.stopPropagation(); openQueuedEmailsModal(); });
+            queuedEl.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); openQueuedEmailsModal(); }
+            });
             stage3Card.querySelector('.stat-label')?.appendChild(queuedEl);
         }
         queuedEl.textContent = `(${queuedCount} בתור לשליחה)`;
     } else if (queuedEl) {
         queuedEl.remove();
     }
+}
+
+// DL-281: Fetch Outbox-backed queue for active filing type.
+async function loadQueuedEmails() {
+    if (!authToken) return;
+    try {
+        const year = document.getElementById('yearFilter')?.value || new Date().getFullYear();
+        const response = await fetch(
+            `${ENDPOINTS.ADMIN_QUEUED_EMAILS}?filing_type=${activeEntityTab}&year=${year}&_t=${Date.now()}`,
+            { headers: { 'Authorization': `Bearer ${authToken}` } }
+        );
+        const data = await response.json();
+        if (!data.ok) {
+            console.warn('[queued-emails]', data.error);
+            return;
+        }
+        queuedEmailsData = data.queued || [];
+        recalculateStats();
+    } catch (err) {
+        console.warn('[queued-emails] fetch failed:', err.message);
+    }
+}
+
+// DL-281: Queue modal — list of clients whose deferred emails are actually in Outbox.
+function openQueuedEmailsModal() {
+    const rows = (queuedEmailsData || []).filter(q => q.filing_type === activeEntityTab);
+    const fmtTime = (iso) => {
+        if (!iso) return '';
+        try {
+            return new Date(iso).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Jerusalem' });
+        } catch { return ''; }
+    };
+    const fmtDateTime = (iso) => {
+        if (!iso) return '';
+        try {
+            const d = new Date(iso);
+            return `${d.toLocaleDateString('he-IL', { day: '2-digit', month: '2-digit', timeZone: 'Asia/Jerusalem' })} ${fmtTime(iso)}`;
+        } catch { return ''; }
+    };
+    const filingLabel = (ft) => ft === 'capital_statement' ? 'דוח הון' : 'דוח שנתי';
+    const typeLabel = (t) => t === 'reply' ? 'תגובה' : 'דרישת מסמכים';
+
+    const listHtml = rows.length === 0
+        ? `<div style="text-align:center;padding:var(--sp-8) 0;color:var(--gray-500)">אין מיילים בתור</div>`
+        : rows.map(r => `
+            <div class="queued-row" style="padding:var(--sp-3) 0;border-bottom:1px solid var(--gray-100)">
+                <div style="display:flex;justify-content:space-between;align-items:baseline;gap:var(--sp-2)">
+                    <strong style="font-size:var(--text-base);color:var(--gray-800)">${escapeHtml(r.client_name)}</strong>
+                    <span style="font-size:var(--text-xs);color:var(--gray-500)">${typeLabel(r.type)} · ${filingLabel(r.filing_type)}</span>
+                </div>
+                <div style="font-size:var(--text-xs);color:var(--gray-600);margin-top:2px">
+                    אושר ${fmtDateTime(r.queued_at)}${r.scheduled_for ? ` · יישלח ${fmtTime(r.scheduled_for)}` : ''}
+                </div>
+            </div>
+        `).join('');
+
+    // Build/refresh dynamic overlay
+    let overlay = document.getElementById('queuedEmailsModal');
+    if (!overlay) {
+        overlay = document.createElement('div');
+        overlay.id = 'queuedEmailsModal';
+        overlay.className = 'ai-modal-overlay';
+        overlay.addEventListener('click', (e) => { if (e.target === overlay) closeQueuedEmailsModal(); });
+        document.body.appendChild(overlay);
+    }
+    overlay.innerHTML = `
+        <div class="ai-modal-panel">
+            <div class="ai-modal-panel-header">
+                <i data-lucide="clock" class="icon"></i>
+                בתור לשליחה ב-08:00 (${rows.length})
+            </div>
+            <div class="ai-modal-panel-body">
+                ${listHtml}
+            </div>
+            <div class="ai-modal-panel-footer">
+                <button class="btn btn-primary" onclick="closeQueuedEmailsModal()">סגור</button>
+            </div>
+        </div>
+    `;
+    overlay.classList.add('show');
+    safeCreateIcons();
+}
+
+function closeQueuedEmailsModal() {
+    const overlay = document.getElementById('queuedEmailsModal');
+    if (overlay) overlay.classList.remove('show');
 }
 
 function updateImportFilingTypeLabel(type) {

@@ -183,9 +183,11 @@ approveAndSend.get('/approve-and-send', async (c) => {
     // Step 5: Send email — deferred if off-hours (DL-273: PidTagDeferredSendTime)
     const graph = new MSGraphClient(c.env, c.executionCtx);
     const offHours = isOffHours();
+    let graphMessageId: string | null = null;
     if (offHours) {
       const deferredUtc = getNext0800Israel();
-      await graph.sendMailDeferred(subject, html, clientEmail, SENDER, deferredUtc);
+      const result = await graph.sendMailDeferred(subject, html, clientEmail, SENDER, deferredUtc);
+      graphMessageId = result.messageId;
     } else {
       await graph.sendMail(subject, html, clientEmail, SENDER);
     }
@@ -200,6 +202,7 @@ approveAndSend.get('/approve-and-send', async (c) => {
       last_progress_check_at: now,
       docs_first_sent_at: existingFirstSent || now,
       queued_send_at: offHours ? now : null,
+      graph_message_id: offHours ? graphMessageId : null,
     };
     if (targetStage === 'Collecting_Docs') {
       stageFields.reminder_next_date = calcReminderNextDate();

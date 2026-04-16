@@ -247,7 +247,7 @@ export class MSGraphClient {
     fromMailbox: string,
     deferredUtc: string,
     ccAddress?: string,
-  ): Promise<void> {
+  ): Promise<{ messageId: string }> {
     const userPath = fromMailbox === 'me' ? '/me' : `/users/${fromMailbox}`;
     const message: Record<string, unknown> = {
       subject,
@@ -262,6 +262,7 @@ export class MSGraphClient {
     }
     const draft = await this.post(`${userPath}/messages`, message) as { id: string };
     await this.post(`${userPath}/messages/${draft.id}/send`, undefined);
+    return { messageId: draft.id };
   }
 
   /**
@@ -273,7 +274,7 @@ export class MSGraphClient {
     htmlContent: string,
     fromMailbox: string,
     deferredUtc: string,
-  ): Promise<void> {
+  ): Promise<{ messageId: string }> {
     const userPath = fromMailbox === 'me' ? '/me' : `/users/${fromMailbox}`;
     // Step 1: Look up Graph ID from Internet Message-ID
     const filter = encodeURIComponent(`internetMessageId eq '${internetMessageId}'`);
@@ -300,6 +301,48 @@ export class MSGraphClient {
 
     // Step 4: Send — Exchange holds in Outbox until deferredUtc
     await this.post(`${userPath}/messages/${draft.id}/send`, undefined);
+    return { messageId: draft.id };
+  }
+
+  /**
+   * List messages in Outbox with PidTagDeferredSendTime expanded (DL-281).
+   * Returns only messages that have the deferred-send property set AND whose
+   * scheduled time is in the future — these are the genuinely pending sends.
+   *
+   * Exchange moves messages from Outbox → SentItems on delivery, so absence
+   * from Outbox means "already delivered (or manually cancelled)".
+   */
+  async listOutboxDeferred(fromMailbox: string): Promise<Array<{
+    messageId: string;
+    toAddress: string;
+    subject: string;
+    deferredUtc: string;
+  }>> {
+    const userPath = fromMailbox === 'me' ? '/me' : `/users/${fromMailbox}`;
+    const expand = encodeURIComponent(`singleValueExtendedProperties($filter=id eq 'SystemTime 0x3FEF')`);
+    const path = `${userPath}/mailFolders/outbox/messages?$select=id,toRecipients,subject&$expand=${expand}&$top=200`;
+    const result = await this.get(path) as {
+      value?: Array<{
+        id: string;
+        subject?: string;
+        toRecipients?: Array<{ emailAddress?: { address?: string } }>;
+        singleValueExtendedProperties?: Array<{ id: string; value: string }>;
+      }>;
+    };
+    const now = Date.now();
+    const out: Array<{ messageId: string; toAddress: string; subject: string; deferredUtc: string }> = [];
+    for (const m of result.value || []) {
+      const prop = m.singleValueExtendedProperties?.find(p => p.id.includes('0x3FEF'));
+      if (!prop?.value) continue;
+      if (new Date(prop.value).getTime() <= now) continue;
+      out.push({
+        messageId: m.id,
+        toAddress: m.toRecipients?.[0]?.emailAddress?.address || '',
+        subject: m.subject || '',
+        deferredUtc: prop.value,
+      });
+    }
+    return out;
   }
 
   async batch(requests: BatchRequest[]): Promise<BatchResponse[]> {

@@ -335,18 +335,35 @@ dashboard.post('/admin-send-comment', async (c) => {
 
     if (offHours) {
       const deferredUtc = getNext0800Israel();
-      let sentViaReply = false;
+      let deferredMessageId: string | null = null;
       if (originalMessageId) {
         try {
-          await graph.replyToMessageDeferred(originalMessageId, commentHtml, SENDER, deferredUtc);
-          sentViaReply = true;
+          const r = await graph.replyToMessageDeferred(originalMessageId, commentHtml, SENDER, deferredUtc);
+          deferredMessageId = r.messageId;
         } catch (replyErr) {
           console.error('[send-comment] replyToMessageDeferred failed, falling back to sendMailDeferred:', (replyErr as Error).message);
         }
       }
-      if (!sentViaReply) {
-        await graph.sendMailDeferred(subject, commentHtml, clientEmail, SENDER, deferredUtc);
+      if (!deferredMessageId) {
+        const r = await graph.sendMailDeferred(subject, commentHtml, clientEmail, SENDER, deferredUtc);
+        deferredMessageId = r.messageId;
       }
+
+      // DL-281: stamp graph_message_id on the note we just saved so the queue
+      // view can correlate Outbox messages back to client notes.
+      try {
+        const lastIdx = notes.length - 1;
+        if (lastIdx >= 0 && notes[lastIdx].id === noteEntry.id) {
+          notes[lastIdx] = { ...notes[lastIdx], graph_message_id: deferredMessageId };
+          await airtable.updateRecord(REPORTS_TABLE, report_id, {
+            client_notes: JSON.stringify(notes),
+          });
+          invalidateCache(c.env.CACHE_KV, `cache:recent_messages:${year}`);
+        }
+      } catch (stampErr) {
+        console.error('[send-comment] failed to stamp graph_message_id on note:', (stampErr as Error).message);
+      }
+
       return c.json({ ok: true, queued: true, scheduled_for: '08:00' });
     }
 
@@ -374,6 +391,147 @@ dashboard.post('/admin-send-comment', async (c) => {
     });
     return c.json({ ok: true, queued: false, email_failed: true });
   }
+});
+
+// GET /webhook/admin-queued-emails (DL-281)
+// Queries Outlook Outbox as source of truth for pending deferred sends,
+// joins with Airtable data, returns list of genuinely pending queued emails.
+dashboard.get('/admin-queued-emails', async (c) => {
+  const authHeader = c.req.header('Authorization') || '';
+  const token = authHeader.startsWith('Bearer ')
+    ? authHeader.slice(7)
+    : c.req.query('token') || '';
+  const authResult = await verifyToken(token, c.env.SECRET_KEY);
+  if (!authResult.valid) return c.json({ ok: false, error: 'unauthorized' });
+
+  const filing_type = c.req.query('filing_type') || 'annual_report';
+  const year = c.req.query('year') || String(new Date().getFullYear());
+
+  // Cache Outbox listing for 60s — one Graph call covers many dashboard loads.
+  // Short TTL keeps the view fresh; at 08:00 delivery window stale state
+  // self-resolves within a minute.
+  let outboxIds: Set<string>;
+  let outboxById: Map<string, { deferredUtc: string }>;
+  try {
+    const graph = new MSGraphClient(c.env, c.executionCtx);
+    const outbox = await getCachedOrFetch(
+      c.env.CACHE_KV,
+      `cache:outbox_deferred:${SENDER}`,
+      60,
+      () => graph.listOutboxDeferred(SENDER),
+    );
+    outboxIds = new Set(outbox.map(m => m.messageId));
+    outboxById = new Map(outbox.map(m => [m.messageId, { deferredUtc: m.deferredUtc }]));
+  } catch (err) {
+    logError(c.executionCtx, c.env, {
+      endpoint: 'admin-queued-emails',
+      error: err as Error,
+      category: 'DEPENDENCY',
+      details: 'Failed to list Outbox deferred messages',
+    });
+    return c.json({ ok: false, error: 'outbox_unavailable' });
+  }
+
+  const airtable = new AirtableClient(c.env.AIRTABLE_BASE_ID, c.env.AIRTABLE_PAT);
+
+  // Pull every report in the active year that has either a graph_message_id OR
+  // a queued_send_at (legacy fallback). Filter by filing_type in memory so we
+  // can still surface legacy annual_report rows without matching graph IDs.
+  const reports = await airtable.listAllRecords('tbls7m3hmHC4hhQVy', {
+    filterByFormula: `AND({year}=${year},OR({graph_message_id}!='',{queued_send_at}!=''))`,
+    fields: [
+      'client_name', 'filing_type', 'client_is_active',
+      'graph_message_id', 'queued_send_at', 'client_notes',
+    ],
+  });
+
+  const first = (v: unknown) => Array.isArray(v) ? v[0] : v;
+  const now = Date.now();
+  type QueuedRow = {
+    report_id: string;
+    client_name: string;
+    filing_type: string;
+    type: 'doc_request' | 'reply';
+    queued_at: string;
+    scheduled_for: string;
+    graph_message_id: string | null;
+  };
+  const queued: QueuedRow[] = [];
+
+  for (const r of reports) {
+    const f = r.fields;
+    const rowFilingType = (f.filing_type as string) || 'annual_report';
+    if (rowFilingType !== filing_type) continue;
+
+    const isActiveRaw = f.client_is_active;
+    const is_active = isActiveRaw === undefined
+      ? true
+      : (Array.isArray(isActiveRaw) ? (isActiveRaw[0] === true) : (isActiveRaw === true));
+    if (!is_active) continue;
+
+    const clientName = String(first(f.client_name) || 'לקוח');
+
+    // Doc-request path: record-level graph_message_id on the report.
+    const reportGraphId = (f.graph_message_id as string | undefined) || '';
+    const queuedSendAt = (f.queued_send_at as string | undefined) || '';
+    if (reportGraphId && outboxIds.has(reportGraphId)) {
+      queued.push({
+        report_id: r.id,
+        client_name: clientName,
+        filing_type: rowFilingType,
+        type: 'doc_request',
+        queued_at: queuedSendAt || new Date().toISOString(),
+        scheduled_for: outboxById.get(reportGraphId)!.deferredUtc,
+        graph_message_id: reportGraphId,
+      });
+    } else if (!reportGraphId && queuedSendAt) {
+      // Legacy fallback: pre-DL-281 record with queued_send_at but no messageId.
+      // Show only if computed 08:00 send time is still in the future.
+      const queuedAtMs = new Date(queuedSendAt).getTime();
+      if (!Number.isNaN(queuedAtMs)) {
+        // Next 08:00 Israel after queuedAt = 05:00 UTC of the next day-boundary.
+        // Simpler heuristic: treat as pending if queuedAtMs is within last 12h.
+        const twelveHoursMs = 12 * 60 * 60 * 1000;
+        if (now - queuedAtMs < twelveHoursMs) {
+          queued.push({
+            report_id: r.id,
+            client_name: clientName,
+            filing_type: rowFilingType,
+            type: 'doc_request',
+            queued_at: queuedSendAt,
+            scheduled_for: '',
+            graph_message_id: null,
+          });
+        }
+      }
+    }
+
+    // Reply path: graph_message_id stored inside client_notes JSON entries.
+    const notesRaw = f.client_notes as string | undefined;
+    if (notesRaw) {
+      let notes: Array<Record<string, unknown>> = [];
+      try { notes = JSON.parse(notesRaw); } catch { notes = []; }
+      if (!Array.isArray(notes)) notes = [];
+      for (const n of notes) {
+        const gid = n.graph_message_id;
+        if (typeof gid !== 'string' || !gid) continue;
+        if (!outboxIds.has(gid)) continue;
+        queued.push({
+          report_id: r.id,
+          client_name: clientName,
+          filing_type: rowFilingType,
+          type: 'reply',
+          queued_at: String(n.date || new Date().toISOString()),
+          scheduled_for: outboxById.get(gid)!.deferredUtc,
+          graph_message_id: gid,
+        });
+      }
+    }
+  }
+
+  queued.sort((a, b) => new Date(a.queued_at).getTime() - new Date(b.queued_at).getTime());
+
+  return c.json({ ok: true, queued });
 });
 
 export default dashboard;

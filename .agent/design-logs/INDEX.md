@@ -2,7 +2,7 @@
 
 Active and pending logs. For completed history, see [ARCHIVE-INDEX.md](ARCHIVE-INDEX.md).
 
-**Total logs:** 185 | **Active:** 87 | **Archived:** 98
+**Total logs:** 186 | **Active:** 88 | **Archived:** 98
 
 ## Folder Structure
 
@@ -11,7 +11,7 @@ Active and pending logs. For completed history, see [ARCHIVE-INDEX.md](ARCHIVE-I
 - `capital-statements/` — Capital Statements (4)
 - `client-portal/` — Client Portal & Questionnaires (13)
 - `documents/` — Documents & OneDrive (20)
-- `email/` — Email System (19)
+- `email/` — Email System (20)
 - `infrastructure/` — Infrastructure & Workflows (18)
 - `reminders/` — Reminder System (17)
 - `research/` — Research & Feasibility (7)
@@ -21,6 +21,7 @@ Active and pending logs. For completed history, see [ARCHIVE-INDEX.md](ARCHIVE-I
 
 | # | File | Status | Summary |
 |---|------|--------|---------|
+| 281 | [281-queued-emails-outbox-source-of-truth.md](email/281-queued-emails-outbox-source-of-truth.md) | IMPLEMENTED — NEED TESTING | Queue view modal + Outlook Outbox as source of truth for pending deferred sends (fixes DL-273 §8 staleness gap) |
 | 280 | [280-fix-mobile-bottom-nav-hidden.md](admin-ui/280-fix-mobile-bottom-nav-hidden.md) | IMPLEMENTED — NEED TESTING | Fix mobile bottom nav never appearing after login — CSS specificity conflict between inline FOUC guard and `.visible` class gate |
 | 278 | [278-ai-review-client-list-layout.md](ai-review/278-ai-review-client-list-layout.md) | IMPLEMENTED — NEED TESTING | AI review: viewport-locked split layout with independent scrolling master panel |
 | 277 | [277-fix-reminder-progress-bar-and-429-retry.md](email/277-fix-reminder-progress-bar-and-429-retry.md) | IMPLEMENTED — NEED TESTING | Fix reminder progress bar math (waived excluded) + 429 retry with backoff + re-classify endpoint |
