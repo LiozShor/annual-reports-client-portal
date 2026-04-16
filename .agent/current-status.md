@@ -4,6 +4,44 @@
 
 ---
 
+## FINDING A JOB
+
+**Context:** Lioz has no prior professional experience. This project is the portfolio candidate, but it was AI-assisted ("vibe coded") — so ownership ≠ understanding yet. Goal: turn this repo into a defensible junior-dev portfolio.
+
+### Skill gaps to fill (prioritized)
+1. **SQL** — joins, GROUP BY, window functions. ~1 week.
+2. **React** — current frontend is vanilla HTML/JS; most junior postings require React. 2–4 weeks.
+3. **Docker** — `Dockerfile`, `docker compose`, running containers. 2–3 days.
+4. **One major cloud (AWS or GCP)** — CF Workers is cousin but recruiters filter for AWS/GCP. Learn S3, Lambda, IAM. 1–2 weeks.
+5. **DSA basics** — arrays, hashmaps, recursion for interview screens. LeetCode easy/medium.
+
+**Skip for now** (unless a specific job asks): BigQuery, Angular, Kafka, Kubernetes, big-data stacks.
+
+### Owning this project (so it's defensible in interviews)
+- Pick 3–4 subsystems, read them line-by-line until every decision is explainable.
+- Break things on purpose, fix without AI. ~10 reps.
+- Rebuild one feature from scratch without AI (e.g., the inbound email queue). Ugly but yours.
+- Write a README framing this as "production system handling X emails/day" — architecture-first.
+
+### Interview-ready talking points for this repo
+- **Cloudflare Workers vs Node/Express:** serverless/edge, V8 isolates (no `fs`/most npm), stateless, CPU-time limits. Chosen for cost, no server management, global latency, webhook fit.
+- **Why a queue in front of the inbound webhook (DL-287):** avoid webhook timeouts (CF ~30s), prevent downstream 429 storms via controlled batch/concurrency, automatic retries + DLQ, decouple sender from processing time. `waitUntil` was tried (DL-283) and failed because its 30s cap can't absorb 60–72s `Retry-After` from 429s.
+- **`max_batch_size=1`:** per-message CPU budget is heavy (classification + OneDrive upload); batching would starve the CPU limit — trade throughput for safety.
+
+### Quiz progress (this session)
+- [x] Q1 — Workers vs Node. Partial credit; corrected on runtime + execution model.
+- [x] Q2 — Why a queue. Partial credit (got 429); expanded to timeout + retries + decoupling.
+- [ ] Q3 — `max_batch_size=1` trade-off. Pending.
+- [ ] Next topics to cover: dedup with KV (`message.attempts === 1`), HMAC client tokens (45d vs 24h assisted), Airtable `performUpsert` race pattern, n8n IF-node boolean gotcha, frontend stale-flash root cause (DL-288).
+
+### Next concrete steps
+- [ ] Finish the quiz on this repo (Q3 onward).
+- [ ] Write portfolio README for this project (architecture diagram + 3 key decisions).
+- [ ] Start SQL + React tracks in parallel.
+- [ ] Build one tiny 100%-self-written side project (todo app with auth, deployed) to pair with this repo.
+
+---
+
 ## Session Summary (2026-04-16 — DL-288)
 
 ### DL-288: Fix Queued-Subtitle Stale Flash on Dashboard Load [IMPLEMENTED — NEED TESTING]
