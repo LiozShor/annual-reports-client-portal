@@ -63,4 +63,7 @@ const ENDPOINTS = {
 
     // --- Client reports (DL-218) ---
     GET_CLIENT_REPORTS:        `${CF_BASE}/get-client-reports`,
+
+    // --- Review & Approve queue (DL-292) ---
+    ADMIN_PENDING_APPROVAL:    `${CF_BASE}/admin-pending-approval`,
 };

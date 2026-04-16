@@ -96,6 +96,10 @@
                 <i data-lucide="clipboard-check" class="icon-sm"></i> מוכנים להכנה
                 <span class="review-count-badge" id="reviewCountBadge" style="display:none;">0</span>
             </button>
+            <button class="tab-item" onclick="switchTab('pending-approval', event)">
+                <i data-lucide="clipboard-pen" class="icon-sm"></i> סקירה ואישור
+                <span class="ai-review-tab-badge ai-badge-loading" id="pendingApprovalTabBadge">...</span>
+            </button>
             <button class="tab-item" onclick="switchTab('ai-review', event)">
                 <i data-lucide="scan-eye" class="icon-sm"></i> סקירת AI
                 <span class="ai-review-tab-badge ai-badge-loading" id="aiReviewTabBadge">...</span>
@@ -121,7 +125,7 @@
                         <div class="stat-number" id="stat-stage2">-</div>
                         <div class="stat-label"><i data-lucide="hourglass" class="icon-sm"></i> טרם מילאו שאלון</div>
                     </div>
-                    <div class="stat-card stage-3" onclick="toggleStageFilter('3')" ondblclick="toggleStageFilter('')">
+                    <div class="stat-card stage-3" onclick="switchTab('pending-approval', event)" ondblclick="toggleStageFilter('')" title="לחץ לפתיחת תור סקירה ואישור">
                         <div class="stat-number" id="stat-stage3">-</div>
                         <div class="stat-label"><i data-lucide="clipboard-check" class="icon-sm"></i> התקבל שאלון<br>טרם נשלחו מסמכים</div>
                     </div>
@@ -747,6 +751,66 @@
                     </div>
                 </div>
             </div>
+            <!-- Review & Approve Tab (DL-292) -->
+            <div id="tab-pending-approval" class="tab-content">
+                <!-- Filter Bar -->
+                <div class="ai-filter-bar" style="padding: 8px 12px; gap: 8px;">
+                    <div class="filter-group" style="max-width: 200px;">
+                        <label><i data-lucide="calendar" class="icon-sm"></i></label>
+                        <select id="paYearFilter" onchange="loadPendingApprovalQueue(false)" style="padding: 6px 10px; font-size: 13px;">
+                            <!-- options populated by JS -->
+                        </select>
+                    </div>
+                    <div class="filter-group" style="max-width: 220px;">
+                        <label><i data-lucide="filter" class="icon-sm"></i></label>
+                        <select id="paFilingTypeFilter" onchange="loadPendingApprovalQueue(false)" style="padding: 6px 10px; font-size: 13px;">
+                            <option value="annual_report">דוחות שנתיים</option>
+                            <option value="capital_statement">הצהרות הון</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Split View: Cards (right/start in RTL) + Preview (left/end in RTL) -->
+                <div class="ai-review-split">
+                    <!-- Master: Card list -->
+                    <div class="ai-review-master">
+                        <div id="paCardsContainer">
+                            <!-- DL-247: Skeleton shown until prefetch completes -->
+                            <div class="skeleton-loader">
+                                <div class="skeleton-card"><div class="skeleton skeleton-text-lg" style="width:60%;margin-bottom:var(--sp-3)"></div><div class="skeleton skeleton-text" style="width:40%"></div><div class="skeleton skeleton-text" style="width:80%"></div></div>
+                                <div class="skeleton-card"><div class="skeleton skeleton-text-lg" style="width:50%;margin-bottom:var(--sp-3)"></div><div class="skeleton skeleton-text" style="width:45%"></div><div class="skeleton skeleton-text" style="width:70%"></div></div>
+                            </div>
+                        </div>
+                        <div id="paPagination"></div>
+                        <div id="paEmptyState" class="ai-empty-done" style="display: none;">
+                            <div class="ai-empty-done-icon"><i data-lucide="circle-check-big" class="icon-2xl"></i></div>
+                            <h2>כל השאלונים נסקרו</h2>
+                            <p>אין שאלונים הממתינים לאישור ושליחת מסמכים</p>
+                            <button class="btn btn-secondary mt-4" onclick="loadPendingApprovalQueue()">
+                                <i data-lucide="refresh-cw" class="icon-sm"></i> בדוק שוב
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Detail: Preview panel (sticky) -->
+                    <div class="ai-review-detail" id="paReviewDetail">
+                        <div class="preview-header-bar" id="paPreviewHeaderBar" style="display: none;">
+                            <span class="preview-file-name" id="paPreviewClientName"></span>
+                            <a href="#" target="_blank" id="paOpenInDocManager" class="btn btn-ghost btn-sm">
+                                <i data-lucide="external-link" class="icon-sm"></i> פתח בניהול מסמכים
+                            </a>
+                        </div>
+                        <div class="preview-placeholder" id="paPreviewPlaceholder">
+                            <i data-lucide="clipboard-pen" class="icon-2xl"></i>
+                            <p>לחץ על כרטיס לקוח לפרטים מלאים</p>
+                        </div>
+                        <div id="paPreviewBody" style="display:none; flex:1; overflow-y:auto; padding: var(--sp-5);">
+                            <!-- Populated by loadPaPreview() -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Questionnaires Tab -->
             <div id="tab-questionnaires" class="tab-content">
                 <!-- Stats Bar -->
@@ -1059,6 +1123,10 @@
 
         <!-- More popover (opens upward) -->
         <div class="bottom-nav-popover" id="bottomNavMorePopover">
+            <button onclick="switchTabFromBottomNav('pending-approval', event)">
+                <i data-lucide="clipboard-pen" class="icon-sm"></i> סקירה ואישור
+                <span class="bottom-nav-popover-badge" id="pendingApprovalBottomBadge" style="display:none;">0</span>
+            </button>
             <button onclick="switchTabFromBottomNav('review', event)">
                 <i data-lucide="clipboard-check" class="icon-sm"></i> מוכנים להכנה
                 <span class="bottom-nav-popover-badge" id="reviewBottomBadge" style="display:none;">0</span>
@@ -1109,6 +1177,40 @@
             </div>
             <!-- AI classification info + actions (populated by JS) -->
             <div class="mobile-preview-footer" id="mobilePreviewFooter" style="display:none;"></div>
+        </div>
+    </div>
+
+    <!-- Questions-for-Client Modal (DL-292 Review & Approve) -->
+    <div id="paQuestionsModal" class="ai-modal-overlay" onclick="if(event.target===this)closePaQuestionsModal()">
+        <div class="ai-modal-panel" style="max-width:600px;">
+            <div class="ai-modal-panel-header">
+                <i data-lucide="message-circle" class="icon-sm"></i>
+                שאלות ללקוח
+            </div>
+            <div class="ai-modal-panel-body" id="paQuestionsModalBody">
+                <!-- populated by openQuestionsForClient() -->
+            </div>
+            <div class="ai-modal-panel-footer">
+                <button class="btn btn-ghost" onclick="closePaQuestionsModal()">ביטול</button>
+                <button class="btn btn-primary" id="paQuestionsModalSaveBtn" onclick="savePaClientQuestions()">
+                    <i data-lucide="save" class="icon-sm"></i> שמור
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Mobile PA Preview Modal (DL-292) -->
+    <div id="paMobilePreviewModal" class="ai-modal-overlay" onclick="if(event.target===this)closePaMobilePreview()">
+        <div class="ai-modal-panel mobile-preview-panel">
+            <div class="mobile-preview-header">
+                <button class="btn btn-ghost btn-sm" onclick="closePaMobilePreview()">
+                    <i data-lucide="x" class="icon-sm"></i>
+                </button>
+                <span class="preview-file-name" id="paMobileClientName"></span>
+            </div>
+            <div class="mobile-preview-body" id="paMobilePreviewBody" style="overflow-y:auto;padding:var(--sp-4);">
+                <!-- populated by loadPaMobilePreview() -->
+            </div>
         </div>
     </div>
 
