@@ -122,6 +122,13 @@ function parseForwardedEmail(bodyText: string): string | null {
     /מ:\s*[^<]*<([^>]+)>/,
     // [mailto:email@domain.com]
     /\[mailto:([^\]]+)\]/i,
+    // DL-282 non-angle-bracket variants (some clients strip the <>):
+    // From: Name email@domain.com
+    /From:\s*[^\n]*?\s([\w.+-]+@[\w.-]+\.[A-Za-z]{2,})\b/i,
+    // From: Name (email@domain.com)
+    /From:\s*[^\n]*?\(([\w.+-]+@[\w.-]+\.[A-Za-z]{2,})\)/i,
+    // Hebrew bare: מאת: Name email@domain.com
+    /מאת:\s*[^\n]*?\s([\w.+-]+@[\w.-]+\.[A-Za-z]{2,})\b/,
   ];
 
   for (const pattern of patterns) {
@@ -347,18 +354,53 @@ async function matchByAI(
 
 /**
  * Identify which client an inbound email belongs to.
- * Uses a 4-tier cascade: email → forwarded → name → AI → unidentified.
+ *
+ * Cascade: email → forwarded → name → AI → unidentified.
+ *
+ * Exception (DL-282): when the sender is an office address
+ * (e.g. moshe@/natan@moshe-atsits.co.il) AND the body contains a
+ * "From: <someone-else>" forward header, we treat this as a forward-on-
+ * behalf and skip Tier 1 (direct email match). Office staff can themselves
+ * be clients — Moshe has report CPA-XXX — and a direct self-match would
+ * otherwise misattribute every forward to the forwarder's own client record.
+ * The forwarded address may or may not be in the Clients table (clients
+ * often have multiple email addresses); either way, we fall through to the
+ * AI tier so the body + attachments can identify the real client.
  */
 export async function identifyClient(
   pCtx: ProcessingContext,
   metadata: EmailMetadata,
   attachmentNames?: string[],
 ): Promise<ClientMatch> {
+  const isOfficeSender = metadata.senderEmail.toLowerCase().endsWith(OFFICE_DOMAIN);
+  const forwardedInBody = isOfficeSender ? parseForwardedEmail(metadata.bodyText) : null;
+  const isForwardOnBehalf =
+    !!forwardedInBody &&
+    forwardedInBody.toLowerCase() !== metadata.senderEmail.toLowerCase();
+
+  if (isForwardOnBehalf) {
+    // Tier 2: try to match the forwarded sender directly
+    const forwardedMatch = await matchByForwardedEmail(pCtx, metadata);
+    if (forwardedMatch) return forwardedMatch;
+
+    // Forwarded email not in Clients table (common — clients have multiple
+    // addresses). Skip Tier 1 (would self-match office staff) and go to AI.
+    const activeClients = await fetchActiveClients(pCtx);
+    if (activeClients.length > 0) {
+      const aiMatch = await matchByAI(pCtx, metadata, activeClients, attachmentNames);
+      if (aiMatch) {
+        // Surface the extracted forwarded email rather than the forwarder's address
+        return { ...aiMatch, email: forwardedInBody ?? aiMatch.email };
+      }
+    }
+    return { ...UNIDENTIFIED_RESULT, email: forwardedInBody };
+  }
+
   // Tier 1: Direct email match
   const emailMatch = await matchByEmail(pCtx, metadata.senderEmail);
   if (emailMatch) return emailMatch;
 
-  // Tier 2: Forwarded email match
+  // Tier 2: Forwarded email match (non-office senders or office-self with no forward)
   const forwardedMatch = await matchByForwardedEmail(pCtx, metadata);
   if (forwardedMatch) return forwardedMatch;
 
@@ -367,7 +409,6 @@ export async function identifyClient(
   if (nameMatch) return nameMatch;
 
   // Tier 4: AI identification
-  // If Tier 3 was skipped (office sender), fetch active clients now for AI
   const clients = activeClients.length > 0
     ? activeClients
     : await fetchActiveClients(pCtx);

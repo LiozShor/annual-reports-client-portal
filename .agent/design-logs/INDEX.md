@@ -21,6 +21,7 @@ Active and pending logs. For completed history, see [ARCHIVE-INDEX.md](ARCHIVE-I
 
 | # | File | Status | Summary |
 |---|------|--------|---------|
+| 282 | [282-forwarded-email-note-recurrence.md](email/282-forwarded-email-note-recurrence.md) | IMPLEMENTED — NEED TESTING | Fix forwarded-email misattribution (DL-279 recurrence): reorder identifier cascade for office senders who are themselves clients, match-method-aware note sender resolver, strip first-line forward headers, extend parseForwardedEmail + backfill sweep |
 | 281 | [281-queued-emails-outbox-source-of-truth.md](email/281-queued-emails-outbox-source-of-truth.md) | IMPLEMENTED — NEED TESTING | Queue view modal + Outlook Outbox as source of truth for pending deferred sends (fixes DL-273 §8 staleness gap) |
 | 280 | [280-fix-mobile-bottom-nav-hidden.md](admin-ui/280-fix-mobile-bottom-nav-hidden.md) | IMPLEMENTED — NEED TESTING | Fix mobile bottom nav never appearing after login — CSS specificity conflict between inline FOUC guard and `.visible` class gate |
 | 278 | [278-ai-review-client-list-layout.md](ai-review/278-ai-review-client-list-layout.md) | IMPLEMENTED — NEED TESTING | AI review: viewport-locked split layout with independent scrolling master panel |

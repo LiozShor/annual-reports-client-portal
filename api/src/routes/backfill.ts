@@ -1,6 +1,6 @@
 /**
- * DL-279: Backfill note sender_email — fix forwarded notes that show
- * office member email instead of client email.
+ * DL-279 / DL-282: Backfill note sender_email — fix forwarded notes that show
+ * an office member's email instead of the real client's email.
  * Remove after running once in production.
  */
 
@@ -15,7 +15,7 @@ const TABLES = {
   REPORTS: 'tbls7m3hmHC4hhQVy',
 };
 
-const OFFICE_EMAIL = 'natan@moshe-atsits.co.il';
+const OFFICE_DOMAIN = '@moshe-atsits.co.il';
 
 backfill.post('/backfill-note-sender', async (c) => {
   const token = c.req.header('Authorization')?.replace('Bearer ', '') || c.req.query('token') || '';
@@ -25,9 +25,10 @@ backfill.post('/backfill-note-sender', async (c) => {
 
   const airtable = new AirtableClient(c.env.AIRTABLE_BASE_ID, c.env.AIRTABLE_PAT);
 
-  // Find reports that have client_notes containing natan's email
+  // Find reports that have client_notes containing ANY office address
+  // (DL-282: broaden from natan@ only to catch moshe@ and any other @moshe-atsits.co.il)
   const reports = await airtable.listAllRecords(TABLES.REPORTS, {
-    filterByFormula: `FIND('${OFFICE_EMAIL}', {client_notes})`,
+    filterByFormula: `FIND('${OFFICE_DOMAIN}', {client_notes})`,
     fields: ['client_notes', 'client_email', 'client_name'],
   });
 
@@ -50,7 +51,13 @@ backfill.post('/backfill-note-sender', async (c) => {
 
     let notesFixed = 0;
     for (const note of notes) {
-      if (typeof note.sender_email === 'string' && note.sender_email.toLowerCase() === OFFICE_EMAIL) {
+      // Only rewrite notes that look like ingested client email (source='email')
+      // AND whose sender_email sits in the office domain — leave office_reply
+      // notes (DL-266) alone since those genuinely originate from the office.
+      if (note.type === 'office_reply') continue;
+      if (note.source !== 'email') continue;
+      const existing = typeof note.sender_email === 'string' ? note.sender_email.toLowerCase() : '';
+      if (existing && existing.endsWith(OFFICE_DOMAIN)) {
         note.sender_email = clientEmail;
         notesFixed++;
       }

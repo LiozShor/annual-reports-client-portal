@@ -15,6 +15,7 @@ import {
   type ActiveReport,
   type AttachmentInfo,
   type ClassificationResult,
+  type ClientMatch,
   TABLES,
   MAILBOX,
   OFFICE_CONVERTIBLE,
@@ -235,8 +236,13 @@ function stripQuotedContent(text: string): string {
     if (/^-{3,}\s*Original Message\s*-{3,}/i.test(trimmed)) break;
     // Stop at Outlook "Original Message" (Hebrew)
     if (/^-{3,}\s*הודעה מקורית\s*-{3,}/.test(trimmed)) break;
-    // Stop at Outlook forwarding headers (only if not the first content line)
-    if (result.length > 0 && /^(From|מאת|נשלח):\s+.+@/.test(trimmed)) break;
+    // Stop at Gmail-style "Forwarded message" separator (DL-282)
+    if (/^-+\s*Forwarded message\s*-+\s*$/i.test(trimmed)) break;
+    // Stop at Outlook HR separator that precedes forward header blocks (DL-282)
+    if (/^_{5,}\s*$/.test(trimmed)) break;
+    // Stop at forward-header lines — no first-line guard: Outlook forwards
+    // without commentary START with this block and must still be stripped (DL-282)
+    if (/^(From|מאת|נשלח):\s+.+@/.test(trimmed)) break;
     // Stop at standard sig delimiter
     if (trimmed === '--' || trimmed === '-- ') break;
     // Stop at Hebrew closing lines (signature boundary)
@@ -249,6 +255,38 @@ function stripQuotedContent(text: string): string {
   }
 
   return result.join('\n').trim();
+}
+
+/**
+ * Resolve the `sender_email` value for a client note.
+ *
+ * Priority (DL-282):
+ *   1. Reports.client_email lookup (already fetched by caller).
+ *   2. If match was direct-email or forwarded-email, clientMatch.email is the
+ *      real client's address — use it.
+ *   3. Otherwise (AI or sender-name match), fetch the matched Client record's
+ *      email. Never fall back to the envelope sender, which for forwards is
+ *      the office forwarder (moshe@ / natan@).
+ */
+async function resolveNoteSenderEmail(
+  airtable: AirtableClient,
+  reportClientEmail: string,
+  clientMatch: ClientMatch,
+): Promise<string> {
+  if (reportClientEmail) return reportClientEmail;
+  if (clientMatch.matchMethod === 'email_match' || clientMatch.matchMethod === 'forwarded_email') {
+    return clientMatch.email;
+  }
+  if (clientMatch.clientRecordId) {
+    try {
+      const client = await airtable.getRecord<{ email?: string }>(TABLES.CLIENTS, clientMatch.clientRecordId);
+      const email = (client.fields.email ?? '').toLowerCase();
+      if (email) return email;
+    } catch {
+      // Fall through — better to return empty than the forwarder's address
+    }
+  }
+  return '';
 }
 
 async function summarizeAndSaveNote(
@@ -709,7 +747,9 @@ export async function processInboundEmail(
       : (reportRecord.fields.client_email ?? '').toLowerCase();
 
     // 12. LLM summarize email → save client note (always, any stage)
-    const notePromise = summarizeAndSaveNote(pCtx, metadata, primaryReport, existingClientNotes, reportClientEmail || clientMatch.email).catch((err) => {
+    // DL-282: match-method-aware sender resolution — never surface the forwarder
+    const noteSenderEmail = await resolveNoteSenderEmail(airtable, reportClientEmail, clientMatch);
+    const notePromise = summarizeAndSaveNote(pCtx, metadata, primaryReport, existingClientNotes, noteSenderEmail).catch((err) => {
       console.error('[inbound] Note save failed:', (err as Error).message);
     });
 
