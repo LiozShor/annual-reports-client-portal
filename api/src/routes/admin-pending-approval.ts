@@ -136,11 +136,14 @@ adminPendingApproval.get('/admin-pending-approval', async (c) => {
           const tmpl = templateId ? templateMap.get(templateId) : undefined;
           const categoryId = df.category as string | undefined;
           const cat = categoryId ? categoryMap.get(categoryId) : undefined;
-          const rawName = tmpl?.short_name_he || tmpl?.name_he || templateId || '';
+          // issuer_name is the actual employer/company name; template name is the fallback
+          const issuerName = (df.issuer_name as string) || '';
+          const templateName = tmpl?.short_name_he || tmpl?.name_he || templateId || '';
+          const displayName = issuerName ? cleanDocName(issuerName) : cleanDocName(templateName);
           return {
             doc_id: d.id,
             template_id: templateId || '',
-            short_name_he: cleanDocName(rawName),
+            short_name_he: displayName,
             category_emoji: cat?.emoji || '📄',
             status: (df.status as string) || 'Required_Missing',
           };
