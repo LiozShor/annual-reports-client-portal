@@ -28,6 +28,28 @@
 ---
 
 
+**Last Updated:** 2026-04-16 (Session — DL-280 fix mobile bottom nav hidden)
+
+---
+
+## Session Summary (2026-04-16 — DL-280)
+
+### DL-280: Fix Mobile Bottom Nav Hidden After Login [IMPLEMENTED — NEED TESTING]
+- **Problem:** Mobile bottom nav (≤768px) never appeared after login. DL-257 added an inline `style="display:none"` FOUC defense on `<nav class="bottom-nav">`; the CSS `.bottom-nav.visible { display: flex }` had no `!important`, so the inline style won on specificity and the `.visible` class toggle was a no-op. Bug surfaced clearly after DL-276 consolidated all auth-success paths through `_showAppUI()`.
+- **Fix:** In `_showAppUI()` clear `bottomNav.style.display` before adding `.visible`; in the `pageshow` bfcache handler, set it back to `'none'` when hiding. Symmetric state reset, no CSS or HTML change.
+- File touched: `frontend/admin/js/script.js` (lines 155-164, 266-274).
+- Design log: `.agent/design-logs/admin-ui/280-fix-mobile-bottom-nav-hidden.md`
+
+**Test checklist (DL-280):**
+- [ ] Fresh load on mobile viewport (DevTools 375px) with valid session — bottom nav visible immediately after splash fades
+- [ ] Login from login screen on mobile viewport — bottom nav appears after auth completes
+- [ ] Tab through dashboard → import → AI review on mobile — nav stays visible across all tabs
+- [ ] Reload page on mobile with valid session (same-tab path in `checkAuth`) — nav appears
+- [ ] Open /admin in a new tab with valid localStorage token (verify+prefetch path) — nav appears
+- [ ] Desktop (>768px) — nav remains hidden (CSS `.bottom-nav { display: none }` still wins)
+- [ ] bfcache: navigate away + back with valid token — nav still visible
+- [ ] bfcache: navigate away + back after token expiry — nav hides, login screen shown, no FOUC flash on next forward nav
+- [ ] Real mobile device (Safari iOS / Chrome Android) — verify no FOUC flicker of nav during login screen render
 
 ---
 
