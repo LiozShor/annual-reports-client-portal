@@ -1,6 +1,26 @@
 # Annual Reports CRM - Current Status
 
-**Last Updated:** 2026-04-16 (Session — DL-288 Fix stale-flash of queued-subtitle on dashboard load — IMPLEMENTED, NEED TESTING)
+**Last Updated:** 2026-04-16 afternoon (Session — DL-280 v2 Mobile Bottom Nav Root Fix — IMPLEMENTED, NEED TESTING)
+
+---
+
+## Session Summary (2026-04-16 afternoon — DL-280 v2)
+
+### DL-280 v2: Mobile Bottom Nav Root Fix (Class-Based FOUC Gate) [IMPLEMENTED — NEED TESTING]
+- **Problem:** Mobile bottom nav still hidden after login despite DL-280's morning fix. DL-281's merge (`81a1b36`) silently overwrote DL-280's three-line `_showAppUI()` fix because DL-281 was branched off main before DL-280 merged. The JS fix had no compile-time defense against stale-branch merges.
+- **Root cause (structural):** v1 mixed CSS layers — inline `style="display:none"` (specificity 1000) + `.visible` class rule (specificity ~20) — making the JS-side `bn.style.display = ''` line load-bearing. Lose that line, lose the fix.
+- **v2 Fix (structural):** Replace inline `style="display:none"` with `class="fouc-hidden"`. Class-based gate keeps the FOUC defense in CSS (where it composes safely with `.visible`) instead of HTML inline (where it specificity-fights). `.bottom-nav.visible:not(.fouc-hidden)` is a fail-safe — if JS forgets to remove `.fouc-hidden`, nav stays hidden (safe default).
+- **Why it survives merges:** (1) `fouc-hidden` is a unique grep-able token; any merge that drops it from HTML is visually obvious in code review. (2) `:not()` fail-safe means missing the JS class swap can't cause UI breakage. (3) `_showAppUI` does the obvious thing (remove hide class, add show class) — no magic future devs would dismiss.
+- **Bonus — chat widget migration:** Per DL-257 note, chat widget used the same fragile `.app.visible ~ #chatWidget` sibling-combinator pattern. Migrated to `#chatWidget.visible` class for consistency. Wired into `_showAppUI` and `pageshow` symmetric reset.
+- **Scrolling concern:** User asked nav must stay visible during scroll. Auto-handled by existing `position: fixed; bottom: 0` + verified no transform/filter parent that would break fixed positioning.
+- **Files:**
+  - `frontend/admin/index.html` — `<nav class="bottom-nav fouc-hidden">` (was: inline `style="display:none"`)
+  - `frontend/admin/css/style.css` — `.bottom-nav.fouc-hidden { display: none; }` rule + `:not(.fouc-hidden)` guard on `.visible`. Chat widget: `#chatWidget.visible` replaces sibling combinator.
+  - `frontend/admin/js/script.js` — `_showAppUI`: swap fouc-hidden → visible for both bottomNav + chatWidget. `pageshow`: symmetric inverse.
+- **Design log:** `.agent/design-logs/admin-ui/280-fix-mobile-bottom-nav-hidden.md` (Section 9 added — v2 root fix)
+- **Branch:** `DL-280-root-fix`
+
+**Test checklist (DL-280 v2) — see Active TODOs below.**
 
 ---
 
@@ -1060,6 +1080,20 @@ _(empty — no P1 items)_
 ---
 
 ## Active TODOs
+
+**Test DL-280 v2: Mobile Bottom Nav Root Fix (class-based FOUC gate)** — verify nav appears on mobile after auth, stays during scroll, doesn't flash pre-auth
+- [ ] Fresh load on mobile viewport (DevTools 375px) with valid session → bottom nav visible immediately after splash fades
+- [ ] Login from login screen on mobile → nav appears after auth completes (no flash before)
+- [ ] Scroll the dashboard up/down on mobile → nav stays pinned to bottom across the entire scroll range
+- [ ] Tab through dashboard → import → AI review on mobile → nav stays visible across all tabs
+- [ ] Reload page on mobile with valid session (same-tab path) → nav appears
+- [ ] New tab/window on mobile with valid token (verify+prefetch path) → nav appears
+- [ ] Desktop (>768px) → nav still hidden (CSS `.bottom-nav { display: none }` outside media query)
+- [ ] bfcache: navigate away + back with valid token → nav still visible
+- [ ] bfcache: navigate away + back after token expiry → nav hides cleanly, login screen shown, no FOUC flash on next forward nav
+- [ ] Chat widget audit: appears on mobile + desktop after auth, hides on bfcache restore with expired token (migrated from sibling-combinator to `.visible` class)
+- [ ] Real iOS Safari + Android Chrome — verify safe-area inset on notched devices, no flicker during login screen render
+Design log: `.agent/design-logs/admin-ui/280-fix-mobile-bottom-nav-hidden.md`
 
 **Test DL-288: Queued-Subtitle Stale Flash** — verify dashboard load has no `(N בתור לשליחה)` flash
 - [ ] Hard-reload `/admin` after 08:00 when no emails are queued → stage-3 card renders clean, no subtitle flash at any point

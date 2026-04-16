@@ -1022,8 +1022,9 @@
     <div id="chatWidget"></div>
 
     <!-- Mobile Bottom Nav (hidden on desktop via CSS) -->
+    <!-- DL-280 v2: .fouc-hidden class replaces inline style="display:none" to avoid specificity conflict with .visible class. JS swaps .fouc-hidden ↔ .visible on auth. -->
     <div class="bottom-nav-backdrop" id="bottomNavBackdrop" onclick="closeBottomNavPopovers()"></div>
-    <nav class="bottom-nav" id="bottomNav" style="display:none">
+    <nav class="bottom-nav fouc-hidden" id="bottomNav">
         <button class="bottom-nav-item active" onclick="switchTab('dashboard', event)" data-tab="dashboard">
             <i data-lucide="bar-chart-3"></i>
             <span>לוח בקרה</span>

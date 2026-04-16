@@ -5826,14 +5826,23 @@ tr:hover .client-edit-link {
     display: none;
 }
 
+/* DL-280 v2: explicit FOUC-defense class. Initial markup has .fouc-hidden;
+   JS removes it on auth and adds .visible. Class-based gate replaces the v1
+   inline style="display:none" that lost specificity battles with .visible. */
+.bottom-nav.fouc-hidden {
+    display: none;
+}
+
 @media (max-width: 768px) {
     /* Hide top tabs on mobile */
     .tabs-nav {
         display: none !important;
     }
 
-    /* Bottom nav bar — only show after auth (controlled via JS .visible class) */
-    .bottom-nav.visible {
+    /* Bottom nav bar — only show after auth (controlled via JS .visible class).
+       :not(.fouc-hidden) is a fail-safe: if JS forgets to remove .fouc-hidden,
+       nav stays hidden (safe default) instead of flashing pre-auth UI. */
+    .bottom-nav.visible:not(.fouc-hidden) {
         display: flex;
         position: fixed;
         bottom: 0;
@@ -6441,12 +6450,15 @@ tr:hover .client-edit-link {
     }
 }
 
-/* Hide chat widget until authenticated (it lives outside #app) */
+/* Hide chat widget until authenticated (it lives outside #app).
+   DL-280 v2: migrated from `.app.visible ~ #chatWidget` sibling combinator to
+   explicit `.visible` class for consistency with bottom nav and to remove
+   implicit DOM-ordering dependency (DL-257 flagged this pattern as fragile). */
 #chatWidget {
     display: none;
 }
 
-.app.visible ~ #chatWidget {
+#chatWidget.visible {
     display: block;
 }
 

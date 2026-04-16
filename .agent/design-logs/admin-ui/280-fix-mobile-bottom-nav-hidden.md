@@ -1,8 +1,8 @@
 # Design Log 280: Fix Mobile Bottom Nav Hidden After Login
 
-**Status:** [IMPLEMENTED — NEED TESTING]
-**Date:** 2026-04-16
-**Related Logs:** DL-212 (mobile bottom nav introduction), DL-257 (auth gate + FOUC defense), DL-276 (smooth admin auth flow)
+**Status:** [IMPLEMENTED — NEED TESTING] (v2 root fix)
+**Date:** 2026-04-16 (v1), 2026-04-16 afternoon (v2 root fix)
+**Related Logs:** DL-212 (mobile bottom nav introduction), DL-257 (auth gate + FOUC defense), DL-276 (smooth admin auth flow), DL-281 (regressed v1 fix)
 
 ## 1. Context & Problem
 
@@ -136,3 +136,56 @@ window.addEventListener('pageshow', (e) => {
 * Applied "clear-inline + add-class" pairing in `_showAppUI()` and inverse in the `pageshow` bfcache handler. No CSS or HTML changes.
 * Scope held tight per user answer — only `frontend/admin/js/script.js` touched.
 * Added a short `DL-280:` comment at the only non-obvious line (inline-style clear) to explain why it's needed; other lines are self-explanatory from the symmetric pattern.
+
+## 9. v2 Root Fix — 2026-04-16 afternoon
+
+### Why v1 Failed
+DL-281 (`81a1b36`) was branched off main BEFORE DL-280 merged (`5914ce0`). When DL-281 merged, its older copy of `_showAppUI()` overwrote DL-280's three-line fix with the original one-liner — the merge had no conflict because DL-281 wasn't aware of DL-280's edit. Result: bottom nav broke again within hours of being fixed.
+
+The deeper lesson: **a JS-only fix to a CSS specificity problem is regression-prone**. Anyone editing `_showAppUI()` who copies the "obvious" pattern (`bottomNav.classList.add('visible')`) silently loses the fix. There's no compile-time signal, no test, no comment is loud enough to survive a stale branch merge.
+
+### v2 Approach: Class-Based FOUC Gate
+Move the FOUC defense from an inline `style` attribute into an explicit CSS class. The fix lives in HTML+CSS where it's structural, not in JS where it's procedural and easily clobbered.
+
+**Before (v1):**
+- HTML: `<nav class="bottom-nav" id="bottomNav" style="display:none">` — inline style
+- JS: must clear `bn.style.display = ''` AND add `.visible` class — fragile pairing
+
+**After (v2):**
+- HTML: `<nav class="bottom-nav fouc-hidden" id="bottomNav">` — class-based
+- CSS: `.bottom-nav.fouc-hidden { display: none; }` + `.bottom-nav.visible:not(.fouc-hidden) { display: flex; }` — `:not()` is a fail-safe (if JS forgets to remove `.fouc-hidden`, nav stays hidden, no broken UI)
+- JS: `bn.classList.remove('fouc-hidden'); bn.classList.add('visible');` — symmetric, atomic
+
+### v2 Research: Class-Based State Gating
+- **MDN — CSS Specificity:** Class selectors carry the same weight (0-0-1-0) regardless of inline/external. Inline `style` attribute is 1000 — strictly higher. Class-vs-class fights resolve via cascade order, not inline override.
+- **CSS Working Group — Cascade:** "Defense in depth" should compose at the same layer (CSS), not mix layers (HTML inline + CSS class). Mixing layers creates specificity asymmetry that's hard to reason about.
+- **Patterns from React/Vue (precedent):** Both frameworks default to class-based state gates (`v-show`, `className`) rather than `style` because classes are mergeable and serializable. Same principle applies in vanilla JS.
+
+### v2 Anti-Patterns Avoided
+- **`!important` everywhere:** considered but rejected — pollutes the cascade and trains future devs to reach for it. The `:not()` guard provides the same fail-safe with no `!important`.
+- **Removing FOUC defense entirely:** considered (CSS link is render-blocking) but rejected — DL-257 deliberately added the inline defense for slow-connection scenarios, and a CSS class costs nothing.
+- **JS-only re-fix with louder comments:** rejected — comments don't survive merges.
+
+### v2 Scope Expansion: Chat Widget Audit
+DL-257 noted chat widget uses the same fragile `.app.visible ~ #chatWidget` sibling-combinator pattern. Audit confirms chat widget is NOT affected by the same inline-style bug (no inline style exists), but the sibling-combinator pattern is still implicit and fragile. Migrate chat widget to the same `.visible` class pattern for consistency and future-proofing.
+
+### v2 Files Changed
+| File | Action | Description |
+|------|--------|-------------|
+| `frontend/admin/index.html` | Modify | `<nav class="bottom-nav fouc-hidden" id="bottomNav">` (was: `style="display:none"`) |
+| `frontend/admin/css/style.css` | Modify | Add `.bottom-nav.fouc-hidden { display: none; }` + add `:not(.fouc-hidden)` to `.visible` rule. Migrate chat widget: drop sibling-combinator, add `#chatWidget.visible` rule. |
+| `frontend/admin/js/script.js` | Modify | `_showAppUI`: `remove('fouc-hidden') + add('visible')` for both bottomNav and chatWidget. `pageshow`: inverse symmetric reset. |
+
+### v2 Why This Survives Merges
+1. **HTML class is grep-able** — `fouc-hidden` is a unique token; any future merge that drops it from the `<nav>` element is visually obvious in code review.
+2. **CSS `:not()` fail-safe** — if a future JS edit forgets to remove `.fouc-hidden`, nav stays hidden (safe default — user sees nothing missing rather than a flash of pre-auth UI).
+3. **No JS-state-tracking** — `_showAppUI` does the obvious "remove hide class, add show class". No magic inline-style manipulation that future devs would dismiss as "weird".
+4. **Symmetric pageshow handler** — bfcache restoration adds `.fouc-hidden` back, mirroring the show path. Easy to reason about.
+
+### v2 Scrolling Behavior (Bonus User Concern)
+User asked nav must "also be visible during scrolling." This is automatic once visibility works:
+- `.bottom-nav.visible` is `position: fixed; bottom: 0` — viewport-anchored, scroll-immune
+- `<nav class="bottom-nav">` is a direct child of `<body>` — no transform/filter parent that would break fixed positioning (which converts `position: fixed` into `position: absolute` relative to the transformed ancestor)
+- Verified: no parent of `#bottomNav` has `transform`, `filter`, `perspective`, or `will-change`
+
+No additional changes needed for scroll-persistence.
