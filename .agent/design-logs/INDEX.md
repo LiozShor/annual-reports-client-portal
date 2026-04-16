@@ -2,7 +2,7 @@
 
 Active and pending logs. For completed history, see [ARCHIVE-INDEX.md](ARCHIVE-INDEX.md).
 
-**Total logs:** 189 | **Active:** 91 | **Archived:** 98
+**Total logs:** 190 | **Active:** 92 | **Archived:** 98
 
 ## Folder Structure
 
@@ -21,8 +21,9 @@ Active and pending logs. For completed history, see [ARCHIVE-INDEX.md](ARCHIVE-I
 
 | # | File | Status | Summary |
 |---|------|--------|---------|
+| 287 | [287-cloudflare-queues-inbound-email.md](infrastructure/287-cloudflare-queues-inbound-email.md) | IMPLEMENTED — NEED TESTING | Cloudflare Queues migration for inbound email — decouples HTTP lifecycle from processing; producer enqueues + 202, consumer runs dedup lock + processInboundEmail with full 5min CPU budget; DLQ + feature flag `USE_QUEUE`; classifier serialized (BATCH_SIZE 3→1) |
 | 284 | [284-admin-questionnaire-link-on-behalf.md](admin-ui/284-admin-questionnaire-link-on-behalf.md) | IMPLEMENTED — NEED TESTING | Admin right-click menu item — open questionnaire landing page on behalf of client (assisted mode); 24h token + audit log + visible banner |
-| 283 | [283-n8n-workflow-errors-investigation.md](infrastructure/283-n8n-workflow-errors-investigation.md) | IMPLEMENTED — NEED TESTING | n8n morning errors: WF02/WF06 Airtable 401 (missed credential in Session 14 PAT rotation) + WF05 Worker 120s timeout (decouple via ctx.waitUntil) + PAT rotation runbook |
+| 283 | [283-n8n-workflow-errors-investigation.md](infrastructure/283-n8n-workflow-errors-investigation.md) | SUPERSEDED by DL-287 | n8n morning errors: WF02/WF06 Airtable 401 (missed credential in Session 14 PAT rotation) + WF05 Worker 120s timeout (decouple via ctx.waitUntil) + PAT rotation runbook |
 | 282 | [282-forwarded-email-note-recurrence.md](email/282-forwarded-email-note-recurrence.md) | IMPLEMENTED — NEED TESTING | Fix forwarded-email misattribution (DL-279 recurrence): reorder identifier cascade for office senders who are themselves clients, match-method-aware note sender resolver, strip first-line forward headers, extend parseForwardedEmail + backfill sweep |
 | 281 | [281-queued-emails-outbox-source-of-truth.md](email/281-queued-emails-outbox-source-of-truth.md) | IMPLEMENTED — NEED TESTING | Queue view modal + Outlook Outbox as source of truth for pending deferred sends (fixes DL-273 §8 staleness gap) |
 | 280 | [280-fix-mobile-bottom-nav-hidden.md](admin-ui/280-fix-mobile-bottom-nav-hidden.md) | IMPLEMENTED — NEED TESTING | Fix mobile bottom nav never appearing after login — CSS specificity conflict between inline FOUC guard and `.visible` class gate |

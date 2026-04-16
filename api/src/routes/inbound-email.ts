@@ -39,11 +39,44 @@ inboundEmail.post('/process-inbound-email', async (c) => {
       return c.json({ ok: true, status: 'skipped', reason: 'change_type_not_created' });
     }
 
+    const dedupKey = `dedup:${message_id}`;
+
+    // DL-287: Feature-flag branch for Cloudflare Queues migration.
+    // Two paths exist during rollout: the queue path (async producer) and
+    // the sync path (legacy DL-286 behavior). Controlled by env.USE_QUEUE
+    // so we can flip back instantly if the queue consumer misbehaves.
+    if (c.env.USE_QUEUE === 'true') {
+      // Layer 1 (queue path): CHECK-ONLY dedup.
+      // The consumer (api/src/lib/inbound/queue-consumer.ts) takes the write
+      // lock when it picks up the message. The producer only short-circuits
+      // on an already-locked key to avoid enqueueing obvious duplicates.
+      const existing = await c.env.CACHE_KV.get(dedupKey);
+      if (existing) {
+        return c.json({ ok: true, status: 'skipped', reason: 'duplicate' });
+      }
+
+      try {
+        await c.env.INBOUND_QUEUE.send({ message_id, change_type });
+        return c.json({ ok: true, status: 'enqueued' }, 202);
+      } catch (err) {
+        console.error('[inbound-email] Enqueue error:', (err as Error).message);
+        logError(c.executionCtx, c.env, {
+          endpoint: '/process-inbound-email',
+          error: err,
+          category: 'INTERNAL',
+          details: `enqueue failed; message_id=${message_id}`,
+        });
+        return c.json(
+          { ok: false, error: (err as Error).message || 'enqueue failed' },
+          500
+        );
+      }
+    }
+
+    // Sync path (DL-286 fallback) — unchanged behavior.
     // Layer 1: KV dedup — read-first + write-first-then-verify pattern
     // MS Graph fires 2 notifications. n8n forwards them ~2s apart.
     // Read-first catches the delayed duplicate. Write-then-verify catches simultaneous arrivals.
-    const dedupKey = `dedup:${message_id}`;
-
     const existing = await c.env.CACHE_KV.get(dedupKey);
     if (existing) {
       return c.json({ ok: true, status: 'skipped', reason: 'duplicate' });

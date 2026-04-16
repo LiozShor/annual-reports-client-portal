@@ -33,5 +33,28 @@ id = "5e3beec684c04f539939efe42dada1d0"
 binding = "CACHE_KV"
 id = "39bcc73f6c8c4507bc9c5032bf2914cf"
 
+# DL-287: Cloudflare Queues (inbound email pipeline)
+[[queues.producers]]
+binding = "INBOUND_QUEUE"
+queue = "inbound-email"
+
+[[queues.consumers]]
+queue = "inbound-email"
+# Each message can consume the full cpu_ms=300000 (5 min) budget when an email has
+# many attachments and Anthropic 429-retries. batch_size=1 keeps each invocation
+# scoped to one email so retries don't blow the whole batch.
+max_batch_size = 1
+max_batch_timeout = 2
+max_retries = 3
+max_concurrency = 2
+retry_delay = 30
+dead_letter_queue = "inbound-email-dlq"
+
+[[queues.consumers]]
+queue = "inbound-email-dlq"
+max_batch_size = 5
+max_batch_timeout = 10
+max_retries = 1
+
 [observability]
 enabled = true

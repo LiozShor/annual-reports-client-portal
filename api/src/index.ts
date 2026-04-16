@@ -28,7 +28,9 @@ import createFolders from './routes/create-folders';
 import checkFolders from './routes/check-folders';
 import backfill from './routes/backfill';
 import { logError } from './lib/error-logger';
-import type { Env } from './lib/types';
+import { handleInboundQueue } from './lib/inbound/queue-consumer';
+import { handleInboundDLQ } from './lib/inbound/dlq-consumer';
+import type { Env, InboundQueueMessage } from './lib/types';
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -86,4 +88,14 @@ app.onError((err, c) => {
 
 export default {
   fetch: app.fetch,
+  async queue(batch: MessageBatch<InboundQueueMessage>, env: Env, ctx: ExecutionContext) {
+    if (batch.queue === 'inbound-email') {
+      return handleInboundQueue(batch, env, ctx);
+    }
+    if (batch.queue === 'inbound-email-dlq') {
+      return handleInboundDLQ(batch, env, ctx);
+    }
+    console.error(`[worker] unknown queue: ${batch.queue}`);
+    throw new Error(`Unknown queue: ${batch.queue}`);
+  },
 };
