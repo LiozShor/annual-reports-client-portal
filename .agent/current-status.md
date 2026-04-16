@@ -33,6 +33,50 @@
 ---
 
 **Last Updated:** 2026-04-16 (Session 14 — .agent reorg + urgent Airtable PAT rotation)
+**Last Updated:** 2026-04-16 (DL-283 — n8n morning errors fix + PAT rotation runbook)
+
+---
+
+## Session Summary (2026-04-16 — DL-283)
+
+### DL-283: n8n Workflow Errors Investigation & Fix [IMPLEMENTED — NEED TESTING]
+- **Trigger:** This morning (2026-04-16 05:00–06:30 UTC) the n8n executions tab showed 4 errors across WF02 (×2, Airtable 401), WF05 (×1, 120s Worker timeout), WF06 (×1, Airtable 401 on 08:00 cron).
+- **Root cause A — WF02/WF06:** Yesterday's PAT rotation (Session 14) updated the hardcoded token in WF02's `Clear Reminder Date` Code node but **missed the shared n8n Airtable credential `ODW07LgvsPQySQxh`**. 28 Airtable nodes across 6 workflows all reference this credential, so every Airtable call was 401'ing.
+- **Root cause B — WF05:** Synchronous `processInboundEmail` in `api/src/routes/inbound-email.ts` awaits all attachment work before responding. For 19-PDF emails the work exceeded n8n's 120s HTTP cap, so n8n aborted and Cloudflare cancelled the Worker mid-flight.
+
+**Actions taken**
+- **Credential fix:** `PATCH /api/v1/credentials/ODW07LgvsPQySQxh` via n8n REST API (required `allowedHttpRequestDomains: "all"` in body alongside `accessToken`). Updated at 06:43:02 UTC.
+- **Replay lost WF02 work:** triggered `/webhook/questionnaire-response` for both failed records — `recrpTM7Mi9eIP2us` (exec 11933 SUCCESS) and `reccuB0IJJkLHISRr` (exec 11936 SUCCESS).
+- **Async inbound:** wrapped `processInboundEmail` in `c.executionCtx.waitUntil(...)`, return `202 accepted` immediately. Worker deployed: version `006deee5-8da2-4c78-8110-1249ca254871`. Post-deploy WF05 execs 11935 / 11938 both succeed.
+- **Full audit:** scanned all 10 active workflows via REST API. Confirmed all 28 Airtable nodes use the shared credential (single PATCH fixed every one). **0 occurrences** of the old rotated PAT anywhere. 1 known-good hardcoded new-PAT (Session 14 workaround in `Clear Reminder Date`) left in place.
+- **Runbook:** wrote `.agent/runbooks/pat-rotation.md` — 6-surface checklist covering Airtable regenerate, `.env`, Worker secret, n8n credential, grep for leaked tokens in design logs, grep Code/HTTP nodes for hardcoded copies.
+- **Known remaining miss:** **WF06 08:00 Israel cron did not run** (exec 11925 failed before credential fix). Next scheduled cron is 2026-04-17 08:00 Israel. **User must manually execute WF06 via n8n UI ("Execute Workflow" button) to catch up today's reminders.**
+
+**WF05 follow-up (out of scope for DL-283):** `ctx.waitUntil` has a hard 30s cap. Emails with 6+ attachments may still truncate — these will log via `logError(...)` to `security_logs`. If truncation becomes frequent, migrate to Cloudflare Queues (tracked as a follow-up DL).
+
+**Files touched (code):**
+- `api/src/routes/inbound-email.ts` (lines 59–80): `ctx.waitUntil` + 202 response.
+
+**Files touched (.agent/docs):**
+- `.agent/design-logs/infrastructure/283-n8n-workflow-errors-investigation.md` (new)
+- `.agent/design-logs/INDEX.md` (new row)
+- `.agent/runbooks/pat-rotation.md` (new)
+- This file
+
+---
+
+## Test DL-283: n8n Workflow Errors Fix — NEED TESTING
+
+Verify each item once deploy & credential change have settled. Design log: `.agent/design-logs/infrastructure/283-n8n-workflow-errors-investigation.md`
+
+- [ ] **V1 — WF02 credential.** After any fresh Tally questionnaire submission, n8n execution `Fetch Record` node shows `executionStatus: "success"` (not 401).
+- [ ] **V2 — WF06 credential + catch-up reminders.** Manually trigger WF06 in n8n UI (`[06] Reminder Scheduler` → "Execute Workflow"). First Airtable node succeeds. Reminders that should have gone today actually send (Type A + Type B emails arrive at test addresses).
+- [ ] **V3 — WF06 tomorrow cron.** 2026-04-17 at 08:00 Israel (05:00 UTC), the scheduled cron run completes with `status: success`.
+- [ ] **V4 — WF05 async path.** Forward a test email with 1 PDF to `reports@moshe-atsits.co.il`. n8n `Forward to Worker` node completes in <1s with HTTP 202. Airtable classifications record appears within ~15s. OneDrive file uploaded.
+- [ ] **V5 — WF05 large batch.** Forward an email with 6+ attachments. Observe whether waitUntil 30s cap truncates. If truncated, check Airtable `security_logs` table for the `logError` entry (endpoint `/process-inbound-email`, `category: INTERNAL`).
+- [ ] **V6 — WF02 end-to-end (happy path).** Fresh Tally submission flows through Fetch Record → Get Mappings → Extract & Map → Call Document Service → Upsert Documents + Update Report Stage + Mark Processed. Office email arrives at `reports@moshe-atsits.co.il`.
+- [ ] **V7 — MONITOR Security Alerts unchanged.** Next hourly cron run shows `success`.
+- [ ] **V8 — Runbook usable.** On the next rotation, the runbook lists every surface that needs updating (add surfaces if you find new ones).
 
 ---
 
