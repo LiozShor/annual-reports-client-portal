@@ -434,11 +434,11 @@ dashboard.get('/admin-queued-emails', async (c) => {
 
   const airtable = new AirtableClient(c.env.AIRTABLE_BASE_ID, c.env.AIRTABLE_PAT);
 
-  // Pull every report in the active year that has either a graph_message_id OR
-  // a queued_send_at (legacy fallback). Filter by filing_type in memory so we
-  // can still surface legacy annual_report rows without matching graph IDs.
+  // Pull every report in the active year that has a graph_message_id (set on
+  // queueing) OR a non-empty client_notes (might contain queued reply notes).
+  // Filter rows in memory by Outbox membership — Outbox is the source of truth.
   const reports = await airtable.listAllRecords('tbls7m3hmHC4hhQVy', {
-    filterByFormula: `AND({year}=${year},OR({graph_message_id}!='',{queued_send_at}!=''))`,
+    filterByFormula: `AND({year}=${year},OR({graph_message_id}!='',{client_notes}!=''))`,
     fields: [
       'client_name', 'filing_type', 'client_is_active',
       'graph_message_id', 'queued_send_at', 'client_notes',
@@ -446,7 +446,6 @@ dashboard.get('/admin-queued-emails', async (c) => {
   });
 
   const first = (v: unknown) => Array.isArray(v) ? v[0] : v;
-  const now = Date.now();
   type QueuedRow = {
     report_id: string;
     client_name: string;
@@ -472,9 +471,12 @@ dashboard.get('/admin-queued-emails', async (c) => {
     const clientName = String(first(f.client_name) || 'לקוח');
 
     // Doc-request path: record-level graph_message_id on the report.
+    // Outlook Outbox is the single source of truth — records without a matching
+    // message in the Outbox are NOT shown (delivered, cancelled, or pre-DL-281
+    // legacy records that already went out).
     const reportGraphId = (f.graph_message_id as string | undefined) || '';
-    const queuedSendAt = (f.queued_send_at as string | undefined) || '';
     if (reportGraphId && outboxIds.has(reportGraphId)) {
+      const queuedSendAt = (f.queued_send_at as string | undefined) || '';
       queued.push({
         report_id: r.id,
         client_name: clientName,
@@ -484,26 +486,6 @@ dashboard.get('/admin-queued-emails', async (c) => {
         scheduled_for: outboxById.get(reportGraphId)!.deferredUtc,
         graph_message_id: reportGraphId,
       });
-    } else if (!reportGraphId && queuedSendAt) {
-      // Legacy fallback: pre-DL-281 record with queued_send_at but no messageId.
-      // Show only if computed 08:00 send time is still in the future.
-      const queuedAtMs = new Date(queuedSendAt).getTime();
-      if (!Number.isNaN(queuedAtMs)) {
-        // Next 08:00 Israel after queuedAt = 05:00 UTC of the next day-boundary.
-        // Simpler heuristic: treat as pending if queuedAtMs is within last 12h.
-        const twelveHoursMs = 12 * 60 * 60 * 1000;
-        if (now - queuedAtMs < twelveHoursMs) {
-          queued.push({
-            report_id: r.id,
-            client_name: clientName,
-            filing_type: rowFilingType,
-            type: 'doc_request',
-            queued_at: queuedSendAt,
-            scheduled_for: '',
-            graph_message_id: null,
-          });
-        }
-      }
     }
 
     // Reply path: graph_message_id stored inside client_notes JSON entries.

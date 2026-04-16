@@ -20,6 +20,7 @@ let importData = [];
 let existingEmails = new Set();
 let reviewQueueData = [];
 let queuedEmailsData = []; // DL-281: Outbox-backed queued email list (both filing types)
+let queuedEmailsLoaded = false; // DL-281: distinguishes "API returned empty" from "not loaded yet"
 let showArchivedMode = false;
 let dashboardLoaded = false;
 let pendingClientsLoaded = false;
@@ -1589,8 +1590,9 @@ function recalculateStats() {
     }
 
     // DL-281: Outbox-backed queued count (source of truth = Outlook, not queued_send_at).
-    // Falls back to legacy client-side filter while queuedEmailsData is still loading.
-    const queuedCount = queuedEmailsData.length > 0
+    // Empty list once loaded means "Outbox is empty for this filing type" — don't fall
+    // back to the broken queued_send_at filter (DL-273 §8 staleness gap).
+    const queuedCount = queuedEmailsLoaded
         ? queuedEmailsData.filter(q => q.filing_type === activeEntityTab).length
         : clientsData.filter(c =>
             c.queued_send_at &&
@@ -1633,6 +1635,7 @@ async function loadQueuedEmails() {
             return;
         }
         queuedEmailsData = data.queued || [];
+        queuedEmailsLoaded = true;
         recalculateStats();
     } catch (err) {
         console.warn('[queued-emails] fetch failed:', err.message);
