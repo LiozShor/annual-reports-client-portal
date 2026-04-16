@@ -1,5 +1,5 @@
-# Design Log 289: Align "ממתין לסיווג" Reminder Stat With AI Review Badge
-**Status:** [BEING IMPLEMENTED — DL-289]
+# Design Log 290: Align "ממתין לסיווג" Reminder Stat With AI Review Badge
+**Status:** [BEING IMPLEMENTED — DL-290]
 **Date:** 2026-04-16
 **Related Logs:** DL-112 (file_hash dedup on classifications), DL-216/219/228 (dual filing type), DL-271 (pending classification filter bypass), DL-277 (reminder progress bar math)
 

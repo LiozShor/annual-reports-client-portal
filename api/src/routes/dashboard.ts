@@ -194,21 +194,29 @@ dashboard.get('/admin-recent-messages', async (c) => {
 
         const clientId = String(getField(f.client_id) || '');
 
-        // DL-266: Collect office replies keyed by reply_to note ID
-        const replyMap = new Map<string, { summary: string; date: string }>();
+        // DL-288: Collect ALL office replies per original message (was single-reply map in DL-266)
+        const repliesByOriginal = new Map<string, Array<{ id: string; summary: string; date: string }>>();
         for (const note of notes) {
           if (note.type === 'office_reply' && note.reply_to) {
-            replyMap.set(String(note.reply_to), {
+            const key = String(note.reply_to);
+            const arr = repliesByOriginal.get(key) || [];
+            arr.push({
+              id: String(note.id || ''),
               summary: String(note.summary || ''),
               date: String(note.date || ''),
             });
+            repliesByOriginal.set(key, arr);
           }
+        }
+        // Sort each thread oldest-first so UI reads top-to-bottom chronologically
+        for (const arr of repliesByOriginal.values()) {
+          arr.sort((a, b) => String(a.date).localeCompare(String(b.date)));
         }
 
         for (const note of notes) {
           if (note.source !== 'email') continue; // DL-262: dashboard shows client emails
           if (note.hidden_from_dashboard) continue; // DL-263: skip hidden notes
-          const reply = replyMap.get(String(note.id || ''));
+          const replies = repliesByOriginal.get(String(note.id || '')) || [];
           allMessages.push({
             id: note.id || '',
             report_id: record.id,
@@ -220,7 +228,7 @@ dashboard.get('/admin-recent-messages', async (c) => {
             source: note.source || '',
             sender_email: note.sender_email || '',
             raw_snippet: note.raw_snippet || '',
-            reply: reply || null,
+            replies, // DL-288: array (was `reply: reply || null` — single)
           });
         }
       }
@@ -391,6 +399,42 @@ dashboard.post('/admin-send-comment', async (c) => {
     });
     return c.json({ ok: true, queued: false, email_failed: true });
   }
+});
+
+// POST /webhook/admin-comment-preview (DL-288)
+// Pure render — no email sent, no Airtable mutation, no KV cache.
+dashboard.post('/admin-comment-preview', async (c) => {
+  const authHeader = c.req.header('Authorization') || '';
+  const token = authHeader.startsWith('Bearer ')
+    ? authHeader.slice(7) : '';
+  const authResult = await verifyToken(token, c.env.SECRET_KEY);
+  if (!authResult.valid) return c.json({ ok: false, error: 'unauthorized' });
+
+  let body: Record<string, unknown>;
+  try { body = await c.req.json(); } catch { return c.json({ ok: false, error: 'invalid_json' }); }
+
+  const { report_id, comment_text } = body as { report_id?: string; comment_text?: string };
+  if (!report_id) {
+    return c.json({ ok: false, error: 'report_id is required' });
+  }
+
+  const airtable = new AirtableClient(c.env.AIRTABLE_BASE_ID, c.env.AIRTABLE_PAT);
+
+  let report: { id: string; fields: Record<string, unknown> };
+  try {
+    report = await airtable.getRecord(REPORTS_TABLE, report_id);
+  } catch {
+    return c.json({ ok: false, error: 'report_not_found' });
+  }
+
+  const first = (v: unknown) => Array.isArray(v) ? v[0] : v;
+  const clientName = String(first(report.fields.client_name) || 'לקוח');
+  const year = String(report.fields.year || new Date().getFullYear());
+
+  const html = buildCommentEmailHtml({ commentText: comment_text || '', clientName, year });
+  const subject = buildCommentEmailSubject(year);
+
+  return c.json({ ok: true, html, subject });
 });
 
 // GET /webhook/admin-queued-emails (DL-281)
