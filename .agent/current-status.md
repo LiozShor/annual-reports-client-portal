@@ -20,10 +20,12 @@
 - **Redacted:** DL-112:94 → `'<redacted — see .env AIRTABLE_API_KEY / n8n credential>'`.
 - **`.env` unaffected:** uses separate token `pat2XQGRyzPdycQWr` — untouched.
 
-### Follow-up: Stale Worktree Cleanup [NEEDS ATTENTION]
-- `git worktree list` shows 35 worktrees under `C:/Users/liozm/Desktop/moshe/worktrees/` from 2026-04-14/15/16 sessions.
-- Many are un-named `claude-session-*` branches (likely abandoned agent sessions). Some are real feature branches (`DL-280-*`, `DL-271-*`, `DL-275-*`) that may be in progress or merged-but-not-cleaned.
-- **Recommended next session:** audit each worktree — if branch is merged to main OR is an abandoned `claude-session-*`, run `git worktree remove <path> && git branch -d <branch>`. Keep active feature branches.
+### Stale Worktree Cleanup [PARTIAL — FS CLEANUP PENDING]
+- Audited 35 worktrees: 34 with ahead=0 (merged or empty), 1 (`claude-session-20260415-215959`) with a superseded partial attempt at the same `.agent/` reorg we completed today.
+- **Git-side clean:** All 35 branches deleted (local + remote where applicable). `git worktree list` now shows only main.
+- **Filesystem directories still present** at `C:/Users/liozm/Desktop/moshe/worktrees/**` — Windows refused deletion with "Permission denied" (other Claude Code sessions hold open file handles on those directories).
+- **To finish:** close all other Claude Code sessions (or reboot), then run `rm -rf C:/Users/liozm/Desktop/moshe/worktrees/` from a shell. Also `.git/worktrees/**` admin dirs got the same permission errors — the same reboot/session-close will let those clear.
+- **Skill sharpened:** `~/.claude/skills/design-log/SKILL.md` Phase A step 0 — stale worktree cleanup is now auto-remove for merged/empty branches, ask-first only when a branch has unmerged work.
 
 ---
 
