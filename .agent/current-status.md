@@ -1,6 +1,59 @@
 # Annual Reports CRM - Current Status
 
-**Last Updated:** 2026-04-16 (Session — DL-284 admin "fill questionnaire on behalf of client" — IMPLEMENTED, live-verified with סלביק גרבר; security_logs typecast fix merged)
+**Last Updated:** 2026-04-16 (Session — DL-287 Cloudflare Queues migration for inbound email — IMPLEMENTED, NEED TESTING; supersedes DL-283 and DL-286)
+
+---
+
+## Session Summary (2026-04-16 — DL-287)
+
+### DL-287: Cloudflare Queues Migration for Inbound Email Pipeline [IMPLEMENTED — NEED TESTING]
+
+- **Problem:** Month-long whipsaw between sync (DL-286: n8n 120 s timeout kills Worker on multi-attachment 429-retry emails) and async `ctx.waitUntil` (DL-283: Cloudflare 30 s cap after response, DL-277's 60–72 s 429 `Retry-After` exceeds it → classifications dropped). Orit Matania (8 attachments) and Roby Haviv (multi-attachment) both stuck: `email_events` at `Detected`, `pending_classifications` = 0.
+- **Fix:** Migrate producer to Cloudflare Queues. n8n → POST → auth + dedup-check + `INBOUND_QUEUE.send` + 202 (<2 s). Queue consumer gets fresh 5 min CPU budget per message, takes the dedup lock, runs unchanged `processInboundEmail`. Failures retry 3× with 30 s backoff, then DLQ → `logError(DEPENDENCY)` + admin email. Feature-flagged via `USE_QUEUE=true` secret for instant rollback.
+- **Also:** `CLASSIFY_BATCH_SIZE = 3 → 1` (belt-and-suspenders — prevents 429 storms at source).
+- **Research:** Cloudflare Queues docs, EIP "enqueue-then-return", DL-174 (async hybrid), DL-264 (rejected Queues for a different shape — not applicable here).
+- **Design log:** `.agent/design-logs/infrastructure/287-cloudflare-queues-inbound-email.md`
+
+**Files changed:**
+```
+api/wrangler.toml                              # +queue producer + 2× consumer bindings
+api/src/lib/types.ts                           # +INBOUND_QUEUE, +USE_QUEUE?, +InboundQueueMessage
+api/src/lib/inbound/queue-consumer.ts  (new)   # handleInboundQueue
+api/src/lib/inbound/dlq-consumer.ts    (new)   # handleInboundDLQ
+api/src/routes/inbound-email.ts                # feature-flag branch; sync path preserved
+api/src/index.ts                               # +queue(batch, env, ctx) export
+api/src/lib/inbound/processor.ts               # line 781: CLASSIFY_BATCH_SIZE 3→1
+.agent/design-logs/infrastructure/287-cloudflare-queues-inbound-email.md (new)
+.agent/design-logs/INDEX.md                    # +DL-287 row, DL-283 SUPERSEDED
+.agent/current-status.md                       # this block
+```
+
+**Deploy steps (do in order — consumer FIRST, then flag):**
+1. `cd api && npx wrangler deploy` — deploys consumer code (no-op without producer).
+2. `npx wrangler queues create inbound-email`
+3. `npx wrangler queues create inbound-email-dlq`
+4. `npx wrangler secret put USE_QUEUE` → `true`
+5. Verify V1–V4 below before recovering Orit + Roby.
+
+**Test Plan — DL-287 (NEED TESTING):**
+- [ ] **V1 — Producer fast path.** POST returns 202 in <2 s.
+- [ ] **V2 — Consumer invocation.** Cloudflare tail shows `[queue] processing message_id=...` → `[queue] done ... status=completed`.
+- [ ] **V3 — Idempotency.** Two enqueues of the same `message_id` → one PC record.
+- [ ] **V4 — 1-attachment email.** PC + OneDrive upload <30 s.
+- [ ] **V5 — 8-attachment email (Orit recovery).** 8 PC + 8 files in <2 min.
+- [ ] **V6 — Roby recovery.** Roby's original → CPA-XXX/2025 folder.
+- [ ] **V7 — 429 storm.** Force Anthropic rate-limit (admin re-classify 20 files). All classifications eventually land within Queue consumer's 5 min budget.
+- [ ] **V8 — DLQ.** Poison message (bogus `message_id`) → 3 retries → DLQ → admin email <5 min.
+- [ ] **V9 — Flag off.** `USE_QUEUE=false` → falls back to DL-286 sync path.
+- [ ] **V10 — Regressions.** Forwarded email (DL-282), Office→PDF (Tier 2), office_reply (DL-266) all unchanged.
+
+**Orit + Roby recovery (do AFTER V1–V4 pass):**
+1. Delete `email_events/recmlZ8Op68OMbsAC` (Orit).
+2. Delete `email_events/recRa6aWMSc92AiLJ` (Roby original).
+3. Delete orphan PCs `rec3y6z3lhSt8QaPl` + `recSfYbYiI7wfJiqX` (Roby duplicates). Keep `rectTmGzXJgdJZwj4` (linked to Completed event).
+4. Clear KV dedup keys: `dedup:<orit_message_id>`, `dedup:<roby_original_message_id>`.
+5. User recovers both emails from Outlook deleted items (no need to ask clients to re-send).
+6. Queue path processes them cleanly.
 
 ---
 

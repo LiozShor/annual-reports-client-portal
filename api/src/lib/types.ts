@@ -28,9 +28,23 @@ export interface Env {
   TOKEN_CACHE: KVNamespace;
   CACHE_KV: KVNamespace;
 
+  // Queue producer binding (Phase: Cloudflare Queues migration)
+  INBOUND_QUEUE: Queue<InboundQueueMessage>;
+
   // Vars (set in wrangler.toml [vars])
   ALLOWED_ORIGIN: string;
   AIRTABLE_BASE_ID: string;
+
+  // Feature flags
+  USE_QUEUE?: string;
+}
+
+// Message shape for the inbound email queue. Mirrors InboundEmailRequest
+// from lib/inbound/types.ts; change_type is optional here because the
+// producer route tolerates missing values and defaults downstream.
+export interface InboundQueueMessage {
+  message_id: string;
+  change_type?: string;
 }
 
 // Standard API response shape (matches n8n webhook responses)

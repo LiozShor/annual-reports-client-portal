@@ -777,8 +777,9 @@ export async function processInboundEmail(
 
     // 13. Process attachments — parallel classification, sequential upload/write
     if (attachments.length > 0) {
-      // Phase A: Classify attachments in batches of 3 (avoids Anthropic 429 rate limit)
-      const CLASSIFY_BATCH_SIZE = 3;
+      // Phase A: Classify attachments serially (DL-287: belt-and-suspenders with Queues
+      // migration — size=1 + inter-batch 1s delay eliminates 429 storms at source).
+      const CLASSIFY_BATCH_SIZE = 1;
       const classificationResults: (ClassificationResult | null)[] = new Array(attachments.length).fill(null);
       for (let batch = 0; batch < attachments.length; batch += CLASSIFY_BATCH_SIZE) {
         const batchEnd = Math.min(batch + CLASSIFY_BATCH_SIZE, attachments.length);
