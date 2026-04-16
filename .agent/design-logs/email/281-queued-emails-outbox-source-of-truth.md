@@ -193,6 +193,10 @@ Clicking `(N בתור לשליחה)` opens a modal listing clients whose deferre
 - **Frontend degrades gracefully** — if `/admin-queued-emails` fails, `queuedEmailsData` stays empty, and the count subtitle falls back to the legacy `clientsData.filter(...)` path. Modal still opens (will show "no items" if the fetch silently failed).
 - **Architecture diagrams NOT updated** — `docs/architecture/` is gitignored in this repo, so diagrams aren't tracked. If diagrams are maintained locally, add `GET /admin-queued-emails` to `email-generation-flow.mmd`.
 - **Type-check clean** — only 2 pre-existing errors (backfill.ts ADMIN_SECRET, classifications.ts pageCount) unrelated to this change.
+- **Follow-up fix — stale frontend state across 08:00 (2026-04-16 ~10:00 IDT):** Dashboard left open across the delivery boundary kept showing pre-08:00 counts/modal because `loadQueuedEmails()` only fired once per page load. Confirmed via browser-console `fetch` that the backend was correctly returning `count: 0`; the 30 rows were frozen in-memory `queuedEmailsData`. Two fixes in `frontend/admin/js/script.js`:
+  - `openQueuedEmailsModal()` made async with stale-while-revalidate — renders immediately from `queuedEmailsData`, awaits `loadQueuedEmails()`, re-renders if modal still open. Separated render logic into `renderQueuedEmailsModal()`.
+  - 5-min `setInterval` polling `loadQueuedEmails()` when `document.visibilityState === 'visible'` and `authToken` is set — so count subtitle self-heals without a page refresh.
+  - No backend changes; worker already correct as of deploy `ef0aebd7` (09:49 IDT).
 
 ---
 

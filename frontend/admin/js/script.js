@@ -21,6 +21,7 @@ let existingEmails = new Set();
 let reviewQueueData = [];
 let queuedEmailsData = []; // DL-281: Outbox-backed queued email list (both filing types)
 let queuedEmailsLoaded = false; // DL-281: distinguishes "API returned empty" from "not loaded yet"
+let queuedEmailsAutoRefreshInterval = null; // DL-281: 5-min poll so count/modal survive 08:00 delivery boundary when dashboard stays open
 let showArchivedMode = false;
 let dashboardLoaded = false;
 let pendingClientsLoaded = false;
@@ -756,6 +757,11 @@ async function loadDashboard(silent = false) {
             loadReminderCount();
             loadRecentMessages(); // DL-261: side panel
             loadQueuedEmails(); // DL-281: Outbox-backed queue view
+            if (!queuedEmailsAutoRefreshInterval) {
+                queuedEmailsAutoRefreshInterval = setInterval(() => {
+                    if (document.visibilityState === 'visible' && authToken) loadQueuedEmails();
+                }, 5 * 60 * 1000);
+            }
             if (!pendingClientsLoaded) loadPendingClients(true);
             if (!aiReviewLoaded) loadAIClassifications(true); // DL-247: prefetch AI review
             if (!questionnaireLoaded) loadQuestionnaires(true);
@@ -1643,7 +1649,19 @@ async function loadQueuedEmails() {
 }
 
 // DL-281: Queue modal — list of clients whose deferred emails are actually in Outbox.
-function openQueuedEmailsModal() {
+// Stale-while-revalidate: render immediately from queuedEmailsData, refresh in
+// background, re-render if modal still open. Fixes the bug where a dashboard
+// left open across 08:00 kept showing pre-delivery counts.
+async function openQueuedEmailsModal() {
+    renderQueuedEmailsModal();
+    try {
+        await loadQueuedEmails();
+    } catch { /* keep stale data visible */ }
+    const overlay = document.getElementById('queuedEmailsModal');
+    if (overlay?.classList.contains('show')) renderQueuedEmailsModal();
+}
+
+function renderQueuedEmailsModal() {
     const rows = (queuedEmailsData || []).filter(q => q.filing_type === activeEntityTab);
     const fmtTime = (iso) => {
         if (!iso) return '';
