@@ -155,7 +155,10 @@ function _hideSplash() {
 function _showAppUI() {
     _hideSplash();
     document.getElementById('app').classList.add('visible');
-    document.getElementById('bottomNav').classList.add('visible');
+    // DL-280: clear FOUC-defense inline display:none so `.visible` class rule can take over
+    const bn = document.getElementById('bottomNav');
+    bn.style.display = '';
+    bn.classList.add('visible');
     startBackgroundRefresh();
     safeCreateIcons();
 }
@@ -263,7 +266,9 @@ async function checkAuth() {
 window.addEventListener('pageshow', (e) => {
     if (e.persisted && (!authToken || isTokenExpired(authToken))) {
         document.getElementById('app').classList.remove('visible');
-        document.getElementById('bottomNav').classList.remove('visible');
+        const bn = document.getElementById('bottomNav');
+        bn.classList.remove('visible');
+        bn.style.display = 'none';
         document.getElementById('loginScreen').classList.add('visible');
     }
 });
