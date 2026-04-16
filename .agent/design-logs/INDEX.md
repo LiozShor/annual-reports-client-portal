@@ -2,7 +2,7 @@
 
 Active and pending logs. For completed history, see [ARCHIVE-INDEX.md](ARCHIVE-INDEX.md).
 
-**Total logs:** 190 | **Active:** 92 | **Archived:** 98
+**Total logs:** 191 | **Active:** 93 | **Archived:** 98
 
 ## Folder Structure
 
@@ -21,6 +21,7 @@ Active and pending logs. For completed history, see [ARCHIVE-INDEX.md](ARCHIVE-I
 
 | # | File | Status | Summary |
 |---|------|--------|---------|
+| 288 | [288-recent-messages-checkmark-thread.md](admin-ui/288-recent-messages-checkmark-thread.md) | IMPLEMENTED — NEED TESTING | Recent messages panel: stack 2+ office reply threads (was single-reply overwrite), replace trash icon with check (mark as handled = soft hide), inline post-reply prompt appended below row, Gmail-style expand-compose modal with live email preview iframe |
 | 287 | [287-cloudflare-queues-inbound-email.md](infrastructure/287-cloudflare-queues-inbound-email.md) | IMPLEMENTED — NEED TESTING | Cloudflare Queues migration for inbound email — decouples HTTP lifecycle from processing; producer enqueues + 202, consumer runs dedup lock + processInboundEmail with full 5min CPU budget; DLQ + feature flag `USE_QUEUE`; classifier serialized (BATCH_SIZE 3→1) |
 | 284 | [284-admin-questionnaire-link-on-behalf.md](admin-ui/284-admin-questionnaire-link-on-behalf.md) | IMPLEMENTED — NEED TESTING | Admin right-click menu item — open questionnaire landing page on behalf of client (assisted mode); 24h token + audit log + visible banner |
 | 283 | [283-n8n-workflow-errors-investigation.md](infrastructure/283-n8n-workflow-errors-investigation.md) | SUPERSEDED by DL-287 | n8n morning errors: WF02/WF06 Airtable 401 (missed credential in Session 14 PAT rotation) + WF05 Worker 120s timeout (decouple via ctx.waitUntil) + PAT rotation runbook |
