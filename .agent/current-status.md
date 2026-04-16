@@ -1,6 +1,36 @@
 # Annual Reports CRM - Current Status
 
-**Last Updated:** 2026-04-16 afternoon (Session — DL-280 v2 Mobile Bottom Nav Root Fix — IMPLEMENTED, NEED TESTING)
+**Last Updated:** 2026-04-16 evening (Session — DL-289 expand-compose modal fix + preview perf — shipped)
+
+---
+
+## Session Summary (2026-04-16 evening — DL-289 merge + bugfixes)
+
+### DL-289: Recent Messages — expand-compose modal + preview perf [SHIPPED]
+
+**Bug fix 1 — modal not opening:**
+- `.ai-modal-overlay` is `display:none` by default; the code was appending the overlay to `<body>` but never adding `.show`. Fixed: `requestAnimationFrame(() => overlay.classList.add('show'))` after `appendChild`.
+
+**Bug fix 2 — preview slow on first run:**
+- `/admin-comment-preview` did an Airtable `getRecord` on every debounced keypress to resolve `client_name` + `year`. Fixed: `renderMessages` now writes `data-client-name` + `data-year` onto each `.msg-row`; `showReplyInput` reads them and passes to `expandReplyCompose`; frontend includes them in the POST body; backend skips the Airtable lookup entirely when both are present. Preview is now pure CPU (template render only).
+
+**Also:** Merged `DL-288-recent-messages-checkmark-thread` branch into `main` (conflict in `INDEX.md` — our log renumbered 288→289 since another session claimed 288 for the queued-subtitle stale-flash fix). Remote branch deleted.
+
+**Files changed:**
+```
+frontend/admin/js/script.js    # .show class on overlay; clientName/year data attrs + threaded params
+api/src/routes/dashboard.ts    # fast path: skip Airtable when client_name+year in body
+.agent/design-logs/INDEX.md    # conflict resolved — DL-289 row added
+.agent/current-status.md       # this block
+```
+
+**Test checklist (DL-289 remaining):**
+- [ ] Expand modal opens on click
+- [ ] Type in expanded textarea → preview updates within ~400ms (fast, no visible stall)
+- [ ] Escape key + overlay click = collapse (preserves text)
+- [ ] Click collapse → compact textarea has the typed text
+- [ ] Click send from expanded mode → email sent, post-reply prompt appears
+- [ ] No regression: ✓ mark-as-handled, thread stacking, post-reply prompt all still work
 
 ---
 
