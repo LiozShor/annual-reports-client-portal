@@ -1,5 +1,37 @@
 # Annual Reports CRM - Current Status
 
+**Last Updated:** 2026-04-16 (Session — DL-284 admin "fill questionnaire on behalf of client")
+
+---
+
+## Session Summary (2026-04-16 — DL-284)
+
+### DL-284: Admin "Fill Questionnaire on Behalf of Client" [IMPLEMENTED — NEED TESTING]
+- **Problem:** Elderly clients can't fill the Tally questionnaire themselves. Office staff had no one-click way to reach a client's landing page from the admin dashboard; existing "View as Client" goes to the docs view, not the questionnaire.
+- **Fix:** New right-click menu item on client rows for stages 1–2 (`Send_Questionnaire`, `Waiting_For_Answers`): "מלא שאלון במקום הלקוח". Mints a 24h client token (vs 45d for email links), opens landing page in a new tab with `?assisted=1` flag, landing renders a persistent yellow banner. Every issuance writes a `security_logs` INFO row (`event_type=ADMIN_ASSISTED_OPEN`) with admin IP + report_id + client_name.
+- **Research:** Auth0 impersonation pattern, Google SRE tool-proxy, OWASP ASVS §V7. Actor ≠ subject separation via the audit log; fresh short-TTL token instead of reusing the client's 45d token; visible banner prevents forgotten assisted mode.
+- **Files changed:** `api/src/routes/admin-assisted-link.ts` (new), `api/src/index.ts`, `frontend/shared/endpoints.js`, `frontend/assets/js/landing.js`, `frontend/assets/css/landing.css`, `frontend/admin/js/script.js`
+- Design log: `.agent/design-logs/admin-ui/284-admin-questionnaire-link-on-behalf.md`
+
+**Test checklist (DL-284) — Test Next Session:**
+- [ ] Right-click on a `Send_Questionnaire` client → new menu item appears
+- [ ] Right-click on a `Waiting_For_Answers` client → new menu item appears
+- [ ] Right-click on a `Pending_Approval` (stage ≥ 3) client → item is NOT shown
+- [ ] Right-click on an archived client → item is NOT shown
+- [ ] Click item → Hebrew confirm dialog appears with correct client name
+- [ ] Confirm → loading spinner, then new tab opens with landing page
+- [ ] Landing page shows yellow "assisted mode" banner at top
+- [ ] Language picker works (HE/EN); clicking redirects to Tally with all params prefilled
+- [ ] URL bar on landing page has no query params (stripped by existing `history.replaceState`)
+- [ ] Tally form pre-fills client name / email / year correctly
+- [ ] `security_logs` Airtable has a new `ADMIN_ASSISTED_OPEN` row with correct `actor_ip`, `details`
+- [ ] Token TTL is 24h (decode `expiryUnix` in returned URL, confirm ≈ now + 86400s)
+- [ ] Cancel on confirm dialog → no network call, no new tab
+- [ ] Bad `report_id` → red Hebrew toast, no crash
+- [ ] Worker deployed: `cd api && npx wrangler deploy`
+
+---
+
 **Last Updated:** 2026-04-16 (Session 14 — .agent reorg + urgent Airtable PAT rotation)
 
 ---

@@ -2,16 +2,16 @@
 
 Active and pending logs. For completed history, see [ARCHIVE-INDEX.md](ARCHIVE-INDEX.md).
 
-**Total logs:** 186 | **Active:** 88 | **Archived:** 98
+**Total logs:** 188 | **Active:** 90 | **Archived:** 98
 
 ## Folder Structure
 
-- `admin-ui/` — Admin UI (29)
+- `admin-ui/` — Admin UI (30)
 - `ai-review/` — AI Review & Classification (32)
 - `capital-statements/` — Capital Statements (4)
 - `client-portal/` — Client Portal & Questionnaires (13)
 - `documents/` — Documents & OneDrive (20)
-- `email/` — Email System (20)
+- `email/` — Email System (21)
 - `infrastructure/` — Infrastructure & Workflows (18)
 - `reminders/` — Reminder System (17)
 - `research/` — Research & Feasibility (7)
@@ -21,6 +21,7 @@ Active and pending logs. For completed history, see [ARCHIVE-INDEX.md](ARCHIVE-I
 
 | # | File | Status | Summary |
 |---|------|--------|---------|
+| 284 | [284-admin-questionnaire-link-on-behalf.md](admin-ui/284-admin-questionnaire-link-on-behalf.md) | IMPLEMENTED — NEED TESTING | Admin right-click menu item — open questionnaire landing page on behalf of client (assisted mode); 24h token + audit log + visible banner |
 | 282 | [282-forwarded-email-note-recurrence.md](email/282-forwarded-email-note-recurrence.md) | IMPLEMENTED — NEED TESTING | Fix forwarded-email misattribution (DL-279 recurrence): reorder identifier cascade for office senders who are themselves clients, match-method-aware note sender resolver, strip first-line forward headers, extend parseForwardedEmail + backfill sweep |
 | 281 | [281-queued-emails-outbox-source-of-truth.md](email/281-queued-emails-outbox-source-of-truth.md) | IMPLEMENTED — NEED TESTING | Queue view modal + Outlook Outbox as source of truth for pending deferred sends (fixes DL-273 §8 staleness gap) |
 | 280 | [280-fix-mobile-bottom-nav-hidden.md](admin-ui/280-fix-mobile-bottom-nav-hidden.md) | IMPLEMENTED — NEED TESTING | Fix mobile bottom nav never appearing after login — CSS specificity conflict between inline FOUC guard and `.visible` class gate |

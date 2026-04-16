@@ -6893,6 +6893,9 @@ function openClientContextMenu(e) {
         if (stage === 'Waiting_For_Answers' || stage === 'Collecting_Docs') {
             items += `<button onclick="sendDashboardReminder('${rid}', '${cName}'); closeAllRowMenus();"><i data-lucide="bell-ring"></i> שלח תזכורת</button>`;
         }
+        if (stage === 'Send_Questionnaire' || stage === 'Waiting_For_Answers') {
+            items += `<button onclick="openAssistedQuestionnaire('${rid}', '${cName}'); closeAllRowMenus();"><i data-lucide="user-pen"></i> מלא שאלון במקום הלקוח</button>`;
+        }
         if (stageNum >= 3) {
             items += `<button onclick="viewQuestionnaire('${rid}'); closeAllRowMenus();"><i data-lucide="file-text"></i> צפה בשאלון</button>`;
         }
@@ -7055,6 +7058,34 @@ function bulkSendQuestionnaires() {
 function viewClient(reportId) {
     // Admin token is already in localStorage (same origin) — view-documents.html reads it directly
     window.open(`https://docs.moshe-atsits.com/view-documents.html?report_id=${encodeURIComponent(reportId)}`, '_blank');
+}
+
+// DL-284: Open questionnaire landing page on behalf of a client (office-assisted filling)
+function openAssistedQuestionnaire(reportId, clientName) {
+    showConfirmDialog(
+        `פתח שאלון במקום הלקוח "${clientName}"? הפעולה תירשם ביומן המערכת.`,
+        async () => {
+            showLoading('מכין קישור...');
+            try {
+                const response = await fetchWithTimeout(ENDPOINTS.ADMIN_ASSISTED_LINK, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ token: authToken, report_id: reportId }),
+                }, FETCH_TIMEOUTS.mutate);
+                const data = await response.json();
+                hideLoading();
+                if (!data.ok || !data.url) {
+                    showAIToast(data.error || 'שגיאה בפתיחת השאלון', 'error');
+                    return;
+                }
+                window.open(data.url, '_blank', 'noopener,noreferrer');
+            } catch (err) {
+                hideLoading();
+                showAIToast('שגיאה בפתיחת השאלון: ' + err.message, 'error');
+            }
+        },
+        'פתח שאלון'
+    );
 }
 
 function viewClientDocs(reportId, newTab = false) {

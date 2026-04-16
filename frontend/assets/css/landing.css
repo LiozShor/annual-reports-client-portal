@@ -241,3 +241,27 @@ body {
         font-size: var(--text-sm);
     }
 }
+
+/* DL-284: Assisted mode banner — admin filling on behalf of client */
+.assisted-banner {
+    background: var(--warning-50);
+    border: 1px solid var(--warning-500);
+    border-radius: var(--radius-md, 8px);
+    color: var(--warning-700);
+    padding: var(--sp-4) var(--sp-5);
+    margin: var(--sp-4) var(--sp-5) 0;
+    text-align: center;
+}
+
+.assisted-banner strong {
+    display: block;
+    font-size: var(--text-base);
+    margin-bottom: var(--sp-2);
+}
+
+.assisted-banner p {
+    margin: 0;
+    font-size: var(--text-sm);
+    line-height: 1.5;
+}
+
