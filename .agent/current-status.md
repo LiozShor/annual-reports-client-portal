@@ -1,6 +1,33 @@
 # Annual Reports CRM - Current Status
 
-**Last Updated:** 2026-04-15 (Session 13f — DL-279 fix forwarded note sender email)
+**Last Updated:** 2026-04-16 (Session 14 — .agent reorg + urgent Airtable PAT rotation)
+
+---
+
+## Session Summary (2026-04-16 — Part 14)
+
+### .agent/ Tracking Reorg [COMPLETED]
+- **Problem:** `.gitignore` line 26 had broad `.agent/` ignore (commit `f3e43e9`). Worktrees couldn't see 247 design logs — only the 4 tracked before the ignore landed. Agents in worktree sessions started cold, missing cross-session context.
+- **Fix:** Removed broad ignore. Tracked 247 new design logs across 10 domain folders + `current-status.md`. Added `.gitattributes` with `merge=union` driver on `current-status.md` so parallel Claude sessions' appends auto-merge without conflicts.
+- **Files:** `.gitignore`, `.gitattributes` (new), `.agent/design-logs/**` (247 new), `.agent/current-status.md`
+- **Commit:** `2a9ff3f` (253 files, +35,838 lines)
+
+### P1: Airtable PAT Rotation [COMPLETED — see Priority Queue]
+- Leaked token `patvXzYxSlSUEKx9i.25f38a9e...` found hardcoded in DL-112 design log line 94 during `.agent/` staging scan.
+- **Rotated:** User regenerated in Airtable Developer Hub. New token verified — HTTP 200 on base `appqBL5RWQN9cPOyh`.
+- **n8n updated:** Only `QqEIWQlRs1oZzEtNxFUcQ` WF02 `code-clear-reminder` was active + contained the old token. Updated via MCP `n8n_update_partial_workflow` / `updateNode`. Confirmed new token (`917c1a24...`) is live in workflow, old removed.
+- **Skipped:** `QREwCScDZvhF9njF` Send Batch Status (disabled/superseded by Workers). 3 archived workflows (dormant).
+- **Redacted:** DL-112:94 → `'<redacted — see .env AIRTABLE_API_KEY / n8n credential>'`.
+- **`.env` unaffected:** uses separate token `pat2XQGRyzPdycQWr` — untouched.
+
+### Follow-up: Stale Worktree Cleanup [NEEDS ATTENTION]
+- `git worktree list` shows 35 worktrees under `C:/Users/liozm/Desktop/moshe/worktrees/` from 2026-04-14/15/16 sessions.
+- Many are un-named `claude-session-*` branches (likely abandoned agent sessions). Some are real feature branches (`DL-280-*`, `DL-271-*`, `DL-275-*`) that may be in progress or merged-but-not-cleaned.
+- **Recommended next session:** audit each worktree — if branch is merged to main OR is an abandoned `claude-session-*`, run `git worktree remove <path> && git branch -d <branch>`. Keep active feature branches.
+
+---
+
+
 
 ---
 
