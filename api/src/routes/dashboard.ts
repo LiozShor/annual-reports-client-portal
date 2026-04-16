@@ -413,23 +413,31 @@ dashboard.post('/admin-comment-preview', async (c) => {
   let body: Record<string, unknown>;
   try { body = await c.req.json(); } catch { return c.json({ ok: false, error: 'invalid_json' }); }
 
-  const { report_id, comment_text } = body as { report_id?: string; comment_text?: string };
+  const { report_id, comment_text, client_name: bodyClientName, year: bodyYear } =
+    body as { report_id?: string; comment_text?: string; client_name?: string; year?: string };
   if (!report_id) {
     return c.json({ ok: false, error: 'report_id is required' });
   }
 
-  const airtable = new AirtableClient(c.env.AIRTABLE_BASE_ID, c.env.AIRTABLE_PAT);
+  let clientName: string;
+  let year: string;
 
-  let report: { id: string; fields: Record<string, unknown> };
-  try {
-    report = await airtable.getRecord(REPORTS_TABLE, report_id);
-  } catch {
-    return c.json({ ok: false, error: 'report_not_found' });
+  // Skip Airtable roundtrip when frontend passes client_name + year (fast path)
+  if (bodyClientName && bodyYear) {
+    clientName = bodyClientName;
+    year = bodyYear;
+  } else {
+    const airtable = new AirtableClient(c.env.AIRTABLE_BASE_ID, c.env.AIRTABLE_PAT);
+    let report: { id: string; fields: Record<string, unknown> };
+    try {
+      report = await airtable.getRecord(REPORTS_TABLE, report_id);
+    } catch {
+      return c.json({ ok: false, error: 'report_not_found' });
+    }
+    const first = (v: unknown) => Array.isArray(v) ? v[0] : v;
+    clientName = String(first(report.fields.client_name) || 'לקוח');
+    year = String(report.fields.year || new Date().getFullYear());
   }
-
-  const first = (v: unknown) => Array.isArray(v) ? v[0] : v;
-  const clientName = String(first(report.fields.client_name) || 'לקוח');
-  const year = String(report.fields.year || new Date().getFullYear());
 
   const html = buildCommentEmailHtml({ commentText: comment_text || '', clientName, year });
   const subject = buildCommentEmailSubject(year);

@@ -924,7 +924,7 @@ function renderMessages() {
                     <div class="msg-reply-date">${formatRelativeTime(r.date)}</div>
                 </div>`).join('')}</div>`
             : '';
-        return `<div class="msg-row" data-note-id="${noteId}">
+        return `<div class="msg-row" data-note-id="${noteId}" data-client-name="${escapeAttr(m.client_name)}" data-year="${escapeAttr(String(m.year || ''))}">
             <div class="msg-content" onclick="this.parentElement.classList.toggle('expanded')">
                 <div class="msg-meta">
                     <span class="msg-client">${escapeHtml(m.client_name)}</span>
@@ -989,6 +989,8 @@ function showReplyInput(noteId, reportId) {
     if (!row) return;
     // Don't add twice
     if (row.querySelector('.msg-reply-zone')) return;
+    const clientName = row.dataset.clientName || '';
+    const year = row.dataset.year || '';
 
     row.classList.add('expanded');
     const replyZone = document.createElement('div');
@@ -1018,7 +1020,7 @@ function showReplyInput(noteId, reportId) {
             expandReplyCompose(noteId, reportId, textarea.value, (newText) => {
                 textarea.value = newText;
                 sendBtn.disabled = !textarea.value.trim();
-            });
+            }, clientName, year);
         });
     }
 
@@ -1121,7 +1123,7 @@ function showPostReplyPrompt(noteId, reportId, row) {
 }
 
 // DL-288: Gmail-style expanded compose modal with live email preview
-function expandReplyCompose(noteId, reportId, initialText, onCollapse) {
+function expandReplyCompose(noteId, reportId, initialText, onCollapse, clientName, year) {
     // Cleanup any prior modal
     document.querySelectorAll('.ai-modal-overlay.msg-compose-overlay').forEach(el => el.remove());
 
@@ -1194,7 +1196,7 @@ function expandReplyCompose(noteId, reportId, initialText, onCollapse) {
         fetchWithTimeout(ENDPOINTS.ADMIN_COMMENT_PREVIEW, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
-            body: JSON.stringify({ report_id: reportId, comment_text: text })
+            body: JSON.stringify({ report_id: reportId, comment_text: text, ...(clientName ? { client_name: clientName } : {}), ...(year ? { year } : {}) })
         }, FETCH_TIMEOUTS.load).then(r => r.json()).then(data => {
             if (seq !== previewSeq) return; // stale
             if (data.ok && data.html) {
