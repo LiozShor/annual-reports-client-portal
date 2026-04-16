@@ -291,16 +291,20 @@ document.getElementById('passwordInput').addEventListener('keypress', (e) => {
 // ==================== TABS ====================
 
 const TAB_DROPDOWN_TABS = { send: 'שליחת שאלונים', questionnaires: 'שאלונים שהתקבלו' };
+const TAB_REVIEW_DROPDOWN_TABS = { 'pending-approval': 'סקירה ואישור', 'ai-review': 'סקירת AI' };
 
 function switchTab(tabName, evt) {
     document.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'));
     document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
 
     if (tabName in TAB_DROPDOWN_TABS) {
-        // Activate the dropdown wrapper's tab button
-        const wrapperBtn = document.querySelector('.tab-dropdown-wrapper > .tab-item');
+        const wrapperBtn = document.querySelector('.tab-dropdown-wrapper[data-group="questionnaires"] > .tab-item');
         if (wrapperBtn) wrapperBtn.classList.add('active');
         document.getElementById('tabDropdownLabel').textContent = TAB_DROPDOWN_TABS[tabName];
+    } else if (tabName in TAB_REVIEW_DROPDOWN_TABS) {
+        const wrapperBtn = document.querySelector('.tab-dropdown-wrapper[data-group="reviews"] > .tab-item');
+        if (wrapperBtn) wrapperBtn.classList.add('active');
+        document.getElementById('tabReviewDropdownLabel').textContent = TAB_REVIEW_DROPDOWN_TABS[tabName];
     } else if (evt && evt.currentTarget) {
         evt.currentTarget.classList.add('active');
     }
@@ -328,8 +332,9 @@ function switchTab(tabName, evt) {
 
 function toggleTabDropdown(event) {
     event.stopPropagation();
-    const menu = document.getElementById('tabDropdownMenu');
     const btn = event.currentTarget;
+    const menu = btn.parentElement.querySelector('.tab-dropdown-menu');
+    if (!menu) return;
     const wasOpen = menu.classList.contains('open');
     closeAllRowMenus();
     if (!wasOpen) {
@@ -342,9 +347,10 @@ function toggleTabDropdown(event) {
 
 function switchTabFromDropdown(tabName, event) {
     event.stopPropagation();
-    const menu = document.getElementById('tabDropdownMenu');
-    menu.classList.remove('open');
-    const wrapperBtn = document.querySelector('.tab-dropdown-wrapper > .tab-item');
+    const wrapper = event.currentTarget.closest('.tab-dropdown-wrapper');
+    const menu = wrapper?.querySelector('.tab-dropdown-menu');
+    if (menu) menu.classList.remove('open');
+    const wrapperBtn = wrapper?.querySelector(':scope > .tab-item');
     if (wrapperBtn) wrapperBtn.setAttribute('aria-expanded', 'false');
     switchTab(tabName);
 }
@@ -358,7 +364,7 @@ function syncBottomNav(tabName) {
     bottomNav.querySelectorAll('.bottom-nav-item').forEach(btn => btn.classList.remove('active'));
 
     const questGroupTabs = ['send', 'questionnaires'];
-    const moreGroupTabs = ['review', 'reminders', 'pending-approval'];
+    const moreGroupTabs = ['review', 'reminders', 'pending-approval', 'ai-review'];
 
     let dataTab = tabName;
     if (questGroupTabs.includes(tabName)) dataTab = 'questionnaires-group';
@@ -7485,13 +7491,12 @@ function closeAllRowMenus() {
     document.querySelectorAll('.row-menu.open').forEach(m => m.classList.remove('open'));
     const ctx = document.getElementById('clientContextMenu');
     if (ctx) { ctx.style.display = 'none'; ctx.classList.remove('open'); }
-    // Close tab dropdown
-    const tabMenu = document.getElementById('tabDropdownMenu');
-    if (tabMenu) {
-        tabMenu.classList.remove('open');
-        const tabBtn = document.querySelector('.tab-dropdown-wrapper > .tab-item');
-        if (tabBtn) tabBtn.setAttribute('aria-expanded', 'false');
-    }
+    // Close all tab dropdowns
+    document.querySelectorAll('.tab-dropdown-menu.open').forEach(m => {
+        m.classList.remove('open');
+        const btn = m.closest('.tab-dropdown-wrapper')?.querySelector(':scope > .tab-item');
+        if (btn) btn.setAttribute('aria-expanded', 'false');
+    });
 }
 
 function toggleRowMenu(btn, e) {
