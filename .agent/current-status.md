@@ -1,6 +1,21 @@
 # Annual Reports CRM - Current Status
 
-**Last Updated:** 2026-04-16 (Session — DL-287 Cloudflare Queues migration for inbound email — IMPLEMENTED, NEED TESTING; supersedes DL-283 and DL-286)
+**Last Updated:** 2026-04-16 (Session — DL-288 Fix stale-flash of queued-subtitle on dashboard load — IMPLEMENTED, NEED TESTING)
+
+---
+
+## Session Summary (2026-04-16 — DL-288)
+
+### DL-288: Fix Queued-Subtitle Stale Flash on Dashboard Load [IMPLEMENTED — NEED TESTING]
+- **Problem:** On admin dashboard load, stage-3 card flashes `(30 בתור לשליחה)` subtitle for ~100–300ms, then disappears. Stale count from yesterday's already-delivered emails.
+- **Root cause:** `recalculateStats()` in `frontend/admin/js/script.js:1598-1607` fell back to filtering `clientsData.c.queued_send_at` whenever `queuedEmailsLoaded === false`. That field never self-clears after 08:00 delivery (DL-273 §8 gap). DL-281 switched the post-load path to Outbox as source of truth but left this pre-load fallback alive (Risk C was never implemented).
+- **Fix:** Replace the stale fallback with `: 0`. Subtitle renders only after `/admin-queued-emails` resolves.
+- **Files:** `frontend/admin/js/script.js` (lines 1598-1603 — 10 lines → 6 lines)
+- Design log: `.agent/design-logs/admin-ui/288-queued-subtitle-no-stale-flash.md`
+
+**Test checklist (DL-288) — see Active TODOs below.**
+
+**Session note:** Originally planned to work in worktree `claude-session-20260416-145349`, but its git admin directory was pruned mid-session by a concurrent cleanup process. Branch work moved to main repo as `DL-288-queued-subtitle-no-stale-flash`.
 
 ---
 
@@ -1045,6 +1060,13 @@ _(empty — no P1 items)_
 ---
 
 ## Active TODOs
+
+**Test DL-288: Queued-Subtitle Stale Flash** — verify dashboard load has no `(N בתור לשליחה)` flash
+- [ ] Hard-reload `/admin` after 08:00 when no emails are queued → stage-3 card renders clean, no subtitle flash at any point
+- [ ] Queue an email off-hours → reload → subtitle appears with correct Outbox-backed count after fetch resolves (~200-500ms), no intermediate wrong number
+- [ ] Click the subtitle → `openQueuedEmailsModal()` opens with correct list (DL-281 regression check)
+- [ ] Stage counts (stat-total, stat-stage1..8) still update correctly on the same dashboard refresh
+Design log: `.agent/design-logs/admin-ui/288-queued-subtitle-no-stale-flash.md`
 
 ~~**Test DL-244: Rejected Uploads Visibility**~~ — NOT TESTED (test plan: `.agent/test-plan-2026-04-15.md` Suite 3)
 ~~**Test DL-232: Email & Print Filing Type Audit**~~ — NOT TESTED (test plan: Suite 4)

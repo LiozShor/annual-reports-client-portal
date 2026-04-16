@@ -1595,16 +1595,12 @@ function recalculateStats() {
         stage3Card.classList.toggle('needs-attention', counts.stage3 > 0);
     }
 
-    // DL-281: Outbox-backed queued count (source of truth = Outlook, not queued_send_at).
-    // Empty list once loaded means "Outbox is empty for this filing type" — don't fall
-    // back to the broken queued_send_at filter (DL-273 §8 staleness gap).
+    // DL-281/288: Outbox-backed queued count (source of truth = Outlook). Before the
+    // Outbox fetch lands, render nothing — the legacy queued_send_at fallback flashed
+    // stale counts ("30 בתור לשליחה") from yesterday's already-delivered emails.
     const queuedCount = queuedEmailsLoaded
         ? queuedEmailsData.filter(q => q.filing_type === activeEntityTab).length
-        : clientsData.filter(c =>
-            c.queued_send_at &&
-            (c.filing_type || 'annual_report') === activeEntityTab &&
-            c.is_active !== false
-        ).length;
+        : 0;
     let queuedEl = stage3Card?.querySelector('.queued-subtitle');
     if (queuedCount > 0 && stage3Card) {
         if (!queuedEl) {
