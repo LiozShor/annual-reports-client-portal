@@ -9,7 +9,11 @@ export function logSecurity(
 ): void {
   ctx.waitUntil(
     airtable
-      .createRecords('security_logs', [{ fields: fields as unknown as Record<string, unknown> }])
+      .createRecords(
+        'security_logs',
+        [{ fields: fields as unknown as Record<string, unknown> }],
+        { typecast: true }
+      )
       .catch(() => { /* fire-and-forget */ })
   );
 }

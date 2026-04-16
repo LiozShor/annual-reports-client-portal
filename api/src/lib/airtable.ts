@@ -126,12 +126,15 @@ export class AirtableClient {
 
   async createRecords(
     table: string,
-    records: { fields: Record<string, unknown> }[]
+    records: { fields: Record<string, unknown> }[],
+    opts: { typecast?: boolean } = {}
   ): Promise<AirtableRecord[]> {
+    const body: Record<string, unknown> = { records };
+    if (opts.typecast) body.typecast = true;
     const res = await fetch(this.url(table), {
       method: 'POST',
       headers: this.headers,
-      body: JSON.stringify({ records }),
+      body: JSON.stringify(body),
     });
 
     if (!res.ok) {
