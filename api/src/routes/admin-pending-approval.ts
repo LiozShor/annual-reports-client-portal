@@ -37,6 +37,11 @@ function isNegativeAnswer(value: string): boolean {
   return value === '✗ לא' || value === '✗ No';
 }
 
+/** Strip unresolved template variable placeholders, e.g. " – {employer_name}" → "". */
+function cleanDocName(name: string): string {
+  return name.replace(/\s*[–\-]\s*\{[^}]+\}/g, '').replace(/\{[^}]+\}/g, '').trim();
+}
+
 adminPendingApproval.get('/admin-pending-approval', async (c) => {
   try {
     // ---- Auth ----
@@ -131,10 +136,11 @@ adminPendingApproval.get('/admin-pending-approval', async (c) => {
           const tmpl = templateId ? templateMap.get(templateId) : undefined;
           const categoryId = df.category as string | undefined;
           const cat = categoryId ? categoryMap.get(categoryId) : undefined;
+          const rawName = tmpl?.short_name_he || tmpl?.name_he || templateId || '';
           return {
             doc_id: d.id,
             template_id: templateId || '',
-            short_name_he: tmpl?.short_name_he || tmpl?.name_he || templateId || '',
+            short_name_he: cleanDocName(rawName),
             category_emoji: cat?.emoji || '📄',
             status: (df.status as string) || 'Required_Missing',
           };
