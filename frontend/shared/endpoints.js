@@ -37,6 +37,7 @@ const ENDPOINTS = {
     // --- Questionnaires ---
     ADMIN_SEND_QUESTIONNAIRES: `${CF_BASE}/admin-send-questionnaires`,
     ADMIN_QUESTIONNAIRES:      `${CF_BASE}/admin-questionnaires`,
+    ADMIN_ASSISTED_LINK:       `${CF_BASE}/admin-assisted-link`,
     CHECK_EXISTING_SUBMISSION: `${CF_BASE}/check-existing-submission`,
     RESET_SUBMISSION:          `${CF_BASE}/reset-submission`,
 

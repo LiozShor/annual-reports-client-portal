@@ -7,6 +7,8 @@
 const params = new URLSearchParams(window.location.search);
 const reportId = params.get('report_id');
 const token = params.get('token');
+// DL-284: assisted=1 marks an admin "fill on behalf of" session
+const assistedMode = params.get('assisted') === '1';
 
 // PII populated from API in checkExistingSubmission(), not from URL
 let clientId = '', year = '', fullName = '', email = '';
@@ -266,11 +268,29 @@ function showLinkExpired() {
     reinitIcons();
 }
 
+function renderAssistedBanner() {
+    if (!assistedMode) return;
+    const content = document.getElementById('content');
+    if (!content || document.getElementById('assistedBanner')) return;
+    const banner = document.createElement('div');
+    banner.id = 'assistedBanner';
+    banner.className = 'assisted-banner';
+    banner.setAttribute('role', 'status');
+    banner.setAttribute('dir', 'rtl');
+    banner.innerHTML = `
+        <strong>\u05DE\u05E6\u05D1 \u05DE\u05D9\u05DC\u05D5\u05D9 \u05E2\u05DC \u05D9\u05D3\u05D9 \u05D4\u05DE\u05E9\u05E8\u05D3</strong>
+        <p>\u05E9\u05D0\u05DC\u05D5\u05DF \u05D6\u05D4 \u05E0\u05E4\u05EA\u05D7 \u05DC\u05DE\u05D9\u05DC\u05D5\u05D9 \u05E2\u05DC \u05D9\u05D3\u05D9 \u05E6\u05D5\u05D5\u05EA \u05D4\u05DE\u05E9\u05E8\u05D3 \u05D1\u05DE\u05E7\u05D5\u05DD \u05D4\u05DC\u05E7\u05D5\u05D7. \u05D4\u05E4\u05E2\u05D5\u05DC\u05D4 \u05E0\u05E8\u05E9\u05DE\u05D4 \u05D1\u05D9\u05D5\u05DE\u05DF \u05D4\u05DE\u05E2\u05E8\u05DB\u05EA.</p>
+    `;
+    content.parentNode.insertBefore(banner, content);
+}
+
 function init() {
     document.getElementById('headerTitle').textContent = t('header_title') || 'Tax Questionnaire';
 
     // Initialize offline detection
     initOfflineDetection();
+
+    renderAssistedBanner();
 
     if (!reportId || !token) {
         showError(t('err_missing_params'));
