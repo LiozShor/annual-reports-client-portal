@@ -21,6 +21,7 @@ Active and pending logs. For completed history, see [ARCHIVE-INDEX.md](ARCHIVE-I
 
 | # | File | Status | Summary |
 |---|------|--------|---------|
+| 283 | [283-n8n-workflow-errors-investigation.md](infrastructure/283-n8n-workflow-errors-investigation.md) | IMPLEMENTED — NEED TESTING | n8n morning errors: WF02/WF06 Airtable 401 (missed credential in Session 14 PAT rotation) + WF05 Worker 120s timeout (decouple via ctx.waitUntil) + PAT rotation runbook |
 | 281 | [281-queued-emails-outbox-source-of-truth.md](email/281-queued-emails-outbox-source-of-truth.md) | IMPLEMENTED — NEED TESTING | Queue view modal + Outlook Outbox as source of truth for pending deferred sends (fixes DL-273 §8 staleness gap) |
 | 280 | [280-fix-mobile-bottom-nav-hidden.md](admin-ui/280-fix-mobile-bottom-nav-hidden.md) | IMPLEMENTED — NEED TESTING | Fix mobile bottom nav never appearing after login — CSS specificity conflict between inline FOUC guard and `.visible` class gate |
 | 278 | [278-ai-review-client-list-layout.md](ai-review/278-ai-review-client-list-layout.md) | IMPLEMENTED — NEED TESTING | AI review: viewport-locked split layout with independent scrolling master panel |
