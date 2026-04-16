@@ -1,6 +1,56 @@
 # Annual Reports CRM - Current Status
 
-**Last Updated:** 2026-04-16 evening (Session — DL-289 expand-compose modal fix + preview perf — shipped)
+**Last Updated:** 2026-04-16 night (Session — DL-292 Review & Approve queue tab — shipped)
+
+---
+
+## Session Summary (2026-04-16 night — DL-292 Review & Approve queue tab)
+
+### DL-292: Review & Approve Queue Tab [SHIPPED — NEED TESTING]
+
+New "סקירה ואישור" top-nav tab that eliminates the DL-291 W-1 P1 scroll friction (55 viewport-heights per session → 0). Split-view layout (master cards + sticky preview) mirroring AI-Review.
+
+**Backend:**
+- `GET /webhook/admin-pending-approval?year=&filing_type=` — single round-trip returning all stage-3 (`Pending_Approval`) reports enriched with questionnaire answers (negative "✗ לא" pre-filtered), doc chips (short_name_he + category emoji + status), notes, client_questions JSON, prior-year placeholder. FIFO-sorted by questionnaire submission date.
+- Registered in `api/src/index.ts`.
+
+**Frontend:**
+- New tab button + badge (`#pendingApprovalTabBadge`) between "מוכנים להכנה" and "סקירת AI"
+- Split view: master cards + sticky `#paReviewDetail` preview panel (same pattern as AI-Review)
+- Card shows: client name + id + relative date, answer chips (first 4 + overflow), doc chips (first 6 + overflow), notes preview, prior-year placeholder "—", "שאל את הלקוח" outlined button + "אשר ושלח" green button
+- Preview panel: full Q&A, full doc list grouped by category, full notes, questions list
+- Approve → `.pa-card--sending` slide-out animation → `showAIToast` → auto-focus next card
+- Questions modal (`#paQuestionsModal`): add/edit/delete; saves via `EDIT_DOCUMENTS`; badge counter updates inline
+- Stage-3 stat card click now switches to this tab (previously only `toggleStageFilter('3')`)
+- Mobile: cards stack, preview panel hidden; mobile preview modal (`#paMobilePreviewModal`)
+- SWR caching, refresh button, background refresh — same pattern as AI-Review
+- Mobile "עוד" bottom-nav popover entry
+
+**Files changed:**
+```
+api/src/routes/admin-pending-approval.ts   # new endpoint
+api/src/index.ts                           # register route
+frontend/shared/endpoints.js               # ADMIN_PENDING_APPROVAL constant
+frontend/admin/index.html                  # tab button, tab content, modals, mobile nav
+frontend/admin/js/script.js                # full PA queue section (~400 lines)
+frontend/admin/css/style.css               # .pa-* styles + slide-out animation
+.agent/design-logs/admin-ui/292-*.md       # design log
+.agent/design-logs/INDEX.md                # DL-292 row added
+```
+
+**Test checklist:**
+- [ ] Tab "סקירה ואישור" visible in top nav with loading badge → resolves to count
+- [ ] Badge matches stage-3 stat card count
+- [ ] Cards list stage-3 only, oldest first
+- [ ] Card chips: no "✗ לא" answers appear; doc chips show correct names
+- [ ] Click card → preview panel shows full Q&A + docs + notes
+- [ ] "שאל את הלקוח" → modal opens → add/edit/delete question → save → badge updates
+- [ ] "אשר ושלח" → confirm dialog → slide-out → toast "נשלח ל..." → next card focuses → Airtable stage = Collecting_Docs
+- [ ] Empty state shows when no stage-3 reports
+- [ ] Stage-3 stat card click → switches to this tab
+- [ ] Mobile (390px): cards stack, preview hidden, mobile modal works
+- [ ] Year / filing-type filters work
+- [ ] No regression: AI-Review, document-manager, stage-3 bounce animation
 
 ---
 
