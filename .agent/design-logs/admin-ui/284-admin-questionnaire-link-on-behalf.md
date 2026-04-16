@@ -1,5 +1,5 @@
 # Design Log 284: Admin "Fill Questionnaire on Behalf of Client" Link
-**Status:** [IMPLEMENTED — NEED TESTING]
+**Status:** [IMPLEMENTED — NEED TESTING — 1 Tally submission remaining]
 **Date:** 2026-04-16
 **Related Logs:** [152-move-view-as-client-to-row-menu.md](152-move-view-as-client-to-row-menu.md), [124-dashboard-actions-menu-revamp.md](124-dashboard-actions-menu-revamp.md), [064-fix-type-a-questionnaire-link.md](../reminders/064-fix-type-a-questionnaire-link.md), [073-type-a-single-cta-mirror-wf01.md](../email/073-type-a-single-cta-mirror-wf01.md), [090-hmac-token-architecture.md](../security/090-hmac-token-architecture.md)
 
@@ -179,3 +179,5 @@ Update design log status → `[IMPLEMENTED — NEED TESTING]`, copy Section 7 it
   - `frontend/assets/css/landing.css` (+23 lines — `.assisted-banner` styles)
   - `frontend/admin/js/script.js` (+31 lines — one menu-item branch + `openAssistedQuestionnaire` function)
 * **Worker typecheck:** `npx tsc --noEmit` in `api/` passes cleanly for the new file. Two pre-existing errors exist in `backfill.ts` and `classifications.ts`, unrelated to this work.
+* **Post-deploy follow-up (typecast):** First real assisted-open (סלביק גרבר, 2026-04-16 ~06:58Z) did NOT produce a `security_logs` row. Root cause: Airtable `event_type` is a single-select; `ADMIN_ASSISTED_OPEN` wasn't an existing option; `logSecurity` is fire-and-forget (`.catch(() => {})`) so the rejected write was silently swallowed. Fix (commit `4309b0b`): added optional `typecast?: boolean` param to `AirtableClient.createRecords`; `logSecurity` now passes `typecast: true`, so Airtable auto-creates new single-select options on first use. Verified: subsequent assisted-open wrote a proper row with `event_type=ADMIN_ASSISTED_OPEN`, `actor_ip=2.54.145.103`, and `details` JSON containing `{report_id, client_name, stage}`.
+* **Verified end-to-end (2026-04-16):** סלביק גרבר session — banner rendered correctly (yellow, RTL, persistent), language picker still functional below banner, `security_logs` row landed after typecast fix. Pending: confirm Tally submission writes back to Airtable cleanly once admin finishes filling.

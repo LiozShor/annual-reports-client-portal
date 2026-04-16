@@ -1,34 +1,25 @@
 # Annual Reports CRM - Current Status
 
-**Last Updated:** 2026-04-16 (Session — DL-284 admin "fill questionnaire on behalf of client")
+**Last Updated:** 2026-04-16 (Session — DL-284 admin "fill questionnaire on behalf of client" — IMPLEMENTED, live-verified with סלביק גרבר; security_logs typecast fix merged)
 
 ---
 
 ## Session Summary (2026-04-16 — DL-284)
 
-### DL-284: Admin "Fill Questionnaire on Behalf of Client" [IMPLEMENTED — NEED TESTING]
+### DL-284: Admin "Fill Questionnaire on Behalf of Client" [IMPLEMENTED — Tally submission verification pending]
 - **Problem:** Elderly clients can't fill the Tally questionnaire themselves. Office staff had no one-click way to reach a client's landing page from the admin dashboard; existing "View as Client" goes to the docs view, not the questionnaire.
 - **Fix:** New right-click menu item on client rows for stages 1–2 (`Send_Questionnaire`, `Waiting_For_Answers`): "מלא שאלון במקום הלקוח". Mints a 24h client token (vs 45d for email links), opens landing page in a new tab with `?assisted=1` flag, landing renders a persistent yellow banner. Every issuance writes a `security_logs` INFO row (`event_type=ADMIN_ASSISTED_OPEN`) with admin IP + report_id + client_name.
 - **Research:** Auth0 impersonation pattern, Google SRE tool-proxy, OWASP ASVS §V7. Actor ≠ subject separation via the audit log; fresh short-TTL token instead of reusing the client's 45d token; visible banner prevents forgotten assisted mode.
 - **Files changed:** `api/src/routes/admin-assisted-link.ts` (new), `api/src/index.ts`, `frontend/shared/endpoints.js`, `frontend/assets/js/landing.js`, `frontend/assets/css/landing.css`, `frontend/admin/js/script.js`
+- **Post-deploy fix (commit 4309b0b):** `logSecurity` was silently dropping rows for the new `ADMIN_ASSISTED_OPEN` event_type (Airtable single-select rejected unknown value; fire-and-forget `.catch()` swallowed it). Added optional `typecast` param to `AirtableClient.createRecords`; `logSecurity` now passes `typecast: true` so new event_types auto-create going forward.
 - Design log: `.agent/design-logs/admin-ui/284-admin-questionnaire-link-on-behalf.md`
 
-**Test checklist (DL-284) — Test Next Session:**
-- [ ] Right-click on a `Send_Questionnaire` client → new menu item appears
-- [ ] Right-click on a `Waiting_For_Answers` client → new menu item appears
-- [ ] Right-click on a `Pending_Approval` (stage ≥ 3) client → item is NOT shown
-- [ ] Right-click on an archived client → item is NOT shown
-- [ ] Click item → Hebrew confirm dialog appears with correct client name
-- [ ] Confirm → loading spinner, then new tab opens with landing page
-- [ ] Landing page shows yellow "assisted mode" banner at top
-- [ ] Language picker works (HE/EN); clicking redirects to Tally with all params prefilled
-- [ ] URL bar on landing page has no query params (stripped by existing `history.replaceState`)
-- [ ] Tally form pre-fills client name / email / year correctly
-- [ ] `security_logs` Airtable has a new `ADMIN_ASSISTED_OPEN` row with correct `actor_ip`, `details`
-- [ ] Token TTL is 24h (decode `expiryUnix` in returned URL, confirm ≈ now + 86400s)
-- [ ] Cancel on confirm dialog → no network call, no new tab
-- [ ] Bad `report_id` → red Hebrew toast, no crash
-- [ ] Worker deployed: `cd api && npx wrangler deploy`
+**Verified live (2026-04-16):** סלביק גרבר session — menu item appeared on `Waiting_For_Answers` client, confirm dialog shown, landing opened with yellow banner, language picker rendered beneath it, audit row landed in `security_logs` (after typecast fix).
+
+**Remaining test — do next session:**
+- [ ] Finish filling Slavic Gerber's Tally form → confirm Tally submission webhook (WF03) writes the answers to Airtable correctly (same as a real client submission)
+- [ ] Verify a `Send_Questionnaire` client (not just `Waiting_For_Answers`) also works end-to-end
+- [ ] Right-click on a stage ≥ 3 client → menu item should NOT appear (regression check)
 
 ---
 
