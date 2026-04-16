@@ -56,28 +56,27 @@ inboundEmail.post('/process-inbound-email', async (c) => {
       return c.json({ ok: true, status: 'skipped', reason: 'duplicate' });
     }
 
-    // DL-283: process in background via ctx.waitUntil so n8n's 120s HTTP timeout
-    // can't abort mid-flight (which previously cancelled the Worker and left partial
-    // Airtable/OneDrive state). waitUntil has a 30s cap after response — most emails
-    // finish in <30s; large batches (6+ attachments) log a truncation error via logError
-    // and will migrate to Cloudflare Queues in a follow-up DL.
-    c.executionCtx.waitUntil(
-      (async () => {
-        try {
-          await processInboundEmail(c.env, c.executionCtx, message_id);
-        } catch (err) {
-          console.error('[inbound-email] Pipeline error:', (err as Error).message);
-          logError(c.executionCtx, c.env, {
-            endpoint: '/process-inbound-email',
-            error: err,
-            category: 'INTERNAL',
-            details: `message_id=${message_id}`,
-          });
-        }
-      })()
-    );
-
-    return c.json({ ok: true, status: 'accepted' }, 202);
+    // DL-286: revert DL-283's ctx.waitUntil wrap. waitUntil has a hard 30s cap
+    // after response, which conflicted with DL-277's Anthropic 429 retry wait
+    // (31–64s based on Retry-After) — Worker was cancelled mid-retry on every
+    // multi-attachment email when Anthropic rate-limited, dropping all
+    // classifications. Synchronous processing uses Cloudflare's full CPU budget
+    // (5min per wrangler.toml); n8n's 120s HTTP timeout risk returns for emails
+    // with 6+ attachments but at least classifications persist when they complete.
+    // Proper fix is Cloudflare Queues migration — tracked as follow-up.
+    try {
+      await processInboundEmail(c.env, c.executionCtx, message_id);
+      return c.json({ ok: true, status: 'completed' });
+    } catch (err) {
+      console.error('[inbound-email] Pipeline error:', (err as Error).message);
+      logError(c.executionCtx, c.env, {
+        endpoint: '/process-inbound-email',
+        error: err,
+        category: 'INTERNAL',
+        details: `message_id=${message_id}`,
+      });
+      return c.json({ ok: true, status: 'failed', error: (err as Error).message });
+    }
   } catch (err) {
     console.error('[inbound-email] Route error:', (err as Error).message);
     logError(c.executionCtx, c.env, {
