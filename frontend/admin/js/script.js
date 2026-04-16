@@ -1142,6 +1142,8 @@ function expandReplyCompose(noteId, reportId, initialText, onCollapse) {
         </div>
     `;
     document.body.appendChild(overlay);
+    // Trigger display — .ai-modal-overlay is display:none until .show is added
+    requestAnimationFrame(() => overlay.classList.add('show'));
     safeCreateIcons(overlay);
 
     const textarea = overlay.querySelector('.msg-compose-textarea');
@@ -1213,6 +1215,7 @@ function expandReplyCompose(noteId, reportId, initialText, onCollapse) {
         clearTimeout(previewTimer);
         if (escHandler) document.removeEventListener('keydown', escHandler);
         const text = textarea.value;
+        overlay.classList.remove('show');
         overlay.remove();
         if (typeof onCollapse === 'function') onCollapse(text);
     };
