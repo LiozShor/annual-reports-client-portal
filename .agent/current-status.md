@@ -1,6 +1,46 @@
 # Annual Reports CRM - Current Status
 
-**Last Updated:** 2026-04-16 late night (Session — DL-294 PA queue redesign + bold issuer rendering — shipped)
+**Last Updated:** 2026-04-17 (Session — DL-295 PA queue improvements — implemented, pending push/merge)
+
+---
+
+## Session Summary (2026-04-17 — DL-295 PA queue improvements)
+
+### DL-295: PA Queue Improvements — 2-col preview + placeholder fix + priority + inline actions [IMPLEMENTED — NEED TESTING]
+
+Builds on DL-294. Four improvements:
+
+1. **2-column preview layout.** Q&A left / Docs right at ≥1024px via `.pa-preview-cols` CSS grid; stacks to single column below. Notes + Questions remain full-width below the grid; sticky footer unchanged.
+2. **`{placeholder}` leak fixed.** Master card chips no longer show raw template tokens like `{city_name}`, `{company_name}`, `{deposit_type}`. Backend flattens `doc_chips[]` from the already-resolved `doc_groups[]` (single source of truth); templates' unresolved `short_name_he` no longer leaks to chips.
+3. **Priority age badges.** Master cards show `N ימים` pill: red >7 days, yellow 3–7 days, none <3.
+4. **Inline doc status menu in preview.** Click a doc name → popover with Missing/Received/Requires_Fix/Waived → optimistic UI + `EDIT_DOCUMENTS` API (`send_email: false`). Reuses DL-227's `.ai-doc-tag-menu` DOM + CSS; new PA-scoped callback (`renderPaDocTagRow` / `openPaDocTagMenu` / `updatePaDocStatusInline`). On failure: rollback + error toast.
+
+**Files changed:**
+```
+api/src/routes/admin-pending-approval.ts                  # flatten doc_chips from doc_groups
+frontend/admin/js/script.js                               # buildPaCard priority + resolved names; 2-col buildPaPreviewBody; inline doc menu (5 new functions)
+frontend/admin/css/style.css                              # .pa-preview-cols, .pa-card__priority--{med,high}, .pa-doc-tag-clickable
+.agent/design-logs/admin-ui/295-pa-queue-improvements.md  # design log
+.agent/design-logs/INDEX.md                               # DL-295 row
+```
+
+**Test checklist (DL-295):**
+- [ ] Master card chips: no raw `{xxx}` tokens visible for any report (verify specifically on CPA-XXX & CPA-XXX from screenshot)
+- [ ] Chip renders bolded issuer (no literal `<b>` text visible)
+- [ ] Desktop (≥1024px): preview shows Q&A left / Docs right; Notes + Questions full-width below
+- [ ] Tablet/mobile (<1024px): sections stack vertically in order
+- [ ] Age badge: red `N ימים` when >7d, yellow 3–7d, none <3d
+- [ ] Click doc name in preview → status menu opens anchored to the tag
+- [ ] Select "לא נדרש" (Waived) → toast confirms, doc row re-renders waived, master card chip updates, Airtable `status` PATCHed
+- [ ] Select "דרוש תיקון" / "התקבל" / "חסר" → same flow, no email sent
+- [ ] Network failure (DevTools offline) → optimistic rollback + error toast
+- [ ] Menu closes on outside click; Esc closes menu
+- [ ] DL-294 sticky footer still sticks; stats strip counts correct
+- [ ] AI-Review tab inline doc-tag menu unchanged (no regression)
+- [ ] XSS: inject `<script>` into test issuer → whitelist escapes
+- [ ] Mobile sheet (`loadPaMobilePreview`) renders stacked layout without breaking
+
+Design log: `.agent/design-logs/admin-ui/295-pa-queue-improvements.md`
 
 ---
 

@@ -5789,21 +5789,29 @@ function buildPaCard(item) {
     const qCount = questions.filter(q => q && (q.text || '').trim()).length;
     const isActive = _activePaReportId === item.report_id;
 
+    // DL-295: priority age badge — red >7d, yellow 3–7d, none <3d
+    const ageDays = item.submitted_at
+        ? Math.floor((Date.now() - new Date(item.submitted_at).getTime()) / 86400000)
+        : 0;
+    const priorityCls = ageDays > 7 ? 'pa-card__priority--high'
+        : (ageDays >= 3 ? 'pa-card__priority--med' : '');
+    const priorityHtml = priorityCls
+        ? `<span class="pa-card__priority ${priorityCls}">${ageDays} ימים</span>`
+        : '';
+
     // Answer chips (first 4)
     const visibleAnswers = qs.slice(0, 4);
     const moreAnswers = qs.length > 4 ? qs.length - 4 : 0;
     const answerChips = visibleAnswers.map(a => `<span class="pa-chip pa-chip--answer" title="${escapeHtml(a.label)}">${escapeHtml(a.value.length > 20 ? a.value.slice(0, 20) + '…' : a.value)}</span>`).join('') +
         (moreAnswers > 0 ? `<span class="pa-chip pa-chip--more">+${moreAnswers}</span>` : '');
 
-    // Doc chips (first 6) — short_name + bolded issuer (via renderDocLabel)
+    // DL-295: Doc chips use resolved `name` from doc_groups pipeline (no {placeholder} leak)
     const visibleDocs = docs.slice(0, 6);
     const moreDocs = docs.length > 6 ? docs.length - 6 : 0;
     const docChips = visibleDocs.map(d => {
-        const short = d.short_name_he || '';
-        const issuer = (d.issuer_name || '').trim();
-        const issuerHtml = issuer ? ` – ${renderDocLabel(issuer)}` : '';
-        const fullText = issuer ? `${short} – ${issuer.replace(/<\/?b>/g, '')}` : short;
-        return `<span class="pa-chip pa-chip--doc" title="${escapeHtml(fullText)}">${d.category_emoji || '📄'} ${escapeHtml(short)}${issuerHtml}</span>`;
+        const nameHtml = d.name || d.short_name_he || '';
+        const plain = nameHtml.replace(/<\/?b>/g, '');
+        return `<span class="pa-chip pa-chip--doc" title="${escapeHtml(plain)}">${d.category_emoji || '📄'} ${renderDocLabel(nameHtml)}</span>`;
     }).join('') + (moreDocs > 0 ? `<span class="pa-chip pa-chip--more">+${moreDocs}</span>` : '');
 
     // Notes preview
@@ -5819,6 +5827,7 @@ function buildPaCard(item) {
             <div class="pa-card__meta">
                 <span class="pa-card__id">${escapeHtml(item.client_id || '')}</span>
                 ${relDate ? `<span class="pa-card__date">${escapeHtml(relDate)}</span>` : ''}
+                ${priorityHtml}
             </div>
         </div>
         ${qs.length > 0 ? `<div class="pa-card__chips-row">${answerChips}</div>` : ''}
@@ -5934,15 +5943,14 @@ function buildPaPreviewBody(item) {
         else freeAnswers.push(a);
     }
 
-    let html = '';
-
-    // ========== Q&A SECTION ==========
+    // ========== Q&A SECTION (left column) ==========
+    let qaHtml = '';
     if (answersAll.length > 0) {
-        html += `<div class="pa-preview-section">
+        qaHtml += `<div class="pa-preview-section">
             <div class="pa-preview-section-title"><i data-lucide="file-text" class="icon-sm"></i> תשובות שאלון</div>`;
 
         if (yesAnswers.length > 0) {
-            html += `<div class="pa-preview-subsection">
+            qaHtml += `<div class="pa-preview-subsection">
                 <div class="pa-preview-subtitle">✓ כן (${yesAnswers.length})</div>
                 <div class="pa-yes-chips-grid">
                     ${yesAnswers.map(a => `<span class="pa-yes-chip">${escapeHtml(a.label)}</span>`).join('')}
@@ -5951,7 +5959,7 @@ function buildPaPreviewBody(item) {
         }
 
         if (freeAnswers.length > 0) {
-            html += `<div class="pa-preview-subsection">
+            qaHtml += `<div class="pa-preview-subsection">
                 <div class="pa-preview-subtitle">תשובות פתוחות (${freeAnswers.length})</div>
                 <div class="pa-preview-qa">
                     ${freeAnswers.map(a => `<div class="pa-preview-qa-row">
@@ -5963,7 +5971,7 @@ function buildPaPreviewBody(item) {
         }
 
         if (noAnswers.length > 0) {
-            html += `<div class="pa-preview-subsection">
+            qaHtml += `<div class="pa-preview-subsection">
                 <button class="pa-preview-toggle" onclick="togglePaShowNo('${item.report_id}')">
                     <i data-lucide="${showNo ? 'chevron-up' : 'chevron-down'}" class="icon-xs"></i>
                     ${showNo ? 'הסתר' : 'הצג'} תשובות "לא" (${noAnswers.length})
@@ -5974,12 +5982,13 @@ function buildPaPreviewBody(item) {
             </div>`;
         }
 
-        html += `</div>`;
+        qaHtml += `</div>`;
     }
 
-    // ========== DOC LIST (per-person, per-category) ==========
+    // ========== DOC LIST (right column) — per-person / per-category ==========
+    let docsHtml = '';
     if (docGroups.length > 0) {
-        html += `<div class="pa-preview-section">
+        docsHtml = `<div class="pa-preview-section">
             <div class="pa-preview-section-title"><i data-lucide="folder" class="icon-sm"></i> רשימת מסמכים</div>
             ${docGroups.map(group => {
                 const personLabel = group.person_label || (group.person === 'spouse' ? `מסמכים של ${item.spouse_name || 'בן/בת הזוג'}` : `מסמכים של ${item.client_name}`);
@@ -5991,20 +6000,20 @@ function buildPaPreviewBody(item) {
                         if (catDocs.length === 0) return '';
                         return `<div class="pa-preview-category">
                             <div class="pa-preview-category-title">${cat.emoji || '📄'} ${escapeHtml(cat.name || cat.name_he || '')}</div>
-                            ${catDocs.map(d => {
-                                const status = d.status || 'Required_Missing';
-                                const statusCls = status.toLowerCase().replace(/_/g, '-');
-                                // `name` is populated by formatForOfficeMode from issuer_name or template name_he
-                                const nameHtml = renderDocLabel(d.name || '');
-                                return `<div class="pa-preview-doc-row">
-                                    <span class="pa-chip pa-chip--status-${statusCls}" title="${escapeHtml(statusLabel(status, true))}">${statusLabel(status)}</span>
-                                    <span class="pa-preview-doc-name">${nameHtml}</span>
-                                </div>`;
-                            }).join('')}
+                            ${catDocs.map(d => renderPaDocTagRow(d, item.report_id)).join('')}
                         </div>`;
                     }).join('')}
                 </div>`;
             }).join('')}
+        </div>`;
+    }
+
+    // DL-295: 2-column grid wrapper — CSS collapses to single column <1024px
+    let html = '';
+    if (qaHtml || docsHtml) {
+        html += `<div class="pa-preview-cols">
+            <div class="pa-preview-col pa-preview-col--qa">${qaHtml}</div>
+            <div class="pa-preview-col pa-preview-col--docs">${docsHtml}</div>
         </div>`;
     }
 
@@ -6031,6 +6040,165 @@ function buildPaPreviewBody(item) {
     }
 
     return html || `<div class="pa-preview-empty"><p>אין נתונים לתצוגה</p></div>`;
+}
+
+// DL-295: inline doc status menu in PA preview (mirrors DL-227 pattern, scoped to pendingApprovalData)
+function renderPaDocTagRow(d, reportId) {
+    const status = d.status || 'Required_Missing';
+    const statusCls = status.toLowerCase().replace(/_/g, '-');
+    const docRecordId = d.doc_record_id || d.id || '';
+    const nameHtml = renderDocLabel(d.name || '');
+    return `<div class="pa-preview-doc-row">
+        <span class="pa-chip pa-chip--status-${statusCls}" title="${escapeHtml(statusLabel(status, true))}">${statusLabel(status)}</span>
+        <span class="pa-preview-doc-name pa-doc-tag-clickable"
+              data-report-id="${escapeAttr(reportId)}"
+              data-doc-record-id="${escapeAttr(docRecordId)}"
+              data-status="${escapeAttr(status)}"
+              onclick="openPaDocTagMenu(event, this)">${nameHtml}</span>
+    </div>`;
+}
+
+function openPaDocTagMenu(event, tagEl) {
+    event.stopPropagation();
+    closeDocTagMenu();
+
+    const currentStatus = tagEl.dataset.status || 'Required_Missing';
+    const docRecordId = tagEl.dataset.docRecordId;
+    const reportId = tagEl.dataset.reportId;
+    if (!docRecordId || !reportId) return;
+
+    const options = [
+        { status: 'Required_Missing', label: 'חסר', icon: '○' },
+        { status: 'Received', label: 'התקבל', icon: '✓' },
+        { status: 'Requires_Fix', label: 'דרוש תיקון', icon: '⚠' },
+        { status: 'Waived', label: 'לא נדרש', icon: '—' },
+    ].filter(o => o.status !== currentStatus);
+
+    const menu = document.createElement('div');
+    menu.className = 'ai-doc-tag-menu';
+    menu.innerHTML = options.map(o =>
+        `<button class="ai-doc-tag-menu-item" data-new-status="${o.status}" onclick="selectPaDocTagStatus(event, this)">
+            <span class="ai-doc-tag-menu-icon">${o.icon}</span> ${o.label}
+        </button>`
+    ).join('');
+
+    const rect = tagEl.getBoundingClientRect();
+    menu.style.position = 'fixed';
+    menu.style.top = (rect.bottom + 4) + 'px';
+    menu.style.left = rect.left + 'px';
+    menu.dataset.docRecordId = docRecordId;
+    menu.dataset.reportId = reportId;
+
+    document.body.appendChild(menu);
+    tagEl.classList.add('ai-doc-tag-active');
+
+    requestAnimationFrame(() => {
+        document._docTagMenuClose = (e) => {
+            if (!menu.contains(e.target) && e.target !== tagEl) closeDocTagMenu();
+        };
+        document.addEventListener('click', document._docTagMenuClose, { capture: true });
+    });
+}
+
+function selectPaDocTagStatus(event, btnEl) {
+    event.stopPropagation();
+    const menu = btnEl.closest('.ai-doc-tag-menu');
+    const docRecordId = menu.dataset.docRecordId;
+    const reportId = menu.dataset.reportId;
+    const newStatus = btnEl.dataset.newStatus;
+    closeDocTagMenu();
+    updatePaDocStatusInline(reportId, docRecordId, newStatus);
+}
+
+function applyPaDocStatusChange(reportId, docRecordId, newStatus) {
+    const item = pendingApprovalData.find(i => i.report_id === reportId);
+    if (!item) return null;
+    let previousStatus = null;
+    // Update doc_groups (preview source)
+    const groups = Array.isArray(item.doc_groups) ? item.doc_groups : [];
+    for (const g of groups) {
+        const cats = Array.isArray(g.categories) ? g.categories : [];
+        for (const cat of cats) {
+            const docs = Array.isArray(cat.docs) ? cat.docs : [];
+            for (const d of docs) {
+                if ((d.doc_record_id || d.id) === docRecordId) {
+                    previousStatus = d.status || 'Required_Missing';
+                    d.status = newStatus;
+                }
+            }
+        }
+    }
+    // Update doc_chips (master card source)
+    const chips = Array.isArray(item.doc_chips) ? item.doc_chips : [];
+    for (const c of chips) {
+        if ((c.doc_id || c.id) === docRecordId) c.status = newStatus;
+    }
+    return previousStatus;
+}
+
+async function updatePaDocStatusInline(reportId, docRecordId, newStatus) {
+    const item = pendingApprovalData.find(i => i.report_id === reportId);
+    if (!item) return;
+
+    const previousStatus = applyPaDocStatusChange(reportId, docRecordId, newStatus);
+    if (previousStatus === null || previousStatus === newStatus) return;
+
+    // Re-render preview body + master card to reflect new status
+    const body = document.getElementById('paPreviewBody');
+    if (body) {
+        body.innerHTML = buildPaPreviewBody(item);
+        safeCreateIcons(body);
+    }
+    const card = document.querySelector(`.pa-card[data-report-id="${CSS.escape(reportId)}"]`);
+    if (card) {
+        card.outerHTML = buildPaCard(item);
+        safeCreateIcons(document.getElementById('paCardsContainer') || document);
+    }
+
+    const payload = {
+        data: {
+            fields: [{ type: 'HIDDEN_FIELDS', value: { report_record_id: reportId } }],
+            extensions: {
+                status_changes: [{ id: docRecordId, new_status: newStatus }],
+                send_email: false
+            }
+        }
+    };
+
+    const statusLabels = {
+        'Waived': 'המסמך סומן כלא נדרש',
+        'Required_Missing': 'המסמך שוחזר לרשימה',
+        'Received': 'המסמך סומן כהתקבל',
+        'Requires_Fix': 'המסמך סומן כדרוש תיקון'
+    };
+
+    try {
+        const response = await fetchWithTimeout(ENDPOINTS.EDIT_DOCUMENTS, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${authToken}`
+            },
+            body: JSON.stringify(payload)
+        }, FETCH_TIMEOUTS.mutate);
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        showAIToast(statusLabels[newStatus] || 'הסטטוס עודכן', 'success');
+    } catch (err) {
+        // Rollback
+        applyPaDocStatusChange(reportId, docRecordId, previousStatus);
+        const body2 = document.getElementById('paPreviewBody');
+        if (body2) {
+            body2.innerHTML = buildPaPreviewBody(item);
+            safeCreateIcons(body2);
+        }
+        const card2 = document.querySelector(`.pa-card[data-report-id="${CSS.escape(reportId)}"]`);
+        if (card2) {
+            card2.outerHTML = buildPaCard(item);
+            safeCreateIcons(document.getElementById('paCardsContainer') || document);
+        }
+        showAIToast('שגיאה בעדכון סטטוס המסמך', 'danger');
+        console.error('DL-295: PA status update failed', err);
+    }
 }
 
 function buildPaPreviewFooter(item) {
