@@ -177,8 +177,14 @@ route.post('/extract-issuer-names', async (c) => {
       ? authHeader.slice(7)
       : c.req.query('token') || '';
 
-    const auth = await verifyToken(token, c.env.SECRET_KEY);
-    if (!auth.valid) {
+    // Accept either an admin/client HMAC token OR the shared N8N_INTERNAL_KEY
+    // used by Worker↔n8n calls (DL-293: WF02 calls this endpoint).
+    let authorized = token === c.env.N8N_INTERNAL_KEY && token.length > 0;
+    if (!authorized) {
+      const auth = await verifyToken(token, c.env.SECRET_KEY);
+      authorized = auth.valid;
+    }
+    if (!authorized) {
       return c.json({ ok: false, error: 'unauthorized' }, 401);
     }
 
