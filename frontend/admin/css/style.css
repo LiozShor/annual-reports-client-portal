@@ -8065,10 +8065,15 @@ tr:hover .client-edit-link {
     cursor: pointer;
     padding: 4px 0;
 }
+/* DL-299 followup: pin the card header to the viewport top while scrolling a tall expanded body */
 .pa-card--expanded .pa-card__header {
-    padding-bottom: var(--sp-2);
+    padding-block: var(--sp-2);
     border-bottom: 1px solid var(--gray-100);
     margin-bottom: var(--sp-3);
+    position: sticky;
+    top: 0;
+    background: white;
+    z-index: 20;
 }
 .pa-card__header-main {
     flex: 1;
