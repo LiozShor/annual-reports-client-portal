@@ -8404,3 +8404,15 @@ tr:hover .client-edit-link {
     color: var(--gray-800);
     white-space: pre-wrap;
 }
+
+/* DL-299 follow-up: minimal non-Missing state styling (Waived/Received rare at this stage) */
+.pa-preview-doc-row--waived .pa-preview-doc-name,
+.pa-preview-doc-row--waived .pa-doc-row__status-label {
+    color: var(--gray-400);
+    text-decoration: line-through;
+}
+.pa-doc-row__status-label {
+    font-size: 11px;
+    color: var(--gray-500);
+    font-style: italic;
+}
