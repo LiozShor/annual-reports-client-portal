@@ -8162,3 +8162,211 @@ tr:hover .client-edit-link {
         flex: 1 1 auto;
     }
 }
+
+/* ============================================================
+   DL-299: Per-doc issuer edit, note popover, questionnaire print
+   ============================================================ */
+
+/* Doc row actions (pencil + note icon) — hover-reveal on desktop, always visible on mobile */
+.pa-doc-row__actions {
+    display: inline-flex;
+    gap: 4px;
+    margin-inline-start: auto;
+    align-items: center;
+}
+.pa-preview-doc-row {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
+    flex-wrap: wrap;
+}
+.pa-doc-row__edit,
+.pa-doc-row__note {
+    background: transparent;
+    border: 1px solid transparent;
+    color: var(--gray-400);
+    cursor: pointer;
+    padding: 3px 5px;
+    border-radius: var(--radius-sm);
+    display: inline-flex;
+    align-items: center;
+    opacity: 0;
+    transition: opacity 120ms, background 120ms, color 120ms, border-color 120ms;
+}
+.pa-preview-doc-row:hover .pa-doc-row__edit,
+.pa-preview-doc-row:hover .pa-doc-row__note,
+.pa-preview-doc-row:focus-within .pa-doc-row__edit,
+.pa-preview-doc-row:focus-within .pa-doc-row__note {
+    opacity: 1;
+}
+.pa-doc-row__edit:hover,
+.pa-doc-row__note:hover {
+    background: var(--gray-100);
+    color: var(--gray-800);
+    border-color: var(--gray-200);
+}
+.pa-doc-row__note--has-content {
+    opacity: 1 !important;
+    color: #d97706;
+}
+.pa-doc-row__note--has-content:hover {
+    color: #b45309;
+}
+@media (max-width: 768px) {
+    .pa-doc-row__edit,
+    .pa-doc-row__note {
+        opacity: 1;
+    }
+}
+
+/* Inline issuer edit row */
+.pa-issuer-edit-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    width: 100%;
+    flex: 1;
+}
+.pa-issuer-edit-input {
+    flex: 1;
+    min-width: 120px;
+    padding: 4px 8px;
+    border: 1px solid var(--gray-300);
+    border-radius: var(--radius-sm);
+    font-size: var(--text-sm);
+    font-family: inherit;
+    direction: auto;
+}
+.pa-issuer-edit-input:focus {
+    outline: none;
+    border-color: var(--primary-500);
+    box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.15);
+}
+.pa-issuer-edit-save,
+.pa-issuer-edit-cancel,
+.pa-issuer-swap-toggle {
+    background: white;
+    border: 1px solid var(--gray-300);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    padding: 4px 6px;
+    font-size: var(--text-xs);
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+}
+.pa-issuer-edit-save {
+    background: var(--success-500, #10b981);
+    color: white;
+    border-color: var(--success-500, #10b981);
+}
+.pa-issuer-edit-save:hover { background: #059669; }
+.pa-issuer-edit-cancel:hover { background: var(--gray-100); }
+.pa-issuer-swap-toggle:hover { background: var(--gray-100); color: var(--gray-800); }
+
+/* Issuer swap combobox */
+.pa-issuer-swap-combo {
+    margin-top: 6px;
+    padding: 6px;
+    background: var(--gray-50);
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius-md);
+    width: 100%;
+}
+.pa-issuer-swap-filter {
+    width: 100%;
+    padding: 4px 8px;
+    border: 1px solid var(--gray-300);
+    border-radius: var(--radius-sm);
+    font-size: var(--text-sm);
+    margin-bottom: 6px;
+    direction: rtl;
+}
+.pa-issuer-swap-list {
+    max-height: 180px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+.pa-issuer-swap-option {
+    background: transparent;
+    border: none;
+    text-align: start;
+    padding: 4px 8px;
+    font-size: var(--text-sm);
+    cursor: pointer;
+    border-radius: var(--radius-sm);
+    color: var(--gray-700);
+}
+.pa-issuer-swap-option:hover {
+    background: var(--primary-50, #eef2ff);
+    color: var(--primary-700, #4338ca);
+}
+.pa-issuer-swap-empty {
+    font-size: var(--text-xs);
+    color: var(--gray-400);
+    padding: 6px;
+    text-align: center;
+}
+
+/* Note popover */
+.pa-note-popover {
+    position: fixed;
+    width: 300px;
+    background: white;
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius-md);
+    box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -4px rgba(0,0,0,0.1);
+    padding: var(--sp-3);
+    z-index: 1100;
+}
+.pa-note-popover textarea {
+    width: 100%;
+    min-height: 100px;
+    padding: 6px 8px;
+    border: 1px solid var(--gray-300);
+    border-radius: var(--radius-sm);
+    font-family: inherit;
+    font-size: var(--text-sm);
+    resize: vertical;
+    direction: rtl;
+}
+.pa-note-popover textarea:focus {
+    outline: none;
+    border-color: var(--primary-500);
+    box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.15);
+}
+.pa-note-popover-hint {
+    font-size: 10px;
+    color: var(--gray-400);
+    margin-top: 4px;
+    text-align: start;
+}
+
+/* Questionnaire print button in PA card Q&A section title */
+.pa-preview-section-title {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--sp-2);
+}
+.pa-print-btn {
+    background: transparent;
+    border: 1px solid var(--gray-200);
+    color: var(--gray-600);
+    cursor: pointer;
+    padding: 3px 8px;
+    border-radius: var(--radius-sm);
+    font-size: 11px;
+    font-weight: 500;
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    transition: background var(--transition-base), color var(--transition-base);
+}
+.pa-print-btn:hover {
+    background: var(--gray-100);
+    color: var(--gray-900);
+    border-color: var(--gray-300);
+}

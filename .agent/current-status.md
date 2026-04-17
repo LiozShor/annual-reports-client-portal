@@ -1,8 +1,35 @@
 # Annual Reports CRM - Current Status
 
-**Last Updated:** 2026-04-17 (DL-298 implemented — PA queue full redesign to stacked full-width cards; DL-295 preview-panel bug moot — preview panel removed)
+**Last Updated:** 2026-04-17 (DL-299 implemented — PA card doc-manager parity: per-doc issuer edit + note popover + questionnaire print. Built on DL-298)
 
-## Session Summary (2026-04-17 — DL-298 PA queue stacked cards)
+## Session Summary (2026-04-17 — DL-299 PA card doc-manager parity)
+
+### DL-299: PA Card — Per-Doc Issuer Edit + Note Popover + Print [IMPLEMENTED — NEED TESTING]
+
+Three doc-manager features ported onto the DL-298 PA card so admins don't need to leave for common edits:
+
+1. **Per-doc manual issuer edit.** Pencil icon inline on each doc row (hover-reveal desktop, always-on mobile) → inline input + ✓/✗. For T501/T401/T301 an extra "החלף חברה ▼" combobox lists known `company_links` with live filter. Saves via `EDIT_DOCUMENTS.name_updates` (same path as DL-296 ✨ accept). Complements the ✨ suggestion for wrong/missing cases.
+2. **Per-doc bookkeepers_notes popover.** Speech-bubble icon per row; filled when note has content. Popover flip-above near viewport bottom; immediate save on outside-click / blur via `EDIT_DOCUMENTS.note_updates`; Esc cancels. Rollback on failure.
+3. **Questionnaire print.** 🖨 הדפסה button in the Q&A section title. Shared `printQuestionnaireSheet(data)` helper in new `frontend/shared/print-questionnaire.js`. Doc-manager's print fn refactored to a thin wrapper around the same helper.
+
+**Backend:** `admin-pending-approval.ts` now returns `company_links` (name→url). `EDIT_DOCUMENTS` already accepted `note_updates[]` — no route change.
+
+**Files changed:**
+```
+api/src/routes/admin-pending-approval.ts            # return company_links
+frontend/shared/print-questionnaire.js              # NEW — shared print helper
+frontend/admin/index.html                           # +<script> for print helper; +#paNotePopover DOM
+frontend/document-manager.html                      # +<script> for print helper
+frontend/assets/js/document-manager.js              # printQuestionnaireFromDocManager → thin wrapper
+frontend/admin/js/script.js                         # pencil + note buttons in renderPaDocTagRow; 10+ PA handlers; print button in Q&A section title
+frontend/admin/css/style.css                        # .pa-doc-row__edit/note, .pa-issuer-edit-row, .pa-issuer-swap-combo, .pa-note-popover, .pa-print-btn
+.agent/design-logs/admin-ui/299-pa-card-issuer-edit-notes-print.md  # design log
+.agent/design-logs/INDEX.md                         # DL-299 row
+```
+
+---
+
+## Previous Session Summary (2026-04-17 — DL-298 PA queue stacked cards)
 
 ### DL-298: PA Queue — Stacked Full-Width Cards with Internal Q&A | Docs Split [IMPLEMENTED — NEED TESTING]
 
@@ -23,7 +50,27 @@ frontend/admin/css/style.css                                # .pa-stack, .pa-car
 
 ## Active TODOs
 
-1. **Test DL-298: PA Queue stacked cards** — verify the stacked layout + expand/collapse + inline ✨ + doc-manager link on the live site.
+1. **Test DL-299: PA card doc-manager parity** — verify the three new features on the live site.
+   - [ ] Pencil appears on hover (desktop) / always (mobile) at the end of each doc row
+   - [ ] Click pencil on T106 (non-company) → input + ✓/✗ only, no swap toggle
+   - [ ] Click pencil on T501/T401/T301 → input + ✓/✗ + "החלף חברה ▼" toggle
+   - [ ] Toggle swap → filtered combobox lists `company_links`; pick one → input filled; ✓ → saves
+   - [ ] Enter saves; Esc / ✗ cancels with original value restored
+   - [ ] Save updates doc name, clears any ✨ chip on that row, toast "שם עודכן", Airtable PATCHed
+   - [ ] Save failure (network offline) → rollback + error toast
+   - [ ] Click note icon → popover anchored to icon (flip-above near viewport bottom)
+   - [ ] Edit text + outside-click → icon swaps to filled (`message-square-text`), toast "הערה נשמרה", Airtable PATCHed
+   - [ ] Esc in popover → closes without saving; no toast
+   - [ ] Opening second note popover closes the first
+   - [ ] Print button visible in "תשובות שאלון" title; click → new window with Q&A + client questions + office notes; popup blocker → toast
+   - [ ] Doc-manager's print button still works identically (refactor didn't break it)
+   - [ ] DL-298 expand/collapse, DL-296 ✨ accept, DL-227 status menu, DL-295 hide-No toggle, folder-open link all unchanged
+   - [ ] RTL + Hebrew characters render correctly in print window
+   - [ ] No console errors
+
+   Design log: `.agent/design-logs/admin-ui/299-pa-card-issuer-edit-notes-print.md`
+
+2. **Test DL-298: PA Queue stacked cards** — verify the stacked layout + expand/collapse + inline ✨ + doc-manager link on the live site.
    - [ ] Open "סקירה ואישור" tab → no sticky preview panel exists; single stacked column of cards
    - [ ] First 3 cards expanded on load; rest collapsed with informative header (name, id, date, priority badge, count badges, folder-open doc-manager link)
    - [ ] Expanded card at ≥1024px: Q&A on one side, docs on the other side, 50/50

@@ -2850,89 +2850,33 @@ function toggleHideNoAnswers() {
     if (container && _questionnaireData) _renderQuestionnaire(container);
 }
 
+// DL-299: thin wrapper — actual HTML generation lives in frontend/shared/print-questionnaire.js
 function printQuestionnaireFromDocManager() {
     if (!_questionnaireData) {
         showToast('יש לפתוח את השאלון לפני ההדפסה', 'warning');
         return;
     }
-    const printWindow = window.open('', '_blank', 'width=900,height=700');
-    if (!printWindow) { showToast('לא ניתן לפתוח חלון הדפסה. אפשר חלונות קופצים.', 'error'); return; }
-
     const qa = _questionnaireData;
     const info = qa.client_info || {};
-    const answers = qa.answers || [];
-    const printAnswers = answers.filter(a => a.value && a.value !== '✗ לא');
-    const date = info.submission_date ? new Date(info.submission_date).toLocaleDateString('he-IL', { day:'2-digit', month:'2-digit', year:'numeric' }) : '—';
     const activeReport = allReports.find(r => r.report_id === REPORT_ID);
     const ftLabel = FILING_TYPE_LABELS[activeReport?.filing_type || 'annual_report'] || 'דוח שנתי';
 
-    let rows = printAnswers.map((a, i) => `<tr>
-        <td class="q-col">${escapeHtml(a.label)}</td>
-        <td class="a-col">${escapeHtml(String(a.value || ''))}</td>
-    </tr>`).join('');
-
-    // Client questions for print — use module-level clientQuestions (always up-to-date)
-    const printCQ = clientQuestions.filter(q => q.text && q.text.trim());
-
-    let cqHtml = '';
-    if (printCQ.length > 0) {
-        cqHtml += `<div class="client-questions"><h4>שאלות הלקוח</h4>`;
-        printCQ.forEach((q, idx) => {
-            const text = typeof q === 'string' ? q : (q.text || q.question || JSON.stringify(q));
-            const answer = (typeof q === 'object' && q.answer) ? q.answer.trim() : '';
-            cqHtml += `<div class="cq-item">
-                <div class="cq-q">${idx + 1}. ${escapeHtml(text)}</div>
-                <div class="cq-a${answer ? '' : ' cq-no-answer'}">${answer ? escapeHtml(answer) : 'ללא תשובה'}</div>
-            </div>`;
-        });
-        cqHtml += `</div>`;
+    if (typeof window.printQuestionnaireSheet !== 'function') {
+        showToast('מודול ההדפסה לא נטען', 'error');
+        return;
     }
 
-    // Office notes
-    let notesHtml = '';
-    if (REPORT_NOTES) {
-        notesHtml = `<div class="office-notes"><h4>הערות משרד</h4><div class="notes-content">${escapeHtml(REPORT_NOTES)}</div></div>`;
-    }
-
-    const html = `<!DOCTYPE html><html dir="rtl" lang="he"><head>
-<meta charset="UTF-8"><title>שאלון — ${escapeHtml(info.name || '')}</title>
-<style>
-  @page{margin:15mm;size:A4}*{box-sizing:border-box}
-  body{font-family:Arial,sans-serif;font-size:12pt;color:#1f2937;direction:rtl;margin:0}
-  .header{border-bottom:3px solid #4f46e5;padding-bottom:10px;margin-bottom:16px}
-  .header h2{margin:0 0 4px;font-size:18pt}.meta{font-size:10pt;color:#6b7280}
-  table{width:100%;border-collapse:collapse;font-size:10pt}
-  th{background:#f3f4f6;padding:7px 10px;font-weight:700;color:#374151;border-bottom:2px solid #d1d5db;text-align:right}
-  td{padding:6px 10px;border-bottom:1px solid #f3f4f6;vertical-align:top;text-align:right}
-  tr:nth-child(even) td{background:#f9fafb}
-  .q-col{font-weight:600;color:#374151;width:40%}.a-col{color:#4b5563}
-  .client-questions{margin-top:12px;border-right:3px solid #d97706;padding:8px 12px;background:#fffbeb;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-  .client-questions h4{margin:0 0 8px;font-size:10pt;color:#92400e;text-transform:uppercase;letter-spacing:0.05em}
-  .cq-item{padding:6px 0;border-bottom:1px solid #fde68a;break-inside:avoid}
-  .cq-item:last-child{border-bottom:none}
-  .cq-q{font-weight:600;color:#78350f;font-size:10pt}
-  .cq-a{color:#4b5563;font-size:10pt;margin-top:2px;padding-right:16px}
-  .cq-no-answer{color:#9ca3af;font-style:italic}
-  .office-notes{margin-top:12px;border-right:3px solid #3b82f6;padding:8px 12px;background:#eff6ff;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-  .office-notes h4{margin:0 0 8px;font-size:10pt;color:#1e40af;text-transform:uppercase;letter-spacing:0.05em}
-  .office-notes .notes-content{color:#1f2937;font-size:10pt;white-space:pre-wrap}
-  .footer{margin-top:12px;font-size:8pt;color:#9ca3af;border-top:1px solid #e5e7eb;padding-top:8px}
-</style></head><body>
-<div class="header">
-  <h2>${escapeHtml(info.name || '—')} — ${ftLabel} ${escapeHtml(info.year || '—')}</h2>
-  <div class="meta">${escapeHtml(info.email || '—')}${info.phone ? ` | ${escapeHtml(info.phone)}` : ''} | שאלון הוגש: ${date}</div>
-</div>
-<table><thead><tr><th class="q-col">שאלה</th><th class="a-col">תשובה</th></tr></thead>
-<tbody>${rows}</tbody></table>
-${cqHtml}
-${notesHtml}
-<div class="footer">הודפס מתוך מערכת ניהול דוחות — Client Name רו"ח</div>
-</body></html>`;
-
-    printWindow.document.write(html);
-    printWindow.document.close();
-    printWindow.focus();
-    setTimeout(() => printWindow.print(), 500);
+    window.printQuestionnaireSheet({
+        clientName: info.name || '',
+        year: info.year || '',
+        email: info.email || '',
+        phone: info.phone || '',
+        submissionDate: info.submission_date || null,
+        filingTypeLabel: ftLabel,
+        answers: qa.answers || [],
+        clientQuestions: clientQuestions || [],
+        reportNotes: REPORT_NOTES || '',
+    });
 }
 
 // ===================== FILE UPLOAD PER ROW (DL-198) =====================

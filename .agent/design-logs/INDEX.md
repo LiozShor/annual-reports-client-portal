@@ -2,7 +2,7 @@
 
 Active and pending logs. For completed history, see [ARCHIVE-INDEX.md](ARCHIVE-INDEX.md).
 
-**Total logs:** 196 | **Active:** 98 | **Archived:** 98
+**Total logs:** 197 | **Active:** 99 | **Archived:** 98
 
 ## Folder Structure
 
@@ -21,6 +21,7 @@ Active and pending logs. For completed history, see [ARCHIVE-INDEX.md](ARCHIVE-I
 
 | # | File | Status | Summary |
 |---|------|--------|---------|
+| 299 | [299-pa-card-issuer-edit-notes-print.md](admin-ui/299-pa-card-issuer-edit-notes-print.md) | IMPLEMENTED — NEED TESTING | PA card parity w/ doc-manager: (1) per-doc pencil → inline issuer edit + `החלף חברה` combobox for T501/T401/T301 (from `company_links`); (2) per-doc note popover — immediate save of `bookkeepers_notes`; (3) questionnaire print button in Q&A section title. Shared `frontend/shared/print-questionnaire.js` replaces doc-manager inline print. No new endpoints |
 | 298 | [298-pa-queue-stacked-cards.md](admin-ui/298-pa-queue-stacked-cards.md) | IMPLEMENTED — NEED TESTING | PA queue redesign: delete master/preview split; stacked full-width cards (`.pa-stack`) with collapsed header (name, age, count badges, folder-open doc-manager link, chevron) + expandable body (DL-295 2-col Q&A \| Docs, notes, questions, actions). First 3 of each page auto-expanded. DL-296 ✨ issuer suggestion chip moves inline into each doc row. Deletes `loadPaPreview`, `loadPaMobilePreview`, `buildPaPreviewHtml`, `_activePaReportId`, `paMobilePreviewModal` |
 | 297 | [297-doc-manager-header-sticky-stage-edit.md](admin-ui/297-doc-manager-header-sticky-stage-edit.md) | IMPLEMENTED — NEED TESTING | Doc-manager polish: sticky action bar moved above page-header block (position:sticky instead of fixed, visually reads as top row of header when at-top, pins on scroll). Stage label (`שלב`) now clickable → dropdown with 8 stages, reuses `ADMIN_CHANGE_STAGE` endpoint with optimistic update + revert |
 | 296 | [296-wf02-extract-issuer-names.md](infrastructure/296-wf02-extract-issuer-names.md) | IMPLEMENTED — NEED TESTING | WF02 calls new `/webhook/extract-issuer-names` (Haiku 4.5 + forced tool use) to extract issuer names from questionnaire free-text; stores as `issuer_name_suggested`; Review & Approve card shows bold ✨ chip with 1-click accept (+ "אשר הכל" batch); raw context preserved in `bookkeepers_notes` |

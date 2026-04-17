@@ -71,12 +71,15 @@ adminPendingApproval.get('/admin-pending-approval', async (c) => {
     ]);
 
     if (reportRecords.length === 0) {
-      return c.json({ ok: true, items: [], count: 0 });
+      return c.json({ ok: true, items: [], count: 0, company_links: {} });
     }
 
     const categoryMap = buildCategoryMap(categoryRecords);
     const templateMap = buildTemplateMap(templateRecords);
     const companyLinks = buildCompanyLinkMap(companyLinkRecords);
+    // DL-299: expose company_links to the admin PA card for the "החלף חברה" combobox in per-doc issuer edit
+    const companyLinksObj: Record<string, string> = {};
+    for (const [k, v] of companyLinks) companyLinksObj[k] = v;
 
     const reportIds = reportRecords.map(r => r.id);
 
@@ -195,7 +198,7 @@ adminPendingApproval.get('/admin-pending-approval', async (c) => {
       return new Date(a.submitted_at).getTime() - new Date(b.submitted_at).getTime();
     });
 
-    return c.json({ ok: true, items, count: items.length });
+    return c.json({ ok: true, items, count: items.length, company_links: companyLinksObj });
   } catch (err) {
     console.error('[admin-pending-approval] Unhandled error:', (err as Error).message);
     logError(c.executionCtx, c.env, {
