@@ -8370,3 +8370,35 @@ tr:hover .client-edit-link {
     color: var(--gray-900);
     border-color: var(--gray-300);
 }
+
+/* DL-299 follow-up: notes timeline (parsed from JSON communication thread) */
+.pa-notes-timeline {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-2);
+    margin-bottom: var(--sp-2);
+}
+.pa-note-row {
+    padding: 6px 10px;
+    border-inline-start: 3px solid var(--gray-300);
+    background: var(--gray-50);
+    border-radius: var(--radius-sm);
+}
+.pa-note-row--office {
+    border-inline-start-color: var(--primary-500, #4f46e5);
+    background: #eef2ff;
+}
+.pa-note-row--client {
+    border-inline-start-color: #10b981;
+    background: #ecfdf5;
+}
+.pa-note-meta {
+    font-size: 10px;
+    color: var(--gray-500);
+    margin-bottom: 2px;
+}
+.pa-note-text {
+    font-size: var(--text-sm);
+    color: var(--gray-800);
+    white-space: pre-wrap;
+}
