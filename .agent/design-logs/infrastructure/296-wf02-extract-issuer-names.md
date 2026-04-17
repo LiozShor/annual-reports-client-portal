@@ -1,6 +1,8 @@
 # Design Log 296: WF02 — Extract Issuer Names from Questionnaire Free-Text Context
-**Status:** [IMPLEMENTED — NEED TESTING]
+**Status:** [IMPLEMENTED — NEED TESTING] (✨ accept chip disabled pending UX rework — see 2026-04-17 update)
 **Date:** 2026-04-17
+
+> **2026-04-17 update (DL-300 follow-up):** the frontend ✨ accept chip shipped by this log is **disabled on both surfaces** (PA card + doc-manager) in commit `ca3e7d5`. Accept overwrote `issuer_name` with the bare short form (e.g. "לאומי"), which then rendered as the entire doc-row label — the template prefix ("טופס 867 (אישור ניכוי מס) לשנת 2025 …") was lost because `doc-builder.ts:293` resolves the label as `issuer_name ?? template.name_he`. The backend (`/webhook/extract-issuer-names`, this log's WF02 wiring) still runs and writes `issuer_name_suggested` for opted-in templates (DL-300 gate); only the UI chip is hidden. Re-enabling = replace the `suggestion = ''` stubs in `frontend/admin/js/script.js` + `frontend/assets/js/document-manager.js` with the original reads, *after* the accept path is reworked to re-compose via `buildShortName(templateId, issuer)` or equivalent.
 **Related Logs:** DL-112 (webhook dedup + issuer display), DL-129 (dynamic short names), DL-136/144 (issuer matching fixes), DL-224 (issuer-aware doc lookup), DL-275 (WF02 zero-docs fix), DL-292 (Review & Approve queue tab), DL-294/295 (PA queue doc_chips schema)
 
 **Numbering note:** Built on branch `DL-293-wf02-extract-issuer-names` when DL-293 was unassigned. Renumbered to DL-296 at merge time after `admin-ui/293-doc-manager-edit-client.md` landed on main in parallel. In-flight artifacts (n8n node IDs `dl293-build-payload`/`dl293-call-extract`, commit messages, code comments) keep the DL-293 label for traceability — they map to this log.

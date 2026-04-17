@@ -34,6 +34,25 @@ frontend/admin/css/style.css                             # .pa-preview-doc-row--
 - [ ] No regression: waive/receive toggle, note popover, pencil edit, print, approve-and-send still work on a card with freshly added docs.
 
 Design log: `.agent/design-logs/admin-ui/301-pa-add-doc-affordance.md`
+**Last Updated:** 2026-04-17 (DL-300 gate shipped; ✨ chip disabled pending UX rework)
+
+## Session Summary (2026-04-17 — ✨ chip disabled on both surfaces)
+
+Live-test on CPA-XXX after DL-300 deploy surfaced a render bug in the ✨ accept flow (DL-296):
+
+- Before accept: doc-row label = "טופס 867 (אישור ניכוי מס) לשנת 2025 – הפקדתי בלאומי ויש לי פיקדון גם בבנק דיסקונט" (prose stuffed into `issuer_name` by WF02 Document Service).
+- Click "החלף ל-לאומי" → `EDIT_DOCUMENTS` overwrites `issuer_name = "לאומי"`.
+- `doc-builder.ts:293` resolves label as `issuer_name ?? template.name_he` → post-accept label is just "לאומי". Template prefix is gone.
+
+**Decision:** hide the ✨ chip on both surfaces until the render/accept path re-composes via `buildShortName(templateId, issuer)`. Backend still writes `issuer_name_suggested` for opted-in templates (cheap, harmless).
+
+**Files changed (commit `ca3e7d5`):**
+- `frontend/admin/js/script.js` — `suggestionRaw = ''` in `renderPaDocTagRow`; `suggestionCount = 0` in PA card header badge
+- `frontend/assets/js/document-manager.js` — `suggestion = ''` in the dm-suggestion-row block
+
+Design logs updated: DL-296, DL-299, DL-300 + INDEX.
+
+Re-enable later = 3-line revert on the frontend stubs, after the accept path re-composes via template.short_name_he with `{issuer}`.
 
 ---
 

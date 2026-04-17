@@ -1,6 +1,9 @@
 # Design Log 299: PA Card — Manual Issuer Edit + Per-Doc Notes + Questionnaire Print
 **Status:** [IMPLEMENTED — NEED TESTING]
 **Date:** 2026-04-17
+
+> **2026-04-17 update (DL-300 follow-up):** the ✨ `issuer_name_suggested` chip on the PA card (the DL-296 accept-suggestion button — *not* the manual pencil edit or note popover this log ships) is **disabled in the frontend** (commit `ca3e7d5`). Accepting a suggestion overwrote `issuer_name` with the bare short form, which then rendered as the entire doc-row label, losing the template prefix ("טופס 867 …"). The pencil + note + print features in this log are unaffected. Re-enabling is a small frontend revert once the render path re-composes via `buildShortName({issuer})`.
+
 **Related Logs:**
 - DL-298 (PA queue stacked cards — this log extends it)
 - DL-296 (WF02 ✨ issuer suggestion — `issuer_name_suggested` + accept chip; manual edit is the complement for wrong/missing suggestions)
