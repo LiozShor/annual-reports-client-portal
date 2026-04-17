@@ -1,6 +1,50 @@
 # Annual Reports CRM - Current Status
 
-**Last Updated:** 2026-04-17 (DL-296 hardening + doc-manager chip shipped)
+**Last Updated:** 2026-04-17 (DL-300 per-template issuer-suggestion gate)
+
+## Session Summary (2026-04-17 — DL-300 per-template issuer-suggestion gate)
+
+### DL-300: Per-Template Issuer-Suggestion Gate [IMPLEMENTED — NEED TESTING]
+
+Follow-up to DL-296. DL-296's extractor runs on every doc with non-empty `raw_context` — including templates where "issuer" is meaningless (T003, T1201, T801, T1301, T1001). Wastes tokens; occasional garbage suggestions on PA cards.
+
+**Solution:** new Airtable `needs_issuer_suggestion` checkbox on the templates table (opt-in, default false). `/webhook/extract-issuer-names` loads templates, partitions the incoming docs into `llmDocs` (opted-in) vs `noteOnlyDocs` (everything else), and only calls Haiku for `llmDocs`. Raw-context `[תשובה מהשאלון] <raw>` note append still runs for *all* docs — two independent switches.
+
+**Response adds** `filtered_by_template` counter for observability.
+
+**Cleanup script:** `api/scripts/clear-disabled-template-suggestions.ts` — dry-run by default (`DRY=1`), lists + optionally clears `issuer_name_suggested` on docs whose template is now disabled. Idempotent.
+
+**Files changed:**
+```
+api/src/lib/doc-builder.ts                              # + needs_issuer_suggestion on TemplateInfo + buildTemplateMap
+api/src/routes/extract-issuer-names.ts                  # load templates, partition, conditional callClaude, still append notes for all
+api/scripts/clear-disabled-template-suggestions.ts      # NEW one-shot cleanup (dry-run default)
+.agent/design-logs/infrastructure/300-per-template-issuer-suggestion-gate.md  # NEW
+.agent/design-logs/INDEX.md                             # + DL-300 row
+```
+
+**Manual steps (Natan / deploy):**
+1. Add `needs_issuer_suggestion` checkbox to Airtable templates table.
+2. `cd api && npx wrangler deploy`.
+3. Natan toggles the ~32 template flags.
+4. `DRY=1 node api/scripts/clear-disabled-template-suggestions.ts` → review → `DRY=0` to apply.
+
+**Test DL-300 — §7:**
+- [ ] `needs_issuer_suggestion` checkbox visible on templates table; toggles save.
+- [ ] POST `/webhook/extract-issuer-names` with mixed batch → Claude only called with enabled docs; `filtered_by_template` reflects count.
+- [ ] POST with only disabled templates → no Claude call, `bookkeepers_notes` still appended, `suggested: 0`, `filtered_by_template > 0`.
+- [ ] POST with only enabled templates → behaviour identical to pre-DL-300.
+- [ ] Templates-table fetch failure → 500 (no silent skip).
+- [ ] `DRY=1 node scripts/clear-disabled-template-suggestions.ts` prints counts, no writes.
+- [ ] `DRY=0 …` clears only disabled-template docs; ✨ chips disappear on PA cards.
+- [ ] Re-run of cleanup is a no-op.
+- [ ] DL-296 ✨ chip + 1-click accept still works for enabled templates.
+- [ ] DL-299 PA card pencil + note popover unchanged.
+- [ ] `bookkeepers_notes` still contains `[תשובה מהשאלון] <raw>` for both enabled and disabled templates.
+
+Design log: `.agent/design-logs/infrastructure/300-per-template-issuer-suggestion-gate.md`
+
+---
 
 ## Session Summary (2026-04-17 — DL-296 follow-ups)
 

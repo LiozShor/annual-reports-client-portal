@@ -17,12 +17,14 @@
 import { Hono } from 'hono';
 import { verifyToken } from '../lib/token';
 import { AirtableClient } from '../lib/airtable';
+import { buildTemplateMap } from '../lib/doc-builder';
 import { logError } from '../lib/error-logger';
 import type { Env } from '../lib/types';
 
 const route = new Hono<{ Bindings: Env }>();
 
 const DOCUMENTS_TABLE = 'tblcwptR63skeODPn';
+const TEMPLATES_TABLE = 'tblQTsbhC6ZBrhspc';
 const ANTHROPIC_URL = 'https://api.anthropic.com/v1/messages';
 const MODEL = 'claude-haiku-4-5-20251001';
 const CONFIDENCE_FLOOR = 0.5;
@@ -241,11 +243,31 @@ route.post('/extract-issuer-names', async (c) => {
     );
 
     if (docs.length === 0) {
-      return c.json({ ok: true, suggested: 0, skipped: 0, results: [] });
+      return c.json({ ok: true, suggested: 0, skipped: 0, filtered_by_template: 0, results: [] });
     }
 
-    // ---- Call Claude ----
-    const results = await callClaude(c.env.ANTHROPIC_API_KEY, docs);
+    // ---- DL-300: per-template gate ----
+    // Fetch templates, partition docs into llmDocs (needs_issuer_suggestion=true)
+    // vs noteOnlyDocs (still get the bookkeepers_notes append but no Claude call).
+    // If the templates fetch fails, bubble up — don't silently drop suggestions.
+    const airtable = new AirtableClient(c.env.AIRTABLE_BASE_ID, c.env.AIRTABLE_PAT);
+    const templateRecords = await airtable.listAllRecords(TEMPLATES_TABLE);
+    const templateMap = buildTemplateMap(templateRecords);
+
+    const llmDocs: DocInput[] = [];
+    const noteOnlyDocs: DocInput[] = [];
+    for (const d of docs) {
+      if (templateMap.get(d.template_id)?.needs_issuer_suggestion === true) {
+        llmDocs.push(d);
+      } else {
+        noteOnlyDocs.push(d);
+      }
+    }
+
+    // ---- Call Claude (only for enabled templates) ----
+    const results = llmDocs.length > 0
+      ? await callClaude(c.env.ANTHROPIC_API_KEY, llmDocs)
+      : [];
     const byId = new Map(results.map((r) => [r.doc_record_id, r]));
 
     // ---- Build batch PATCH ----
@@ -253,7 +275,7 @@ route.post('/extract-issuer-names', async (c) => {
     let suggested = 0;
     let skipped = 0;
 
-    for (const doc of docs) {
+    for (const doc of llmDocs) {
       const r = byId.get(doc.doc_record_id);
       const suggestion =
         r && typeof r.issuer_name === 'string' && r.issuer_name.trim().length > 0
@@ -282,6 +304,14 @@ route.post('/extract-issuer-names', async (c) => {
       }
     }
 
+    // Disabled-template docs: still preserve raw context in bookkeepers_notes.
+    for (const doc of noteOnlyDocs) {
+      const noteUpdate = buildNotesUpdate(doc.existing_notes, doc.raw_context);
+      if (noteUpdate !== null) {
+        updates.push({ id: doc.doc_record_id, fields: { bookkeepers_notes: noteUpdate } });
+      }
+    }
+
     // Defensive: never PATCH Airtable with empty/malformed IDs (422 INVALID_RECORDS)
     const validUpdates = updates.filter(
       (u) => typeof u.id === 'string' && u.id.startsWith('rec') && u.id.length >= 15,
@@ -293,18 +323,19 @@ route.post('/extract-issuer-names', async (c) => {
       );
     }
     if (validUpdates.length > 0) {
-      const airtable = new AirtableClient(c.env.AIRTABLE_BASE_ID, c.env.AIRTABLE_PAT);
       await airtable.batchUpdate(DOCUMENTS_TABLE, validUpdates);
     }
 
+    const filtered_by_template = noteOnlyDocs.length;
     console.log(
-      `[extract-issuer-names] report=${body.report_record_id} docs=${docs.length} suggested=${suggested} skipped=${skipped}`,
+      `[extract-issuer-names] report=${body.report_record_id} docs=${docs.length} suggested=${suggested} skipped=${skipped} filtered_by_template=${filtered_by_template}`,
     );
 
     return c.json({
       ok: true,
       suggested,
       skipped,
+      filtered_by_template,
       results: results.map((r) => ({
         doc_record_id: r.doc_record_id,
         issuer_name: r.issuer_name,

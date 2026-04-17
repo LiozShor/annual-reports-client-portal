@@ -47,6 +47,7 @@ export interface TemplateInfo {
   variables?: string;  // comma-separated variable names
   help_he?: string;
   help_en?: string;
+  needs_issuer_suggestion?: boolean;  // DL-300: per-template gate for WF02 Haiku issuer extraction
 }
 
 export interface CompanyLink {
@@ -141,6 +142,7 @@ export function buildTemplateMap(
       variables: f['variables'] as string | undefined,
       help_he: f['help_he'] as string | undefined,
       help_en: f['help_en'] as string | undefined,
+      needs_issuer_suggestion: f['needs_issuer_suggestion'] === true,
     });
   }
 
