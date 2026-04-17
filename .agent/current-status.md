@@ -1,6 +1,21 @@
 # Annual Reports CRM - Current Status
 
-**Last Updated:** 2026-04-17 (Session — DL-295 PA queue improvements — implemented, pending push/merge)
+**Last Updated:** 2026-04-17 (DL-295 shipped & merged; ⚠️ KNOWN BUG: preview docs column not rendering in live test — needs next-session debug)
+
+## ⚠️ Open Bug from DL-295 (2026-04-17)
+
+Live test of merged DL-295 on main:
+- ✅ Placeholder fix works (chips clean — "נהרייה", "יובל חינוך" — no `{city_name}` / `{company_name}` leak)
+- ✅ Priority badge works (yellow "5 ימים" pill on cards)
+- ❌ **Preview panel docs column appears empty** — only Q&A renders. Stats strip shows correct doc count (5 📂), master card chips populate, but `.pa-preview-col--docs` looks empty.
+
+Suspect causes to investigate:
+1. Browser: check `pendingApprovalData[0].doc_groups` in console — is it populated?
+2. CSS: try `grid-template-columns: minmax(0, 1fr) minmax(0, 1fr)` in `.pa-preview-cols`
+3. Cache: confirm hard-refresh. GitHub Pages deploy lag possible.
+4. RTL + grid — docs col rendered but positioned off-screen?
+
+Code to inspect: `frontend/admin/js/script.js` `buildPaPreviewBody` (~line 5988); `frontend/admin/css/style.css` `.pa-preview-cols` (~line 7690).
 
 ---
 
