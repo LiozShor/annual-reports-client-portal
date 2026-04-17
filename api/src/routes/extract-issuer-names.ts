@@ -89,24 +89,30 @@ const TOOL_SCHEMA = {
   },
 } as const;
 
-const SYSTEM_PROMPT = `You extract the single most salient ORGANISATION name (employer, broker, bank, insurance company, pension fund, tax authority, or similar entity) from a Hebrew free-text context describing the client's relationship with that entity.
+const SYSTEM_PROMPT = `You extract the single most salient ORGANISATION name (employer, broker, bank, insurance company, pension fund, tax authority, or similar entity) from a free-text context — in Hebrew OR English — describing the client's relationship with that entity.
 
 For each doc below, return {doc_record_id, issuer_name, confidence}.
 
 Rules:
-- Return ONLY the organisation name, stripped of prefixes like "חברת", "בבנק", "אצל", "בחברת", "שנקרא", "של", and possessive suffixes. Example: "בחברת אינטראקטיב" → "אינטראקטיב".
-- Do NOT return: job titles, cities ("בתל אביב"), generic nouns ("בר", "חברה", "בנק"), date ranges, or amounts.
-- If no organisation is identifiable, return issuer_name: null.
+- Return ONLY the organisation name in the SAME language and script as appears in the context. Strip Hebrew prefixes ("חברת", "בבנק", "אצל", "בחברת", "שנקרא", "של") and English prefixes ("at", "from", "with", "the"). Examples:
+    "בחברת אינטראקטיב"                   → "אינטראקטיב"
+    "עבדתי כשכיר בבר בתל אביב שנקרא ג'ויה"    → "ג'ויה"
+    "I worked at MyHeritage until February 17" → "MyHeritage"
+    "my account at Bank Leumi"              → "Bank Leumi"
+- Do NOT return: job titles, cities ("בתל אביב", "Tel Aviv"), generic nouns ("בר", "חברה", "בנק", "company", "bank"), date ranges, or amounts.
+- If the context is descriptive of an event/amount with no organisation (e.g. "נולדה בתאריך 12.12.25", "received benefit of 1,500₪"), return issuer_name: null with low confidence.
 - Confidence >= 0.8 only if the entity is explicitly named in the context.
-- For banks/insurers, prefer the common short form (e.g. "בנק לאומי", "מגדל", "הפניקס").
+- For banks/insurers, prefer the common short form ("בנק לאומי" → "לאומי"; "מגדל חברה לביטוח" → "מגדל"; "Bank Hapoalim" → "Hapoalim").
 
-Template hints (the expected entity type for each template_id):
-- T106/T806: employer (מעסיק)
-- T867: broker / investment company (חברת השקעות)
-- T601: bank (בנק)
-- T501: insurance / pension (חברת ביטוח / קרן פנסיה)
-- T901/T902: landlord or tenant (משכיר/שוכר)
-- Others: treat as generic organisation`;
+Template hints (expected entity type):
+- T106/T806/T201/T202: employer (מעסיק / employer)
+- T867: broker / investment company
+- T601: bank
+- T501: insurance / pension
+- T901/T902: landlord or tenant
+- T1101/T1102 (857/856/806): payer of income with tax withheld
+- T1501: educational institution
+- Others: treat as generic organisation; return null if no organisation is identifiable.`;
 
 function buildUserMessage(docs: DocInput[]): string {
   const lines = docs.map(
