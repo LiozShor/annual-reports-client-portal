@@ -5801,6 +5801,29 @@ function buildPaCard(item) {
     const docChips = visibleDocs.map(d => `<span class="pa-chip pa-chip--doc" title="${escapeHtml(d.short_name_he)}">${d.category_emoji} ${escapeHtml(d.short_name_he.length > 18 ? d.short_name_he.slice(0, 18) + '…' : d.short_name_he)}</span>`).join('') +
         (moreDocs > 0 ? `<span class="pa-chip pa-chip--more">+${moreDocs}</span>` : '');
 
+    // DL-293: issuer-name suggestion chips (one per doc with a pending ✨ suggestion)
+    const suggestions = docs.filter(d => (d.issuer_name_suggested || '').trim());
+    const suggestionChips = suggestions.map(d => {
+        const sug = (d.issuer_name_suggested || '').trim();
+        const truncated = sug.length > 18 ? sug.slice(0, 18) + '…' : sug;
+        return `<button class="pa-chip pa-suggest-chip"
+            title="${escapeHtml('שנה שם לגורם המנפיק: ' + sug)}"
+            data-doc-id="${escapeHtml(d.doc_id)}"
+            data-suggestion="${escapeHtml(sug)}"
+            data-report-id="${item.report_id}"
+            onclick="event.stopPropagation(); acceptIssuerSuggestion(this)">
+            <span class="pa-suggest-chip__icon">✨</span>
+            <strong>${escapeHtml(truncated)}</strong>
+            <span class="pa-suggest-chip__check">✓</span>
+        </button>`;
+    }).join('');
+    const acceptAll = suggestions.length > 1
+        ? `<button class="pa-suggest-all" data-report-id="${item.report_id}" onclick="event.stopPropagation(); acceptAllIssuerSuggestions('${item.report_id}')">✨ אשר הכל (${suggestions.length})</button>`
+        : '';
+    const suggestionsRow = suggestions.length > 0
+        ? `<div class="pa-card__suggestions" data-report-id="${item.report_id}">${suggestionChips}${acceptAll}</div>`
+        : '';
+
     // Notes preview
     const notesText = (item.notes || item.client_notes || '').trim();
     const notesHtml = notesText ? `<div class="pa-card__notes"><i data-lucide="message-square" class="icon-xs"></i> ${escapeHtml(notesText.slice(0, 120))}${notesText.length > 120 ? '…' : ''}</div>` : '';
@@ -5818,6 +5841,7 @@ function buildPaCard(item) {
         </div>
         ${qs.length > 0 ? `<div class="pa-card__chips-row">${answerChips}</div>` : ''}
         ${docs.length > 0 ? `<div class="pa-card__chips-row">${docChips}</div>` : ''}
+        ${suggestionsRow}
         ${notesHtml}
         ${priorYearHtml}
         <div class="pa-card__actions" onclick="event.stopPropagation()">
@@ -5950,6 +5974,94 @@ function loadPaMobilePreview(reportId) {
 
 function closePaMobilePreview() {
     document.getElementById('paMobilePreviewModal').classList.remove('show');
+}
+
+// DL-293: Accept a single AI-suggested issuer_name on the Review & Approve card.
+async function acceptIssuerSuggestion(btn) {
+    if (!btn || btn.disabled) return;
+    const docId = btn.dataset.docId;
+    const suggestion = btn.dataset.suggestion;
+    const reportId = btn.dataset.reportId;
+    if (!docId || !suggestion || !reportId) return;
+
+    btn.disabled = true;
+    btn.classList.add('pa-suggest-chip--applying');
+
+    const item = pendingApprovalData.find(i => i.report_id === reportId);
+    const payload = {
+        data: {
+            fields: [{ type: 'HIDDEN_FIELDS', value: { report_record_id: reportId } }],
+            extensions: {
+                name_updates: [{ id: docId, issuer_name: suggestion }],
+                send_email: false,
+            },
+        },
+    };
+
+    try {
+        const response = await fetchWithTimeout(ENDPOINTS.EDIT_DOCUMENTS, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
+            body: JSON.stringify(payload),
+        }, FETCH_TIMEOUTS.mutate);
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+        // Local state update — clear suggestion + update doc chip label
+        if (item && Array.isArray(item.docs)) {
+            const doc = item.docs.find(d => d.doc_id === docId);
+            if (doc) {
+                doc.issuer_name_suggested = '';
+                doc.short_name_he = suggestion;
+            }
+        }
+        btn.classList.add('pa-suggest-chip--accepted');
+        setTimeout(() => { btn.remove(); renderPendingApprovalCards(); }, 220);
+        showAIToast('שם הגורם המנפיק עודכן', 'success');
+    } catch (err) {
+        console.error('[DL-293] acceptIssuerSuggestion failed', err);
+        btn.disabled = false;
+        btn.classList.remove('pa-suggest-chip--applying');
+        showAIToast('שגיאה בעדכון שם הגורם המנפיק', 'danger');
+    }
+}
+
+// DL-293: Accept all pending issuer_name suggestions for one report in a single batch.
+async function acceptAllIssuerSuggestions(reportId) {
+    const item = pendingApprovalData.find(i => i.report_id === reportId);
+    if (!item || !Array.isArray(item.docs)) return;
+    const updates = item.docs
+        .filter(d => (d.issuer_name_suggested || '').trim())
+        .map(d => ({ id: d.doc_id, issuer_name: d.issuer_name_suggested.trim() }));
+    if (updates.length === 0) return;
+
+    const payload = {
+        data: {
+            fields: [{ type: 'HIDDEN_FIELDS', value: { report_record_id: reportId } }],
+            extensions: { name_updates: updates, send_email: false },
+        },
+    };
+
+    try {
+        const response = await fetchWithTimeout(ENDPOINTS.EDIT_DOCUMENTS, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
+            body: JSON.stringify(payload),
+        }, FETCH_TIMEOUTS.mutate);
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+        for (const upd of updates) {
+            const doc = item.docs.find(d => d.doc_id === upd.id);
+            if (doc) {
+                doc.issuer_name_suggested = '';
+                doc.short_name_he = upd.issuer_name;
+            }
+        }
+        renderPendingApprovalCards();
+        showAIToast(`${updates.length} שמות עודכנו`, 'success');
+    } catch (err) {
+        console.error('[DL-293] acceptAllIssuerSuggestions failed', err);
+        showAIToast('שגיאה בעדכון השמות', 'danger');
+    }
 }
 
 async function approveAndSendFromQueue(reportId, clientName) {

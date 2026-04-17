@@ -140,12 +140,14 @@ adminPendingApproval.get('/admin-pending-approval', async (c) => {
           const issuerName = (df.issuer_name as string) || '';
           const templateName = tmpl?.short_name_he || tmpl?.name_he || templateId || '';
           const displayName = issuerName ? cleanDocName(issuerName) : cleanDocName(templateName);
+          const issuerNameSuggested = (df.issuer_name_suggested as string) || '';
           return {
             doc_id: d.id,
             template_id: templateId || '',
             short_name_he: displayName,
             category_emoji: cat?.emoji || '📄',
             status: (df.status as string) || 'Required_Missing',
+            issuer_name_suggested: issuerNameSuggested, // DL-293: admin-only ✨ chip
           };
         });
 

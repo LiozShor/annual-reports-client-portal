@@ -7514,6 +7514,64 @@ tr:hover .client-edit-link {
     color: var(--gray-400);
 }
 
+/* DL-293: AI issuer-name suggestion chip on pa-card */
+.pa-card__suggestions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 6px;
+    align-items: center;
+}
+.pa-suggest-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 10px;
+    border: 1px solid var(--primary-300, #93C5FD);
+    border-radius: var(--radius-full);
+    background: linear-gradient(135deg, #EEF4FF 0%, #F5F0FF 100%);
+    color: var(--primary-800, #1E40AF);
+    font-size: var(--text-xs);
+    font-weight: 600;
+    line-height: 1.4;
+    cursor: pointer;
+    transition: transform 0.12s ease, box-shadow 0.12s ease, opacity 0.2s ease;
+    white-space: nowrap;
+}
+.pa-suggest-chip:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 6px rgba(59, 130, 246, 0.18);
+}
+.pa-suggest-chip strong {
+    font-weight: 700;
+}
+.pa-suggest-chip__check {
+    font-weight: 700;
+    color: var(--success-700, #15803D);
+    margin-inline-start: 2px;
+}
+.pa-suggest-chip--applying {
+    opacity: 0.6;
+    cursor: progress;
+}
+.pa-suggest-chip--accepted {
+    opacity: 0;
+    transform: scale(0.9);
+}
+.pa-suggest-all {
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 8px;
+    border: none;
+    background: transparent;
+    color: var(--primary-700, #1D4ED8);
+    font-size: var(--text-xs);
+    font-weight: 600;
+    text-decoration: underline;
+    cursor: pointer;
+}
+.pa-suggest-all:hover { color: var(--primary-900, #1E3A8A); }
+
 .pa-chip--status-received {
     background: var(--success-50, #F0FDF4);
     color: var(--success-700, #15803D);

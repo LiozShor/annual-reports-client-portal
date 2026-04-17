@@ -23,6 +23,7 @@ export interface DocFields {
   category?: string;       // category_id
   issuer_name?: string;    // may contain HTML bold tags, e.g. <b>מיטב דש</b>
   issuer_name_en?: string;
+  issuer_name_suggested?: string;  // DL-293: Haiku-extracted short name awaiting admin 1-click accept
   file_url?: string;
   onedrive_item_id?: string;
   file_hash?: string;
