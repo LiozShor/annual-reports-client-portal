@@ -1379,6 +1379,21 @@ _(empty — no P1 items)_
 
 ## Active TODOs
 
+**Test DL-297: Doc-Manager — Sticky Header Merge + Editable Stage** — verify sticky bar reads as header top row and stage is click-to-edit
+- [ ] Sticky bar: at page top, bar sits directly above page-header with no visual gap, reads as header top row.
+- [ ] Sticky bar: scroll down → bar stays pinned at top, logo + title scroll away.
+- [ ] Sticky bar: no double-margin below bar (old 44px spacer rule is gone).
+- [ ] Stage: click stage label → dropdown appears below with all 8 stages.
+- [ ] Stage: current stage visually highlighted in dropdown.
+- [ ] Stage: select a different stage → label updates immediately, toast on success.
+- [ ] Stage: backward move (e.g., Collecting_Docs → Waiting_For_Answers) → Airtable reminder fields reset (backend stage.ts logic).
+- [ ] Stage: API error → label reverts, error toast.
+- [ ] Stage: click outside dropdown → closes without change.
+- [ ] Stage: Esc key closes dropdown.
+- [ ] No console errors on doc-manager page load.
+- [ ] Regression: sticky bar progress fill + summary text + actions still render correctly.
+Design log: `.agent/design-logs/admin-ui/297-doc-manager-header-sticky-stage-edit.md`
+
 **Test DL-293: Doc-Manager — Full Client Edit (Pencil + Inline)** — verify pencil in doc-manager opens shared modal, inline edit works, dashboard modal unchanged
 - [ ] Pencil icon appears in doc-manager client bar next to client name.
 - [ ] Click pencil → modal opens with current name / email / cc_email / phone pre-filled.

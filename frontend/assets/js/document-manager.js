@@ -3826,6 +3826,97 @@ function startInlineEdit(fieldKey) {
     });
 }
 
+// ==================== DL-297: Editable stage dropdown ====================
+
+function openStageDropdownDM(event) {
+    event.stopPropagation();
+    if (!REPORT_ID) return;
+    const anchor = document.getElementById('clientStage');
+    const dd = document.getElementById('stageDropdownDM');
+    if (!anchor || !dd || typeof STAGES === 'undefined') return;
+
+    // Render options from SSOT
+    const currentKey = CURRENT_STAGE;
+    dd.innerHTML = Object.entries(STAGES).map(([key, meta]) => `
+        <div class="stage-option${key === currentKey ? ' current' : ''}" data-stage="${key}" onclick="selectStageDM('${key}')">
+            <span class="stage-num">${meta.num}</span>
+            <span>${escapeHtml(meta.label)}</span>
+        </div>
+    `).join('');
+
+    // Position below the anchor (fixed positioning — viewport coords)
+    const rect = anchor.getBoundingClientRect();
+    dd.style.display = 'block';
+    dd.style.top = (rect.bottom + 6) + 'px';
+    // RTL: align dropdown's right edge with anchor's right edge
+    const vw = document.documentElement.clientWidth;
+    const ddWidth = Math.min(360, Math.max(260, rect.width + 40));
+    dd.style.width = ddWidth + 'px';
+    const right = vw - rect.right;
+    dd.style.right = Math.max(8, right) + 'px';
+    dd.style.left = 'auto';
+
+    anchor.classList.add('open');
+
+    // Close handler (capture, once)
+    const close = (e) => {
+        if (dd.contains(e.target) || anchor.contains(e.target)) return;
+        closeStageDropdownDM();
+        document.removeEventListener('click', close, true);
+        document.removeEventListener('keydown', onEsc, true);
+    };
+    const onEsc = (e) => {
+        if (e.key === 'Escape') {
+            closeStageDropdownDM();
+            document.removeEventListener('click', close, true);
+            document.removeEventListener('keydown', onEsc, true);
+        }
+    };
+    // Defer so the current click doesn't immediately close
+    setTimeout(() => {
+        document.addEventListener('click', close, true);
+        document.addEventListener('keydown', onEsc, true);
+    }, 0);
+}
+
+function closeStageDropdownDM() {
+    const dd = document.getElementById('stageDropdownDM');
+    const anchor = document.getElementById('clientStage');
+    if (dd) dd.style.display = 'none';
+    if (anchor) anchor.classList.remove('open');
+}
+
+async function selectStageDM(newStageKey) {
+    closeStageDropdownDM();
+    if (!REPORT_ID || !newStageKey || typeof STAGES === 'undefined') return;
+    if (newStageKey === CURRENT_STAGE) return;
+
+    const previousStage = CURRENT_STAGE;
+    const newLabel = (STAGES[newStageKey] && STAGES[newStageKey].label) || newStageKey;
+
+    // Optimistic update
+    CURRENT_STAGE = newStageKey;
+    const stageEl = document.getElementById('clientStage');
+    if (stageEl) stageEl.textContent = newLabel;
+
+    try {
+        const resp = await fetchWithTimeout(ENDPOINTS.ADMIN_CHANGE_STAGE, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ token: ADMIN_TOKEN, report_id: REPORT_ID, target_stage: newStageKey })
+        }, FETCH_TIMEOUTS.mutate);
+        const data = await resp.json();
+        if (!data.ok) throw new Error(data.error || 'שגיאה בעדכון שלב');
+        showToast(`שלב עודכן ל"${newLabel}"`, 'success');
+    } catch (err) {
+        // Revert
+        CURRENT_STAGE = previousStage;
+        const prevLabel = (STAGES[previousStage] && STAGES[previousStage].label) || previousStage;
+        if (stageEl) stageEl.textContent = prevLabel;
+        showToast('שגיאה בעדכון שלב: ' + err.message, 'error');
+    }
+}
+
 function cancelInlineEdit(fieldKey) {
     const elId = fieldKey === 'email' ? 'clientEmailField'
                : fieldKey === 'cc_email' ? 'clientCcEmailField'
