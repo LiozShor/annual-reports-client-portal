@@ -6020,10 +6020,46 @@ function buildPaPreviewBody(item) {
     }
 
     // ========== NOTES ==========
-    if (notesText) {
+    // DL-299 follow-up: `item.notes` often stores a JSON communication thread (DL-199/266/289).
+    // Parse it into a readable timeline; fall back to plain text for free-form notes.
+    const rawNotes = (item.notes || '').trim();
+    const clientNotesPlain = (item.client_notes || '').trim();
+    let notesTimelineHtml = '';
+    let notesPlainHtml = '';
+    if (rawNotes) {
+        try {
+            const parsed = JSON.parse(rawNotes);
+            if (Array.isArray(parsed)) {
+                const visible = parsed.filter(n => n && !n.hidden_from_dashboard);
+                if (visible.length > 0) {
+                    notesTimelineHtml = visible.map(n => {
+                        const when = n.date ? new Date(n.date).toLocaleString('he-IL', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '';
+                        const who = n.sender_email || (n.type === 'office_reply' ? 'המשרד' : 'הלקוח');
+                        const text = (n.summary || n.raw_snippet || '').toString().trim();
+                        if (!text) return '';
+                        const kind = n.type === 'office_reply' ? 'office' : 'client';
+                        return `<div class="pa-note-row pa-note-row--${kind}">
+                            <div class="pa-note-meta">${escapeHtml(who)}${when ? ` · ${escapeHtml(when)}` : ''}</div>
+                            <div class="pa-note-text">${escapeHtml(text)}</div>
+                        </div>`;
+                    }).filter(Boolean).join('');
+                }
+            } else if (typeof parsed === 'string') {
+                notesPlainHtml = escapeHtml(parsed);
+            }
+        } catch {
+            // Not JSON — render verbatim
+            notesPlainHtml = escapeHtml(rawNotes);
+        }
+    }
+    if (clientNotesPlain) {
+        notesPlainHtml = (notesPlainHtml ? notesPlainHtml + '\n\n' : '') + escapeHtml(clientNotesPlain);
+    }
+    if (notesTimelineHtml || notesPlainHtml) {
         html += `<div class="pa-preview-section">
             <div class="pa-preview-section-title"><i data-lucide="message-square" class="icon-sm"></i> הערות</div>
-            <div class="pa-preview-notes">${escapeHtml(notesText)}</div>
+            ${notesTimelineHtml ? `<div class="pa-notes-timeline">${notesTimelineHtml}</div>` : ''}
+            ${notesPlainHtml ? `<div class="pa-preview-notes">${notesPlainHtml}</div>` : ''}
         </div>`;
     }
 
@@ -6107,7 +6143,6 @@ function openPaDocTagMenu(event, tagEl) {
     const options = [
         { status: 'Required_Missing', label: 'חסר', icon: '○' },
         { status: 'Received', label: 'התקבל', icon: '✓' },
-        { status: 'Requires_Fix', label: 'דרוש תיקון', icon: '⚠' },
         { status: 'Waived', label: 'לא נדרש', icon: '—' },
     ].filter(o => o.status !== currentStatus);
 
