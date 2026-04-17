@@ -1186,12 +1186,19 @@
 
     <!-- DL-298: removed mobile PA preview modal (stacked cards render inline on mobile) -->
 
+    <!-- DL-299: per-doc bookkeepers_notes popover (immediate save on blur) -->
+    <div id="paNotePopover" class="pa-note-popover" style="display:none;" onclick="event.stopPropagation()">
+        <textarea id="paNotePopoverText" placeholder="הערה למסמך..." rows="4"></textarea>
+        <div class="pa-note-popover-hint">נשמר אוטומטית בסגירה</div>
+    </div>
+
     <!-- Script -->
     <script src="../assets/js/error-handler.js"></script>
     <script src="../assets/js/resilient-fetch.js"></script>
     <script src="../shared/constants.js"></script>
     <script src="../shared/endpoints.js"></script>
     <script src="../assets/js/client-detail-modal.js"></script>
+    <script src="../shared/print-questionnaire.js"></script>
     <script src="js/script.js?v=266"></script>
     <script src="js/chatbot.js"></script>
 </body>

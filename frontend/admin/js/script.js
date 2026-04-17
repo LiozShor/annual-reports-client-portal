@@ -5692,6 +5692,14 @@ let _paPage = 1;
 const PA_PAGE_SIZE = 20;
 // DL-298: expand state for stacked cards. First 3 of each render are pre-expanded; others toggle via togglePaCard().
 let _paExpanded = new Set();
+// DL-299: company_links map (Hebrew name → url) for "החלף חברה" combobox in per-doc issuer edit
+let paCompanyLinks = {};
+// DL-299: active issuer-edit / note-popover state
+let _paActiveIssuerEdit = null;   // {reportId, docId}
+let _paActiveNoteDocId = null;
+let _paActiveNoteReportId = null;
+let _paActiveNoteOriginal = '';
+const PA_COMPANY_TEMPLATES = ['T501', 'T401', 'T301']; // mirrors doc-manager COMPANY_TEMPLATES
 let _paQuestionsEditState = []; // mutable copy for the questions modal
 let _paQuestionsReportId = null;
 
@@ -5730,6 +5738,7 @@ async function loadPendingApprovalQueue(silent = false) {
             throw new Error(data.error || 'שגיאה בטעינת הנתונים');
         }
         pendingApprovalData = data.items || [];
+        paCompanyLinks = data.company_links || {}; // DL-299: for החלף חברה combobox on issuer edit
         pendingApprovalLoaded = true;
         pendingApprovalLoadedAt = Date.now();
         _paPage = 1;
@@ -5942,7 +5951,12 @@ function buildPaPreviewBody(item) {
     let qaHtml = '';
     if (answersAll.length > 0) {
         qaHtml += `<div class="pa-preview-section">
-            <div class="pa-preview-section-title"><i data-lucide="file-text" class="icon-sm"></i> תשובות שאלון</div>`;
+            <div class="pa-preview-section-title">
+                <span><i data-lucide="file-text" class="icon-sm"></i> תשובות שאלון</span>
+                <button class="pa-print-btn" onclick="event.stopPropagation(); printPaQuestionnaire('${item.report_id}')" title="הדפס שאלון">
+                    <i data-lucide="printer" class="icon-xs"></i> הדפסה
+                </button>
+            </div>`;
 
         if (yesAnswers.length > 0) {
             qaHtml += `<div class="pa-preview-subsection">
@@ -6037,7 +6051,7 @@ function buildPaPreviewBody(item) {
     return html || `<div class="pa-preview-empty"><p>אין נתונים לתצוגה</p></div>`;
 }
 
-// DL-295/297: inline doc status menu + inline ✨ issuer suggestion chip (DL-296).
+// DL-295/298/299: inline doc status menu + ✨ suggestion chip + (DL-299) pencil edit + note popover
 function renderPaDocTagRow(d, reportId) {
     const status = d.status || 'Required_Missing';
     const statusCls = status.toLowerCase().replace(/_/g, '-');
@@ -6045,6 +6059,8 @@ function renderPaDocTagRow(d, reportId) {
     const nameHtml = renderDocLabel(d.name || '');
     const suggestion = (d.issuer_name_suggested || '').trim();
     const docId = d.doc_id || d.doc_record_id || d.id || '';
+    const templateId = d.template_id || '';
+    const hasNote = !!(d.bookkeepers_notes && String(d.bookkeepers_notes).trim());
     const suggestChip = suggestion
         ? `<button class="pa-doc-row__suggest pa-suggest-chip"
             title="${escapeHtml('שנה שם לגורם המנפיק: ' + suggestion)}"
@@ -6057,7 +6073,24 @@ function renderPaDocTagRow(d, reportId) {
             <span class="pa-suggest-chip__check">✓</span>
         </button>`
         : '';
-    return `<div class="pa-preview-doc-row">
+    // DL-299: pencil (manual issuer edit) — always shown; COMPANY_TEMPLATES get a "החלף חברה" combobox
+    const pencilBtn = `<button class="pa-doc-row__edit"
+        title="ערוך שם"
+        data-report-id="${escapeAttr(reportId)}"
+        data-doc-id="${escapeAttr(docId)}"
+        data-template-id="${escapeAttr(templateId)}"
+        onclick="event.stopPropagation(); openPaIssuerEdit(this)">
+        <i data-lucide="pencil" class="icon-xs"></i>
+    </button>`;
+    // DL-299: per-doc bookkeepers_notes popover
+    const noteBtn = `<button class="pa-doc-row__note ${hasNote ? 'pa-doc-row__note--has-content' : ''}"
+        title="${hasNote ? 'ערוך הערה' : 'הוסף הערה'}"
+        data-report-id="${escapeAttr(reportId)}"
+        data-doc-id="${escapeAttr(docId)}"
+        onclick="event.stopPropagation(); openPaDocNotePopover(event, this)">
+        <i data-lucide="${hasNote ? 'message-square-text' : 'message-square'}" class="icon-xs"></i>
+    </button>`;
+    return `<div class="pa-preview-doc-row" data-doc-id="${escapeAttr(docId)}" data-report-id="${escapeAttr(reportId)}">
         <span class="pa-chip pa-chip--status-${statusCls}" title="${escapeHtml(statusLabel(status, true))}">${statusLabel(status)}</span>
         <span class="pa-preview-doc-name pa-doc-tag-clickable"
               data-report-id="${escapeAttr(reportId)}"
@@ -6065,6 +6098,7 @@ function renderPaDocTagRow(d, reportId) {
               data-status="${escapeAttr(status)}"
               onclick="openPaDocTagMenu(event, this)">${nameHtml}</span>
         ${suggestChip}
+        <span class="pa-doc-row__actions">${pencilBtn}${noteBtn}</span>
     </div>`;
 }
 
@@ -6441,6 +6475,326 @@ async function savePaClientQuestions() {
     } finally {
         if (saveBtn) { saveBtn.disabled = false; saveBtn.innerHTML = '<i data-lucide="save" class="icon-sm"></i> שמור'; safeCreateIcons(saveBtn); }
     }
+}
+
+// ==================== DL-299: Per-doc manual issuer edit (pencil → inline input + ✓/✗ + החלף חברה for COMPANY_TEMPLATES) ====================
+
+function _paFindDoc(reportId, docId) {
+    const item = pendingApprovalData.find(i => i.report_id === reportId);
+    if (!item) return { item: null, doc: null };
+    for (const g of (item.doc_groups || [])) {
+        for (const cat of (g.categories || [])) {
+            for (const doc of (cat.docs || [])) {
+                if ((doc.doc_id || doc.doc_record_id || doc.id) === docId) return { item, doc };
+            }
+        }
+    }
+    return { item, doc: null };
+}
+
+function openPaIssuerEdit(btn) {
+    const reportId = btn.dataset.reportId;
+    const docId = btn.dataset.docId;
+    const templateId = btn.dataset.templateId || '';
+    const row = btn.closest('.pa-preview-doc-row');
+    if (!row) return;
+
+    // Close any previously open edit
+    if (_paActiveIssuerEdit) cancelPaIssuerEdit();
+    _paActiveIssuerEdit = { reportId, docId, rowEl: row, originalHtml: row.innerHTML };
+
+    const { doc } = _paFindDoc(reportId, docId);
+    const currentName = (doc && doc.name ? doc.name : '').replace(/<\/?b>/g, '');
+    const showSwap = PA_COMPANY_TEMPLATES.includes(templateId) && Object.keys(paCompanyLinks).length > 0;
+
+    row.innerHTML = `<div class="pa-issuer-edit-row">
+        <input type="text" class="pa-issuer-edit-input" id="paIssuerInput-${escapeAttr(docId)}" dir="auto" value="${escapeHtml(currentName)}" />
+        <button class="pa-issuer-edit-save" title="שמור" onclick="savePaIssuerEdit('${escapeAttr(reportId)}', '${escapeAttr(docId)}')"><i data-lucide="check" class="icon-xs"></i></button>
+        <button class="pa-issuer-edit-cancel" title="ביטול" onclick="cancelPaIssuerEdit()"><i data-lucide="x" class="icon-xs"></i></button>
+        ${showSwap ? `<button class="pa-issuer-swap-toggle" onclick="togglePaIssuerSwap('${escapeAttr(docId)}')" type="button">החלף חברה ▼</button>` : ''}
+    </div>
+    ${showSwap ? `<div class="pa-issuer-swap-combo" id="paIssuerSwap-${escapeAttr(docId)}" style="display:none;">
+        <input type="text" class="pa-issuer-swap-filter" placeholder="חפש חברה..." oninput="filterPaIssuerSwap('${escapeAttr(docId)}', this.value)" />
+        <div class="pa-issuer-swap-list" id="paIssuerSwapList-${escapeAttr(docId)}">${_paBuildIssuerSwapList(docId, '')}</div>
+    </div>` : ''}`;
+    safeCreateIcons(row);
+
+    const input = document.getElementById('paIssuerInput-' + docId);
+    if (input) {
+        input.focus();
+        input.setSelectionRange(input.value.length, input.value.length);
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') { e.preventDefault(); savePaIssuerEdit(reportId, docId); }
+            else if (e.key === 'Escape') { e.preventDefault(); cancelPaIssuerEdit(); }
+        });
+    }
+}
+
+function _paBuildIssuerSwapList(docId, filter) {
+    const names = Object.keys(paCompanyLinks).sort((a, b) => a.localeCompare(b, 'he'));
+    const f = (filter || '').trim().toLowerCase();
+    const matched = f ? names.filter(n => n.toLowerCase().includes(f)) : names;
+    if (matched.length === 0) return `<div class="pa-issuer-swap-empty">אין תוצאות</div>`;
+    return matched.slice(0, 50).map(n =>
+        `<button class="pa-issuer-swap-option" onclick="pickPaIssuerSwap('${escapeAttr(docId)}', ${JSON.stringify(n).replace(/"/g, '&quot;')})">${escapeHtml(n)}</button>`
+    ).join('');
+}
+
+function togglePaIssuerSwap(docId) {
+    const combo = document.getElementById('paIssuerSwap-' + docId);
+    if (!combo) return;
+    combo.style.display = combo.style.display === 'none' ? '' : 'none';
+    if (combo.style.display === '') {
+        const filterInput = combo.querySelector('.pa-issuer-swap-filter');
+        if (filterInput) filterInput.focus();
+    }
+}
+
+function filterPaIssuerSwap(docId, value) {
+    const list = document.getElementById('paIssuerSwapList-' + docId);
+    if (list) list.innerHTML = _paBuildIssuerSwapList(docId, value);
+}
+
+function pickPaIssuerSwap(docId, name) {
+    const input = document.getElementById('paIssuerInput-' + docId);
+    if (input) {
+        input.value = name;
+        input.focus();
+    }
+    const combo = document.getElementById('paIssuerSwap-' + docId);
+    if (combo) combo.style.display = 'none';
+}
+
+function cancelPaIssuerEdit() {
+    if (!_paActiveIssuerEdit) return;
+    const { rowEl, originalHtml } = _paActiveIssuerEdit;
+    _paActiveIssuerEdit = null;
+    if (rowEl) {
+        rowEl.innerHTML = originalHtml;
+        safeCreateIcons(rowEl);
+    }
+}
+
+async function savePaIssuerEdit(reportId, docId) {
+    const input = document.getElementById('paIssuerInput-' + docId);
+    if (!input) return;
+    const newName = input.value.trim();
+    if (!newName) { showAIToast('שם ריק', 'warning'); return; }
+
+    const { item, doc } = _paFindDoc(reportId, docId);
+    if (!item || !doc) { cancelPaIssuerEdit(); return; }
+    const originalName = doc.name || '';
+    const hadSuggestion = !!(doc.issuer_name_suggested || '').trim();
+
+    // Optimistic local update
+    doc.name = newName;
+    if (hadSuggestion) doc.issuer_name_suggested = '';
+    // Sync doc_chips parallel array (card header count consistency)
+    const chips = Array.isArray(item.doc_chips) ? item.doc_chips : [];
+    const chipEntry = chips.find(c => (c.doc_id || c.id) === docId);
+    if (chipEntry) {
+        chipEntry.name = newName;
+        if (hadSuggestion) chipEntry.issuer_name_suggested = '';
+    }
+
+    // Exit edit mode (re-render whole card to reflect updated name + chip count)
+    _paActiveIssuerEdit = null;
+    const card = document.querySelector(`.pa-card[data-report-id="${CSS.escape(reportId)}"]`);
+    if (card) {
+        card.outerHTML = buildPaCard(item);
+        safeCreateIcons(document.getElementById('paCardsContainer') || document);
+    }
+
+    const payload = {
+        data: {
+            fields: [{ type: 'HIDDEN_FIELDS', value: { report_record_id: reportId } }],
+            extensions: { name_updates: [{ id: docId, issuer_name: newName }], send_email: false },
+        },
+    };
+    try {
+        const resp = await fetchWithTimeout(ENDPOINTS.EDIT_DOCUMENTS, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
+            body: JSON.stringify(payload),
+        }, FETCH_TIMEOUTS.mutate);
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        showAIToast('שם עודכן', 'success');
+    } catch (err) {
+        // Rollback
+        doc.name = originalName;
+        if (hadSuggestion) doc.issuer_name_suggested = doc.issuer_name_suggested || '';
+        if (chipEntry) { chipEntry.name = originalName; }
+        const card2 = document.querySelector(`.pa-card[data-report-id="${CSS.escape(reportId)}"]`);
+        if (card2) {
+            card2.outerHTML = buildPaCard(item);
+            safeCreateIcons(document.getElementById('paCardsContainer') || document);
+        }
+        showAIToast('שגיאה בעדכון השם', 'danger');
+        console.error('[DL-299] savePaIssuerEdit failed', err);
+    }
+}
+
+// ==================== DL-299: Per-doc bookkeepers_notes popover (immediate save on close) ====================
+
+function openPaDocNotePopover(event, btn) {
+    event.stopPropagation();
+    const reportId = btn.dataset.reportId;
+    const docId = btn.dataset.docId;
+    const popover = document.getElementById('paNotePopover');
+    const textarea = document.getElementById('paNotePopoverText');
+    if (!popover || !textarea) return;
+
+    // Toggle off if same doc clicked again
+    if (_paActiveNoteDocId === docId) { closePaDocNotePopover(); return; }
+    if (_paActiveNoteDocId) closePaDocNotePopover();
+
+    const { doc } = _paFindDoc(reportId, docId);
+    const currentNote = doc ? (doc.bookkeepers_notes || '') : '';
+    _paActiveNoteDocId = docId;
+    _paActiveNoteReportId = reportId;
+    _paActiveNoteOriginal = currentNote;
+    textarea.value = currentNote;
+
+    // Position anchored to button (flip-above when near viewport bottom) — mirrors doc-manager openNotePopover math
+    const rect = btn.getBoundingClientRect();
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    const POP_W = 300;
+    const POP_H = 160;
+    const GAP = 6;
+    const PAD = 8;
+    if (vh - rect.bottom - GAP >= POP_H) {
+        popover.style.top = (rect.bottom + GAP) + 'px';
+        popover.style.bottom = '';
+    } else {
+        popover.style.top = '';
+        popover.style.bottom = (vh - rect.top + GAP) + 'px';
+    }
+    const right = Math.max(PAD, Math.min(vw - rect.right, vw - POP_W - PAD));
+    popover.style.right = right + 'px';
+    popover.style.left = 'auto';
+    popover.style.display = 'block';
+    textarea.focus();
+    textarea.setSelectionRange(textarea.value.length, textarea.value.length);
+
+    // Bind one-shot outside-click + Esc handlers
+    requestAnimationFrame(() => {
+        document._paNoteCloseHandler = (e) => {
+            if (!popover.contains(e.target) && !btn.contains(e.target)) closePaDocNotePopover();
+        };
+        document._paNoteKeyHandler = (e) => {
+            if (e.key === 'Escape') { e.preventDefault(); cancelPaDocNotePopover(); }
+        };
+        document.addEventListener('click', document._paNoteCloseHandler, { capture: true });
+        document.addEventListener('keydown', document._paNoteKeyHandler);
+    });
+}
+
+function _paTeardownNotePopoverHandlers() {
+    if (document._paNoteCloseHandler) {
+        document.removeEventListener('click', document._paNoteCloseHandler, { capture: true });
+        document._paNoteCloseHandler = null;
+    }
+    if (document._paNoteKeyHandler) {
+        document.removeEventListener('keydown', document._paNoteKeyHandler);
+        document._paNoteKeyHandler = null;
+    }
+}
+
+function cancelPaDocNotePopover() {
+    const popover = document.getElementById('paNotePopover');
+    if (popover) popover.style.display = 'none';
+    _paActiveNoteDocId = null;
+    _paActiveNoteReportId = null;
+    _paActiveNoteOriginal = '';
+    _paTeardownNotePopoverHandlers();
+}
+
+async function closePaDocNotePopover() {
+    const docId = _paActiveNoteDocId;
+    const reportId = _paActiveNoteReportId;
+    const originalNote = _paActiveNoteOriginal;
+    const popover = document.getElementById('paNotePopover');
+    const textarea = document.getElementById('paNotePopoverText');
+    if (!popover || !textarea || !docId || !reportId) {
+        cancelPaDocNotePopover();
+        return;
+    }
+    const newText = textarea.value;
+    popover.style.display = 'none';
+    _paActiveNoteDocId = null;
+    _paActiveNoteReportId = null;
+    _paActiveNoteOriginal = '';
+    _paTeardownNotePopoverHandlers();
+
+    if (newText === originalNote) return; // no change
+
+    const { item, doc } = _paFindDoc(reportId, docId);
+    if (!doc) return;
+
+    // Optimistic update — mutate local + swap icon state
+    doc.bookkeepers_notes = newText;
+    const btn = document.querySelector(`.pa-preview-doc-row[data-doc-id="${CSS.escape(docId)}"] .pa-doc-row__note`);
+    if (btn) {
+        const has = !!newText.trim();
+        btn.classList.toggle('pa-doc-row__note--has-content', has);
+        btn.innerHTML = `<i data-lucide="${has ? 'message-square-text' : 'message-square'}" class="icon-xs"></i>`;
+        btn.title = has ? 'ערוך הערה' : 'הוסף הערה';
+        safeCreateIcons(btn);
+    }
+
+    const payload = {
+        data: {
+            fields: [{ type: 'HIDDEN_FIELDS', value: { report_record_id: reportId } }],
+            extensions: { note_updates: [{ id: docId, note: newText }], send_email: false },
+        },
+    };
+    try {
+        const resp = await fetchWithTimeout(ENDPOINTS.EDIT_DOCUMENTS, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
+            body: JSON.stringify(payload),
+        }, FETCH_TIMEOUTS.mutate);
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        showAIToast('הערה נשמרה', 'success');
+    } catch (err) {
+        // Rollback
+        doc.bookkeepers_notes = originalNote;
+        if (btn) {
+            const has = !!originalNote.trim();
+            btn.classList.toggle('pa-doc-row__note--has-content', has);
+            btn.innerHTML = `<i data-lucide="${has ? 'message-square-text' : 'message-square'}" class="icon-xs"></i>`;
+            safeCreateIcons(btn);
+        }
+        showAIToast('שגיאה בשמירת ההערה', 'danger');
+        console.error('[DL-299] closePaDocNotePopover save failed', err);
+    }
+}
+
+// ==================== DL-299: Questionnaire print from PA card ====================
+
+function printPaQuestionnaire(reportId) {
+    const item = pendingApprovalData.find(i => i.report_id === reportId);
+    if (!item) return;
+    if (typeof window.printQuestionnaireSheet !== 'function') {
+        showAIToast('מודול ההדפסה לא נטען', 'danger');
+        return;
+    }
+    const FILING_TYPE_LABELS_LOCAL = { annual_report: 'דוח שנתי', capital_statement: 'הצהרת הון' };
+    const answers = Array.isArray(item.answers_all) ? item.answers_all
+                  : (Array.isArray(item.answers_summary) ? item.answers_summary : []);
+    const notesText = [(item.notes || '').trim(), (item.client_notes || '').trim()].filter(Boolean).join('\n\n');
+    window.printQuestionnaireSheet({
+        clientName: item.client_name || '',
+        year: item.year || '',
+        email: item.client_email || '',
+        phone: item.client_phone || '',
+        submissionDate: item.submitted_at || null,
+        filingTypeLabel: FILING_TYPE_LABELS_LOCAL[item.filing_type] || item.filing_type || 'דוח שנתי',
+        answers,
+        clientQuestions: Array.isArray(item.client_questions) ? item.client_questions : [],
+        reportNotes: notesText,
+    });
 }
 
 // ==================== REMINDERS TAB ====================
