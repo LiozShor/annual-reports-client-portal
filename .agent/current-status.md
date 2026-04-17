@@ -1,6 +1,56 @@
 # Annual Reports CRM - Current Status
 
-**Last Updated:** 2026-04-16 night (Session — DL-292 Review & Approve queue tab — shipped)
+**Last Updated:** 2026-04-16 late night (Session — DL-294 PA queue redesign + bold issuer rendering — shipped)
+
+---
+
+## Session Summary (2026-04-16 late night — DL-294 PA queue redesign)
+
+### DL-294: PA Queue Preview Panel Redesign + Bold Issuer Rendering [SHIPPED — NEED TESTING]
+
+Builds on DL-292. Three defects fixed:
+
+1. **Raw `<b>` tags visible as text** → now rendered as bold via `renderDocLabel()` (XSS-safe whitelist: escape everything, then un-escape only `<b>`/`</b>`).
+2. **Short names missing, doc names overloaded** → backend now returns split shape: `doc_chips[]` (flat — template `short_name_he` + raw `issuer_name` HTML) and `doc_groups[]` (per-person/per-category via `groupDocsByPerson` + `formatForOfficeMode`).
+3. **Preview panel looked amateurish** → redesigned with:
+   - Sticky client-summary header (name + id + filing/year/relative-date) with stats strip (📝 answers · 📂 docs · 💬 notes · ❓ questions)
+   - Scrollable middle: Q&A grouped into "✓ כן" chips grid / free-text rows / collapsible "✗ לא" toggle; docs tree grouped per-person/per-category with bolded issuer names
+   - Sticky footer with "שאל את הלקוח" + "אשר ושלח ללקוח" CTAs (always reachable)
+   - Notes highlighted with brand accent border
+   - Per-person section header with emoji, category sub-groups
+
+**Files changed:**
+```
+api/src/routes/admin-pending-approval.ts   # returns doc_chips + doc_groups; removes cleanDocName
+frontend/admin/js/script.js                # buildPaCard + buildPaPreviewHtml rewritten; togglePaShowNo added
+frontend/admin/css/style.css               # .pa-preview-header/-stats/-sticky-footer/-person-section/etc
+frontend/admin/index.html                  # #paPreviewBody: inline style → .pa-preview-body class
+.agent/design-logs/admin-ui/294-*.md       # design log
+.agent/design-logs/INDEX.md                # DL-294 row
+```
+
+**Branch hygiene note:** Discovered mid-session that original DL-292 worktree was orphaned (filesystem dir existed but no longer a registered git worktree). Branched off main directly as `DL-294-pa-queue-redesign` (rename from DL-293 to avoid collision with another tab's `DL-293-doc-manager-edit-client`). Merged and cleaned up.
+
+**Test checklist (DL-294):**
+- [ ] Chip on master card shows bolded issuer (e.g., "טופס 106 – **יובל חינוך**") not literal `<b>יובל חינוך</b>`
+- [ ] Chip truncates with "…" tooltip shows full text
+- [ ] Preview header shows client name + client_id + filing_type + year + relative submitted date
+- [ ] Stats strip: 📝 answers · 📂 docs · 💬 notes · ❓ questions with correct counts
+- [ ] Q&A "✓ כן" section renders as chips grid (dense, compact)
+- [ ] Q&A "תשובות פתוחות" section renders as label/value rows
+- [ ] "הצג תשובות לא (N)" toggle expands/collapses negative answers
+- [ ] Docs grouped per-person (client first, spouse below) with `📂 מסמכים של {name}` header
+- [ ] Within each person, categories grouped with emoji + name_he; status pill on each row
+- [ ] Issuer name bolded via `renderDocLabel`; no literal `<b>` visible
+- [ ] Spouse-only reports render correctly (no empty client section)
+- [ ] Approve button sticks to bottom of preview, always visible while scrolling
+- [ ] Questions button opens existing modal (unchanged)
+- [ ] Empty state renders without glitch
+- [ ] Mobile (390px): preview modal renders with the new layout inside
+- [ ] XSS: inject `<script>` into an issuer_name — confirm whitelist escapes it
+- [ ] No regression: AI-Review tab unchanged; doc-manager approve flow unchanged; DL-092 duplicate-send guard fires
+
+Design log: `.agent/design-logs/admin-ui/294-pa-queue-redesign.md`
 
 ---
 
