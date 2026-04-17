@@ -1,5 +1,5 @@
 # Design Log 293: WF02 — Extract Issuer Names from Questionnaire Free-Text Context
-**Status:** [BEING IMPLEMENTED — DL-293]
+**Status:** [IMPLEMENTED — NEED TESTING]
 **Date:** 2026-04-17
 **Related Logs:** DL-112 (webhook dedup + issuer display), DL-129 (dynamic short names), DL-136/144 (issuer matching fixes), DL-224 (issuer-aware doc lookup), DL-275 (WF02 zero-docs fix), DL-292 (Review & Approve queue tab)
 
@@ -266,4 +266,14 @@ Template hints (informs which entity type is expected):
 ## 8. Implementation Notes (Post-Code)
 *Append deviations, research principles applied, and ordering notes during implementation.*
 
-**Ordering resolved by revised design:** Extraction now runs **after** `Upsert Documents` and is non-blocking relative to the email branch — the client's email is unaffected by extraction timing. Extraction populates the admin-side suggestion; only admin 1-click accept rewrites `issuer_name`. No re-read gymnastics needed in WF02.
+**Ordering resolved by revised design:** Extraction runs **after** `Upsert Documents`, parallel to email branch. Non-blocking.
+
+**No-op rule corrected mid-build:** initial impl normalised Hebrew prefixes when deciding whether a suggestion was redundant; user flagged that "בלאומי"→"לאומי" IS a useful improvement. Rule changed to suppress only when suggestion is LITERALLY equal to existing `issuer_name` after HTML+whitespace strip. Any real text change (including prefix cleanup) surfaces as a chip.
+
+**Auth:** reused existing `N8N_INTERNAL_KEY` (same secret used in inbound-email + outbound Worker→n8n calls). Worker accepts either that bearer OR an HMAC admin token — one-secret-two-directions pattern matches repo convention.
+
+**Production steps applied in this session:**
+- Airtable field `issuer_name_suggested` created via Meta API (`flduGQ8NvmTVEN8Ik`).
+- Worker deployed: `annual-reports-api` version `292e9c32-c882-48d6-b124-a963998cb793`.
+- WF02 (`QqEIWQlRs1oZzEtNxFUcQ`) patched via n8n public REST API (`scripts/dl293-patch-wf02.py`) — added 2 nodes + 1 connection chain after Upsert Documents, workflow remained active throughout. Side-effect: `availableInMCP` reset to False (public-API PUT whitelist doesn't include it); re-enable in n8n UI if needed for MCP reads.
+- Smoke test: `/webhook/extract-issuer-names` returns 401 without bearer, 200 `{ok:true, suggested:0, skipped:0, results:[]}` with the internal key and an empty batch.

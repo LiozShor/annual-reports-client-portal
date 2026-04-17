@@ -1,6 +1,34 @@
 # Annual Reports CRM - Current Status
 
-**Last Updated:** 2026-04-16 night (Session — DL-292 Review & Approve queue tab — shipped)
+**Last Updated:** 2026-04-17 (DL-293 WF02 issuer-name extraction deployed)
+
+---
+
+## Session Summary (2026-04-17 — DL-293 WF02 issuer-name extraction)
+
+### DL-293: WF02 issuer-name extraction + 1-click accept on Review & Approve queue [IMPLEMENTED — NEED TESTING]
+
+Haiku 4.5 extracts entity names (employer, broker, bank) from questionnaire free-text stuffed in `issuer_name` (e.g., "עבדתי בבר בתל אביב שנקרא ג'ויה" → `ג'ויה`). Extraction runs during WF02, writes to a new `issuer_name_suggested` field (admin-only). Review & Approve queue card shows a bold ✨ chip per suggestion; 1-click accept promotes to `issuer_name`. Original context preserved in `bookkeepers_notes`. Suppresses no-op suggestions (suggestion literally equal to existing issuer_name).
+
+**Production state applied this session:**
+- Airtable: added `issuer_name_suggested` on Documents table (`flduGQ8NvmTVEN8Ik`).
+- Worker deployed: `annual-reports-api` → version `292e9c32-c882-48d6-b124-a963998cb793` (adds `POST /webhook/extract-issuer-names`).
+- WF02 (`QqEIWQlRs1oZzEtNxFUcQ`) patched via REST API (scripts/dl293-patch-wf02.py): `Build Issuer Extraction Payload` (Code) + `Call Extract Issuer Names` (HTTP, Continue-on-Fail) inserted after `Upsert Documents`; workflow active. Side-effect: `availableInMCP` flipped to False (n8n public-API PUT whitelist).
+- Smoke test: endpoint auth works (401 without bearer, 200 empty with `N8N_INTERNAL_KEY`).
+
+**Test checklist (move to Active TODOs):**
+- [ ] Submit a live Tally questionnaire with a known context ("עובד בחברת אינטראקטיב") — verify `issuer_name_suggested` lands in Airtable for the matching T867 doc, `bookkeepers_notes` has `[תשובה מהשאלון] ...`, and `issuer_name` is unchanged.
+- [ ] Open that report on the Review & Approve queue — verify the bold ✨ chip renders, click → toast, doc chip label updates, `issuer_name_suggested` cleared server-side.
+- [ ] "אשר הכל" link appears when a card has 2+ suggestions — batch accept works.
+- [ ] Manual inline-rename (DL-080) on a doc with a pending suggestion also clears `issuer_name_suggested` (EDIT_DOCUMENTS name_updates path).
+- [ ] No-op suppression: contrive a case where issuer_name is already clean ("לאומי") → no chip surfaces.
+- [ ] Real cleanup suggestion: `issuer_name = "בלאומי"` → chip offers "לאומי", click accepts.
+- [ ] Low-confidence path: questionnaire context without a named entity ("עבדתי 3 חודשים במפעל") → no chip, `bookkeepers_notes` still gets raw context.
+- [ ] Failure path: temporarily block ANTHROPIC_API_KEY → WF02 still completes (Continue-on-Fail); office receives email as today.
+- [ ] Approve-and-Send on a report with accepted suggestions — client email renders compact issuer labels instead of full sentences.
+- [ ] Re-enable `availableInMCP: true` on WF02 in n8n UI (restore MCP read access).
+
+Design log: `.agent/design-logs/infrastructure/293-wf02-extract-issuer-names.md`
 
 ---
 
