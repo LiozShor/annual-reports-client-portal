@@ -1,5 +1,5 @@
 # Design Log 107: Document Manager Email + Phone Inline Edit
-**Status:** [DRAFT]
+**Status:** [SUPERSEDED by DL-293]
 **Date:** 2026-03-06
 **Related Logs:** DL-106 (client-detail-modal-phone-field), DL-104 (doc-manager-phase2-fixes), DL-045 (document-manager-status-overview)
 

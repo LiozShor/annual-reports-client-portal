@@ -80,11 +80,29 @@
                     <i data-lucide="user" class="icon-sm"></i>
                     <span class="text-muted text-sm">שם לקוח:</span>
                     <strong id="clientName">-</strong>
+                    <a id="clientEditLink" class="client-edit-link" href="javascript:void(0)" onclick="openClientDetailModal(REPORT_ID)" title="עריכת פרטי לקוח" style="display:none;">
+                        <i data-lucide="pencil" class="icon-xs"></i>
+                    </a>
                 </div>
                 <div class="client-bar-item">
                     <i data-lucide="heart" class="icon-sm"></i>
                     <span class="text-muted text-sm">בן/בת זוג:</span>
                     <strong id="spouseName">-</strong>
+                </div>
+                <div class="client-bar-item">
+                    <i data-lucide="mail" class="icon-sm"></i>
+                    <span class="text-muted text-sm">אימייל:</span>
+                    <strong id="clientEmailField" class="editable-field" data-field="email" onclick="startInlineEdit('email')" title="לחץ לעריכה">-</strong>
+                </div>
+                <div class="client-bar-item" id="clientCcEmailRow" style="display:none;">
+                    <i data-lucide="mail-plus" class="icon-sm"></i>
+                    <span class="text-muted text-sm">אימייל בן/בת זוג:</span>
+                    <strong id="clientCcEmailField" class="editable-field" data-field="cc_email" onclick="startInlineEdit('cc_email')" title="לחץ לעריכה">-</strong>
+                </div>
+                <div class="client-bar-item">
+                    <i data-lucide="phone" class="icon-sm"></i>
+                    <span class="text-muted text-sm">טלפון:</span>
+                    <strong id="clientPhoneField" class="editable-field" data-field="phone" onclick="startInlineEdit('phone')" title="לחץ לעריכה">-</strong>
                 </div>
                 <div class="client-bar-item">
                     <i data-lucide="calendar" class="icon-sm"></i>
@@ -478,6 +496,52 @@
            accept=".pdf,.jpg,.jpeg,.png,.heic,.tif,.tiff,.xlsx,.docx,.xls,.doc"
            style="display:none" onchange="handleFileSelected(event)">
 
+    <!-- Client Detail Modal (DL-293: shared with admin dashboard) -->
+    <div class="ai-modal-overlay" id="clientDetailModal" onclick="if(event.target===this)closeClientDetailModal()">
+        <div class="ai-modal-panel">
+            <div class="ai-modal-panel-header">
+                <h3><i data-lucide="pencil" class="icon-sm"></i> עריכת פרטי לקוח</h3>
+                <button class="btn btn-ghost" onclick="closeClientDetailModal()"><i data-lucide="x" class="icon-sm"></i></button>
+            </div>
+            <div class="ai-modal-panel-body client-detail-form" style="position:relative">
+                <input type="hidden" id="clientDetailReportId">
+                <div id="clientDetailLoading" class="client-detail-loading">
+                    <div class="spinner"></div>
+                    <p>טוען פרטי לקוח...</p>
+                </div>
+                <div id="clientDetailFields" class="client-detail-fields" style="display:none">
+                    <div class="form-field">
+                        <label class="form-label">שם מלא:</label>
+                        <input type="text" id="clientDetailName" placeholder="ישראל ישראלי">
+                    </div>
+                    <div class="form-field">
+                        <label class="form-label">אימייל:</label>
+                        <input type="text" id="clientDetailEmail" placeholder="israel@example.com">
+                    </div>
+                    <div class="form-field">
+                        <label class="form-label">אימייל בן/בת זוג (לא חובה):</label>
+                        <input type="text" id="clientDetailCcEmail" placeholder="spouse@example.com">
+                        <span class="form-help">יקבל/תקבל עותק של השאלון</span>
+                    </div>
+                    <div class="form-field">
+                        <label class="form-label">טלפון:</label>
+                        <input type="text" id="clientDetailPhone" placeholder="050-0000000">
+                    </div>
+                </div>
+                <div id="clientDetailSavingOverlay" class="client-detail-saving-overlay" style="display:none">
+                    <div class="spinner"></div>
+                    <span>שומר...</span>
+                </div>
+            </div>
+            <div class="ai-modal-panel-footer">
+                <button class="btn btn-secondary" onclick="closeClientDetailModal()">ביטול</button>
+                <button class="btn btn-primary" onclick="saveClientDetails()">
+                    <i data-lucide="check" class="icon-sm"></i> שמור
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- Status dropdown -->
     <div id="statusDropdown" class="status-dropdown" style="display:none;">
         <div class="dropdown-option" data-status="Required_Missing" onclick="setDocStatus('Required_Missing')">
@@ -493,6 +557,7 @@
     <script src="shared/constants.js"></script>
     <script src="shared/endpoints.js"></script>
     <script src="shared/utils.js"></script>
+    <script src="assets/js/client-detail-modal.js"></script>
     <script src="assets/js/document-manager.js"></script>
 </body>
 </html>

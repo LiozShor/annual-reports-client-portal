@@ -2261,3 +2261,167 @@ body {
         display: none;
     }
 }
+
+/* ==================== DL-293: Client edit pencil + inline edit + modal ==================== */
+
+.client-edit-link {
+    color: var(--gray-400);
+    display: inline-flex;
+    align-items: center;
+    margin-inline-start: 4px;
+    opacity: 0.55;
+    transition: opacity 150ms, color 150ms;
+    text-decoration: none;
+}
+.client-bar-item:hover .client-edit-link {
+    opacity: 1;
+}
+.client-edit-link:hover {
+    color: var(--brand-600, #4f46e5);
+}
+
+.editable-field {
+    cursor: pointer;
+    padding: 2px 6px;
+    border-radius: 4px;
+    border: 1px dashed transparent;
+    transition: border-color 150ms, background 150ms;
+    direction: ltr;
+    display: inline-block;
+    min-width: 60px;
+}
+.editable-field:hover {
+    border-color: var(--gray-300, #d1d5db);
+    background: var(--gray-50, #f9fafb);
+}
+.editable-field.editing {
+    padding: 0;
+    border-color: transparent;
+    background: transparent;
+    cursor: text;
+}
+
+.inline-edit-input {
+    padding: 4px 8px;
+    border: 1px solid var(--brand-500, #6366f1);
+    border-radius: 4px;
+    font-size: inherit;
+    font-family: inherit;
+    font-weight: inherit;
+    direction: ltr;
+    width: 220px;
+    max-width: 100%;
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+    outline: none;
+}
+
+/* Modal — subset copied from admin/css/style.css for DL-293 reuse in doc-manager */
+.ai-modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(2px);
+}
+.ai-modal-overlay.show {
+    display: flex;
+}
+.ai-modal-panel {
+    background: white;
+    border-radius: var(--radius-xl, 12px);
+    max-width: 560px;
+    width: 90%;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: var(--shadow-lg, 0 10px 25px rgba(0,0,0,0.15));
+    animation: dlmModalSlideUp 200ms ease-out;
+}
+@keyframes dlmModalSlideUp {
+    from { transform: translateY(20px); opacity: 0; }
+    to   { transform: translateY(0);    opacity: 1; }
+}
+.ai-modal-panel-header {
+    padding: var(--sp-6, 24px) var(--sp-6, 24px) 0;
+    display: flex;
+    align-items: center;
+    gap: var(--sp-3, 12px);
+    font-size: var(--text-xl, 18px);
+    font-weight: 700;
+    color: var(--gray-800, #1f2937);
+    justify-content: space-between;
+}
+.ai-modal-panel-header h3 {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2, 8px);
+    margin: 0;
+}
+.ai-modal-panel-body {
+    padding: var(--sp-5, 20px) var(--sp-6, 24px);
+    color: var(--gray-600, #4b5563);
+    line-height: 1.7;
+}
+.ai-modal-panel-footer {
+    padding: 0 var(--sp-6, 24px) var(--sp-6, 24px);
+    display: flex;
+    gap: var(--sp-3, 12px);
+    justify-content: flex-end;
+}
+
+.client-detail-form .form-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 12px;
+}
+.client-detail-form input[type="text"] {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid var(--gray-300, #d1d5db);
+    border-radius: var(--radius-md, 6px);
+    font-size: var(--text-sm, 14px);
+    transition: border-color 150ms, box-shadow 150ms;
+    direction: ltr;
+}
+.client-detail-form input[type="text"]:focus {
+    outline: none;
+    border-color: var(--brand-500, #6366f1);
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+}
+.client-detail-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: var(--sp-8, 32px) 0;
+    gap: var(--sp-3, 12px);
+}
+.client-detail-loading p {
+    color: var(--gray-600, #4b5563);
+    font-size: var(--text-sm, 14px);
+    font-weight: 500;
+    margin: 0;
+}
+.client-detail-saving-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(255, 255, 255, 0.85);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--sp-3, 12px);
+    border-radius: var(--radius-lg, 8px);
+    z-index: 2;
+}
+.client-detail-saving-overlay .spinner {
+    width: 24px;
+    height: 24px;
+}
+.client-detail-saving-overlay span {
+    color: var(--gray-600, #4b5563);
+    font-size: var(--text-sm, 14px);
+    font-weight: 500;
+}
