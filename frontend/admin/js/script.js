@@ -3898,7 +3898,7 @@ function renderAICards(items, allFilteredItems) {
                 html += `<div class="ai-cn-section">
                     <div class="ai-cn-header">📋 הודעות הלקוח (${cnArr.length})</div>
                     <div class="ai-cn-entries">${previewHtml}${expandedHtml}</div>
-                    <span class="ai-cn-toggle" onclick="toggleClientNotes(this)">הצג הכל ▼</span>
+                    ${hasMore ? `<span class="ai-cn-toggle" onclick="toggleClientNotes(this)">הצג הכל ▼</span>` : ''}
                 </div>`;
             }
         }
