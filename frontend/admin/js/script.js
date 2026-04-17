@@ -6109,13 +6109,12 @@ function buildPaPreviewBody(item) {
 }
 
 // DL-295/298/299: inline doc status menu + ✨ suggestion chip + pencil edit + note popover
-// DL-299 follow-up: prefer short_name (office-side) over full template name (client-facing)
+// DL-299 follow-up 2: reverted — show full d.name (user preferred the verbose client-facing text)
 function renderPaDocTagRow(d, reportId) {
     const status = d.status || 'Required_Missing';
     const statusCls = status.toLowerCase().replace(/_/g, '-');
     const docRecordId = d.doc_record_id || d.id || '';
-    const displayName = d.name_short || d.name || '';
-    const nameHtml = renderDocLabel(displayName);
+    const nameHtml = renderDocLabel(d.name || '');
     const suggestionRaw = (d.issuer_name_suggested || '').trim();
     // DL-299 follow-up: hide chip when the suggestion adds no info over the stored
     // issuer. Compares stripped+normalised text (bold tags, whitespace, punctuation).
