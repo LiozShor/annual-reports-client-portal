@@ -25,7 +25,15 @@ tmp/
 # Claude Code internal working files
 # (.agent/ tracked — design logs + current-status.md both travel with repo.
 #  current-status.md uses union merge driver in .gitattributes to avoid conflicts.)
-.claude/
+# DL-296: .claude/ is selectively ignored — team-scope settings.json + hooks/
+# are tracked; everything else (personal state, plans, local overrides) stays local.
+.claude/agents/
+.claude/plans/
+.claude/rules/
+.claude/skills/
+.claude/worktrees/
+.claude/settings.local.json
+.claude/scheduled_tasks.lock
 .claudeignore
 .design-logs/
 .worktreeinclude
