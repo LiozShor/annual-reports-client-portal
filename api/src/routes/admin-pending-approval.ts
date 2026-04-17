@@ -20,6 +20,7 @@ import {
   groupDocsByPerson, formatForOfficeMode,
   type DocFields, type ReportContext,
 } from '../lib/doc-builder';
+import { buildShortName } from '../lib/classification-helpers';
 import { formatQuestionnaire } from '../lib/format-questionnaire';
 import { logError } from '../lib/error-logger';
 import type { Env } from '../lib/types';
@@ -145,6 +146,23 @@ adminPendingApproval.get('/admin-pending-approval', async (c) => {
       const groupedRaw = groupDocsByPerson(docFields, reportCtx, categoryMap, templateMap, companyLinks);
       const doc_groups = formatForOfficeMode(groupedRaw);
 
+      // DL-299 follow-up: enrich each doc with `name_short` (resolved template.short_name_he
+      // with {issuer}/{year} placeholders filled in). AI-Review uses this same pattern via
+      // classification-helpers.buildShortName. PA card will prefer name_short over full name
+      // to keep doc rows scannable on the office side (full name stays for client emails).
+      for (const g of doc_groups as Record<string, unknown>[]) {
+        const cats = Array.isArray(g.categories) ? g.categories as Record<string, unknown>[] : [];
+        for (const cat of cats) {
+          const catDocs = Array.isArray(cat.docs) ? cat.docs as Record<string, unknown>[] : [];
+          for (const d of catDocs) {
+            const tid = (d.type as string) || '';
+            const issuerName = (d.issuer_name as string) || (d.name as string) || '';
+            const shortName = tid ? buildShortName(tid, issuerName, templateMap) : null;
+            if (shortName) d.name_short = shortName;
+          }
+        }
+      }
+
       // DL-295: flatten doc_groups for master-card chips — single source of truth,
       // avoids {placeholder} leakage from templates' raw short_name_he.
       // DL-296: carry `issuer_name_suggested` through for the ✨ chip on the card.
@@ -158,6 +176,7 @@ adminPendingApproval.get('/admin-pending-approval', async (c) => {
           return catDocs.map((d) => ({
             doc_id: (d.doc_record_id as string) || (d.id as string) || '',
             name: (d.name as string) || '',
+            name_short: (d.name_short as string) || '',
             category_emoji: emoji,
             status: (d.status as string) || 'Required_Missing',
             issuer_name_suggested: (d.issuer_name_suggested as string) || '',
