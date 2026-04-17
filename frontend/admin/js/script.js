@@ -6026,30 +6026,42 @@ function buildPaPreviewBody(item) {
     const clientNotesPlain = (item.client_notes || '').trim();
     let notesTimelineHtml = '';
     let notesPlainHtml = '';
+    // Looks like JSON? Always try to parse; never render raw JSON blob to the user.
+    const looksLikeJson = /^\s*[\[\{]/.test(rawNotes);
     if (rawNotes) {
+        let items = [];
         try {
             const parsed = JSON.parse(rawNotes);
-            if (Array.isArray(parsed)) {
-                const visible = parsed.filter(n => n && !n.hidden_from_dashboard);
-                if (visible.length > 0) {
-                    notesTimelineHtml = visible.map(n => {
-                        const when = n.date ? new Date(n.date).toLocaleString('he-IL', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '';
-                        const who = n.sender_email || (n.type === 'office_reply' ? 'המשרד' : 'הלקוח');
-                        const text = (n.summary || n.raw_snippet || '').toString().trim();
-                        if (!text) return '';
-                        const kind = n.type === 'office_reply' ? 'office' : 'client';
-                        return `<div class="pa-note-row pa-note-row--${kind}">
-                            <div class="pa-note-meta">${escapeHtml(who)}${when ? ` · ${escapeHtml(when)}` : ''}</div>
-                            <div class="pa-note-text">${escapeHtml(text)}</div>
-                        </div>`;
-                    }).filter(Boolean).join('');
-                }
-            } else if (typeof parsed === 'string') {
-                notesPlainHtml = escapeHtml(parsed);
-            }
+            if (Array.isArray(parsed)) items = parsed;
+            else if (parsed && typeof parsed === 'object') items = [parsed];
+            else if (typeof parsed === 'string') notesPlainHtml = escapeHtml(parsed);
         } catch {
-            // Not JSON — render verbatim
-            notesPlainHtml = escapeHtml(rawNotes);
+            // Strict parse failed. If it smells like JSON, try to salvage objects via regex extraction
+            if (looksLikeJson) {
+                const matches = rawNotes.match(/\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}/g) || [];
+                for (const m of matches) {
+                    try { items.push(JSON.parse(m)); } catch { /* skip */ }
+                }
+            } else {
+                notesPlainHtml = escapeHtml(rawNotes);
+            }
+        }
+        if (items.length > 0) {
+            const visible = items.filter(n => n && !n.hidden_from_dashboard);
+            if (visible.length > 0) {
+                notesTimelineHtml = visible.map(n => {
+                    const when = n.date ? new Date(n.date).toLocaleString('he-IL', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '';
+                    const who = n.sender_email || (n.type === 'office_reply' ? 'המשרד' : 'הלקוח');
+                    const text = (n.summary || n.raw_snippet || n.text || '').toString().trim();
+                    if (!text) return '';
+                    const kind = n.type === 'office_reply' ? 'office' : 'client';
+                    return `<div class="pa-note-row pa-note-row--${kind}">
+                        <div class="pa-note-meta">${escapeHtml(who)}${when ? ` · ${escapeHtml(when)}` : ''}</div>
+                        <div class="pa-note-text">${escapeHtml(text)}</div>
+                    </div>`;
+                }).filter(Boolean).join('');
+            }
+            // Either way: if source looked like JSON, NEVER dump raw JSON — leave plain empty
         }
     }
     if (clientNotesPlain) {
