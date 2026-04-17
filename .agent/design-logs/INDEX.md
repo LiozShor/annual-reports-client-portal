@@ -21,6 +21,7 @@ Active and pending logs. For completed history, see [ARCHIVE-INDEX.md](ARCHIVE-I
 
 | # | File | Status | Summary |
 |---|------|--------|---------|
+| 293 | [293-doc-manager-edit-client.md](admin-ui/293-doc-manager-edit-client.md) | IMPLEMENTED — NEED TESTING | Doc-manager pencil icon + inline email/cc_email/phone editing. Extracts DL-106 modal into shared `client-detail-modal.js` reused by dashboard + doc-manager; adds `client_phone` to GET_CLIENT_REPORTS office response. Supersedes DL-107 |
 | 292 | [292-pending-approval-review-queue-tab.md](admin-ui/292-pending-approval-review-queue-tab.md) | DRAFT | New "סקירה ואישור" tab — stage-3 (Pending_Approval) queue with AI-Review-style split view (master cards + sticky preview); reuses `APPROVE_AND_SEND` + `EDIT_DOCUMENTS`; addresses DL-291 W-1 scroll friction |
 | 290 | [290-pending-classification-count-mismatch.md](admin-ui/290-pending-classification-count-mismatch.md) | IMPLEMENTED — NEED TESTING | Align "ממתין לסיווג" reminder stat with AI Review badge — `reminders.ts` `pending_review` now counts unique `client_id` (any stage in reminder scope) instead of reports in Collecting_Docs only; fixes dual-filing-type double-count |
 | 289 | [289-recent-messages-checkmark-thread.md](admin-ui/289-recent-messages-checkmark-thread.md) | IMPLEMENTED — NEED TESTING | Recent messages panel: stack 2+ office reply threads (was single-reply overwrite), replace trash icon with check (mark as handled = soft hide), inline post-reply prompt appended below row, Gmail-style expand-compose modal with live email preview iframe |

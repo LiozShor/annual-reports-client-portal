@@ -111,6 +111,7 @@ router.get('/get-client-reports', async (c) => {
     const clientRec = clientRecords[0];
     const clientEmail = clientRec ? String(clientRec.fields.email || '') : '';
     const clientCcEmail = clientRec ? String(clientRec.fields.cc_email || '') : '';
+    const clientPhone = clientRec ? String(clientRec.fields.phone || '') : '';
 
     // ---- Build response ----
     const reportItems = await Promise.all(
@@ -157,6 +158,7 @@ router.get('/get-client-reports', async (c) => {
     if (mode === 'office') {
       result.client_email = clientEmail;
       result.cc_email = clientCcEmail;
+      result.client_phone = clientPhone;
     }
     return c.json(result);
   } catch (err) {

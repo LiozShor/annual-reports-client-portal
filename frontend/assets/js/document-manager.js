@@ -13,6 +13,7 @@ let YEAR = '';
 let CURRENT_STAGE = '';
 let CLIENT_EMAIL = '';
 let CLIENT_CC_EMAIL = '';
+let CLIENT_PHONE = '';
 // STAGE_LABELS, API_BASE, ADMIN_TOKEN_KEY loaded from shared/constants.js
 // sanitizeDocHtml() loaded from shared/utils.js
 // ENDPOINTS loaded from shared/endpoints.js
@@ -424,6 +425,8 @@ async function loadClientReports(clientId) {
         allReports = data.reports || [];
         CLIENT_EMAIL = data.client_email || '';
         CLIENT_CC_EMAIL = data.cc_email || '';
+        CLIENT_PHONE = data.client_phone || '';
+        updateClientBarContacts();
         if (allReports.length === 0) {
             document.getElementById('loading').style.display = 'none';
             document.getElementById('not-started-view').style.display = 'block';
@@ -459,6 +462,11 @@ async function discoverSiblingReports(reportId) {
         if (!data.ok || !data.reports) return;
 
         allReports = data.reports;
+        // DL-293: populate contact info when loading via report_id
+        if (data.client_email !== undefined) CLIENT_EMAIL = data.client_email || '';
+        if (data.cc_email !== undefined) CLIENT_CC_EMAIL = data.cc_email || '';
+        if (data.client_phone !== undefined) CLIENT_PHONE = data.client_phone || '';
+        updateClientBarContacts();
         if (allReports.length > 1) renderFilingTabs();
         renderAddFilingTypeBtn();
     } catch (e) {
@@ -3658,4 +3666,169 @@ if (CLIENT_ID) {
     } else {
         loadClientSwitcher();
     }
+}
+
+// ==================== CLIENT DETAIL MODAL + INLINE EDIT (DL-293) ====================
+
+function updateClientBarContacts() {
+    const emailEl = document.getElementById('clientEmailField');
+    if (emailEl && !emailEl.classList.contains('editing')) {
+        emailEl.textContent = CLIENT_EMAIL || '—';
+    }
+    const phoneEl = document.getElementById('clientPhoneField');
+    if (phoneEl && !phoneEl.classList.contains('editing')) {
+        phoneEl.textContent = CLIENT_PHONE || '—';
+    }
+    const ccRow = document.getElementById('clientCcEmailRow');
+    const ccEl = document.getElementById('clientCcEmailField');
+    if (ccEl && !ccEl.classList.contains('editing')) {
+        if (CLIENT_CC_EMAIL) {
+            ccEl.textContent = CLIENT_CC_EMAIL;
+            if (ccRow) ccRow.style.display = '';
+        } else {
+            ccEl.textContent = '—';
+            // Still show the row so it can be inline-edited to add a cc email? Keep hidden to reduce noise.
+            if (ccRow) ccRow.style.display = 'none';
+        }
+    }
+    const editLink = document.getElementById('clientEditLink');
+    if (editLink && REPORT_ID) editLink.style.display = '';
+}
+
+function openClientDetailModal(reportId) {
+    if (!reportId) return;
+    return openClientDetailModalShared(reportId, {
+        authToken: ADMIN_TOKEN,
+        toast: (msg, type) => {
+            const mapped = type === 'danger' ? 'error' : type === 'warning' ? 'error' : type;
+            showToast(msg, mapped || 'info');
+        },
+        onSaved: (updated) => {
+            CLIENT_NAME = updated.name;
+            CLIENT_EMAIL = updated.email;
+            CLIENT_CC_EMAIL = updated.cc_email;
+            CLIENT_PHONE = updated.phone;
+            const nameEl = document.getElementById('clientName');
+            if (nameEl) nameEl.textContent = CLIENT_NAME || '-';
+            updateClientBarContacts();
+            showToast('פרטי הלקוח עודכנו בהצלחה', 'success');
+        }
+    });
+}
+
+function _isValidEmailDM(email) {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
+function startInlineEdit(fieldKey) {
+    const elId = fieldKey === 'email' ? 'clientEmailField'
+               : fieldKey === 'cc_email' ? 'clientCcEmailField'
+               : fieldKey === 'phone' ? 'clientPhoneField'
+               : null;
+    if (!elId) return;
+    const el = document.getElementById(elId);
+    if (!el || el.classList.contains('editing')) return;
+    const current = fieldKey === 'email' ? CLIENT_EMAIL
+                  : fieldKey === 'cc_email' ? CLIENT_CC_EMAIL
+                  : CLIENT_PHONE;
+
+    const input = document.createElement('input');
+    input.type = fieldKey === 'phone' ? 'tel' : 'email';
+    input.value = current || '';
+    input.className = 'inline-edit-input';
+    input.style.direction = 'ltr';
+    input.dataset.field = fieldKey;
+
+    el.classList.add('editing');
+    el.textContent = '';
+    el.appendChild(input);
+    input.focus();
+    input.select();
+
+    let committing = false;
+    const commit = async () => {
+        if (committing) return;
+        committing = true;
+        const value = input.value.trim();
+        const normalized = fieldKey === 'phone' ? value : value.toLowerCase();
+
+        if ((fieldKey === 'email') && normalized && !_isValidEmailDM(normalized)) {
+            showToast('כתובת אימייל לא תקינה', 'error');
+            input.focus();
+            committing = false;
+            return;
+        }
+        if (fieldKey === 'email' && !normalized) {
+            showToast('אימייל נדרש', 'error');
+            input.focus();
+            committing = false;
+            return;
+        }
+        if (fieldKey === 'cc_email' && normalized && !_isValidEmailDM(normalized)) {
+            showToast('כתובת אימייל לא תקינה', 'error');
+            input.focus();
+            committing = false;
+            return;
+        }
+
+        const prev = fieldKey === 'email' ? CLIENT_EMAIL
+                   : fieldKey === 'cc_email' ? CLIENT_CC_EMAIL
+                   : CLIENT_PHONE;
+        if (normalized === (prev || '')) {
+            cancelInlineEdit(fieldKey);
+            return;
+        }
+
+        try {
+            const body = { token: ADMIN_TOKEN, report_id: REPORT_ID, action: 'update' };
+            body[fieldKey] = normalized;
+            const resp = await fetchWithTimeout(ENDPOINTS.ADMIN_UPDATE_CLIENT, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body)
+            }, FETCH_TIMEOUTS.mutate);
+            const data = await resp.json();
+            if (!data.ok) throw new Error(data.error || 'שגיאה בשמירה');
+
+            if (fieldKey === 'email') CLIENT_EMAIL = normalized;
+            else if (fieldKey === 'cc_email') CLIENT_CC_EMAIL = normalized;
+            else CLIENT_PHONE = normalized;
+
+            el.classList.remove('editing');
+            updateClientBarContacts();
+            showToast('עודכן', 'success');
+        } catch (err) {
+            showToast('שגיאה בשמירה: ' + err.message, 'error');
+            input.focus();
+            committing = false;
+        }
+    };
+
+    input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            commit();
+        } else if (e.key === 'Escape') {
+            e.preventDefault();
+            cancelInlineEdit(fieldKey);
+        }
+    });
+    input.addEventListener('blur', () => {
+        // Small delay so Escape keydown can fire first
+        setTimeout(() => {
+            if (el.classList.contains('editing')) commit();
+        }, 120);
+    });
+}
+
+function cancelInlineEdit(fieldKey) {
+    const elId = fieldKey === 'email' ? 'clientEmailField'
+               : fieldKey === 'cc_email' ? 'clientCcEmailField'
+               : fieldKey === 'phone' ? 'clientPhoneField'
+               : null;
+    if (!elId) return;
+    const el = document.getElementById(elId);
+    if (!el) return;
+    el.classList.remove('editing');
+    updateClientBarContacts();
 }

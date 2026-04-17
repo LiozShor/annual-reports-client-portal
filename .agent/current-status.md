@@ -1244,6 +1244,23 @@ _(empty — no P1 items)_
 
 ## Active TODOs
 
+**Test DL-293: Doc-Manager — Full Client Edit (Pencil + Inline)** — verify pencil in doc-manager opens shared modal, inline edit works, dashboard modal unchanged
+- [ ] Pencil icon appears in doc-manager client bar next to client name.
+- [ ] Click pencil → modal opens with current name / email / cc_email / phone pre-filled.
+- [ ] Edit name in modal → save → client bar updates without reload; dashboard also shows new name on next visit.
+- [ ] Edit email → save → inline email field in bar updates to new value.
+- [ ] Cancel (X or backdrop) with unsaved changes → DL-268 dirty-check prompt fires.
+- [ ] Inline: click email `<strong>` → turns into `<input type="email">` LTR with current value selected.
+- [ ] Inline: Enter saves, Escape reverts, blur saves (same as Enter).
+- [ ] Inline: invalid email → validation toast, input stays open, no save.
+- [ ] Inline: cc_email and phone behave the same (phone is free-text, no format validation).
+- [ ] Dashboard modal still behaves identically — regression check DL-106 + DL-268 flows (dirty-check, change summary toast, optimistic update, cc_email row).
+- [ ] `admin-update-client` audit log fires for both modal and inline edits.
+- [ ] `GET_CLIENT_REPORTS` office response now includes `client_phone`.
+- [ ] No console errors on doc-manager page load.
+- [ ] Network: single fetch for initial load (not a separate call for phone).
+Design log: `.agent/design-logs/admin-ui/293-doc-manager-edit-client.md`
+
 **Test DL-280 v2: Mobile Bottom Nav Root Fix (class-based FOUC gate)** — verify nav appears on mobile after auth, stays during scroll, doesn't flash pre-auth
 - [ ] Fresh load on mobile viewport (DevTools 375px) with valid session → bottom nav visible immediately after splash fades
 - [ ] Login from login screen on mobile → nav appears after auth completes (no flash before)
