@@ -8065,15 +8065,20 @@ tr:hover .client-edit-link {
     cursor: pointer;
     padding: 4px 0;
 }
-/* DL-299 followup: pin the card header to the viewport top while scrolling a tall expanded body */
+/* DL-299 followup: pin the card header just below the admin navbar (56px) while scrolling a tall expanded body */
 .pa-card--expanded .pa-card__header {
     padding-block: var(--sp-2);
     border-bottom: 1px solid var(--gray-100);
     margin-bottom: var(--sp-3);
     position: sticky;
-    top: 0;
+    top: 56px;
     background: white;
     z-index: 20;
+}
+@media (max-width: 768px) {
+    .pa-card--expanded .pa-card__header {
+        top: 48px; /* compact navbar on mobile */
+    }
 }
 .pa-card__header-main {
     flex: 1;
