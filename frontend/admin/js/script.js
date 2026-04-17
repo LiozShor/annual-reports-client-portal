@@ -6020,58 +6020,74 @@ function buildPaPreviewBody(item) {
     }
 
     // ========== NOTES ==========
-    // DL-299 follow-up: `item.notes` often stores a JSON communication thread (DL-199/266/289).
-    // Parse it into a readable timeline; fall back to plain text for free-form notes.
+    // DL-299 follow-up: `item.notes` stores the same JSON communication thread that
+    // powers the dashboard "הודעות אחרונות מלקוחות" panel (DL-199/266/289).
+    // Reuse the dashboard's .msg-row / .msg-thread-replies visual — client messages
+    // as cards, office_reply items nested as replies via reply_to, never raw JSON.
     const rawNotes = (item.notes || '').trim();
     const clientNotesPlain = (item.client_notes || '').trim();
-    let notesTimelineHtml = '';
-    let notesPlainHtml = '';
-    // Looks like JSON? Always try to parse; never render raw JSON blob to the user.
     const looksLikeJson = /^\s*[\[\{]/.test(rawNotes);
+
+    let noteItems = [];
     if (rawNotes) {
-        let items = [];
         try {
             const parsed = JSON.parse(rawNotes);
-            if (Array.isArray(parsed)) items = parsed;
-            else if (parsed && typeof parsed === 'object') items = [parsed];
-            else if (typeof parsed === 'string') notesPlainHtml = escapeHtml(parsed);
+            if (Array.isArray(parsed)) noteItems = parsed;
+            else if (parsed && typeof parsed === 'object') noteItems = [parsed];
         } catch {
-            // Strict parse failed. If it smells like JSON, try to salvage objects via regex extraction
-            if (looksLikeJson) {
-                const matches = rawNotes.match(/\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}/g) || [];
-                for (const m of matches) {
-                    try { items.push(JSON.parse(m)); } catch { /* skip */ }
-                }
-            } else {
-                notesPlainHtml = escapeHtml(rawNotes);
-            }
-        }
-        if (items.length > 0) {
-            const visible = items.filter(n => n && !n.hidden_from_dashboard);
-            if (visible.length > 0) {
-                notesTimelineHtml = visible.map(n => {
-                    const when = n.date ? new Date(n.date).toLocaleString('he-IL', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '';
-                    const who = n.sender_email || (n.type === 'office_reply' ? 'המשרד' : 'הלקוח');
-                    const text = (n.summary || n.raw_snippet || n.text || '').toString().trim();
-                    if (!text) return '';
-                    const kind = n.type === 'office_reply' ? 'office' : 'client';
-                    return `<div class="pa-note-row pa-note-row--${kind}">
-                        <div class="pa-note-meta">${escapeHtml(who)}${when ? ` · ${escapeHtml(when)}` : ''}</div>
-                        <div class="pa-note-text">${escapeHtml(text)}</div>
-                    </div>`;
-                }).filter(Boolean).join('');
-            }
-            // Either way: if source looked like JSON, NEVER dump raw JSON — leave plain empty
+            // Strict parse failed — salvage {…} objects one by one
+            const matches = rawNotes.match(/\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}/g) || [];
+            for (const m of matches) { try { noteItems.push(JSON.parse(m)); } catch { /* skip */ } }
         }
     }
-    if (clientNotesPlain) {
-        notesPlainHtml = (notesPlainHtml ? notesPlainHtml + '\n\n' : '') + escapeHtml(clientNotesPlain);
+    // Partition: client messages = parents; office_reply = children, linked via reply_to
+    const clientMsgs = noteItems.filter(n => n && !n.hidden_from_dashboard && n.type !== 'office_reply');
+    const repliesByParent = new Map();
+    for (const n of noteItems) {
+        if (n && !n.hidden_from_dashboard && n.type === 'office_reply' && n.reply_to) {
+            if (!repliesByParent.has(n.reply_to)) repliesByParent.set(n.reply_to, []);
+            repliesByParent.get(n.reply_to).push(n);
+        }
     }
-    if (notesTimelineHtml || notesPlainHtml) {
+
+    let messagesHtml = '';
+    if (clientMsgs.length > 0) {
+        messagesHtml = clientMsgs.map(m => {
+            const date = m.date ? formatRelativeTime(m.date) : '';
+            const text = (m.raw_snippet || m.summary || m.text || '').toString().trim();
+            if (!text) return '';
+            const replies = repliesByParent.get(m.id) || [];
+            const repliesHtml = replies.length > 0
+                ? `<div class="msg-thread-replies">${replies.map((r, i) => {
+                        const rText = (r.summary || r.raw_snippet || r.text || '').toString().trim();
+                        return `<div class="msg-office-reply">
+                            <div class="msg-reply-label"><i data-lucide="corner-down-left" class="icon-xs"></i> ${replies.length > 1 ? `תגובת המשרד #${i + 1}` : 'תגובת המשרד'}</div>
+                            <div class="msg-reply-text">${escapeHtml(rText)}</div>
+                            <div class="msg-reply-date">${escapeHtml(r.date ? formatRelativeTime(r.date) : '')}</div>
+                        </div>`;
+                    }).join('')}</div>`
+                : '';
+            return `<div class="msg-row pa-notes-msg-row">
+                <div class="msg-content">
+                    <div class="msg-meta">
+                        <span class="msg-client">${escapeHtml(m.sender_email || item.client_name || 'הלקוח')}</span>
+                        <span class="msg-date">${escapeHtml(date)}</span>
+                    </div>
+                    <div class="msg-summary">"${escapeHtml(text)}"</div>
+                    ${repliesHtml}
+                </div>
+            </div>`;
+        }).filter(Boolean).join('');
+    }
+
+    // Plain-text client_notes (legacy, non-JSON). Never render raw JSON blob.
+    const plainNotes = clientNotesPlain || (looksLikeJson ? '' : rawNotes);
+
+    if (messagesHtml || plainNotes) {
         html += `<div class="pa-preview-section">
             <div class="pa-preview-section-title"><i data-lucide="message-square" class="icon-sm"></i> הערות</div>
-            ${notesTimelineHtml ? `<div class="pa-notes-timeline">${notesTimelineHtml}</div>` : ''}
-            ${notesPlainHtml ? `<div class="pa-preview-notes">${notesPlainHtml}</div>` : ''}
+            ${messagesHtml ? `<div class="pa-notes-messages">${messagesHtml}</div>` : ''}
+            ${plainNotes ? `<div class="pa-preview-notes">${escapeHtml(plainNotes)}</div>` : ''}
         </div>`;
     }
 
@@ -6100,7 +6116,20 @@ function renderPaDocTagRow(d, reportId) {
     const docRecordId = d.doc_record_id || d.id || '';
     const displayName = d.name_short || d.name || '';
     const nameHtml = renderDocLabel(displayName);
-    const suggestion = (d.issuer_name_suggested || '').trim();
+    const suggestionRaw = (d.issuer_name_suggested || '').trim();
+    // DL-299 follow-up: hide chip when the suggestion adds no info over the stored
+    // issuer. Compares stripped+normalised text (bold tags, whitespace, punctuation).
+    const _paNormalizeIssuer = (s) => String(s || '')
+        .replace(/<\/?b>/gi, '')
+        .replace(/\s+/g, ' ')
+        .replace(/[\u2013\u2014\-–—]/g, '-')
+        .trim()
+        .toLowerCase();
+    const issuerCurrent = _paNormalizeIssuer(d.issuer_name || d.name || '');
+    const suggestionNorm = _paNormalizeIssuer(suggestionRaw);
+    const suggestion = (suggestionRaw && suggestionNorm && suggestionNorm !== issuerCurrent
+        && !issuerCurrent.includes(suggestionNorm))
+        ? suggestionRaw : '';
     const docId = d.doc_id || d.doc_record_id || d.id || '';
     const templateId = d.template_id || '';
     const hasNote = !!(d.bookkeepers_notes && String(d.bookkeepers_notes).trim());
