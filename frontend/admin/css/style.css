@@ -8392,7 +8392,9 @@ tr:hover .client-edit-link {
 }
 
 .pa-add-doc-popover {
-    position: fixed;
+    position: absolute;
+    direction: rtl;
+    text-align: right;
     width: 340px;
     max-height: 480px;
     background: white;

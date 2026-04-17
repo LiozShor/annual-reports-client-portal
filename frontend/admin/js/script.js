@@ -6461,24 +6461,25 @@ function openPaAddDocPopover(event, rowEl) {
     pop.innerHTML = `<div class="pa-add-doc-loading">טוען תבניות…</div>`;
     document.body.appendChild(pop);
 
-    // Position
+    // Position (absolute, document-relative so popover scrolls with the page)
     const rect = rowEl.getBoundingClientRect();
     const vw = window.innerWidth;
     const vh = window.innerHeight;
+    const sx = window.scrollX || window.pageXOffset || 0;
+    const sy = window.scrollY || window.pageYOffset || 0;
     const POP_W = 340;
     const POP_H = 420;
     const GAP = 6;
     const PAD = 8;
-    if (vh - rect.bottom - GAP >= POP_H) {
-        pop.style.top = (rect.bottom + GAP) + 'px';
-        pop.style.bottom = '';
-    } else {
-        pop.style.top = '';
-        pop.style.bottom = (vh - rect.top + GAP) + 'px';
-    }
-    const right = Math.max(PAD, Math.min(vw - rect.right, vw - POP_W - PAD));
-    pop.style.right = right + 'px';
-    pop.style.left = 'auto';
+    const openBelow = (vh - rect.bottom - GAP) >= POP_H;
+    pop.style.top = openBelow
+        ? (rect.bottom + sy + GAP) + 'px'
+        : (rect.top + sy - POP_H - GAP) + 'px';
+    pop.style.bottom = '';
+    // Anchor to the row's right edge in viewport coords, clamped within viewport
+    const rightInViewport = Math.max(PAD, Math.min(vw - rect.right, vw - POP_W - PAD));
+    pop.style.left = (vw - rightInViewport - POP_W + sx) + 'px';
+    pop.style.right = 'auto';
 
     // Bind close handlers
     requestAnimationFrame(() => {
@@ -6542,7 +6543,7 @@ function _paRenderAddDocPick() {
         const items = catTpls.map(tpl => {
             const display = _paStripBold((tpl.name_he || '')
                 .replace(/\{year\}/g, item.year || 'YYYY')
-                .replace(/\{[^}]+\}/g, '[...]'));
+                .replace(/\{spouse_name\}/g, item.spouse_name || ''));
             return `<div class="pa-add-doc-option" data-template-id="${escapeAttr(tpl.template_id)}" onclick="paAddDocPickTemplate('${escapeAttr(tpl.template_id)}')">${escapeHtml(display)}</div>`;
         }).join('');
         listHtml += `<div class="pa-add-doc-cat">${escapeHtml((cat.emoji || '') + ' ' + (cat.name_he || ''))}</div>${items}`;
@@ -6636,7 +6637,7 @@ function _paRenderAddDocVariables(userVars) {
     const item = pendingApprovalData.find(i => i.report_id === st.reportId);
     const displayName = _paStripBold((st.selectedTpl.name_he || '')
         .replace(/\{year\}/g, item.year || 'YYYY')
-        .replace(/\{[^}]+\}/g, '[...]'));
+        .replace(/\{spouse_name\}/g, item.spouse_name || ''));
 
     const fields = userVars.map(v => {
         const label = _PA_VAR_LABELS[v] || v;
