@@ -56,6 +56,31 @@ frontend/admin/css/style.css                              # .pa-preview-cols, .p
 - [ ] Mobile sheet (`loadPaMobilePreview`) renders stacked layout without breaking
 
 Design log: `.agent/design-logs/admin-ui/295-pa-queue-improvements.md`
+**Last Updated:** 2026-04-17 morning (Session — DL-293 doc-manager edit + DL-297 sticky header & editable stage — shipped)
+
+---
+
+## Session Summary (2026-04-17 morning — DL-293 + DL-297 doc-manager polish)
+
+### DL-293: Doc-Manager — Full Client Edit (Pencil + Inline) [SHIPPED — NEED TESTING]
+- New shared module `frontend/assets/js/client-detail-modal.js` — extracts DL-106 modal logic from `admin/js/script.js` so both dashboard and doc-manager reuse one implementation via `openClientDetailModalShared(reportId, {authToken, toast, onSaved})`.
+- Doc-manager client bar: pencil next to client name opens the modal; email/cc_email/phone rendered as `.editable-field <strong>` with click-to-edit (Enter/Esc/blur semantics, LTR inputs in RTL page, validation on email fields).
+- API `api/src/routes/client-reports.ts` office-mode response now returns `client_phone` alongside existing `client_email` + `cc_email`.
+- Dashboard modal (DL-106 + DL-268 dirty-check + change-summary) preserved byte-identical via onSaved callback.
+- Follow-up fixes in the same session:
+  - `cf9ad79` — pencil visibility was gated on `REPORT_ID`; moved `updateClientBarContacts()` after REPORT_ID resolves + re-run `lucide.createIcons()` so the SVG glyph paints when revealed.
+
+### DL-297: Doc-Manager — Sticky Header Merge + Editable Stage [SHIPPED — NEED TESTING]
+- Sticky action bar moved out of `#content` to be a sibling of `.page-wrapper` at the top of `<body>` (needed because `.container { overflow: hidden }` in `common.css` was clipping `position: sticky` children). Switched from `position: fixed` → `position: sticky; top: 0`; dropped the 44px spacer compensation.
+- `שלב` (stage) label in the client bar is now clickable → dropdown with all 8 stages (current highlighted via `.stage-option.current`). Reuses existing `ADMIN_CHANGE_STAGE` endpoint; optimistic update + revert on error; Esc / outside-click close.
+- Originally DL-295; renumbered to DL-297 after parallel-session merge collision (your other tab shipped DL-295 = PA queue improvements and DL-296 = WF02 extract-issuer-names during this session).
+
+### Worker deploy
+- `annual-reports-api` deployed with `client_phone` response field — Version `08408189-1ff1-4701-a53f-d16cccfca2e1`.
+
+### Follow-ups / gotchas learned
+- **`position: sticky` inside `.container`** → clipped by `overflow:hidden`. For any future sticky bars on pages that use `.container`, put the sticky element OUTSIDE `.container`.
+- **Auto-merge to main was overridden** — saved to memory (`feedback_ask_before_merge_push.md`): the design-log skill's Phase-D auto-merge step is superseded by the standing "ask before merge and push" rule.
 
 ---
 
