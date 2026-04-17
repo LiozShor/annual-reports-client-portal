@@ -5784,7 +5784,7 @@ function buildPaCard(item) {
     const escapedName = escapeHtml(item.client_name || '');
     const relDate = item.submitted_at ? formatRelativeTime(item.submitted_at) : '';
     const qs = Array.isArray(item.answers_summary) ? item.answers_summary : [];
-    const docs = Array.isArray(item.docs) ? item.docs : [];
+    const docs = Array.isArray(item.doc_chips) ? item.doc_chips : (Array.isArray(item.docs) ? item.docs : []);
     const questions = Array.isArray(item.client_questions) ? item.client_questions : [];
     const qCount = questions.filter(q => q && (q.text || '').trim()).length;
     const isActive = _activePaReportId === item.report_id;
@@ -5795,11 +5795,16 @@ function buildPaCard(item) {
     const answerChips = visibleAnswers.map(a => `<span class="pa-chip pa-chip--answer" title="${escapeHtml(a.label)}">${escapeHtml(a.value.length > 20 ? a.value.slice(0, 20) + '…' : a.value)}</span>`).join('') +
         (moreAnswers > 0 ? `<span class="pa-chip pa-chip--more">+${moreAnswers}</span>` : '');
 
-    // Doc chips (first 6)
+    // Doc chips (first 6) — short_name + bolded issuer (via renderDocLabel)
     const visibleDocs = docs.slice(0, 6);
     const moreDocs = docs.length > 6 ? docs.length - 6 : 0;
-    const docChips = visibleDocs.map(d => `<span class="pa-chip pa-chip--doc" title="${escapeHtml(d.short_name_he)}">${d.category_emoji} ${escapeHtml(d.short_name_he.length > 18 ? d.short_name_he.slice(0, 18) + '…' : d.short_name_he)}</span>`).join('') +
-        (moreDocs > 0 ? `<span class="pa-chip pa-chip--more">+${moreDocs}</span>` : '');
+    const docChips = visibleDocs.map(d => {
+        const short = d.short_name_he || '';
+        const issuer = (d.issuer_name || '').trim();
+        const issuerHtml = issuer ? ` – ${renderDocLabel(issuer)}` : '';
+        const fullText = issuer ? `${short} – ${issuer.replace(/<\/?b>/g, '')}` : short;
+        return `<span class="pa-chip pa-chip--doc" title="${escapeHtml(fullText)}">${d.category_emoji || '📄'} ${escapeHtml(short)}${issuerHtml}</span>`;
+    }).join('') + (moreDocs > 0 ? `<span class="pa-chip pa-chip--more">+${moreDocs}</span>` : '');
 
     // Notes preview
     const notesText = (item.notes || item.client_notes || '').trim();
@@ -5843,7 +5848,8 @@ function loadPaPreview(reportId) {
     if (_activePaReportId === reportId) {
         _activePaReportId = null;
         document.querySelectorAll('.pa-card.preview-active').forEach(c => c.classList.remove('preview-active'));
-        document.getElementById('paPreviewHeaderBar').style.display = 'none';
+        const hdr = document.getElementById('paPreviewHeaderBar');
+        if (hdr) hdr.style.display = 'none';
         document.getElementById('paPreviewBody').style.display = 'none';
         document.getElementById('paPreviewPlaceholder').style.display = '';
         return;
@@ -5854,86 +5860,204 @@ function loadPaPreview(reportId) {
     const card = document.querySelector(`.pa-card[data-report-id="${reportId}"]`);
     if (card) card.classList.add('preview-active');
 
-    // Populate header
+    // Hide old-style header bar + placeholder; new layout has its own sticky header inside the body
     const header = document.getElementById('paPreviewHeaderBar');
-    document.getElementById('paPreviewClientName').textContent = item.client_name || '';
-    const docMgrLink = document.getElementById('paOpenInDocManager');
-    if (docMgrLink) {
-        docMgrLink.href = `../document-manager.html?report_id=${encodeURIComponent(item.report_id)}&token=${encodeURIComponent(authToken)}`;
-    }
-    header.style.display = '';
+    if (header) header.style.display = 'none';
     document.getElementById('paPreviewPlaceholder').style.display = 'none';
 
-    // Build preview body
     const body = document.getElementById('paPreviewBody');
     body.style.display = '';
     body.innerHTML = buildPaPreviewHtml(item);
     safeCreateIcons(body);
 }
 
-function buildPaPreviewHtml(item) {
-    const qs = Array.isArray(item.answers_summary) ? item.answers_summary : [];
-    const docs = Array.isArray(item.docs) ? item.docs : [];
+// Show/hide "No" answers in preview (per-report state)
+const _paShowNoAnswers = new Set();
+
+function togglePaShowNo(reportId) {
+    if (_paShowNoAnswers.has(reportId)) _paShowNoAnswers.delete(reportId);
+    else _paShowNoAnswers.add(reportId);
+    // Re-render preview
+    const item = pendingApprovalData.find(i => i.report_id === reportId);
+    if (!item) return;
+    const body = document.getElementById('paPreviewBody');
+    if (body) {
+        body.innerHTML = buildPaPreviewBody(item);
+        safeCreateIcons(body);
+    }
+}
+
+function buildPaPreviewHeader(item) {
+    const FILING_TYPE_LABELS = { annual_report: 'דוח שנתי', capital_statement: 'הצהרת הון' };
+    const filingLabel = FILING_TYPE_LABELS[item.filing_type] || item.filing_type || '';
+    const relDate = item.submitted_at ? formatRelativeTime(item.submitted_at) : '';
+
+    const answersCount = Array.isArray(item.answers_all) ? item.answers_all.length
+        : (Array.isArray(item.answers_summary) ? item.answers_summary.length : 0);
+    const docsCount = Array.isArray(item.doc_chips) ? item.doc_chips.length : 0;
+    const notesCount = ((item.notes || '').trim() || (item.client_notes || '').trim()) ? 1 : 0;
+    const questionsCount = Array.isArray(item.client_questions)
+        ? item.client_questions.filter(q => q && (q.text || '').trim()).length : 0;
+
+    return `<div class="pa-preview-header">
+        <div class="pa-preview-header-top">
+            <div class="pa-preview-client-name">${escapeHtml(item.client_name || '')}</div>
+            <span class="pa-preview-client-id">${escapeHtml(item.client_id || '')}</span>
+        </div>
+        <div class="pa-preview-header-meta">
+            ${escapeHtml(filingLabel)} · ${escapeHtml(String(item.year || ''))}${relDate ? ` · הוגש ${escapeHtml(relDate)}` : ''}${item.spouse_name ? ` · ${escapeHtml(item.spouse_name)}` : ''}
+        </div>
+        <div class="pa-preview-stats">
+            <span class="pa-preview-stat" title="תשובות שאלון"><i data-lucide="file-text" class="icon-xs"></i> ${answersCount}</span>
+            <span class="pa-preview-stat" title="מסמכים"><i data-lucide="folder" class="icon-xs"></i> ${docsCount}</span>
+            <span class="pa-preview-stat${notesCount ? '' : ' pa-preview-stat--empty'}" title="הערות"><i data-lucide="message-square" class="icon-xs"></i> ${notesCount}</span>
+            <span class="pa-preview-stat${questionsCount ? '' : ' pa-preview-stat--empty'}" title="שאלות ללקוח"><i data-lucide="message-circle" class="icon-xs"></i> ${questionsCount}</span>
+        </div>
+    </div>`;
+}
+
+function buildPaPreviewBody(item) {
+    const answersAll = Array.isArray(item.answers_all) ? item.answers_all
+        : (Array.isArray(item.answers_summary) ? item.answers_summary : []);
     const notesText = [(item.notes || '').trim(), (item.client_notes || '').trim()].filter(Boolean).join('\n\n');
     const questions = Array.isArray(item.client_questions) ? item.client_questions.filter(q => q && (q.text || '').trim()) : [];
+    const docGroups = Array.isArray(item.doc_groups) ? item.doc_groups : [];
+    const showNo = _paShowNoAnswers.has(item.report_id);
+
+    // Partition answers: yes (✓ כן), no (✗ לא), free-text
+    const yesAnswers = [];
+    const noAnswers = [];
+    const freeAnswers = [];
+    for (const a of answersAll) {
+        if (a.value === '✓ כן' || a.value === '✓ Yes') yesAnswers.push(a);
+        else if (a.value === '✗ לא' || a.value === '✗ No') noAnswers.push(a);
+        else freeAnswers.push(a);
+    }
 
     let html = '';
 
-    // Q&A section
-    if (qs.length > 0) {
+    // ========== Q&A SECTION ==========
+    if (answersAll.length > 0) {
         html += `<div class="pa-preview-section">
-            <h4 class="pa-preview-section-title"><i data-lucide="file-text" class="icon-sm"></i> תשובות שאלון</h4>
-            <div class="pa-preview-qa">
-                ${qs.map(a => `<div class="pa-preview-qa-row"><span class="pa-preview-qa-label">${escapeHtml(a.label)}</span><span class="pa-preview-qa-value">${escapeHtml(a.value)}</span></div>`).join('')}
-            </div>
-        </div>`;
-    }
+            <div class="pa-preview-section-title"><i data-lucide="file-text" class="icon-sm"></i> תשובות שאלון</div>`;
 
-    // Doc list section
-    if (docs.length > 0) {
-        const grouped = {};
-        for (const d of docs) {
-            const key = d.category_emoji || '📄';
-            if (!grouped[key]) grouped[key] = [];
-            grouped[key].push(d);
+        if (yesAnswers.length > 0) {
+            html += `<div class="pa-preview-subsection">
+                <div class="pa-preview-subtitle">✓ כן (${yesAnswers.length})</div>
+                <div class="pa-yes-chips-grid">
+                    ${yesAnswers.map(a => `<span class="pa-yes-chip">${escapeHtml(a.label)}</span>`).join('')}
+                </div>
+            </div>`;
         }
-        html += `<div class="pa-preview-section">
-            <h4 class="pa-preview-section-title"><i data-lucide="folder" class="icon-sm"></i> רשימת מסמכים (${docs.length})</h4>
-            ${Object.entries(grouped).map(([emoji, docList]) =>
-                `<div class="pa-preview-docgroup">
-                    ${docList.map(d => `<div class="pa-preview-doc-row">
-                        <span class="pa-chip pa-chip--status-${(d.status || 'Required_Missing').toLowerCase().replace('_', '-')}">${statusLabel(d.status)}</span>
-                        <span>${emoji} ${escapeHtml(d.short_name_he)}</span>
+
+        if (freeAnswers.length > 0) {
+            html += `<div class="pa-preview-subsection">
+                <div class="pa-preview-subtitle">תשובות פתוחות (${freeAnswers.length})</div>
+                <div class="pa-preview-qa">
+                    ${freeAnswers.map(a => `<div class="pa-preview-qa-row">
+                        <span class="pa-preview-qa-label">${escapeHtml(a.label)}</span>
+                        <span class="pa-preview-qa-value">${escapeHtml(a.value)}</span>
                     </div>`).join('')}
-                </div>`
-            ).join('')}
+                </div>
+            </div>`;
+        }
+
+        if (noAnswers.length > 0) {
+            html += `<div class="pa-preview-subsection">
+                <button class="pa-preview-toggle" onclick="togglePaShowNo('${item.report_id}')">
+                    <i data-lucide="${showNo ? 'chevron-up' : 'chevron-down'}" class="icon-xs"></i>
+                    ${showNo ? 'הסתר' : 'הצג'} תשובות "לא" (${noAnswers.length})
+                </button>
+                ${showNo ? `<div class="pa-yes-chips-grid" style="margin-top:var(--sp-2);">
+                    ${noAnswers.map(a => `<span class="pa-yes-chip pa-yes-chip--no">${escapeHtml(a.label)}</span>`).join('')}
+                </div>` : ''}
+            </div>`;
+        }
+
+        html += `</div>`;
+    }
+
+    // ========== DOC LIST (per-person, per-category) ==========
+    if (docGroups.length > 0) {
+        html += `<div class="pa-preview-section">
+            <div class="pa-preview-section-title"><i data-lucide="folder" class="icon-sm"></i> רשימת מסמכים</div>
+            ${docGroups.map(group => {
+                const personLabel = group.person_label || (group.person === 'spouse' ? `מסמכים של ${item.spouse_name || 'בן/בת הזוג'}` : `מסמכים של ${item.client_name}`);
+                const cats = Array.isArray(group.categories) ? group.categories : [];
+                return `<div class="pa-preview-person-section">
+                    <div class="pa-preview-person-title">📂 ${escapeHtml(personLabel)}</div>
+                    ${cats.map(cat => {
+                        const catDocs = Array.isArray(cat.docs) ? cat.docs : [];
+                        if (catDocs.length === 0) return '';
+                        return `<div class="pa-preview-category">
+                            <div class="pa-preview-category-title">${cat.emoji || '📄'} ${escapeHtml(cat.name || cat.name_he || '')}</div>
+                            ${catDocs.map(d => {
+                                const status = d.status || 'Required_Missing';
+                                const statusCls = status.toLowerCase().replace(/_/g, '-');
+                                // `name` is populated by formatForOfficeMode from issuer_name or template name_he
+                                const nameHtml = renderDocLabel(d.name || '');
+                                return `<div class="pa-preview-doc-row">
+                                    <span class="pa-chip pa-chip--status-${statusCls}" title="${escapeHtml(statusLabel(status, true))}">${statusLabel(status)}</span>
+                                    <span class="pa-preview-doc-name">${nameHtml}</span>
+                                </div>`;
+                            }).join('')}
+                        </div>`;
+                    }).join('')}
+                </div>`;
+            }).join('')}
         </div>`;
     }
 
-    // Notes section
+    // ========== NOTES ==========
     if (notesText) {
         html += `<div class="pa-preview-section">
-            <h4 class="pa-preview-section-title"><i data-lucide="message-square" class="icon-sm"></i> הערות</h4>
+            <div class="pa-preview-section-title"><i data-lucide="message-square" class="icon-sm"></i> הערות</div>
             <div class="pa-preview-notes">${escapeHtml(notesText)}</div>
         </div>`;
     }
 
-    // Questions for client section
+    // ========== QUESTIONS FOR CLIENT ==========
     if (questions.length > 0) {
         html += `<div class="pa-preview-section">
-            <h4 class="pa-preview-section-title"><i data-lucide="message-circle" class="icon-sm"></i> שאלות ללקוח (${questions.length})</h4>
+            <div class="pa-preview-section-title"><i data-lucide="message-circle" class="icon-sm"></i> שאלות ללקוח (${questions.length})</div>
             ${questions.map((q, i) => `<div class="pa-preview-question">
                 <span class="pa-preview-qnum">${i + 1}.</span>
-                <span>${escapeHtml(q.text || '')}</span>
-                ${q.answer ? `<div class="pa-preview-answer">↳ ${escapeHtml(q.answer)}</div>` : ''}
+                <div style="flex:1;">
+                    <div>${escapeHtml(q.text || '')}</div>
+                    ${q.answer ? `<div class="pa-preview-answer">↳ ${escapeHtml(q.answer)}</div>` : ''}
+                </div>
             </div>`).join('')}
         </div>`;
     }
 
-    return html || `<div class="preview-placeholder" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--gray-400);gap:var(--sp-3);padding:var(--sp-5);text-align:center;"><p>אין נתוני שאלון לתצוגה</p></div>`;
+    return html || `<div class="pa-preview-empty"><p>אין נתונים לתצוגה</p></div>`;
 }
 
-function statusLabel(status) {
+function buildPaPreviewFooter(item) {
+    const qCount = Array.isArray(item.client_questions)
+        ? item.client_questions.filter(q => q && (q.text || '').trim()).length : 0;
+    const escapedName = escapeHtml(item.client_name || '').replace(/'/g, "\\'");
+    return `<div class="pa-preview-sticky-footer">
+        <button class="btn btn-outline pa-btn-questions" onclick="openQuestionsForClient('${item.report_id}')">
+            <i data-lucide="message-circle" class="icon-sm"></i> שאל את הלקוח${qCount > 0 ? ` <span class="pa-questions-badge">${qCount}</span>` : ''}
+        </button>
+        <button class="btn btn-success pa-btn-approve" onclick="approveAndSendFromQueue('${item.report_id}', '${escapedName}')">
+            <i data-lucide="send" class="icon-sm"></i> אשר ושלח ללקוח
+        </button>
+    </div>`;
+}
+
+function buildPaPreviewHtml(item) {
+    return buildPaPreviewHeader(item)
+        + `<div class="pa-preview-scroll">${buildPaPreviewBody(item)}</div>`
+        + buildPaPreviewFooter(item);
+}
+
+function statusLabel(status, verbose = false) {
+    if (verbose) {
+        const m = { 'Received': 'התקבל', 'Required_Missing': 'חסר', 'Requires_Fix': 'דרוש תיקון', 'Waived': 'פטור' };
+        return m[status] || status;
+    }
     const map = { 'Received': '✓', 'Required_Missing': '✗', 'Requires_Fix': '⚠', 'Waived': '−' };
     return map[status] || status;
 }
