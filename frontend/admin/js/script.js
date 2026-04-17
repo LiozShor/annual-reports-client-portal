@@ -6092,12 +6092,14 @@ function buildPaPreviewBody(item) {
     return html || `<div class="pa-preview-empty"><p>אין נתונים לתצוגה</p></div>`;
 }
 
-// DL-295/298/299: inline doc status menu + ✨ suggestion chip + (DL-299) pencil edit + note popover
+// DL-295/298/299: inline doc status menu + ✨ suggestion chip + pencil edit + note popover
+// DL-299 follow-up: prefer short_name (office-side) over full template name (client-facing)
 function renderPaDocTagRow(d, reportId) {
     const status = d.status || 'Required_Missing';
     const statusCls = status.toLowerCase().replace(/_/g, '-');
     const docRecordId = d.doc_record_id || d.id || '';
-    const nameHtml = renderDocLabel(d.name || '');
+    const displayName = d.name_short || d.name || '';
+    const nameHtml = renderDocLabel(displayName);
     const suggestion = (d.issuer_name_suggested || '').trim();
     const docId = d.doc_id || d.doc_record_id || d.id || '';
     const templateId = d.template_id || '';
