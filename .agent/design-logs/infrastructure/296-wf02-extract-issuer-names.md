@@ -274,6 +274,13 @@ Template hints (informs which entity type is expected):
 
 **Auth:** reused existing `N8N_INTERNAL_KEY` (same secret used in inbound-email + outbound Worker→n8n calls). Worker accepts either that bearer OR an HMAC admin token — one-secret-two-directions pattern matches repo convention.
 
+**Scope expansion — doc-manager chip (post-ship refinement):**
+User asked why the ✨ chip wasn't visible on the doc-manager page. DL-296 originally only wired the chip onto the DL-292 Review & Approve queue card. Added a second rendering surface on `frontend/assets/js/document-manager.js`:
+- Placement: indented row **below** `.document-item` (inside `.document-wrapper`), gated on `issuer_name_suggested` non-empty AND `effectiveStatus === 'Required_Missing'` AND `!isWaived` AND `!isNameChanged` (no double-chip once a manual rename is queued).
+- Accept handler `acceptDocManagerIssuerSuggestion()` uses doc-manager's existing queued-edit pattern (`nameChanges.set(docId, suggestion)`) rather than an immediate PATCH — consistent with the rest of doc-manager's "edit, then save all" UX. Server-side, `edit-documents.ts`'s `name_updates` branch already clears `issuer_name_suggested` (wired in the original DL-296 implementation).
+- CSS: `.dm-suggestion-row` + `.dm-suggest-chip` added to `frontend/assets/css/document-manager.css`, visually parallel to `.pa-suggest-chip` from DL-292 but distinct class names (doc-manager doesn't load admin's style.css).
+- User ruled out other admin surfaces for now: doc-manager + Review & Approve queue only.
+
 **Production steps applied in this session:**
 - Airtable field `issuer_name_suggested` created via Meta API (`flduGQ8NvmTVEN8Ik`).
 - Worker deployed: `annual-reports-api` version `292e9c32-c882-48d6-b124-a963998cb793`.

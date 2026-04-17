@@ -634,6 +634,43 @@ body {
     overflow: hidden;
 }
 
+/* DL-296: AI issuer-name suggestion row — one per doc with a pending suggestion */
+.dm-suggestion-row {
+    padding: 4px 44px 8px 14px; /* RTL: indent on the right (same side as doc name) */
+    background: transparent;
+}
+.dm-suggest-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 12px;
+    border: 1px solid var(--primary-300, #93C5FD);
+    border-radius: var(--radius-full);
+    background: linear-gradient(135deg, #EEF4FF 0%, #F5F0FF 100%);
+    color: var(--primary-800, #1E40AF);
+    font-size: var(--text-xs);
+    font-weight: 500;
+    line-height: 1.4;
+    cursor: pointer;
+    transition: transform 0.12s ease, box-shadow 0.12s ease;
+    white-space: nowrap;
+}
+.dm-suggest-chip:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 6px rgba(59, 130, 246, 0.18);
+}
+.dm-suggest-chip strong {
+    font-weight: 700;
+}
+.dm-suggest-chip__icon {
+    font-size: 14px;
+}
+.dm-suggest-chip__check {
+    font-weight: 700;
+    color: var(--success-700, #15803D);
+    margin-inline-start: 2px;
+}
+
 .document-name {
     font-size: var(--text-sm);
     color: var(--gray-800);

@@ -126,18 +126,24 @@ async function callClaude(
   apiKey: string,
   docs: DocInput[],
 ): Promise<ExtractionResult[]> {
+  // 4096 is enough for ~50 docs' worth of {doc_record_id, issuer_name, confidence}
+  // results without truncation. Previous 1024 silently truncated on full-report batches.
   const body = {
     model: MODEL,
-    max_tokens: 1024,
+    max_tokens: 4096,
     system: SYSTEM_PROMPT,
     messages: [{ role: 'user', content: buildUserMessage(docs) }],
     tools: [TOOL_SCHEMA],
     tool_choice: { type: 'tool', name: 'extract_issuer_names' },
   };
 
-  let resp: Response | null = null;
+  // Retry on 429 (rate limit), 5xx (overload), and on empty-results (transient).
+  // Haiku occasionally returns a tool_use block with missing input under load —
+  // a single retry almost always clears it.
+  let results: ExtractionResult[] = [];
+  let lastErr: string | null = null;
   for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
-    resp = await fetch(ANTHROPIC_URL, {
+    const resp = await fetch(ANTHROPIC_URL, {
       method: 'POST',
       headers: {
         'x-api-key': apiKey,
@@ -146,23 +152,45 @@ async function callClaude(
       },
       body: JSON.stringify(body),
     });
-    if (resp.status !== 429 || attempt === MAX_RETRIES) break;
-    await new Promise((r) => setTimeout(r, 1000 * Math.pow(2, attempt)));
+
+    if (resp.status === 429 || resp.status >= 500) {
+      lastErr = `${resp.status} ${await resp.text().catch(() => '').then(t => t.slice(0, 200))}`;
+      if (attempt < MAX_RETRIES) {
+        await new Promise((r) => setTimeout(r, 1000 * Math.pow(2, attempt)));
+        continue;
+      }
+      throw new Error(`Anthropic API error ${lastErr}`);
+    }
+
+    if (!resp.ok) {
+      const text = await resp.text().catch(() => '');
+      throw new Error(`Anthropic API error ${resp.status}: ${text.slice(0, 200)}`);
+    }
+
+    const data = (await resp.json()) as {
+      content: Array<{ type: string; input?: { results?: ExtractionResult[] } }>;
+      stop_reason?: string;
+    };
+
+    if (data.stop_reason && data.stop_reason !== 'end_turn' && data.stop_reason !== 'tool_use') {
+      console.warn(`[extract-issuer-names] stop_reason=${data.stop_reason} for ${docs.length} docs`);
+    }
+
+    const toolBlock = data.content.find((b) => b.type === 'tool_use');
+    const parsed = toolBlock?.input?.results;
+
+    if (Array.isArray(parsed) && parsed.length > 0) {
+      results = parsed;
+      break;
+    }
+
+    // Empty / malformed tool_use — retry once
+    console.warn(`[extract-issuer-names] empty results from Haiku (attempt ${attempt + 1}/${MAX_RETRIES + 1}), stop_reason=${data.stop_reason}`);
+    if (attempt < MAX_RETRIES) {
+      await new Promise((r) => setTimeout(r, 500 * Math.pow(2, attempt)));
+      continue;
+    }
   }
-
-  if (!resp || !resp.ok) {
-    const status = resp?.status ?? 0;
-    const text = resp ? await resp.text().catch(() => '') : '';
-    throw new Error(`Anthropic API error ${status}: ${text.slice(0, 200)}`);
-  }
-
-  const data = (await resp.json()) as {
-    content: Array<{ type: string; input?: { results?: ExtractionResult[] } }>;
-  };
-
-  const toolBlock = data.content.find((b) => b.type === 'tool_use');
-  const results = toolBlock?.input?.results;
-  if (!Array.isArray(results)) return [];
 
   return results;
 }

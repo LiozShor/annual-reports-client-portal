@@ -1127,8 +1127,27 @@ function displayDocuments() {
                                     id="badge-${doc.id}"
                                     title="לחץ לשינוי סטטוס">${status.text} &#x25BE;</span>`
                         }
-                    </div>
-                </div>`;
+                    </div>`;
+
+                // DL-296: AI suggestion chip — only on Required_Missing, non-waived docs
+                // that haven't yet been manually renamed in this edit session.
+                const suggestion = (doc.issuer_name_suggested || '').trim();
+                if (suggestion && !isWaived && effectiveStatus === 'Required_Missing' && !isNameChanged) {
+                    html += `
+                        <div class="dm-suggestion-row" id="suggest-row-${doc.id}">
+                            <button type="button" class="dm-suggest-chip"
+                                data-doc-id="${escapeAttr(doc.id)}"
+                                data-suggestion="${escapeAttr(suggestion)}"
+                                onclick="acceptDocManagerIssuerSuggestion(this)"
+                                title="${escapeAttr('החלף שם מסמך ל: ' + suggestion)}">
+                                <span class="dm-suggest-chip__icon">✨</span>
+                                <span class="dm-suggest-chip__label">החלף ל-<strong>${escapeHtml(suggestion)}</strong></span>
+                                <span class="dm-suggest-chip__check">✓</span>
+                            </button>
+                        </div>`;
+                }
+
+                html += `</div>`;
             }
 
             html += `</div>`;
@@ -1388,6 +1407,37 @@ document.addEventListener('scroll', function() {
 const COMPANY_TEMPLATES = ['T501', 'T401', 'T301'];
 
 // Inline document name editing
+// DL-296: Accept an AI issuer-name suggestion on doc-manager.
+// Uses the same queued-edit pattern as manual rename (nameChanges Map); the
+// actual PATCH fires when the admin hits the "Save" button. Server-side,
+// edit-documents.ts clears issuer_name_suggested whenever name_updates touches
+// the doc, so the chip naturally disappears on re-render.
+function acceptDocManagerIssuerSuggestion(btn) {
+    if (!btn || btn.disabled) return;
+    const docId = btn.dataset.docId;
+    const suggestion = (btn.dataset.suggestion || '').trim();
+    if (!docId || !suggestion) return;
+
+    const doc = currentDocuments.find(d => d.id === docId);
+    if (!doc) return;
+
+    // Queue the name change (same pattern as saveNameEdit)
+    nameChanges.set(docId, suggestion);
+
+    // Update the in-memory doc so subsequent renders don't show the chip again
+    doc.issuer_name_suggested = '';
+
+    // DOM updates — swap displayed name, mark item as changed, remove the chip row
+    const nameEl = document.getElementById(`docname-${docId}`);
+    if (nameEl) nameEl.innerHTML = sanitizeDocHtml(suggestion);
+    const docEl = document.getElementById(`doc-${docId}`);
+    if (docEl) docEl.classList.add('name-changed');
+    const row = document.getElementById(`suggest-row-${docId}`);
+    if (row) row.remove();
+
+    updateStats();
+}
+
 function startNameEdit(docId) {
     const nameEl = document.getElementById(`docname-${docId}`);
     if (!nameEl) return;
