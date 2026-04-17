@@ -23,6 +23,18 @@
     </noscript>
     <div class="page-wrapper">
         <div class="container">
+            <!-- Sticky Action Bar (DL-297: moved above header, sticks on scroll) -->
+            <div id="stickyActionBar" class="sticky-action-bar">
+                <div class="sticky-progress-bar">
+                    <div class="sticky-progress-fill" id="stickyProgressFill"></div>
+                </div>
+                <div class="sticky-bar-content">
+                    <span id="stickySummary" class="sticky-summary"></span>
+                    <span id="stickyChanges" class="sticky-changes"></span>
+                    <div class="sticky-bar-actions" id="stickyBarActions"></div>
+                </div>
+            </div>
+
             <!-- Header bar -->
             <header class="page-header">
                 <div class="page-header-top">
@@ -112,7 +124,7 @@
                 <div class="client-bar-item">
                     <i data-lucide="layers" class="icon-sm"></i>
                     <span class="text-muted text-sm">שלב:</span>
-                    <strong id="clientStage">-</strong>
+                    <strong id="clientStage" class="editable-stage" onclick="openStageDropdownDM(event)" title="לחץ לשינוי שלב">-</strong>
                 </div>
                 <div class="client-bar-item" id="sentBadge" style="display:none;"></div>
                 <!-- Add other filing type (DL-228) -->
@@ -178,17 +190,6 @@
 
             <!-- Main content -->
             <div id="content" style="display:none;">
-                <!-- Sticky Action Bar -->
-                <div id="stickyActionBar" class="sticky-action-bar">
-                    <div class="sticky-progress-bar">
-                        <div class="sticky-progress-fill" id="stickyProgressFill"></div>
-                    </div>
-                    <div class="sticky-bar-content">
-                        <span id="stickySummary" class="sticky-summary"></span>
-                        <span id="stickyChanges" class="sticky-changes"></span>
-                        <div class="sticky-bar-actions" id="stickyBarActions"></div>
-                    </div>
-                </div>
                 <!-- Status Overview -->
                 <div id="statusOverview" class="status-overview" style="display:none;">
                     <div class="status-overview-header">
@@ -541,6 +542,9 @@
             </div>
         </div>
     </div>
+
+    <!-- Stage dropdown (DL-297) -->
+    <div id="stageDropdownDM" class="stage-dropdown-dm" style="display:none;"></div>
 
     <!-- Status dropdown -->
     <div id="statusDropdown" class="status-dropdown" style="display:none;">

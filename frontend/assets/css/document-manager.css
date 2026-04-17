@@ -2188,20 +2188,19 @@ body {
 }
 
 /* ==================== STICKY ACTION BAR ==================== */
+/* DL-297: moved from position:fixed to position:sticky — bar now flows directly
+   above the page-header (same .container parent) so at page top it reads as the
+   top row of the header block; on scroll it pins to the viewport top. */
 .sticky-action-bar {
-    position: fixed;
+    position: sticky;
     top: 0;
-    left: 0;
-    right: 0;
     z-index: 100;
     background: white;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-    border-bottom: 1px solid var(--gray-200);
-}
-
-/* Spacer to prevent content from hiding behind the fixed bar */
-.sticky-action-bar + * {
-    margin-top: 44px;
+    /* No border-bottom or bottom shadow at-top — page-header sits flush below
+       so the two read as one header block. Only the side/bottom drop shadow
+       appears once it pins on scroll (visual cue it's now floating). */
+    box-shadow: 0 4px 10px -8px rgba(0, 0, 0, 0.15);
+    margin-bottom: 0;
 }
 
 .sticky-progress-bar {
@@ -2424,4 +2423,80 @@ body {
     color: var(--gray-600, #4b5563);
     font-size: var(--text-sm, 14px);
     font-weight: 500;
+}
+
+/* ==================== DL-297: Editable stage + dropdown ==================== */
+
+.editable-stage {
+    cursor: pointer;
+    padding: 2px 8px;
+    border-radius: 4px;
+    border: 1px dashed transparent;
+    transition: border-color 150ms, background 150ms;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+.editable-stage::after {
+    content: '▾';
+    font-size: 0.75em;
+    color: var(--gray-500, #6b7280);
+    margin-inline-start: 2px;
+}
+.editable-stage:hover {
+    border-color: var(--gray-300, #d1d5db);
+    background: var(--gray-50, #f9fafb);
+}
+.editable-stage.open {
+    border-color: var(--brand-500, #6366f1);
+    background: var(--gray-50, #f9fafb);
+}
+
+.stage-dropdown-dm {
+    position: fixed;
+    z-index: 1100;
+    background: white;
+    border: 1px solid var(--gray-200, #e5e7eb);
+    border-radius: var(--radius-md, 6px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+    min-width: 260px;
+    max-width: 360px;
+    padding: 4px;
+    overflow: hidden;
+}
+.stage-dropdown-dm .stage-option {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: var(--text-sm, 14px);
+    color: var(--gray-700, #374151);
+    transition: background 120ms;
+}
+.stage-dropdown-dm .stage-option:hover {
+    background: var(--gray-100, #f3f4f6);
+}
+.stage-dropdown-dm .stage-option.current {
+    background: rgba(99, 102, 241, 0.08);
+    color: var(--brand-700, #4338ca);
+    font-weight: 600;
+}
+.stage-dropdown-dm .stage-option .stage-num {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: var(--gray-200, #e5e7eb);
+    color: var(--gray-700, #374151);
+    font-size: 11px;
+    font-weight: 700;
+    flex-shrink: 0;
+}
+.stage-dropdown-dm .stage-option.current .stage-num {
+    background: var(--brand-600, #4f46e5);
+    color: white;
 }

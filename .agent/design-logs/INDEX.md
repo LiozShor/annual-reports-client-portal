@@ -2,7 +2,7 @@
 
 Active and pending logs. For completed history, see [ARCHIVE-INDEX.md](ARCHIVE-INDEX.md).
 
-**Total logs:** 193 | **Active:** 95 | **Archived:** 98
+**Total logs:** 194 | **Active:** 96 | **Archived:** 98
 
 ## Folder Structure
 
@@ -21,6 +21,9 @@ Active and pending logs. For completed history, see [ARCHIVE-INDEX.md](ARCHIVE-I
 
 | # | File | Status | Summary |
 |---|------|--------|---------|
+| 297 | [297-doc-manager-header-sticky-stage-edit.md](admin-ui/297-doc-manager-header-sticky-stage-edit.md) | IMPLEMENTED — NEED TESTING | Doc-manager polish: sticky action bar moved above page-header block (position:sticky instead of fixed, visually reads as top row of header when at-top, pins on scroll). Stage label (`שלב`) now clickable → dropdown with 8 stages, reuses `ADMIN_CHANGE_STAGE` endpoint with optimistic update + revert |
+| 296 | [296-wf02-extract-issuer-names.md](infrastructure/296-wf02-extract-issuer-names.md) | IMPLEMENTED — NEED TESTING | WF02 calls new `/webhook/extract-issuer-names` (Haiku 4.5 + forced tool use) to extract issuer names from questionnaire free-text; stores as `issuer_name_suggested`; Review & Approve card shows bold ✨ chip with 1-click accept (+ "אשר הכל" batch); raw context preserved in `bookkeepers_notes` |
+| 295 | [295-pa-queue-improvements.md](admin-ui/295-pa-queue-improvements.md) | IMPLEMENTED — NEED TESTING | PA queue: 2-column preview (Q&A \| docs) on desktop, stacked on mobile; fix `{placeholder}` leak by flattening `doc_chips` from `doc_groups`; age priority badge on master cards (red >7d / yellow 3–7d); inline doc status menu in preview reusing DL-227 pattern |
 | 294 | [294-pa-queue-redesign.md](admin-ui/294-pa-queue-redesign.md) | IMPLEMENTED — NEED TESTING | PA queue redesign: render `<b>issuer</b>` via `renderDocLabel`; split `doc_chips` (short_name) from `doc_groups` (per-person/per-category); redesigned preview panel with sticky client header + stats strip + sticky footer CTA + Yes/free-text answer grouping |
 | 293 | [293-doc-manager-edit-client.md](admin-ui/293-doc-manager-edit-client.md) | IMPLEMENTED — NEED TESTING | Doc-manager pencil icon + inline email/cc_email/phone editing. Extracts DL-106 modal into shared `client-detail-modal.js` reused by dashboard + doc-manager; adds `client_phone` to GET_CLIENT_REPORTS office response. Supersedes DL-107 |
 | 292 | [292-pending-approval-review-queue-tab.md](admin-ui/292-pending-approval-review-queue-tab.md) | IMPLEMENTED — NEED TESTING | New "סקירה ואישור" tab — stage-3 (Pending_Approval) queue with AI-Review-style split view (master cards + sticky preview); reuses `APPROVE_AND_SEND` + `EDIT_DOCUMENTS`; addresses DL-291 W-1 scroll friction |
