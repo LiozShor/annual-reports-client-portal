@@ -1,6 +1,31 @@
 # Annual Reports CRM - Current Status
 
-**Last Updated:** 2026-04-17 (DL-299 implemented — PA card doc-manager parity: per-doc issuer edit + note popover + questionnaire print. Built on DL-298)
+**Last Updated:** 2026-04-17 (DL-296 hardening + doc-manager chip shipped)
+
+## Session Summary (2026-04-17 — DL-296 follow-ups)
+
+### DL-296: Worker hardening + doc-manager chip [IMPLEMENTED — NEED TESTING]
+
+Post-ship refinements after live-testing on CPA-XXX:
+
+1. **Worker `max_tokens` bump 1024→4096** — 47-doc batches were silently truncating mid-tool-use, Haiku returned empty results, all 47 docs were skipped. 4096 is safe for ≤50-doc batches.
+2. **Retry-on-empty + 5xx retry** — `callClaude()` now retries up to 2× on transient empty-results (overload/hiccup) and on 5xx responses, in addition to the existing 429 retry. Caught by real WF02 run returning `suggested: 0` when a manual replay on the same batch returned 30.
+3. **Defensive Airtable-id filter** — skip records in the batchUpdate where id doesn't start with `rec` (prevents 422 INVALID_RECORDS from smoke tests / malformed callers).
+4. **Bilingual prompt** — explicit Hebrew + English examples (`"I worked at MyHeritage"` → `MyHeritage`) after CPA-XXX audit surfaced 108 sentence-style answers including English ones.
+5. **Drop WF02 AR-template allowlist** — Code-node filter now runs extraction on any doc with non-empty `issuer_name`; content-based suppression (no-op + confidence floor) handles the rest. Captures previously-missed templates: T201/T202/T1101/T1102/T1501, and any future templates.
+6. **Doc-manager ✨ chip** — second rendering surface for suggestions. Indented row below `.document-item`, gated on `effectiveStatus === 'Required_Missing' && !isWaived && !isNameChanged`. Accept uses native queued-edit pattern (`nameChanges.set`) — consistent with doc-manager's existing batch-save UX.
+
+**End-to-end verified on CPA-XXX:** 47 docs → 30 suggestions (incl. `אלביט`, `MyHeritage`, `אינטראקטיב`, `לאומי`, `אלפא בע״מ`, `אוניברסיטת בן גוריון`, + pension/insurance companies).
+
+**Open hardening item (deferred):** 9/47 suggestions are redundant `ביטוח לאומי` for NII forms (T102/T302/T303/T305/T306/T1403). Prompt tweak or template skiplist can suppress — not blocking.
+
+**Outstanding manual TODOs:**
+- Re-enable `availableInMCP: true` on WF02 in n8n UI (REST PUTs keep resetting it; hook reminder now lives in `.claude/settings.json`).
+- Test the doc-manager ✨ chip live on the CPA-XXX docs page — click one, confirm it queues as name change + disappears, then Save fires EDIT_DOCUMENTS.
+
+Design log: `.agent/design-logs/infrastructure/296-wf02-extract-issuer-names.md`
+
+---
 
 ## Session Summary (2026-04-17 — DL-299 PA card doc-manager parity)
 
