@@ -5832,13 +5832,13 @@ function buildPaCard(item) {
         ? `<span class="pa-card__priority ${priorityCls}">${ageDays} ימים</span>`
         : '';
 
-    // Count badges (always visible in header — triage info at a glance)
+    // Count badges (always visible in header — triage info at a glance). Icons removed per request; numbers + tooltips only.
     const countBadges = `
-        <span class="pa-count-badge" title="תשובות שאלון"><i data-lucide="file-text" class="icon-xs"></i> ${answersAll.length}</span>
-        <span class="pa-count-badge" title="מסמכים"><i data-lucide="folder" class="icon-xs"></i> ${docs.length}</span>
+        <span class="pa-count-badge" title="תשובות שאלון">${answersAll.length}</span>
+        <span class="pa-count-badge" title="מסמכים">${docs.length}</span>
         ${suggestionCount > 0 ? `<span class="pa-count-badge pa-count-badge--suggest" title="הצעות שם מנפיק">✨ ${suggestionCount}</span>` : ''}
-        ${qCount > 0 ? `<span class="pa-count-badge" title="שאלות ללקוח"><i data-lucide="message-circle" class="icon-xs"></i> ${qCount}</span>` : ''}
-        ${notesText ? `<span class="pa-count-badge" title="הערות"><i data-lucide="message-square" class="icon-xs"></i></span>` : ''}
+        ${qCount > 0 ? `<span class="pa-count-badge" title="שאלות ללקוח">❓ ${qCount}</span>` : ''}
+        ${notesText ? `<span class="pa-count-badge" title="הערות">💬</span>` : ''}
     `;
 
     const clientId = item.client_id || '';
@@ -6116,18 +6116,19 @@ function renderPaDocTagRow(d, reportId) {
     const docRecordId = d.doc_record_id || d.id || '';
     const nameHtml = renderDocLabel(d.name || '');
     const suggestionRaw = (d.issuer_name_suggested || '').trim();
-    // DL-299 follow-up: hide chip when the suggestion adds no info over the stored
-    // issuer. Compares stripped+normalised text (bold tags, whitespace, punctuation).
+    // DL-299 follow-up: hide chip ONLY when the stored `issuer_name` field already
+    // equals the suggestion (a true no-op). Do NOT compare against `d.name` because
+    // the full resolved template text may transitively include the issuer substring.
     const _paNormalizeIssuer = (s) => String(s || '')
         .replace(/<\/?b>/gi, '')
         .replace(/\s+/g, ' ')
         .replace(/[\u2013\u2014\-–—]/g, '-')
         .trim()
         .toLowerCase();
-    const issuerCurrent = _paNormalizeIssuer(d.issuer_name || d.name || '');
+    const issuerCurrentNorm = _paNormalizeIssuer(d.issuer_name || '');
     const suggestionNorm = _paNormalizeIssuer(suggestionRaw);
-    const suggestion = (suggestionRaw && suggestionNorm && suggestionNorm !== issuerCurrent
-        && !issuerCurrent.includes(suggestionNorm))
+    // Redundant iff: suggestion exists AND issuer_name exists AND they match after normalization
+    const suggestion = (suggestionRaw && !(issuerCurrentNorm && issuerCurrentNorm === suggestionNorm))
         ? suggestionRaw : '';
     const docId = d.doc_id || d.doc_record_id || d.id || '';
     const templateId = d.template_id || '';
