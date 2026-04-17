@@ -6014,52 +6014,27 @@ function buildPaPreviewBody(item) {
     }
 
     // ========== NOTES ==========
-    // DL-299 follow-up: `item.notes` stores the same JSON communication thread that
-    // powers the dashboard "הודעות אחרונות מלקוחות" panel (DL-199/266/289).
-    // Reuse the dashboard's .msg-row / .msg-thread-replies visual — client messages
-    // as cards, office_reply items nested as replies via reply_to, never raw JSON.
-    const rawNotes = (item.notes || '').trim();
-    const clientNotesPlain = (item.client_notes || '').trim();
-    // Stronger JSON detection: prefix OR any tell-tale JSON fragment token
-    const looksLikeJson = /^\s*[\[\{]/.test(rawNotes)
-        || /"(id|source|type|reply_to|sender_email|summary|raw_snippet|hidden_from_dashboard|message_id)"\s*:/.test(rawNotes);
+    // DL-299 follow-up: the JSON communication thread lives in `item.client_notes`
+    // (same field dashboard's `/admin-recent-messages` parses). `item.notes` is
+    // the office free-text bookkeeper field. Mirror dashboard's pairing logic.
+    const rawThread = (item.client_notes || '').trim();
+    const plainOfficeNotes = (item.notes || '').trim();
 
     let noteItems = [];
-    if (rawNotes) {
+    if (rawThread) {
         try {
-            const parsed = JSON.parse(rawNotes);
+            const parsed = JSON.parse(rawThread);
             if (Array.isArray(parsed)) noteItems = parsed;
             else if (parsed && typeof parsed === 'object') noteItems = [parsed];
         } catch {
-            // Strict parse failed — try multiple salvage strategies
-            // 1) Wrap in [ ... ] in case the outer brackets were stripped by Airtable truncation
-            try {
-                const wrapped = JSON.parse('[' + rawNotes.replace(/,\s*$/, '').replace(/,\s*\}/g, '}') + ']');
-                if (Array.isArray(wrapped)) noteItems = wrapped;
-            } catch { /* fall through */ }
-            // 2) Split by "},{" to get object chunks, re-brace, parse each
-            if (noteItems.length === 0) {
-                const chunks = rawNotes
-                    .replace(/^[\[\{]?/, '') // drop possible leading bracket
-                    .replace(/[\]\}]?$/, '') // drop possible trailing bracket
-                    .split(/\},\s*\{/);
-                for (let i = 0; i < chunks.length; i++) {
-                    const c = chunks[i];
-                    const prefix = i === 0 ? '{' : '{';
-                    const suffix = i === chunks.length - 1 ? '}' : '}';
-                    const candidate = (c.startsWith('{') ? c : prefix + c) + (c.endsWith('}') ? '' : suffix);
-                    try { noteItems.push(JSON.parse(candidate)); } catch { /* skip malformed */ }
-                }
-            }
-            // 3) Last-resort regex: grab everything between balanced-ish {...}
-            if (noteItems.length === 0) {
-                const matches = rawNotes.match(/\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}/g) || [];
-                for (const m of matches) { try { noteItems.push(JSON.parse(m)); } catch { /* skip */ } }
-            }
+            // Salvage on malformed JSON — never show raw to the user
+            const matches = rawThread.match(/\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}/g) || [];
+            for (const m of matches) { try { noteItems.push(JSON.parse(m)); } catch { /* skip */ } }
         }
     }
-    // Partition: client messages = parents; office_reply = children, linked via reply_to
-    const clientMsgs = noteItems.filter(n => n && !n.hidden_from_dashboard && n.type !== 'office_reply');
+    // Partition (mirrors dashboard.ts:197–214): client messages = parents, office_reply children linked via reply_to
+    const clientMsgs = noteItems
+        .filter(n => n && !n.hidden_from_dashboard && n.source === 'email' && n.type !== 'office_reply');
     const repliesByParent = new Map();
     for (const n of noteItems) {
         if (n && !n.hidden_from_dashboard && n.type === 'office_reply' && n.reply_to) {
@@ -6067,6 +6042,12 @@ function buildPaPreviewBody(item) {
             repliesByParent.get(n.reply_to).push(n);
         }
     }
+    // Sort each thread oldest-first (matches dashboard behaviour)
+    for (const arr of repliesByParent.values()) {
+        arr.sort((a, b) => String(a.date || '').localeCompare(String(b.date || '')));
+    }
+    // Sort parents date-desc (newest conversation first) — matches dashboard listing order
+    clientMsgs.sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')));
 
     let messagesHtml = '';
     if (clientMsgs.length > 0) {
@@ -6098,8 +6079,9 @@ function buildPaPreviewBody(item) {
         }).filter(Boolean).join('');
     }
 
-    // Plain-text client_notes (legacy, non-JSON). Never render raw JSON blob.
-    const plainNotes = clientNotesPlain || (looksLikeJson ? '' : rawNotes);
+    // Office free-text notes only if plain text (never dump raw JSON if admin put a thread here by accident)
+    const officeNotesIsJson = /^\s*[\[\{]/.test(plainOfficeNotes);
+    const plainNotes = officeNotesIsJson ? '' : plainOfficeNotes;
 
     if (messagesHtml || plainNotes) {
         html += `<div class="pa-preview-section">
