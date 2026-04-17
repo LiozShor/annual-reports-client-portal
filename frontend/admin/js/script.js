@@ -5991,6 +5991,7 @@ function buildPaPreviewBody(item) {
             ${docGroups.map(group => {
                 const personLabel = group.person_label || (group.person === 'spouse' ? `מסמכים של ${item.spouse_name || 'בן/בת הזוג'}` : `מסמכים של ${item.client_name}`);
                 const cats = Array.isArray(group.categories) ? group.categories : [];
+                const personKey = group.person === 'spouse' ? 'spouse' : 'client';
                 return `<div class="pa-preview-person-section">
                     <div class="pa-preview-person-title">📂 ${escapeHtml(personLabel)}</div>
                     ${cats.map(cat => {
@@ -6001,6 +6002,7 @@ function buildPaPreviewBody(item) {
                             ${catDocs.map(d => renderPaDocTagRow(d, item.report_id)).join('')}
                         </div>`;
                     }).join('')}
+                    ${renderPaAddDocRow(item.report_id, personKey)}
                 </div>`;
             }).join('')}
         </div>`;
@@ -6319,6 +6321,630 @@ async function updatePaDocStatusInline(reportId, docRecordId, newStatus) {
 }
 
 // DL-298: removed buildPaPreviewFooter + buildPaPreviewHtml (no preview panel; card renders body inline).
+
+// ==================== DL-301: PA card add-doc affordance ====================
+// Lazy-fetched template catalog, keyed by client_id. Shape: { apiTemplates, apiCategories, filingType }
+const _paTemplateCache = new Map();
+// Active popover state
+let _paAddDocState = null;
+// Key for the templates/categories dataset we last fetched per report; reset when report switches
+const _paTemplatePending = new Map(); // clientId -> Promise
+
+async function ensurePaTemplatesLoaded(clientId, reportId, filingType) {
+    if (!clientId || !reportId) throw new Error('missing client/report');
+    const cached = _paTemplateCache.get(clientId);
+    if (cached && cached.filingType === filingType) return cached;
+    if (_paTemplatePending.has(clientId)) return _paTemplatePending.get(clientId);
+
+    const p = (async () => {
+        const resp = await fetchWithTimeout(
+            `${ENDPOINTS.GET_CLIENT_DOCUMENTS}?report_id=${encodeURIComponent(reportId)}&mode=office`,
+            { headers: { 'Authorization': `Bearer ${authToken}` } },
+            FETCH_TIMEOUTS.quick
+        );
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        const data = await resp.json();
+        const entry = {
+            apiTemplates: Array.isArray(data.templates) ? data.templates : [],
+            apiCategories: Array.isArray(data.categories_list) ? data.categories_list : [],
+            filingType
+        };
+        _paTemplateCache.set(clientId, entry);
+        return entry;
+    })();
+    _paTemplatePending.set(clientId, p);
+    try { return await p; } finally { _paTemplatePending.delete(clientId); }
+}
+
+function renderPaAddDocRow(reportId, person) {
+    return `<div class="pa-preview-doc-row pa-preview-doc-row--add"
+        data-report-id="${escapeAttr(reportId)}"
+        data-person="${escapeAttr(person)}"
+        role="button" tabindex="0"
+        onclick="openPaAddDocPopover(event, this)"
+        onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openPaAddDocPopover(event, this);}">
+        <span class="pa-add-doc-icon"><i data-lucide="plus" class="icon-xs"></i></span>
+        <span class="pa-add-doc-label">הוסף מסמך</span>
+    </div>`;
+}
+
+function _paStripBold(s) { return (s || '').replace(/<\/?b>/g, '').replace(/\*\*/g, ''); }
+
+function _paResolveTemplateName(tpl, collectedValues, item) {
+    const vals = {
+        year: item.year || '',
+        spouse_name: item.spouse_name || '',
+        ...(collectedValues || {})
+    };
+    let nameHe = tpl.name_he || '';
+    let nameEn = tpl.name_en || '';
+    for (const [k, v] of Object.entries(vals)) {
+        const re = new RegExp(`\\{${k}\\}`, 'g');
+        nameHe = nameHe.replace(re, v);
+        nameEn = nameEn.replace(re, v);
+    }
+    return { nameHe: _paStripBold(nameHe), nameEn: _paStripBold(nameEn) };
+}
+
+function _paComputeIssuerKey(collectedValues) {
+    const autoVars = ['year', 'spouse_name'];
+    const parts = Object.entries(collectedValues || {})
+        .filter(([k]) => !autoVars.includes(k))
+        .map(([, v]) => (v || '').toString().trim())
+        .filter(Boolean);
+    return parts.join(' ').trim();
+}
+
+function paDocIsDuplicate(item, pendingDoc) {
+    const groups = Array.isArray(item.doc_groups) ? item.doc_groups : [];
+    const targetTpl = (pendingDoc.template_id || '').toLowerCase();
+    const targetKey = (pendingDoc.issuer_key || '').toLowerCase();
+    const targetName = (pendingDoc.issuer_name || '').toLowerCase().trim();
+    for (const g of groups) {
+        for (const cat of (g.categories || [])) {
+            for (const d of (cat.docs || [])) {
+                if (d.status === 'Waived') continue;
+                const dType = (d.type || '').toLowerCase();
+                if (targetTpl === 'general_doc') {
+                    // Custom: match on general_doc name case-insensitive
+                    if (dType === 'general_doc') {
+                        const dName = ((d.issuer_name || d.name || '') + '').toLowerCase().trim();
+                        if (dName === targetName) return true;
+                    }
+                } else {
+                    if (dType !== targetTpl) continue;
+                    const dKey = ((d.issuer_key || '') + '').toLowerCase();
+                    if (dKey === targetKey) return true;
+                }
+            }
+        }
+    }
+    return false;
+}
+
+function closePaAddDocPopover() {
+    const pop = document.getElementById('paAddDocPopover');
+    if (pop) pop.remove();
+    if (document._paAddDocClose) {
+        document.removeEventListener('click', document._paAddDocClose, { capture: true });
+        document._paAddDocClose = null;
+    }
+    if (document._paAddDocKey) {
+        document.removeEventListener('keydown', document._paAddDocKey);
+        document._paAddDocKey = null;
+    }
+    _paAddDocState = null;
+}
+
+function openPaAddDocPopover(event, rowEl) {
+    if (event) event.stopPropagation();
+    if (_paAddDocState) { closePaAddDocPopover(); }
+
+    const reportId = rowEl.dataset.reportId;
+    const person = rowEl.dataset.person || 'client';
+    const item = pendingApprovalData.find(i => i.report_id === reportId);
+    if (!item) return;
+
+    _paAddDocState = {
+        reportId, person,
+        step: 'pick',
+        selectedTpl: null,
+        collectedValues: null,
+        pendingDoc: null,
+        loaded: false
+    };
+
+    const pop = document.createElement('div');
+    pop.id = 'paAddDocPopover';
+    pop.className = 'pa-add-doc-popover';
+    pop.onclick = (e) => e.stopPropagation();
+    pop.innerHTML = `<div class="pa-add-doc-loading">טוען תבניות…</div>`;
+    document.body.appendChild(pop);
+
+    // Position
+    const rect = rowEl.getBoundingClientRect();
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    const POP_W = 340;
+    const POP_H = 420;
+    const GAP = 6;
+    const PAD = 8;
+    if (vh - rect.bottom - GAP >= POP_H) {
+        pop.style.top = (rect.bottom + GAP) + 'px';
+        pop.style.bottom = '';
+    } else {
+        pop.style.top = '';
+        pop.style.bottom = (vh - rect.top + GAP) + 'px';
+    }
+    const right = Math.max(PAD, Math.min(vw - rect.right, vw - POP_W - PAD));
+    pop.style.right = right + 'px';
+    pop.style.left = 'auto';
+
+    // Bind close handlers
+    requestAnimationFrame(() => {
+        document._paAddDocClose = (e) => {
+            const p = document.getElementById('paAddDocPopover');
+            if (p && !p.contains(e.target) && !rowEl.contains(e.target)) closePaAddDocPopover();
+        };
+        document._paAddDocKey = (e) => {
+            if (e.key === 'Escape') { e.preventDefault(); closePaAddDocPopover(); }
+        };
+        document.addEventListener('click', document._paAddDocClose, { capture: true });
+        document.addEventListener('keydown', document._paAddDocKey);
+    });
+
+    // Fetch + render
+    ensurePaTemplatesLoaded(item.client_id, item.report_id, item.filing_type)
+        .then(() => {
+            if (!_paAddDocState) return;
+            _paAddDocState.loaded = true;
+            _paRenderAddDocPick();
+        })
+        .catch((err) => {
+            console.error('DL-301: template fetch failed', err);
+            const p = document.getElementById('paAddDocPopover');
+            if (p) p.innerHTML = `<div class="pa-add-doc-error">שגיאה בטעינת תבניות. נסה שוב.</div>`;
+        });
+}
+
+function _paRenderAddDocPick() {
+    const st = _paAddDocState;
+    if (!st) return;
+    const pop = document.getElementById('paAddDocPopover');
+    if (!pop) return;
+    const item = pendingApprovalData.find(i => i.report_id === st.reportId);
+    if (!item) return;
+    const cached = _paTemplateCache.get(item.client_id);
+    if (!cached) return;
+
+    const filingType = item.filing_type || 'annual_report';
+    const relevant = cached.apiTemplates.filter(t => !t.filing_type || t.filing_type === filingType);
+
+    // Group by category, preserving order from apiCategories
+    const groups = {};
+    for (const tpl of relevant) {
+        const cid = tpl.category || 'other';
+        if (!groups[cid]) groups[cid] = [];
+        groups[cid].push(tpl);
+    }
+
+    const personSelector = item.spouse_name
+        ? `<div class="pa-add-doc-person">
+            <button type="button" class="pa-add-doc-person-btn${st.person === 'client' ? ' active' : ''}" data-person="client" onclick="paAddDocSetPerson('client')">👤 ${escapeHtml(item.client_name || 'לקוח')}</button>
+            <button type="button" class="pa-add-doc-person-btn${st.person === 'spouse' ? ' active' : ''}" data-person="spouse" onclick="paAddDocSetPerson('spouse')">👥 ${escapeHtml(item.spouse_name)}</button>
+        </div>`
+        : '';
+
+    let listHtml = '';
+    for (const cat of cached.apiCategories) {
+        const catTpls = groups[cat.id];
+        if (!catTpls || catTpls.length === 0) continue;
+        const items = catTpls.map(tpl => {
+            const display = _paStripBold((tpl.name_he || '')
+                .replace(/\{year\}/g, item.year || 'YYYY')
+                .replace(/\{[^}]+\}/g, '[...]'));
+            return `<div class="pa-add-doc-option" data-template-id="${escapeAttr(tpl.template_id)}" onclick="paAddDocPickTemplate('${escapeAttr(tpl.template_id)}')">${escapeHtml(display)}</div>`;
+        }).join('');
+        listHtml += `<div class="pa-add-doc-cat">${escapeHtml((cat.emoji || '') + ' ' + (cat.name_he || ''))}</div>${items}`;
+    }
+    if (!listHtml) listHtml = `<div class="pa-add-doc-empty">אין תבניות זמינות</div>`;
+
+    pop.innerHTML = `
+        ${personSelector}
+        <input type="text" class="pa-add-doc-search" id="paAddDocSearch" placeholder="🔍 חפש מסמך..." dir="rtl" autocomplete="off" oninput="paAddDocFilter(this.value)">
+        <div class="pa-add-doc-list" id="paAddDocList">${listHtml}</div>
+        <div class="pa-add-doc-divider">או מסמך מותאם אישית</div>
+        <div class="pa-add-doc-custom">
+            <input type="text" id="paAddDocCustomInput" placeholder="שם המסמך..." dir="auto"
+                onkeydown="if(event.key==='Enter'){event.preventDefault();paAddCustomDocSubmit();}">
+            <button type="button" class="pa-add-doc-custom-btn" onclick="paAddCustomDocSubmit()">
+                <i data-lucide="plus" class="icon-xs"></i> הוסף
+            </button>
+        </div>
+        <div class="pa-add-doc-warning" id="paAddDocWarning" style="display:none;"></div>`;
+
+    safeCreateIcons(pop);
+    const search = document.getElementById('paAddDocSearch');
+    if (search) setTimeout(() => search.focus(), 50);
+}
+
+function paAddDocSetPerson(person) {
+    if (!_paAddDocState) return;
+    _paAddDocState.person = person;
+    const btns = document.querySelectorAll('.pa-add-doc-person-btn');
+    btns.forEach(b => b.classList.toggle('active', b.dataset.person === person));
+}
+
+function paAddDocFilter(query) {
+    const list = document.getElementById('paAddDocList');
+    if (!list) return;
+    const q = (query || '').trim().toLowerCase();
+    const options = list.querySelectorAll('.pa-add-doc-option');
+    const cats = list.querySelectorAll('.pa-add-doc-cat');
+    // First pass: show/hide options
+    options.forEach(o => {
+        const txt = (o.textContent || '').toLowerCase();
+        o.style.display = (!q || txt.includes(q)) ? '' : 'none';
+    });
+    // Second pass: hide category label if no visible option follows until next cat/end
+    cats.forEach(c => {
+        let sib = c.nextElementSibling;
+        let hasVisible = false;
+        while (sib && !sib.classList.contains('pa-add-doc-cat')) {
+            if (sib.classList.contains('pa-add-doc-option') && sib.style.display !== 'none') {
+                hasVisible = true; break;
+            }
+            sib = sib.nextElementSibling;
+        }
+        c.style.display = hasVisible ? '' : 'none';
+    });
+}
+
+function paAddDocPickTemplate(templateId) {
+    const st = _paAddDocState;
+    if (!st) return;
+    const item = pendingApprovalData.find(i => i.report_id === st.reportId);
+    if (!item) return;
+    const cached = _paTemplateCache.get(item.client_id);
+    const tpl = cached && cached.apiTemplates.find(t => t.template_id === templateId);
+    if (!tpl) return;
+
+    st.selectedTpl = tpl;
+    const autoVars = ['year', 'spouse_name'];
+    const userVars = (tpl.variables || []).filter(v => !autoVars.includes(v));
+
+    if (userVars.length > 0) {
+        st.step = 'variables';
+        _paRenderAddDocVariables(userVars);
+    } else {
+        st.collectedValues = {};
+        _paEnterPreview();
+    }
+}
+
+const _PA_VAR_LABELS = {
+    issuer_name: 'שם החברה / המנפיק',
+    issuer_name_en: 'שם החברה (אנגלית)',
+    year: 'שנה',
+    spouse_name: 'שם בן/בת הזוג'
+};
+
+function _paRenderAddDocVariables(userVars) {
+    const st = _paAddDocState;
+    const pop = document.getElementById('paAddDocPopover');
+    if (!pop || !st || !st.selectedTpl) return;
+    const item = pendingApprovalData.find(i => i.report_id === st.reportId);
+    const displayName = _paStripBold((st.selectedTpl.name_he || '')
+        .replace(/\{year\}/g, item.year || 'YYYY')
+        .replace(/\{[^}]+\}/g, '[...]'));
+
+    const fields = userVars.map(v => {
+        const label = _PA_VAR_LABELS[v] || v;
+        return `<div class="pa-add-doc-var-row">
+            <label>${escapeHtml(label)}</label>
+            <input type="text" class="pa-add-doc-var-input" data-var="${escapeAttr(v)}" dir="auto" placeholder="${escapeHtml(label)}">
+        </div>`;
+    }).join('');
+
+    pop.innerHTML = `
+        <div class="pa-add-doc-step-title"><i data-lucide="file-text" class="icon-xs"></i> ${escapeHtml(displayName)}</div>
+        <div class="pa-add-doc-vars">${fields}</div>
+        <div class="pa-add-doc-warning" id="paAddDocWarning" style="display:none;"></div>
+        <div class="pa-add-doc-actions">
+            <button type="button" class="btn btn-sm" onclick="paAddDocBackToPick()">
+                <i data-lucide="arrow-right" class="icon-xs"></i> חזור
+            </button>
+            <button type="button" class="btn btn-sm btn-primary" onclick="paAddDocConfirmVariables()">
+                הבא <i data-lucide="arrow-left" class="icon-xs"></i>
+            </button>
+        </div>`;
+    safeCreateIcons(pop);
+    const inputs = pop.querySelectorAll('.pa-add-doc-var-input');
+    if (inputs.length) setTimeout(() => inputs[0].focus(), 50);
+    inputs.forEach((inp, i) => {
+        inp.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                if (i < inputs.length - 1) inputs[i + 1].focus();
+                else paAddDocConfirmVariables();
+            }
+        });
+    });
+}
+
+function paAddDocConfirmVariables() {
+    const st = _paAddDocState;
+    if (!st || !st.selectedTpl) return;
+    const autoVars = ['year', 'spouse_name'];
+    const userVars = (st.selectedTpl.variables || []).filter(v => !autoVars.includes(v));
+    const collected = {};
+    const inputs = document.querySelectorAll('.pa-add-doc-var-input');
+    let missing = null;
+    for (const inp of inputs) {
+        const v = inp.dataset.var;
+        const val = (inp.value || '').trim();
+        if (!val) { missing = inp; break; }
+        inp.style.borderColor = '';
+        collected[v] = val;
+    }
+    if (missing) {
+        missing.style.borderColor = 'var(--danger-500)';
+        missing.focus();
+        _paShowAddDocWarning('יש למלא את כל השדות');
+        return;
+    }
+    // Ensure we have all userVars keys
+    for (const v of userVars) if (!(v in collected)) { return; }
+    st.collectedValues = collected;
+    _paEnterPreview();
+}
+
+function paAddDocBackToPick() {
+    if (!_paAddDocState) return;
+    _paAddDocState.step = 'pick';
+    _paAddDocState.selectedTpl = null;
+    _paAddDocState.collectedValues = null;
+    _paAddDocState.pendingDoc = null;
+    _paRenderAddDocPick();
+}
+
+function paAddCustomDocSubmit() {
+    const st = _paAddDocState;
+    if (!st) return;
+    const input = document.getElementById('paAddDocCustomInput');
+    const name = (input ? input.value : '').trim();
+    if (!name) {
+        _paShowAddDocWarning('יש להזין שם מסמך');
+        if (input) input.focus();
+        return;
+    }
+    st.selectedTpl = null;
+    st.collectedValues = null;
+    st.pendingDoc = {
+        template_id: 'general_doc',
+        category: 'general',
+        person: st.person,
+        issuer_name: name,
+        issuer_name_en: name,
+        issuer_key: name
+    };
+    st._customDisplay = name;
+    _paEnterPreview();
+}
+
+function _paShowAddDocWarning(msg) {
+    const w = document.getElementById('paAddDocWarning');
+    if (!w) return;
+    w.textContent = msg;
+    w.style.display = 'block';
+}
+
+function _paEnterPreview() {
+    const st = _paAddDocState;
+    if (!st) return;
+    const item = pendingApprovalData.find(i => i.report_id === st.reportId);
+    if (!item) return;
+
+    let pendingDoc;
+    let displayName;
+    let categoryLabel = '';
+    if (st.selectedTpl) {
+        const { nameHe, nameEn } = _paResolveTemplateName(st.selectedTpl, st.collectedValues || {}, item);
+        const issuerKey = _paComputeIssuerKey(st.collectedValues || {});
+        pendingDoc = {
+            template_id: st.selectedTpl.template_id,
+            category: st.selectedTpl.category || 'general',
+            person: st.person,
+            issuer_name: nameHe,
+            issuer_name_en: nameEn,
+            issuer_key: issuerKey
+        };
+        displayName = nameHe;
+        const cached = _paTemplateCache.get(item.client_id);
+        const catInfo = cached && cached.apiCategories.find(c => c.id === pendingDoc.category);
+        if (catInfo) categoryLabel = `${catInfo.emoji || '📄'} ${catInfo.name_he || ''}`;
+    } else if (st.pendingDoc) {
+        pendingDoc = { ...st.pendingDoc, person: st.person };
+        displayName = pendingDoc.issuer_name;
+        categoryLabel = 'מסמך מותאם אישית';
+    } else {
+        return;
+    }
+
+    st.step = 'preview';
+    st.pendingDoc = pendingDoc;
+
+    const isDup = paDocIsDuplicate(item, pendingDoc);
+    const personLabel = st.person === 'spouse'
+        ? (item.spouse_name ? `👥 ${item.spouse_name}` : '👥 בן/בת הזוג')
+        : `👤 ${item.client_name || 'לקוח'}`;
+
+    const pop = document.getElementById('paAddDocPopover');
+    if (!pop) return;
+    pop.innerHTML = `
+        <div class="pa-add-doc-step-title"><i data-lucide="eye" class="icon-xs"></i> תצוגה מקדימה</div>
+        <div class="pa-add-doc-preview">
+            <div class="pa-add-doc-preview-name">${escapeHtml(displayName)}</div>
+            <div class="pa-add-doc-preview-meta">
+                ${categoryLabel ? `<span>${escapeHtml(categoryLabel)}</span>` : ''}
+                <span>${escapeHtml(personLabel)}</span>
+            </div>
+        </div>
+        <div class="pa-add-doc-warning" id="paAddDocWarning" style="${isDup ? '' : 'display:none;'}">${isDup ? 'מסמך זה כבר קיים ברשימה' : ''}</div>
+        <div class="pa-add-doc-actions">
+            <button type="button" class="btn btn-sm" onclick="paAddDocBackToPick()">
+                <i data-lucide="arrow-right" class="icon-xs"></i> חזור
+            </button>
+            <button type="button" class="btn btn-sm btn-success" id="paAddDocConfirmBtn" onclick="paAddDocConfirm()" ${isDup ? 'disabled' : ''}>
+                <i data-lucide="check" class="icon-xs"></i> הוסף לרשימה
+            </button>
+        </div>`;
+    safeCreateIcons(pop);
+}
+
+function _paApplyOptimisticAdd(item, pendingDoc, placeholderId) {
+    const cached = _paTemplateCache.get(item.client_id);
+    const catInfo = cached && cached.apiCategories.find(c => c.id === pendingDoc.category);
+    const catName = catInfo ? (catInfo.name_he || catInfo.name || '') : (pendingDoc.category || 'מסמך');
+    const catEmoji = catInfo ? (catInfo.emoji || '📄') : '📄';
+
+    // Find or create person group
+    const groups = Array.isArray(item.doc_groups) ? item.doc_groups : (item.doc_groups = []);
+    let group = groups.find(g => g.person === pendingDoc.person);
+    if (!group) {
+        group = {
+            person: pendingDoc.person,
+            person_label: pendingDoc.person === 'spouse'
+                ? `מסמכים של ${item.spouse_name || 'בן/בת הזוג'}`
+                : `מסמכים של ${item.client_name}`,
+            categories: []
+        };
+        groups.push(group);
+    }
+    // Find or create category
+    let cat = (group.categories || []).find(c => (c.id === pendingDoc.category) || (c.name === catName));
+    if (!cat) {
+        cat = { id: pendingDoc.category, name: catName, emoji: catEmoji, docs: [] };
+        (group.categories = group.categories || []).push(cat);
+    }
+    const newDoc = {
+        doc_record_id: placeholderId,
+        doc_id: placeholderId,
+        id: placeholderId,
+        type: pendingDoc.template_id,
+        category: pendingDoc.category,
+        person: pendingDoc.person,
+        issuer_name: pendingDoc.issuer_name,
+        issuer_name_en: pendingDoc.issuer_name_en,
+        issuer_key: pendingDoc.issuer_key,
+        name: pendingDoc.issuer_name,
+        name_short: pendingDoc.issuer_name,
+        status: 'Required_Missing'
+    };
+    cat.docs = cat.docs || [];
+    cat.docs.push(newDoc);
+
+    // Mirror into doc_chips (flat master list)
+    const chips = Array.isArray(item.doc_chips) ? item.doc_chips : (item.doc_chips = []);
+    chips.push({
+        doc_id: placeholderId,
+        name: pendingDoc.issuer_name,
+        name_short: pendingDoc.issuer_name,
+        category_emoji: catEmoji,
+        status: 'Required_Missing',
+        issuer_name_suggested: ''
+    });
+}
+
+function _paRollbackOptimisticAdd(item, placeholderId) {
+    for (const g of (item.doc_groups || [])) {
+        for (const cat of (g.categories || [])) {
+            if (!Array.isArray(cat.docs)) continue;
+            cat.docs = cat.docs.filter(d => (d.doc_record_id || d.doc_id || d.id) !== placeholderId);
+        }
+    }
+    if (Array.isArray(item.doc_chips)) {
+        item.doc_chips = item.doc_chips.filter(c => c.doc_id !== placeholderId);
+    }
+}
+
+async function paAddDocConfirm() {
+    const st = _paAddDocState;
+    if (!st || !st.pendingDoc) return;
+    const item = pendingApprovalData.find(i => i.report_id === st.reportId);
+    if (!item) return;
+
+    // Re-check duplicate (state may have changed)
+    if (paDocIsDuplicate(item, st.pendingDoc)) {
+        _paShowAddDocWarning('מסמך זה כבר קיים ברשימה');
+        const btn = document.getElementById('paAddDocConfirmBtn');
+        if (btn) btn.disabled = true;
+        return;
+    }
+
+    const pendingDoc = { ...st.pendingDoc, person: st.person };
+    const placeholderId = `pa-new-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+
+    // Close popover first
+    closePaAddDocPopover();
+
+    // Optimistic local update + re-render
+    _paApplyOptimisticAdd(item, pendingDoc, placeholderId);
+    const card = document.querySelector(`.pa-card[data-report-id="${CSS.escape(item.report_id)}"]`);
+    if (card) {
+        card.outerHTML = buildPaCard(item);
+        safeCreateIcons(document.getElementById('paCardsContainer') || document);
+    }
+
+    const payload = {
+        data: {
+            fields: [{
+                type: 'HIDDEN_FIELDS',
+                value: {
+                    report_record_id: item.report_id,
+                    client_name: item.client_name || '',
+                    spouse_name: item.spouse_name || '',
+                    year: item.year || ''
+                }
+            }],
+            extensions: {
+                docs_to_create: [{
+                    issuer_name: pendingDoc.issuer_name,
+                    issuer_name_en: pendingDoc.issuer_name_en || '',
+                    template_id: pendingDoc.template_id,
+                    category: pendingDoc.category,
+                    person: pendingDoc.person,
+                    issuer_key: pendingDoc.issuer_key || ''
+                }],
+                send_email: false
+            }
+        }
+    };
+
+    try {
+        const resp = await fetchWithTimeout(ENDPOINTS.EDIT_DOCUMENTS, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${authToken}`
+            },
+            body: JSON.stringify(payload)
+        }, FETCH_TIMEOUTS.mutate);
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        showAIToast('המסמך נוסף בהצלחה', 'success');
+    } catch (err) {
+        console.error('DL-301: add-doc failed', err);
+        _paRollbackOptimisticAdd(item, placeholderId);
+        const card2 = document.querySelector(`.pa-card[data-report-id="${CSS.escape(item.report_id)}"]`);
+        if (card2) {
+            card2.outerHTML = buildPaCard(item);
+            safeCreateIcons(document.getElementById('paCardsContainer') || document);
+        }
+        showAIToast('שגיאה בהוספת המסמך', 'danger');
+    }
+}
+
+// ==================== /DL-301 ====================
 
 function statusLabel(status, verbose = false) {
     if (verbose) {
