@@ -5958,14 +5958,7 @@ function buildPaPreviewBody(item) {
                 </button>
             </div>`;
 
-        if (yesAnswers.length > 0) {
-            qaHtml += `<div class="pa-preview-subsection">
-                <div class="pa-preview-subtitle">✓ כן (${yesAnswers.length})</div>
-                <div class="pa-yes-chips-grid">
-                    ${yesAnswers.map(a => `<span class="pa-yes-chip">${escapeHtml(a.label)}</span>`).join('')}
-                </div>
-            </div>`;
-        }
+        // DL-299 follow-up: "✓ כן" chip block removed (noisy; reviewer only needs free-text answers + optional "לא" reveal)
 
         if (freeAnswers.length > 0) {
             qaHtml += `<div class="pa-preview-subsection">
