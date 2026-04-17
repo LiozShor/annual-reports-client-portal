@@ -7894,6 +7894,8 @@ tr:hover .client-edit-link {
 .pa-preview-qa-value {
     color: var(--gray-900);
     flex: 1;
+    white-space: pre-wrap; /* DL-299 followup: preserve client-entered newlines (multi-employer list) */
+    word-break: break-word;
 }
 
 /* Doc list — per-person / per-category tree */
