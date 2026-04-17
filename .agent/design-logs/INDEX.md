@@ -2,7 +2,7 @@
 
 Active and pending logs. For completed history, see [ARCHIVE-INDEX.md](ARCHIVE-INDEX.md).
 
-**Total logs:** 194 | **Active:** 96 | **Archived:** 98
+**Total logs:** 196 | **Active:** 98 | **Archived:** 98
 
 ## Folder Structure
 
@@ -21,6 +21,7 @@ Active and pending logs. For completed history, see [ARCHIVE-INDEX.md](ARCHIVE-I
 
 | # | File | Status | Summary |
 |---|------|--------|---------|
+| 298 | [298-pa-queue-stacked-cards.md](admin-ui/298-pa-queue-stacked-cards.md) | IMPLEMENTED — NEED TESTING | PA queue redesign: delete master/preview split; stacked full-width cards (`.pa-stack`) with collapsed header (name, age, count badges, folder-open doc-manager link, chevron) + expandable body (DL-295 2-col Q&A \| Docs, notes, questions, actions). First 3 of each page auto-expanded. DL-296 ✨ issuer suggestion chip moves inline into each doc row. Deletes `loadPaPreview`, `loadPaMobilePreview`, `buildPaPreviewHtml`, `_activePaReportId`, `paMobilePreviewModal` |
 | 296 | [296-wf02-extract-issuer-names.md](infrastructure/296-wf02-extract-issuer-names.md) | IMPLEMENTED — NEED TESTING | WF02 calls new `/webhook/extract-issuer-names` (Haiku 4.5 + forced tool use) to extract issuer names from questionnaire free-text; stores as `issuer_name_suggested`; Review & Approve card shows bold ✨ chip with 1-click accept (+ "אשר הכל" batch); raw context preserved in `bookkeepers_notes` |
 | 295 | [295-pa-queue-improvements.md](admin-ui/295-pa-queue-improvements.md) | IMPLEMENTED — NEED TESTING | PA queue: 2-column preview (Q&A \| docs) on desktop, stacked on mobile; fix `{placeholder}` leak by flattening `doc_chips` from `doc_groups`; age priority badge on master cards (red >7d / yellow 3–7d); inline doc status menu in preview reusing DL-227 pattern |
 | 294 | [294-pa-queue-redesign.md](admin-ui/294-pa-queue-redesign.md) | IMPLEMENTED — NEED TESTING | PA queue redesign: render `<b>issuer</b>` via `renderDocLabel`; split `doc_chips` (short_name) from `doc_groups` (per-person/per-category); redesigned preview panel with sticky client header + stats strip + sticky footer CTA + Yes/free-text answer grouping |

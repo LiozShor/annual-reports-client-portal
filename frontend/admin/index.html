@@ -777,44 +777,22 @@
                     </div>
                 </div>
 
-                <!-- Split View: Cards (right/start in RTL) + Preview (left/end in RTL) -->
-                <div class="ai-review-split">
-                    <!-- Master: Card list -->
-                    <div class="ai-review-master">
-                        <div id="paCardsContainer">
-                            <!-- DL-247: Skeleton shown until prefetch completes -->
-                            <div class="skeleton-loader">
-                                <div class="skeleton-card"><div class="skeleton skeleton-text-lg" style="width:60%;margin-bottom:var(--sp-3)"></div><div class="skeleton skeleton-text" style="width:40%"></div><div class="skeleton skeleton-text" style="width:80%"></div></div>
-                                <div class="skeleton-card"><div class="skeleton skeleton-text-lg" style="width:50%;margin-bottom:var(--sp-3)"></div><div class="skeleton skeleton-text" style="width:45%"></div><div class="skeleton skeleton-text" style="width:70%"></div></div>
-                            </div>
-                        </div>
-                        <div id="paPagination"></div>
-                        <div id="paEmptyState" class="ai-empty-done" style="display: none;">
-                            <div class="ai-empty-done-icon"><i data-lucide="circle-check-big" class="icon-2xl"></i></div>
-                            <h2>כל השאלונים נסקרו</h2>
-                            <p>אין שאלונים הממתינים לאישור ושליחת מסמכים</p>
-                            <button class="btn btn-secondary mt-4" onclick="loadPendingApprovalQueue()">
-                                <i data-lucide="refresh-cw" class="icon-sm"></i> בדוק שוב
-                            </button>
-                        </div>
+                <!-- DL-298: Stacked full-width cards (replaces master/preview split) -->
+                <div id="paCardsContainer" class="pa-stack">
+                    <!-- DL-247: Skeleton shown until prefetch completes -->
+                    <div class="skeleton-loader">
+                        <div class="skeleton-card"><div class="skeleton skeleton-text-lg" style="width:60%;margin-bottom:var(--sp-3)"></div><div class="skeleton skeleton-text" style="width:40%"></div><div class="skeleton skeleton-text" style="width:80%"></div></div>
+                        <div class="skeleton-card"><div class="skeleton skeleton-text-lg" style="width:50%;margin-bottom:var(--sp-3)"></div><div class="skeleton skeleton-text" style="width:45%"></div><div class="skeleton skeleton-text" style="width:70%"></div></div>
                     </div>
-
-                    <!-- Detail: Preview panel (sticky) -->
-                    <div class="ai-review-detail" id="paReviewDetail">
-                        <div class="preview-header-bar" id="paPreviewHeaderBar" style="display: none;">
-                            <span class="preview-file-name" id="paPreviewClientName"></span>
-                            <a href="#" target="_blank" id="paOpenInDocManager" class="btn btn-ghost btn-sm">
-                                <i data-lucide="external-link" class="icon-sm"></i> פתח בניהול מסמכים
-                            </a>
-                        </div>
-                        <div class="preview-placeholder" id="paPreviewPlaceholder">
-                            <i data-lucide="clipboard-pen" class="icon-2xl"></i>
-                            <p>לחץ על כרטיס לקוח לפרטים מלאים</p>
-                        </div>
-                        <div id="paPreviewBody" class="pa-preview-body" style="display:none;">
-                            <!-- Populated by loadPaPreview() -->
-                        </div>
-                    </div>
+                </div>
+                <div id="paPagination" class="pa-stack-pagination"></div>
+                <div id="paEmptyState" class="ai-empty-done" style="display: none;">
+                    <div class="ai-empty-done-icon"><i data-lucide="circle-check-big" class="icon-2xl"></i></div>
+                    <h2>כל השאלונים נסקרו</h2>
+                    <p>אין שאלונים הממתינים לאישור ושליחת מסמכים</p>
+                    <button class="btn btn-secondary mt-4" onclick="loadPendingApprovalQueue()">
+                        <i data-lucide="refresh-cw" class="icon-sm"></i> בדוק שוב
+                    </button>
                 </div>
             </div>
 
@@ -1206,20 +1184,7 @@
         </div>
     </div>
 
-    <!-- Mobile PA Preview Modal (DL-292) -->
-    <div id="paMobilePreviewModal" class="ai-modal-overlay" onclick="if(event.target===this)closePaMobilePreview()">
-        <div class="ai-modal-panel mobile-preview-panel">
-            <div class="mobile-preview-header">
-                <button class="btn btn-ghost btn-sm" onclick="closePaMobilePreview()">
-                    <i data-lucide="x" class="icon-sm"></i>
-                </button>
-                <span class="preview-file-name" id="paMobileClientName"></span>
-            </div>
-            <div class="mobile-preview-body" id="paMobilePreviewBody" style="overflow-y:auto;padding:var(--sp-4);">
-                <!-- populated by loadPaMobilePreview() -->
-            </div>
-        </div>
-    </div>
+    <!-- DL-298: removed mobile PA preview modal (stacked cards render inline on mobile) -->
 
     <!-- Script -->
     <script src="../assets/js/error-handler.js"></script>

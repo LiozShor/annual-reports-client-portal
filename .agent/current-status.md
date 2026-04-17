@@ -1,21 +1,59 @@
 # Annual Reports CRM - Current Status
 
-**Last Updated:** 2026-04-17 (DL-295 shipped & merged; ⚠️ KNOWN BUG: preview docs column not rendering in live test — needs next-session debug)
+**Last Updated:** 2026-04-17 (DL-298 implemented — PA queue full redesign to stacked full-width cards; DL-295 preview-panel bug moot — preview panel removed)
 
-## ⚠️ Open Bug from DL-295 (2026-04-17)
+## Session Summary (2026-04-17 — DL-298 PA queue stacked cards)
 
-Live test of merged DL-295 on main:
-- ✅ Placeholder fix works (chips clean — "נהרייה", "יובל חינוך" — no `{city_name}` / `{company_name}` leak)
-- ✅ Priority badge works (yellow "5 ימים" pill on cards)
-- ❌ **Preview panel docs column appears empty** — only Q&A renders. Stats strip shows correct doc count (5 📂), master card chips populate, but `.pa-preview-col--docs` looks empty.
+### DL-298: PA Queue — Stacked Full-Width Cards with Internal Q&A | Docs Split [IMPLEMENTED — NEED TESTING]
 
-Suspect causes to investigate:
-1. Browser: check `pendingApprovalData[0].doc_groups` in console — is it populated?
-2. CSS: try `grid-template-columns: minmax(0, 1fr) minmax(0, 1fr)` in `.pa-preview-cols`
-3. Cache: confirm hard-refresh. GitHub Pages deploy lag possible.
-4. RTL + grid — docs col rendered but positioned off-screen?
+Full redesign of the "סקירה ואישור" tab. Replaces DL-292's master/preview split with a stacked column of full-width client cards; each card internally splits Q&A (left) and required docs (right) at ≥1024px. First 3 cards (FIFO-oldest) auto-expanded on load; the rest render as informative collapsed headers (name, id, age badge, count pills for answers / docs / ✨ / questions / notes, a folder-open doc-manager link matching AI-Review accordions, and a chevron). DL-296's ✨ issuer-name suggestion moved from a floating card-level band to an inline chip at the end of each doc row — 1 click accepts. Client Questions modal unchanged. Approve & Send unchanged. Preview panel + `loadPaPreview` / `loadPaMobilePreview` / `buildPaPreviewHtml` / `_activePaReportId` / mobile preview modal all deleted. **DL-295 "docs column empty in preview" bug is now moot — the preview panel no longer exists.**
 
-Code to inspect: `frontend/admin/js/script.js` `buildPaPreviewBody` (~line 5988); `frontend/admin/css/style.css` `.pa-preview-cols` (~line 7690).
+**Files changed:**
+```
+frontend/admin/index.html                                   # PA tab: .ai-review-split → #paCardsContainer.pa-stack; removed paMobilePreviewModal
+frontend/admin/js/script.js                                 # buildPaCard rewrite (header + optional body); togglePaCard; _paExpanded Set; inline ✨ chip inside renderPaDocTagRow; deleted 5 preview fns
+frontend/admin/css/style.css                                # .pa-stack, .pa-card--stack/collapsed/expanded, .pa-card__body fade-in, .pa-count-badge, .pa-card__chevron, .pa-doc-row__suggest; removed stale #paReviewDetail mobile rule
+.agent/design-logs/admin-ui/298-pa-queue-stacked-cards.md   # this log
+.agent/design-logs/INDEX.md                                 # DL-298 row
+```
+
+**No backend changes.** DL-292 endpoint already returns all needed fields; DL-296 populates `issuer_name_suggested` as before.
+
+---
+
+## Active TODOs
+
+1. **Test DL-298: PA Queue stacked cards** — verify the stacked layout + expand/collapse + inline ✨ + doc-manager link on the live site.
+   - [ ] Open "סקירה ואישור" tab → no sticky preview panel exists; single stacked column of cards
+   - [ ] First 3 cards expanded on load; rest collapsed with informative header (name, id, date, priority badge, count badges, folder-open doc-manager link)
+   - [ ] Expanded card at ≥1024px: Q&A on one side, docs on the other side, 50/50
+   - [ ] Expanded card at <1024px: Q&A and docs stack vertically
+   - [ ] Click collapsed card header → expands inline with fade-in; chevron rotates
+   - [ ] Click expanded card header → collapses back
+   - [ ] Click folder-open icon in header → opens `document-manager.html?client_id=<id>` in a new tab; does NOT toggle expand/collapse state
+   - [ ] Card with ≥1 ✨ suggestion → ✨ chip renders INLINE in the matching doc row (right after the doc name), not in a floating band
+   - [ ] Click ✨ chip → optimistic UI removes chip, doc name updates, toast shown, Airtable PATCHed (DL-296 behavior preserved)
+   - [ ] Inline doc status menu (DL-227 pattern via `renderPaDocTagRow`) still works inside the card
+   - [ ] "שאל את הלקוח" modal still opens from card actions footer (DL-292 behavior preserved)
+   - [ ] Approve & Send → card slides out → toast "נשלח ל…" → stage advances; queue re-renders minus that card
+   - [ ] Empty state "כל השאלונים נסקרו" renders when no items
+   - [ ] Pagination (50/page) renders below the stack
+   - [ ] Year + filing-type filters still work
+   - [ ] AI-Review tab visually unchanged (no CSS regression)
+   - [ ] Doc-manager, dashboard, reminders tabs unchanged
+   - [ ] Mobile (390px): cards stack full-width, body sections stack, ✨ chip still inline, actions footer full-width
+   - [ ] RTL: chevron rotates the correct direction; inline ✨ chip sits at the end of the doc name (logical, not left)
+   - [ ] No console errors; no dangling references to `paPreview*` DOM ids or `_activePaReportId`
+
+   Design log: `.agent/design-logs/admin-ui/298-pa-queue-stacked-cards.md`
+
+---
+
+## Archived Sessions
+
+### 2026-04-17 — DL-295 (superseded by DL-298)
+
+DL-295 shipped 2-col preview + placeholder fix + priority + inline actions. The preview panel it redesigned has been removed by DL-298; the "docs column empty in preview" bug noted at the top of the previous current-status is no longer reachable. DL-295's backend `doc_chips` flattening + `.pa-doc-tag-clickable` + priority CSS + inline status menu are still in use inside the new stacked cards.
 
 ---
 

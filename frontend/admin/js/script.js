@@ -5690,7 +5690,8 @@ let pendingApprovalLoaded = false;
 let pendingApprovalLoadedAt = 0;
 let _paPage = 1;
 const PA_PAGE_SIZE = 20;
-let _activePaReportId = null;
+// DL-298: expand state for stacked cards. First 3 of each render are pre-expanded; others toggle via togglePaCard().
+let _paExpanded = new Set();
 let _paQuestionsEditState = []; // mutable copy for the questions modal
 let _paQuestionsReportId = null;
 
@@ -5775,19 +5776,42 @@ function renderPendingApprovalCards() {
 
     const pageItems = items.slice((_paPage - 1) * PA_PAGE_SIZE, _paPage * PA_PAGE_SIZE);
 
+    // DL-298: auto-expand first 3 of the current page (FIFO-oldest-first). Additive — doesn't undo manual collapses on re-render of a single card.
+    for (let i = 0; i < Math.min(3, pageItems.length); i++) {
+        _paExpanded.add(pageItems[i].report_id);
+    }
+
     container.innerHTML = pageItems.map(item => buildPaCard(item)).join('');
     renderPagination('paPagination', items.length, _paPage, PA_PAGE_SIZE, (p) => { _paPage = p; renderPendingApprovalCards(); });
     safeCreateIcons(container);
 }
 
+// DL-298: toggle expand/collapse state for a single card; only re-renders that card.
+function togglePaCard(reportId, ev) {
+    if (ev) ev.stopPropagation();
+    if (_paExpanded.has(reportId)) _paExpanded.delete(reportId);
+    else _paExpanded.add(reportId);
+    const item = pendingApprovalData.find(i => i.report_id === reportId);
+    if (!item) return;
+    const card = document.querySelector(`.pa-card[data-report-id="${CSS.escape(reportId)}"]`);
+    if (card) {
+        card.outerHTML = buildPaCard(item);
+        safeCreateIcons(document.getElementById('paCardsContainer') || document);
+    }
+}
+
+// DL-298: stacked full-width card. Collapsed header always visible; body expanded when in _paExpanded set.
 function buildPaCard(item) {
     const escapedName = escapeHtml(item.client_name || '');
     const relDate = item.submitted_at ? formatRelativeTime(item.submitted_at) : '';
     const qs = Array.isArray(item.answers_summary) ? item.answers_summary : [];
+    const answersAll = Array.isArray(item.answers_all) ? item.answers_all : qs;
     const docs = Array.isArray(item.doc_chips) ? item.doc_chips : (Array.isArray(item.docs) ? item.docs : []);
-    const questions = Array.isArray(item.client_questions) ? item.client_questions : [];
-    const qCount = questions.filter(q => q && (q.text || '').trim()).length;
-    const isActive = _activePaReportId === item.report_id;
+    const questions = Array.isArray(item.client_questions) ? item.client_questions.filter(q => q && (q.text || '').trim()) : [];
+    const qCount = questions.length;
+    const notesText = [(item.notes || '').trim(), (item.client_notes || '').trim()].filter(Boolean).join('\n\n');
+    const suggestionCount = docs.filter(d => (d.issuer_name_suggested || '').trim()).length;
+    const isExpanded = _paExpanded.has(item.report_id);
 
     // DL-295: priority age badge — red >7d, yellow 3–7d, none <3d
     const ageDays = item.submitted_at
@@ -5799,110 +5823,57 @@ function buildPaCard(item) {
         ? `<span class="pa-card__priority ${priorityCls}">${ageDays} ימים</span>`
         : '';
 
-    // Answer chips (first 4)
-    const visibleAnswers = qs.slice(0, 4);
-    const moreAnswers = qs.length > 4 ? qs.length - 4 : 0;
-    const answerChips = visibleAnswers.map(a => `<span class="pa-chip pa-chip--answer" title="${escapeHtml(a.label)}">${escapeHtml(a.value.length > 20 ? a.value.slice(0, 20) + '…' : a.value)}</span>`).join('') +
-        (moreAnswers > 0 ? `<span class="pa-chip pa-chip--more">+${moreAnswers}</span>` : '');
+    // Count badges (always visible in header — triage info at a glance)
+    const countBadges = `
+        <span class="pa-count-badge" title="תשובות שאלון"><i data-lucide="file-text" class="icon-xs"></i> ${answersAll.length}</span>
+        <span class="pa-count-badge" title="מסמכים"><i data-lucide="folder" class="icon-xs"></i> ${docs.length}</span>
+        ${suggestionCount > 0 ? `<span class="pa-count-badge pa-count-badge--suggest" title="הצעות שם מנפיק">✨ ${suggestionCount}</span>` : ''}
+        ${qCount > 0 ? `<span class="pa-count-badge" title="שאלות ללקוח"><i data-lucide="message-circle" class="icon-xs"></i> ${qCount}</span>` : ''}
+        ${notesText ? `<span class="pa-count-badge" title="הערות"><i data-lucide="message-square" class="icon-xs"></i></span>` : ''}
+    `;
 
-    // DL-295: Doc chips use resolved `name` from doc_groups pipeline (no {placeholder} leak)
-    const visibleDocs = docs.slice(0, 6);
-    const moreDocs = docs.length > 6 ? docs.length - 6 : 0;
-    const docChips = visibleDocs.map(d => {
-        const nameHtml = d.name || d.short_name_he || '';
-        const plain = nameHtml.replace(/<\/?b>/g, '');
-        return `<span class="pa-chip pa-chip--doc" title="${escapeHtml(plain)}">${d.category_emoji || '📄'} ${renderDocLabel(nameHtml)}</span>`;
-    }).join('') + (moreDocs > 0 ? `<span class="pa-chip pa-chip--more">+${moreDocs}</span>` : '');
-
-    // DL-293: issuer-name suggestion chips (one per doc with a pending ✨ suggestion)
-    const suggestions = docs.filter(d => (d.issuer_name_suggested || '').trim());
-    const suggestionChips = suggestions.map(d => {
-        const sug = (d.issuer_name_suggested || '').trim();
-        const truncated = sug.length > 18 ? sug.slice(0, 18) + '…' : sug;
-        return `<button class="pa-chip pa-suggest-chip"
-            title="${escapeHtml('שנה שם לגורם המנפיק: ' + sug)}"
-            data-doc-id="${escapeHtml(d.doc_id)}"
-            data-suggestion="${escapeHtml(sug)}"
-            data-report-id="${item.report_id}"
-            onclick="event.stopPropagation(); acceptIssuerSuggestion(this)">
-            <span class="pa-suggest-chip__icon">✨</span>
-            <strong>${escapeHtml(truncated)}</strong>
-            <span class="pa-suggest-chip__check">✓</span>
-        </button>`;
-    }).join('');
-    const acceptAll = suggestions.length > 1
-        ? `<button class="pa-suggest-all" data-report-id="${item.report_id}" onclick="event.stopPropagation(); acceptAllIssuerSuggestions('${item.report_id}')">✨ אשר הכל (${suggestions.length})</button>`
-        : '';
-    const suggestionsRow = suggestions.length > 0
-        ? `<div class="pa-card__suggestions" data-report-id="${item.report_id}">${suggestionChips}${acceptAll}</div>`
+    const clientId = item.client_id || '';
+    const docMgrLink = clientId
+        ? `<a href="../document-manager.html?client_id=${encodeURIComponent(clientId)}" target="_blank" class="ai-doc-manager-link" onclick="event.stopPropagation()" title="לניהול המסמכים"><i data-lucide="folder-open" class="icon-xs"></i></a>`
         : '';
 
-    // Notes preview
-    const notesText = (item.notes || item.client_notes || '').trim();
-    const notesHtml = notesText ? `<div class="pa-card__notes"><i data-lucide="message-square" class="icon-xs"></i> ${escapeHtml(notesText.slice(0, 120))}${notesText.length > 120 ? '…' : ''}</div>` : '';
-
-    // Prior-year placeholder
-    const priorYearHtml = `<div class="pa-card__prior-year"><i data-lucide="calendar" class="icon-xs"></i> נתוני שנה קודמת: <span class="pa-chip pa-chip--placeholder">—</span></div>`;
-
-    return `<div class="ai-review-card pa-card${isActive ? ' preview-active' : ''}" data-report-id="${item.report_id}" onclick="loadPaPreview('${item.report_id}')">
-        <div class="pa-card__header">
+    const header = `<div class="pa-card__header" onclick="togglePaCard('${item.report_id}', event)">
+        <div class="pa-card__header-main">
             <div class="pa-card__name">${escapedName}</div>
             <div class="pa-card__meta">
-                <span class="pa-card__id">${escapeHtml(item.client_id || '')}</span>
+                <span class="pa-card__id">${escapeHtml(clientId)}</span>
                 ${relDate ? `<span class="pa-card__date">${escapeHtml(relDate)}</span>` : ''}
                 ${priorityHtml}
             </div>
         </div>
-        ${qs.length > 0 ? `<div class="pa-card__chips-row">${answerChips}</div>` : ''}
-        ${docs.length > 0 ? `<div class="pa-card__chips-row">${docChips}</div>` : ''}
-        ${suggestionsRow}
-        ${notesHtml}
-        ${priorYearHtml}
+        <div class="pa-card__header-badges">${countBadges}</div>
+        <div class="pa-card__header-actions">
+            ${docMgrLink}
+            <button class="pa-card__chevron" aria-label="${isExpanded ? 'כווץ' : 'הרחב'}" onclick="togglePaCard('${item.report_id}', event)">
+                <i data-lucide="${isExpanded ? 'chevron-up' : 'chevron-down'}" class="icon-sm"></i>
+            </button>
+        </div>
+    </div>`;
+
+    const body = isExpanded ? `<div class="pa-card__body">
+        ${buildPaPreviewBody(item)}
         <div class="pa-card__actions" onclick="event.stopPropagation()">
             <button class="btn btn-sm btn-outline pa-btn-questions" onclick="openQuestionsForClient('${item.report_id}')">
                 <i data-lucide="message-circle" class="icon-xs"></i> שאל את הלקוח${qCount > 0 ? ` <span class="pa-questions-badge">${qCount}</span>` : ''}
             </button>
-            <button class="btn btn-sm btn-success pa-btn-approve" onclick="approveAndSendFromQueue('${item.report_id}', '${escapedName}')">
+            <button class="btn btn-sm btn-success pa-btn-approve" onclick="approveAndSendFromQueue('${item.report_id}', '${escapedName.replace(/'/g, "\\'")}')">
                 <i data-lucide="send" class="icon-xs"></i> אשר ושלח
             </button>
         </div>
+    </div>` : '';
+
+    return `<div class="pa-card pa-card--stack${isExpanded ? ' pa-card--expanded' : ' pa-card--collapsed'}" data-report-id="${item.report_id}">
+        ${header}
+        ${body}
     </div>`;
 }
 
-function loadPaPreview(reportId) {
-    if (window.innerWidth <= 768) {
-        loadPaMobilePreview(reportId);
-        return;
-    }
-    const item = pendingApprovalData.find(i => i.report_id === reportId);
-    if (!item) return;
-
-    // Toggle off if same card clicked again
-    if (_activePaReportId === reportId) {
-        _activePaReportId = null;
-        document.querySelectorAll('.pa-card.preview-active').forEach(c => c.classList.remove('preview-active'));
-        const hdr = document.getElementById('paPreviewHeaderBar');
-        if (hdr) hdr.style.display = 'none';
-        document.getElementById('paPreviewBody').style.display = 'none';
-        document.getElementById('paPreviewPlaceholder').style.display = '';
-        return;
-    }
-
-    _activePaReportId = reportId;
-    document.querySelectorAll('.pa-card.preview-active').forEach(c => c.classList.remove('preview-active'));
-    const card = document.querySelector(`.pa-card[data-report-id="${reportId}"]`);
-    if (card) card.classList.add('preview-active');
-
-    // Hide old-style header bar + placeholder; new layout has its own sticky header inside the body
-    const header = document.getElementById('paPreviewHeaderBar');
-    if (header) header.style.display = 'none';
-    document.getElementById('paPreviewPlaceholder').style.display = 'none';
-
-    const body = document.getElementById('paPreviewBody');
-    body.style.display = '';
-    body.innerHTML = buildPaPreviewHtml(item);
-    safeCreateIcons(body);
-}
+// DL-298: removed loadPaPreview — the card IS the preview; use togglePaCard() instead.
 
 // Show/hide "No" answers in preview (per-report state)
 const _paShowNoAnswers = new Set();
@@ -5910,13 +5881,13 @@ const _paShowNoAnswers = new Set();
 function togglePaShowNo(reportId) {
     if (_paShowNoAnswers.has(reportId)) _paShowNoAnswers.delete(reportId);
     else _paShowNoAnswers.add(reportId);
-    // Re-render preview
+    // DL-298: re-render the single card in place
     const item = pendingApprovalData.find(i => i.report_id === reportId);
     if (!item) return;
-    const body = document.getElementById('paPreviewBody');
-    if (body) {
-        body.innerHTML = buildPaPreviewBody(item);
-        safeCreateIcons(body);
+    const card = document.querySelector(`.pa-card[data-report-id="${CSS.escape(reportId)}"]`);
+    if (card) {
+        card.outerHTML = buildPaCard(item);
+        safeCreateIcons(document.getElementById('paCardsContainer') || document);
     }
 }
 
@@ -6066,12 +6037,26 @@ function buildPaPreviewBody(item) {
     return html || `<div class="pa-preview-empty"><p>אין נתונים לתצוגה</p></div>`;
 }
 
-// DL-295: inline doc status menu in PA preview (mirrors DL-227 pattern, scoped to pendingApprovalData)
+// DL-295/297: inline doc status menu + inline ✨ issuer suggestion chip (DL-296).
 function renderPaDocTagRow(d, reportId) {
     const status = d.status || 'Required_Missing';
     const statusCls = status.toLowerCase().replace(/_/g, '-');
     const docRecordId = d.doc_record_id || d.id || '';
     const nameHtml = renderDocLabel(d.name || '');
+    const suggestion = (d.issuer_name_suggested || '').trim();
+    const docId = d.doc_id || d.doc_record_id || d.id || '';
+    const suggestChip = suggestion
+        ? `<button class="pa-doc-row__suggest pa-suggest-chip"
+            title="${escapeHtml('שנה שם לגורם המנפיק: ' + suggestion)}"
+            data-doc-id="${escapeAttr(docId)}"
+            data-suggestion="${escapeAttr(suggestion)}"
+            data-report-id="${escapeAttr(reportId)}"
+            onclick="event.stopPropagation(); acceptIssuerSuggestion(this)">
+            <span class="pa-suggest-chip__icon">✨</span>
+            <strong>${escapeHtml(suggestion.length > 22 ? suggestion.slice(0, 22) + '…' : suggestion)}</strong>
+            <span class="pa-suggest-chip__check">✓</span>
+        </button>`
+        : '';
     return `<div class="pa-preview-doc-row">
         <span class="pa-chip pa-chip--status-${statusCls}" title="${escapeHtml(statusLabel(status, true))}">${statusLabel(status)}</span>
         <span class="pa-preview-doc-name pa-doc-tag-clickable"
@@ -6079,6 +6064,7 @@ function renderPaDocTagRow(d, reportId) {
               data-doc-record-id="${escapeAttr(docRecordId)}"
               data-status="${escapeAttr(status)}"
               onclick="openPaDocTagMenu(event, this)">${nameHtml}</span>
+        ${suggestChip}
     </div>`;
 }
 
@@ -6167,12 +6153,7 @@ async function updatePaDocStatusInline(reportId, docRecordId, newStatus) {
     const previousStatus = applyPaDocStatusChange(reportId, docRecordId, newStatus);
     if (previousStatus === null || previousStatus === newStatus) return;
 
-    // Re-render preview body + master card to reflect new status
-    const body = document.getElementById('paPreviewBody');
-    if (body) {
-        body.innerHTML = buildPaPreviewBody(item);
-        safeCreateIcons(body);
-    }
+    // DL-298: re-render the single stacked card in place (no preview panel anymore)
     const card = document.querySelector(`.pa-card[data-report-id="${CSS.escape(reportId)}"]`);
     if (card) {
         card.outerHTML = buildPaCard(item);
@@ -6210,11 +6191,6 @@ async function updatePaDocStatusInline(reportId, docRecordId, newStatus) {
     } catch (err) {
         // Rollback
         applyPaDocStatusChange(reportId, docRecordId, previousStatus);
-        const body2 = document.getElementById('paPreviewBody');
-        if (body2) {
-            body2.innerHTML = buildPaPreviewBody(item);
-            safeCreateIcons(body2);
-        }
         const card2 = document.querySelector(`.pa-card[data-report-id="${CSS.escape(reportId)}"]`);
         if (card2) {
             card2.outerHTML = buildPaCard(item);
@@ -6225,25 +6201,7 @@ async function updatePaDocStatusInline(reportId, docRecordId, newStatus) {
     }
 }
 
-function buildPaPreviewFooter(item) {
-    const qCount = Array.isArray(item.client_questions)
-        ? item.client_questions.filter(q => q && (q.text || '').trim()).length : 0;
-    const escapedName = escapeHtml(item.client_name || '').replace(/'/g, "\\'");
-    return `<div class="pa-preview-sticky-footer">
-        <button class="btn btn-outline pa-btn-questions" onclick="openQuestionsForClient('${item.report_id}')">
-            <i data-lucide="message-circle" class="icon-sm"></i> שאל את הלקוח${qCount > 0 ? ` <span class="pa-questions-badge">${qCount}</span>` : ''}
-        </button>
-        <button class="btn btn-success pa-btn-approve" onclick="approveAndSendFromQueue('${item.report_id}', '${escapedName}')">
-            <i data-lucide="send" class="icon-sm"></i> אשר ושלח ללקוח
-        </button>
-    </div>`;
-}
-
-function buildPaPreviewHtml(item) {
-    return buildPaPreviewHeader(item)
-        + `<div class="pa-preview-scroll">${buildPaPreviewBody(item)}</div>`
-        + buildPaPreviewFooter(item);
-}
+// DL-298: removed buildPaPreviewFooter + buildPaPreviewHtml (no preview panel; card renders body inline).
 
 function statusLabel(status, verbose = false) {
     if (verbose) {
@@ -6254,19 +6212,7 @@ function statusLabel(status, verbose = false) {
     return map[status] || status;
 }
 
-function loadPaMobilePreview(reportId) {
-    const item = pendingApprovalData.find(i => i.report_id === reportId);
-    if (!item) return;
-    _activePaReportId = reportId;
-    document.getElementById('paMobileClientName').textContent = item.client_name || '';
-    document.getElementById('paMobilePreviewBody').innerHTML = buildPaPreviewHtml(item);
-    safeCreateIcons(document.getElementById('paMobilePreviewBody'));
-    document.getElementById('paMobilePreviewModal').classList.add('show');
-}
-
-function closePaMobilePreview() {
-    document.getElementById('paMobilePreviewModal').classList.remove('show');
-}
+// DL-298: removed loadPaMobilePreview + closePaMobilePreview (mobile now uses stacked inline cards like desktop).
 
 // DL-293: Accept a single AI-suggested issuer_name on the Review & Approve card.
 async function acceptIssuerSuggestion(btn) {
@@ -6392,20 +6338,11 @@ async function approveAndSendFromQueue(reportId, clientName) {
 
             if (data.ok) {
                 showAIToast('נשלח ל' + clientName, 'success');
-                // Remove from local list
+                // Remove from local list + expand state
                 pendingApprovalData = pendingApprovalData.filter(i => i.report_id !== reportId);
+                _paExpanded.delete(reportId);
                 syncPaBadge(pendingApprovalData.length);
-                // Clear preview if this was the active card
-                if (_activePaReportId === reportId) {
-                    _activePaReportId = null;
-                    document.getElementById('paPreviewHeaderBar').style.display = 'none';
-                    document.getElementById('paPreviewBody').style.display = 'none';
-                    document.getElementById('paPreviewPlaceholder').style.display = '';
-                }
                 renderPendingApprovalCards();
-                // Auto-focus next card
-                const nextItem = pendingApprovalData[0];
-                if (nextItem) setTimeout(() => loadPaPreview(nextItem.report_id), 100);
             } else {
                 if (card) card.classList.remove('pa-card--sending');
                 showAIToast(data.error || 'שגיאה בשליחה', 'danger');
