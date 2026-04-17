@@ -1131,7 +1131,8 @@ function displayDocuments() {
 
                 // DL-296: AI suggestion chip — only on Required_Missing, non-waived docs
                 // that haven't yet been manually renamed in this edit session.
-                const suggestion = (doc.issuer_name_suggested || '').trim();
+                // DL-300 follow-up: ✨ issuer suggestion feature disabled pending UX rework.
+                const suggestion = '';
                 if (suggestion && !isWaived && effectiveStatus === 'Required_Missing' && !isNameChanged) {
                     html += `
                         <div class="dm-suggestion-row" id="suggest-row-${doc.id}">

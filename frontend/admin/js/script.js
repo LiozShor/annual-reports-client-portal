@@ -5819,7 +5819,9 @@ function buildPaCard(item) {
     const questions = Array.isArray(item.client_questions) ? item.client_questions.filter(q => q && (q.text || '').trim()) : [];
     const qCount = questions.length;
     const notesText = [(item.notes || '').trim(), (item.client_notes || '').trim()].filter(Boolean).join('\n\n');
-    const suggestionCount = docs.filter(d => (d.issuer_name_suggested || '').trim()).length;
+    // DL-300 follow-up: ✨ issuer suggestion feature disabled pending UX rework
+    // (accept flow clobbered full doc-row labels instead of re-composing with template prefix).
+    const suggestionCount = 0;
     const isExpanded = _paExpanded.has(item.report_id);
 
     // DL-295: priority age badge — red >7d, yellow 3–7d, none <3d
@@ -6115,7 +6117,8 @@ function renderPaDocTagRow(d, reportId) {
     const statusCls = status.toLowerCase().replace(/_/g, '-');
     const docRecordId = d.doc_record_id || d.id || '';
     const nameHtml = renderDocLabel(d.name || '');
-    const suggestionRaw = (d.issuer_name_suggested || '').trim();
+    // DL-300 follow-up: ✨ issuer suggestion feature disabled pending UX rework.
+    const suggestionRaw = '';
     // DL-299 follow-up: hide chip ONLY when the stored `issuer_name` field already
     // equals the suggestion (a true no-op). Do NOT compare against `d.name` because
     // the full resolved template text may transitively include the issuer substring.
