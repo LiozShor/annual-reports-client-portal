@@ -7935,9 +7935,9 @@ tr:hover .client-edit-link {
 
 .pa-preview-doc-name {
     flex: 1;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    min-width: 0;
+    word-break: break-word;
+    white-space: normal; /* DL-299 followup: wrap long template names instead of truncating */
 }
 
 .pa-preview-doc-name b {
