@@ -123,26 +123,10 @@ adminPendingApproval.get('/admin-pending-approval', async (c) => {
         submitted_at = (qFields['תאריך הגשה'] as string) || null;
       }
 
-      // Build doc chips (flat) — short_name from template, issuer_name as raw HTML
+      // Filter in-scope docs (exclude Removed + Waived)
       const reportDocRecords = (docsByReport.get(report.id) || []).filter(d => {
         const s = d.fields.status as string;
         return s !== 'Removed' && s !== 'Waived';
-      });
-
-      const doc_chips = reportDocRecords.map(d => {
-        const df = d.fields as Record<string, unknown>;
-        const templateId = df.type as string | undefined;
-        const tmpl = templateId ? templateMap.get(templateId) : undefined;
-        const categoryId = df.category as string | undefined;
-        const cat = categoryId ? categoryMap.get(categoryId) : undefined;
-        return {
-          doc_id: d.id,
-          template_id: templateId || '',
-          short_name_he: tmpl?.short_name_he || tmpl?.name_he || templateId || '',
-          issuer_name: (df.issuer_name as string) || '',  // raw <b>...</b> HTML
-          category_emoji: cat?.emoji || '📄',
-          status: (df.status as string) || 'Required_Missing',
-        };
       });
 
       // Build grouped structure for preview panel — reuse doc-builder pipeline
@@ -157,6 +141,24 @@ adminPendingApproval.get('/admin-pending-approval', async (c) => {
         .map(d => ({ id: d.id, ...d.fields as Record<string, unknown> }));
       const groupedRaw = groupDocsByPerson(docFields, reportCtx, categoryMap, templateMap, companyLinks);
       const doc_groups = formatForOfficeMode(groupedRaw);
+
+      // DL-295: flatten doc_groups for master-card chips — single source of truth,
+      // avoids {placeholder} leakage from templates' raw short_name_he.
+      const doc_chips = doc_groups.flatMap((g) => {
+        const cats = Array.isArray((g as Record<string, unknown>).categories)
+          ? ((g as Record<string, unknown>).categories as Record<string, unknown>[])
+          : [];
+        return cats.flatMap((cat) => {
+          const catDocs = Array.isArray(cat.docs) ? (cat.docs as Record<string, unknown>[]) : [];
+          const emoji = (cat.emoji as string) || '📄';
+          return catDocs.map((d) => ({
+            doc_id: (d.doc_record_id as string) || (d.id as string) || '',
+            name: (d.name as string) || '',
+            category_emoji: emoji,
+            status: (d.status as string) || 'Required_Missing',
+          }));
+        });
+      });
 
       let client_questions: unknown[] = [];
       const rawCQ = rf.client_questions as string | undefined;

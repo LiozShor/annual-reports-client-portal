@@ -7686,6 +7686,56 @@ tr:hover .client-edit-link {
     justify-content: center;
 }
 
+/* DL-295: 2-column split (Q&A | Docs) on desktop, stacked on narrow viewports */
+.pa-preview-cols {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--sp-5);
+    align-items: start;
+    margin-bottom: var(--sp-4);
+}
+.pa-preview-col { min-width: 0; }
+.pa-preview-col .pa-preview-section { margin-bottom: var(--sp-4); }
+@media (max-width: 1023px) {
+    .pa-preview-cols { grid-template-columns: 1fr; gap: var(--sp-3); }
+}
+
+/* DL-295: master card priority age badge */
+.pa-card__priority {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1.4;
+}
+.pa-card__priority--med {
+    background: #fef3c7;
+    color: #92400e;
+    border: 1px solid #fde68a;
+}
+.pa-card__priority--high {
+    background: #fee2e2;
+    color: #991b1b;
+    border: 1px solid #fecaca;
+}
+
+/* DL-295: clickable doc-name in PA preview */
+.pa-doc-tag-clickable {
+    cursor: pointer;
+    border-radius: 4px;
+    padding: 2px 4px;
+    margin: -2px -4px;
+    transition: background 0.12s ease;
+}
+.pa-doc-tag-clickable:hover {
+    background: var(--gray-100, #f3f4f6);
+}
+.pa-doc-tag-clickable.ai-doc-tag-active {
+    background: var(--gray-200, #e5e7eb);
+}
+
 /* Sections inside the scroll region */
 .pa-preview-section {
     margin-bottom: var(--sp-6);
