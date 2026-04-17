@@ -6541,9 +6541,7 @@ function _paRenderAddDocPick() {
         const catTpls = groups[cat.id];
         if (!catTpls || catTpls.length === 0) continue;
         const items = catTpls.map(tpl => {
-            const display = _paStripBold((tpl.name_he || '')
-                .replace(/\{year\}/g, item.year || 'YYYY')
-                .replace(/\{spouse_name\}/g, item.spouse_name || ''));
+            const display = _paFormatTemplateTitle(tpl, item, null);
             return `<div class="pa-add-doc-option" data-template-id="${escapeAttr(tpl.template_id)}" onclick="paAddDocPickTemplate('${escapeAttr(tpl.template_id)}')">${escapeHtml(display)}</div>`;
         }).join('');
         listHtml += `<div class="pa-add-doc-cat">${escapeHtml((cat.emoji || '') + ' ' + (cat.name_he || ''))}</div>${items}`;
@@ -6623,32 +6621,72 @@ function paAddDocPickTemplate(templateId) {
     }
 }
 
+// DL-301: mirrors VAR_LABELS in document-manager.js (keep in sync)
 const _PA_VAR_LABELS = {
     issuer_name: 'שם החברה / המנפיק',
-    issuer_name_en: 'שם החברה (אנגלית)',
+    employer_name: 'שם המעסיק',
+    spouse_name: 'שם בן/בת הזוג',
+    institution_name: 'בנק / בית השקעות',
+    company_name: 'שם החברה',
+    city_name: 'שם הישוב',
+    allowance_type: 'סוג הקצבה',
+    person_name: 'שם מלא',
+    withdrawal_type: 'סוג המשיכה',
+    withdrawal_other_text: 'פרטי המשיכה',
+    deposit_type: 'סוג ההפקדה',
+    crypto_source: 'פלטפורמה',
+    gambling_source: 'מקור הזכייה',
+    rent_income_monthly: 'סכום שכירות חודשי',
+    rent_expense_monthly: 'סכום שכירות חודשי',
+    withholding_client_name: 'שם הלקוח',
+    university_name: 'מוסד לימודים',
+    degree_type: 'סוג התואר',
+    country: 'מדינה',
+    income_type: 'סוג ההכנסה',
+    other_income_text: 'פרטי ההכנסה',
+    bank_name: 'שם הבנק',
+    card_company: 'חברת אשראי',
+    lender_name: 'שם המלווה',
+    property_address: 'כתובת הנכס',
+    renovation_detail: 'פרטי השיפוץ',
+    vacation_details: 'פרטי הנכס',
+    vehicle_description: 'תיאור הרכב',
     year: 'שנה',
-    spouse_name: 'שם בן/בת הזוג'
+    year_plus_1: 'שנה עוקבת',
+    survivor_details: 'פרטי שארים',
+    relationship_details: 'פרטי ההנצחה',
+    medical_details: 'פרטים רפואיים'
 };
+
+function _paFormatTemplateTitle(tpl, item, collectedValues) {
+    const labels = _PA_VAR_LABELS;
+    const vals = { year: item.year || '', spouse_name: item.spouse_name || '', ...(collectedValues || {}) };
+    let name = (tpl.name_he || '');
+    name = name.replace(/\{([^}]+)\}/g, (_, key) => {
+        const v = (vals[key] || '').toString().trim();
+        if (v) return v;
+        return `[${labels[key] || key}]`;
+    });
+    return _paStripBold(name);
+}
 
 function _paRenderAddDocVariables(userVars) {
     const st = _paAddDocState;
     const pop = document.getElementById('paAddDocPopover');
     if (!pop || !st || !st.selectedTpl) return;
     const item = pendingApprovalData.find(i => i.report_id === st.reportId);
-    const displayName = _paStripBold((st.selectedTpl.name_he || '')
-        .replace(/\{year\}/g, item.year || 'YYYY')
-        .replace(/\{spouse_name\}/g, item.spouse_name || ''));
+    const initialTitle = _paFormatTemplateTitle(st.selectedTpl, item, null);
 
     const fields = userVars.map(v => {
         const label = _PA_VAR_LABELS[v] || v;
         return `<div class="pa-add-doc-var-row">
             <label>${escapeHtml(label)}</label>
-            <input type="text" class="pa-add-doc-var-input" data-var="${escapeAttr(v)}" dir="auto" placeholder="${escapeHtml(label)}">
+            <input type="text" class="pa-add-doc-var-input" data-var="${escapeAttr(v)}" dir="rtl" placeholder="${escapeHtml(label)}">
         </div>`;
     }).join('');
 
     pop.innerHTML = `
-        <div class="pa-add-doc-step-title"><i data-lucide="file-text" class="icon-xs"></i> ${escapeHtml(displayName)}</div>
+        <div class="pa-add-doc-step-title" id="paAddDocStepTitle"><i data-lucide="file-text" class="icon-xs"></i> <span id="paAddDocStepTitleText">${escapeHtml(initialTitle)}</span></div>
         <div class="pa-add-doc-vars">${fields}</div>
         <div class="pa-add-doc-warning" id="paAddDocWarning" style="display:none;"></div>
         <div class="pa-add-doc-actions">
@@ -6662,7 +6700,15 @@ function _paRenderAddDocVariables(userVars) {
     safeCreateIcons(pop);
     const inputs = pop.querySelectorAll('.pa-add-doc-var-input');
     if (inputs.length) setTimeout(() => inputs[0].focus(), 50);
+    const titleText = document.getElementById('paAddDocStepTitleText');
+    const updateTitle = () => {
+        if (!titleText) return;
+        const collected = {};
+        inputs.forEach(inp => { collected[inp.dataset.var] = (inp.value || '').trim(); });
+        titleText.textContent = _paFormatTemplateTitle(st.selectedTpl, item, collected);
+    };
     inputs.forEach((inp, i) => {
+        inp.addEventListener('input', updateTitle);
         inp.addEventListener('keydown', (e) => {
             if (e.key === 'Enter') {
                 e.preventDefault();
