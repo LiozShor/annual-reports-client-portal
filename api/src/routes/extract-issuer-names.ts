@@ -254,9 +254,19 @@ route.post('/extract-issuer-names', async (c) => {
       }
     }
 
-    if (updates.length > 0) {
+    // Defensive: never PATCH Airtable with empty/malformed IDs (422 INVALID_RECORDS)
+    const validUpdates = updates.filter(
+      (u) => typeof u.id === 'string' && u.id.startsWith('rec') && u.id.length >= 15,
+    );
+    const dropped = updates.length - validUpdates.length;
+    if (dropped > 0) {
+      console.warn(
+        `[extract-issuer-names] report=${body.report_record_id} dropped ${dropped} updates with invalid Airtable IDs`,
+      );
+    }
+    if (validUpdates.length > 0) {
       const airtable = new AirtableClient(c.env.AIRTABLE_BASE_ID, c.env.AIRTABLE_PAT);
-      await airtable.batchUpdate(DOCUMENTS_TABLE, updates);
+      await airtable.batchUpdate(DOCUMENTS_TABLE, validUpdates);
     }
 
     console.log(
