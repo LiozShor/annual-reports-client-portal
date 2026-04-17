@@ -1,9 +1,11 @@
 # Design Log 300: Per-Template Issuer-Suggestion Gate
 
-**Status:** [IMPLEMENTED — NEED TESTING]
+**Status:** [IMPLEMENTED — NEED TESTING] (✨ accept chip disabled on frontend — see 2026-04-17 follow-up)
 **Date:** 2026-04-17
 **Branch:** `DL-300-per-template-issuer-suggestion-gate`
 **Related:** DL-296 (WF02 ✨ issuer extraction), DL-299 (PA card manual edit + ✨ chip)
+
+> **2026-04-17 follow-up:** live-test on CPA-XXX surfaced a render bug in the ✨ accept flow: clicking "החלף ל-<issuer>" replaced `issuer_name` with the bare suggestion ("לאומי"), and `doc-builder.ts` resolves the row label as `issuer_name ?? template.name_he` — so the full "טופס 867 (אישור ניכוי מס) לשנת 2025 – …" context collapsed to just "לאומי". The ✨ chip is now **hidden on both surfaces** (PA card + doc-manager) via frontend stubs (`suggestion = ''`) in commit `ca3e7d5`. Backend DL-300 gate + `issuer_name_suggested` writes remain intact for opted-in templates — cheap, harmless, and ready for re-enable once the render/accept path re-composes labels via `buildShortName(templateId, issuer)`.
 
 ## 1. Context & Problem
 
