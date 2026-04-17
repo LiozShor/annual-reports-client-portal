@@ -21,20 +21,21 @@
             <p><a href="mailto:reports@moshe-atsits.co.il">reports@moshe-atsits.co.il</a></p>
         </div>
     </noscript>
+    <!-- Sticky Action Bar (DL-297: sibling of .container because .container has
+         overflow:hidden which clips position:sticky children on scroll). -->
+    <div id="stickyActionBar" class="sticky-action-bar">
+        <div class="sticky-progress-bar">
+            <div class="sticky-progress-fill" id="stickyProgressFill"></div>
+        </div>
+        <div class="sticky-bar-content">
+            <span id="stickySummary" class="sticky-summary"></span>
+            <span id="stickyChanges" class="sticky-changes"></span>
+            <div class="sticky-bar-actions" id="stickyBarActions"></div>
+        </div>
+    </div>
+
     <div class="page-wrapper">
         <div class="container">
-            <!-- Sticky Action Bar (DL-297: moved above header, sticks on scroll) -->
-            <div id="stickyActionBar" class="sticky-action-bar">
-                <div class="sticky-progress-bar">
-                    <div class="sticky-progress-fill" id="stickyProgressFill"></div>
-                </div>
-                <div class="sticky-bar-content">
-                    <span id="stickySummary" class="sticky-summary"></span>
-                    <span id="stickyChanges" class="sticky-changes"></span>
-                    <div class="sticky-bar-actions" id="stickyBarActions"></div>
-                </div>
-            </div>
-
             <!-- Header bar -->
             <header class="page-header">
                 <div class="page-header-top">

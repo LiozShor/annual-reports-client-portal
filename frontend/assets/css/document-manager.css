@@ -2196,11 +2196,8 @@ body {
     top: 0;
     z-index: 100;
     background: white;
-    /* No border-bottom or bottom shadow at-top — page-header sits flush below
-       so the two read as one header block. Only the side/bottom drop shadow
-       appears once it pins on scroll (visual cue it's now floating). */
-    box-shadow: 0 4px 10px -8px rgba(0, 0, 0, 0.15);
-    margin-bottom: 0;
+    border-bottom: 1px solid var(--gray-200);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
 }
 
 .sticky-progress-bar {
