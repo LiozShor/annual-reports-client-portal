@@ -5832,14 +5832,8 @@ function buildPaCard(item) {
         ? `<span class="pa-card__priority ${priorityCls}">${ageDays} ימים</span>`
         : '';
 
-    // Count badges (always visible in header — triage info at a glance). Icons removed per request; numbers + tooltips only.
-    const countBadges = `
-        <span class="pa-count-badge" title="תשובות שאלון">${answersAll.length}</span>
-        <span class="pa-count-badge" title="מסמכים">${docs.length}</span>
-        ${suggestionCount > 0 ? `<span class="pa-count-badge pa-count-badge--suggest" title="הצעות שם מנפיק">✨ ${suggestionCount}</span>` : ''}
-        ${qCount > 0 ? `<span class="pa-count-badge" title="שאלות ללקוח">❓ ${qCount}</span>` : ''}
-        ${notesText ? `<span class="pa-count-badge" title="הערות">💬</span>` : ''}
-    `;
+    // DL-299 follow-up: all count badges removed per request. Only the folder-open link + chevron remain.
+    const countBadges = '';
 
     const clientId = item.client_id || '';
     const docMgrLink = clientId
@@ -6026,7 +6020,9 @@ function buildPaPreviewBody(item) {
     // as cards, office_reply items nested as replies via reply_to, never raw JSON.
     const rawNotes = (item.notes || '').trim();
     const clientNotesPlain = (item.client_notes || '').trim();
-    const looksLikeJson = /^\s*[\[\{]/.test(rawNotes);
+    // Stronger JSON detection: prefix OR any tell-tale JSON fragment token
+    const looksLikeJson = /^\s*[\[\{]/.test(rawNotes)
+        || /"(id|source|type|reply_to|sender_email|summary|raw_snippet|hidden_from_dashboard|message_id)"\s*:/.test(rawNotes);
 
     let noteItems = [];
     if (rawNotes) {
@@ -6035,9 +6031,31 @@ function buildPaPreviewBody(item) {
             if (Array.isArray(parsed)) noteItems = parsed;
             else if (parsed && typeof parsed === 'object') noteItems = [parsed];
         } catch {
-            // Strict parse failed — salvage {…} objects one by one
-            const matches = rawNotes.match(/\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}/g) || [];
-            for (const m of matches) { try { noteItems.push(JSON.parse(m)); } catch { /* skip */ } }
+            // Strict parse failed — try multiple salvage strategies
+            // 1) Wrap in [ ... ] in case the outer brackets were stripped by Airtable truncation
+            try {
+                const wrapped = JSON.parse('[' + rawNotes.replace(/,\s*$/, '').replace(/,\s*\}/g, '}') + ']');
+                if (Array.isArray(wrapped)) noteItems = wrapped;
+            } catch { /* fall through */ }
+            // 2) Split by "},{" to get object chunks, re-brace, parse each
+            if (noteItems.length === 0) {
+                const chunks = rawNotes
+                    .replace(/^[\[\{]?/, '') // drop possible leading bracket
+                    .replace(/[\]\}]?$/, '') // drop possible trailing bracket
+                    .split(/\},\s*\{/);
+                for (let i = 0; i < chunks.length; i++) {
+                    const c = chunks[i];
+                    const prefix = i === 0 ? '{' : '{';
+                    const suffix = i === chunks.length - 1 ? '}' : '}';
+                    const candidate = (c.startsWith('{') ? c : prefix + c) + (c.endsWith('}') ? '' : suffix);
+                    try { noteItems.push(JSON.parse(candidate)); } catch { /* skip malformed */ }
+                }
+            }
+            // 3) Last-resort regex: grab everything between balanced-ish {...}
+            if (noteItems.length === 0) {
+                const matches = rawNotes.match(/\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}/g) || [];
+                for (const m of matches) { try { noteItems.push(JSON.parse(m)); } catch { /* skip */ } }
+            }
         }
     }
     // Partition: client messages = parents; office_reply = children, linked via reply_to
@@ -6162,13 +6180,22 @@ function renderPaDocTagRow(d, reportId) {
         onclick="event.stopPropagation(); openPaDocNotePopover(event, this)">
         <i data-lucide="${hasNote ? 'message-square-text' : 'message-square'}" class="icon-xs"></i>
     </button>`;
-    return `<div class="pa-preview-doc-row" data-doc-id="${escapeAttr(docId)}" data-report-id="${escapeAttr(reportId)}">
-        <span class="pa-chip pa-chip--status-${statusCls}" title="${escapeHtml(statusLabel(status, true))}">${statusLabel(status)}</span>
+    // DL-299 follow-up: drop the X/status chip — all docs at Pending_Approval are
+    // Required_Missing. Show a minimal grey text label only for the rare non-Missing
+    // states (Waived/Received). Row stays clickable to open the status menu.
+    const statusLabelInline = (status && status !== 'Required_Missing')
+        ? `<span class="pa-doc-row__status-label" title="${escapeHtml(statusLabel(status, true))}">${escapeHtml(statusLabel(status, true))}</span>`
+        : '';
+    const rowCls = status === 'Waived' ? 'pa-preview-doc-row pa-preview-doc-row--waived'
+                 : status === 'Received' ? 'pa-preview-doc-row pa-preview-doc-row--received'
+                 : 'pa-preview-doc-row';
+    return `<div class="${rowCls}" data-doc-id="${escapeAttr(docId)}" data-report-id="${escapeAttr(reportId)}">
         <span class="pa-preview-doc-name pa-doc-tag-clickable"
               data-report-id="${escapeAttr(reportId)}"
               data-doc-record-id="${escapeAttr(docRecordId)}"
               data-status="${escapeAttr(status)}"
               onclick="openPaDocTagMenu(event, this)">${nameHtml}</span>
+        ${statusLabelInline}
         ${suggestChip}
         <span class="pa-doc-row__actions">${pencilBtn}${noteBtn}</span>
     </div>`;
