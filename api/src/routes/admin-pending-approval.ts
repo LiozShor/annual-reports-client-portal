@@ -144,6 +144,7 @@ adminPendingApproval.get('/admin-pending-approval', async (c) => {
 
       // DL-295: flatten doc_groups for master-card chips — single source of truth,
       // avoids {placeholder} leakage from templates' raw short_name_he.
+      // DL-296: carry `issuer_name_suggested` through for the ✨ chip on the card.
       const doc_chips = doc_groups.flatMap((g) => {
         const cats = Array.isArray((g as Record<string, unknown>).categories)
           ? ((g as Record<string, unknown>).categories as Record<string, unknown>[])
@@ -156,6 +157,7 @@ adminPendingApproval.get('/admin-pending-approval', async (c) => {
             name: (d.name as string) || '',
             category_emoji: emoji,
             status: (d.status as string) || 'Required_Missing',
+            issuer_name_suggested: (d.issuer_name_suggested as string) || '',
           }));
         });
       });

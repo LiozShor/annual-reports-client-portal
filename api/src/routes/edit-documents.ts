@@ -234,6 +234,8 @@ function buildUpdateMap(data: ExtractedData): Map<string, Record<string, unknown
     if (!nameUpd.id) continue;
     if (!updateMap.has(nameUpd.id)) updateMap.set(nameUpd.id, { id: nameUpd.id });
     updateMap.get(nameUpd.id)!.issuer_name = nameUpd.issuer_name;
+    // DL-293: promoting / editing issuer_name clears any pending AI suggestion
+    updateMap.get(nameUpd.id)!.issuer_name_suggested = '';
   }
 
   // DL-205: Clear file fields for any doc reverting to Missing

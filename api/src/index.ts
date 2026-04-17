@@ -28,6 +28,7 @@ import checkSentEmails from './routes/check-sent-emails';
 import createFolders from './routes/create-folders';
 import checkFolders from './routes/check-folders';
 import backfill from './routes/backfill';
+import extractIssuerNames from './routes/extract-issuer-names';
 import { logError } from './lib/error-logger';
 import { handleInboundQueue } from './lib/inbound/queue-consumer';
 import { handleInboundDLQ } from './lib/inbound/dlq-consumer';
@@ -70,6 +71,7 @@ app.route('/webhook', checkSentEmails);
 app.route('/webhook', createFolders);
 app.route('/webhook', checkFolders);
 app.route('/webhook', backfill); // DL-267: temporary — remove after backfill
+app.route('/webhook', extractIssuerNames);
 
 // Health check
 app.get('/health', (c) => c.json({ ok: true, service: 'annual-reports-api' }));
