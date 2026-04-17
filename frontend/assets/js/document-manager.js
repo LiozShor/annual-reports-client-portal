@@ -426,8 +426,8 @@ async function loadClientReports(clientId) {
         CLIENT_EMAIL = data.client_email || '';
         CLIENT_CC_EMAIL = data.cc_email || '';
         CLIENT_PHONE = data.client_phone || '';
-        updateClientBarContacts();
         if (allReports.length === 0) {
+            updateClientBarContacts();
             document.getElementById('loading').style.display = 'none';
             document.getElementById('not-started-view').style.display = 'block';
             return;
@@ -437,6 +437,7 @@ async function loadClientReports(clientId) {
         const preferredTab = PREFERRED_FILING_TYPE || params.get('tab');
         const tabMatch = preferredTab && allReports.find(r => r.filing_type === preferredTab);
         REPORT_ID = tabMatch ? tabMatch.report_id : allReports[0].report_id;
+        updateClientBarContacts();
 
         // Render tabs if multiple reports
         if (allReports.length > 1) renderFilingTabs();
@@ -3692,7 +3693,11 @@ function updateClientBarContacts() {
         }
     }
     const editLink = document.getElementById('clientEditLink');
-    if (editLink && REPORT_ID) editLink.style.display = '';
+    if (editLink) editLink.style.display = REPORT_ID ? '' : 'none';
+    // Refresh lucide icon (pencil glyph) once the link becomes visible
+    if (editLink && REPORT_ID && window.lucide && typeof window.lucide.createIcons === 'function') {
+        try { window.lucide.createIcons(); } catch (_) { /* ignore */ }
+    }
 }
 
 function openClientDetailModal(reportId) {
