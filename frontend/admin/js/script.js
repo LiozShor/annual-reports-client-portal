@@ -432,13 +432,14 @@ let _reviewsAiCount = 0;
 let _reviewsPaCount = 0;
 function _syncReviewsGroupBadge() {
     const badge = document.getElementById('reviewsBottomBadge');
-    if (!badge) return;
+    const desktopBadge = document.getElementById('reviewsDesktopBadge');
     const total = (_reviewsAiCount || 0) + (_reviewsPaCount || 0);
     if (total > 0) {
-        badge.textContent = '';
-        badge.style.display = 'inline-block';
+        if (badge) { badge.textContent = ''; badge.style.display = 'inline-block'; }
+        if (desktopBadge) desktopBadge.style.display = 'inline-block';
     } else {
-        badge.style.display = 'none';
+        if (badge) badge.style.display = 'none';
+        if (desktopBadge) desktopBadge.style.display = 'none';
     }
 }
 

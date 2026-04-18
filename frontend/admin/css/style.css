@@ -1454,7 +1454,7 @@ select.field-prefilled {
     height: 20px;
     padding: 0 6px;
     border-radius: var(--radius-full);
-    background: #7C3AED;
+    background: var(--danger-500);
     color: white;
     font-size: 11px;
     font-weight: 700;
@@ -1572,6 +1572,18 @@ tr:hover .client-view-link {
 
 /* ==================== AI REVIEW TAB ==================== */
 
+/* Desktop reviews group dot */
+.desktop-reviews-badge {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: var(--radius-full);
+    background: var(--danger-500);
+    margin-inline-start: 4px;
+    vertical-align: middle;
+    flex-shrink: 0;
+}
+
 /* Tab Badge */
 .ai-review-tab-badge {
     display: inline-flex;
@@ -1581,7 +1593,7 @@ tr:hover .client-view-link {
     height: 20px;
     padding: 0 6px;
     border-radius: var(--radius-full);
-    background: var(--warning-500);
+    background: var(--danger-500);
     color: white;
     font-size: 11px;
     font-weight: 700;
@@ -6158,7 +6170,7 @@ tr:hover .client-edit-link {
         height: 18px;
         padding: 0 5px;
         border-radius: var(--radius-full);
-        background: var(--brand-500);
+        background: var(--danger-500);
         color: white;
         font-size: 10px;
         font-weight: 700;
