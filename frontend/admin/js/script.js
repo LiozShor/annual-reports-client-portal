@@ -364,10 +364,12 @@ function syncBottomNav(tabName) {
     bottomNav.querySelectorAll('.bottom-nav-item').forEach(btn => btn.classList.remove('active'));
 
     const questGroupTabs = ['send', 'questionnaires'];
-    const moreGroupTabs = ['review', 'reminders', 'pending-approval', 'ai-review'];
+    const reviewsGroupTabs = ['pending-approval', 'ai-review'];
+    const moreGroupTabs = ['review', 'reminders'];
 
     let dataTab = tabName;
     if (questGroupTabs.includes(tabName)) dataTab = 'questionnaires-group';
+    else if (reviewsGroupTabs.includes(tabName)) dataTab = 'reviews-group';
     else if (moreGroupTabs.includes(tabName)) dataTab = 'more';
 
     const target = bottomNav.querySelector(`[data-tab="${dataTab}"]`);
@@ -376,42 +378,29 @@ function syncBottomNav(tabName) {
     closeBottomNavPopovers();
 }
 
-function toggleBottomNavSubmenu(event) {
+function _bnPopoverToggle(targetId, event) {
     event.stopPropagation();
-    const popover = document.getElementById('bottomNavQuestPopover');
-    const morePopover = document.getElementById('bottomNavMorePopover');
+    const popover = document.getElementById(targetId);
+    if (!popover) return;
     const backdrop = document.getElementById('bottomNavBackdrop');
     const wasOpen = popover.classList.contains('open');
 
-    morePopover.classList.remove('open');
+    // Close other popovers
+    ['bottomNavQuestPopover', 'bottomNavReviewsPopover', 'bottomNavMorePopover'].forEach(id => {
+        if (id !== targetId) {
+            const p = document.getElementById(id);
+            if (p) p.classList.remove('open');
+        }
+    });
+
     popover.classList.toggle('open', !wasOpen);
-    backdrop.classList.toggle('open', !wasOpen);
+    if (backdrop) backdrop.classList.toggle('open', !wasOpen);
 
     if (!wasOpen) {
         const btn = event.currentTarget;
         const rect = btn.getBoundingClientRect();
-        popover.style.left = Math.max(8, rect.left + rect.width / 2 - 90) + 'px';
-    }
-
-    safeCreateIcons();
-}
-
-function toggleBottomNavMore(event) {
-    event.stopPropagation();
-    const popover = document.getElementById('bottomNavMorePopover');
-    const questPopover = document.getElementById('bottomNavQuestPopover');
-    const backdrop = document.getElementById('bottomNavBackdrop');
-    const wasOpen = popover.classList.contains('open');
-
-    questPopover.classList.remove('open');
-    popover.classList.toggle('open', !wasOpen);
-    backdrop.classList.toggle('open', !wasOpen);
-
-    if (!wasOpen) {
-        const btn = event.currentTarget;
-        const rect = btn.getBoundingClientRect();
-        const popW = 180;
-        let leftPos = rect.left + rect.width / 2 - 90;
+        const popW = 200;
+        let leftPos = rect.left + rect.width / 2 - popW / 2;
         leftPos = Math.max(8, Math.min(leftPos, window.innerWidth - popW - 8));
         popover.style.left = leftPos + 'px';
     }
@@ -419,12 +408,16 @@ function toggleBottomNavMore(event) {
     safeCreateIcons();
 }
 
+function toggleBottomNavSubmenu(event) { _bnPopoverToggle('bottomNavQuestPopover', event); }
+function toggleBottomNavReviews(event) { _bnPopoverToggle('bottomNavReviewsPopover', event); }
+function toggleBottomNavMore(event) { _bnPopoverToggle('bottomNavMorePopover', event); }
+
 function closeBottomNavPopovers() {
-    const q = document.getElementById('bottomNavQuestPopover');
-    const m = document.getElementById('bottomNavMorePopover');
+    ['bottomNavQuestPopover', 'bottomNavReviewsPopover', 'bottomNavMorePopover'].forEach(id => {
+        const p = document.getElementById(id);
+        if (p) p.classList.remove('open');
+    });
     const b = document.getElementById('bottomNavBackdrop');
-    if (q) q.classList.remove('open');
-    if (m) m.classList.remove('open');
     if (b) b.classList.remove('open');
 }
 
@@ -432,6 +425,20 @@ function switchTabFromBottomNav(tabName, event) {
     event.stopPropagation();
     closeBottomNavPopovers();
     switchTab(tabName);
+}
+
+let _reviewsAiCount = 0;
+let _reviewsPaCount = 0;
+function _syncReviewsGroupBadge() {
+    const badge = document.getElementById('reviewsBottomBadge');
+    if (!badge) return;
+    const total = (_reviewsAiCount || 0) + (_reviewsPaCount || 0);
+    if (total > 0) {
+        badge.textContent = total;
+        badge.style.display = 'inline-flex';
+    } else {
+        badge.style.display = 'none';
+    }
 }
 
 function syncAIBadge(topBadge, count) {
@@ -444,6 +451,8 @@ function syncAIBadge(topBadge, count) {
         topBadge.style.display = 'none';
         if (bottomBadge) bottomBadge.style.display = 'none';
     }
+    _reviewsAiCount = count || 0;
+    _syncReviewsGroupBadge();
 }
 
 // ==================== MOBILE PREVIEW MODAL (AI Review) ====================
@@ -5766,6 +5775,8 @@ function syncPaBadge(count) {
         badge.style.display = 'none';
         if (bottomBadge) bottomBadge.style.display = 'none';
     }
+    _reviewsPaCount = count || 0;
+    _syncReviewsGroupBadge();
 }
 
 function renderPendingApprovalCards() {
@@ -6458,8 +6469,13 @@ function openPaAddDocPopover(event, rowEl) {
     pop.id = 'paAddDocPopover';
     pop.className = 'pa-add-doc-popover';
     pop.onclick = (e) => e.stopPropagation();
-    pop.innerHTML = `<div class="pa-add-doc-loading">טוען תבניות…</div>`;
+    pop.innerHTML = `
+        <button type="button" class="pa-add-doc-close" aria-label="סגור" title="סגור" onclick="closePaAddDocPopover()">
+            <i data-lucide="x" class="icon-xs"></i>
+        </button>
+        <div class="pa-add-doc-body" id="paAddDocBody"><div class="pa-add-doc-loading">טוען תבניות…</div></div>`;
     document.body.appendChild(pop);
+    safeCreateIcons(pop);
 
     // Position (absolute, document-relative so popover scrolls with the page)
     const rect = rowEl.getBoundingClientRect();
@@ -6518,8 +6534,11 @@ function _paRenderAddDocPick() {
     const cached = _paTemplateCache.get(item.client_id);
     if (!cached) return;
 
+    const body = document.getElementById('paAddDocBody') || pop;
     const filingType = item.filing_type || 'annual_report';
-    const relevant = cached.apiTemplates.filter(t => !t.filing_type || t.filing_type === filingType);
+    const relevant = cached.apiTemplates
+        .filter(t => !t.filing_type || t.filing_type === filingType)
+        .filter(t => _paTemplateMatchesPerson(t, st.person));
 
     // Group by category, preserving order from apiCategories
     const groups = {};
@@ -6548,7 +6567,7 @@ function _paRenderAddDocPick() {
     }
     if (!listHtml) listHtml = `<div class="pa-add-doc-empty">אין תבניות זמינות</div>`;
 
-    pop.innerHTML = `
+    body.innerHTML = `
         ${personSelector}
         <input type="text" class="pa-add-doc-search" id="paAddDocSearch" placeholder="🔍 חפש מסמך..." dir="rtl" autocomplete="off" oninput="paAddDocFilter(this.value)">
         <div class="pa-add-doc-list" id="paAddDocList">${listHtml}</div>
@@ -6567,11 +6586,28 @@ function _paRenderAddDocPick() {
     if (search) setTimeout(() => search.focus(), 50);
 }
 
+// DL-301: template scope filter.
+// Airtable `scope` values (verified live): CLIENT, SPOUSE, PERSON, GLOBAL_SINGLE, empty.
+//  - CLIENT       → client only
+//  - SPOUSE       → spouse only
+//  - PERSON       → either (disability/maternity — whoever the event applies to)
+//  - GLOBAL_SINGLE→ either (single-per-report like T002 ID update)
+//  - empty        → either (defensive default)
+function _paTemplateMatchesPerson(tpl, person) {
+    const scope = (tpl.scope || '').toString().trim().toUpperCase();
+    if (scope === 'CLIENT') return person === 'client';
+    if (scope === 'SPOUSE') return person === 'spouse';
+    return true; // PERSON, GLOBAL_SINGLE, empty, unknown → show for either
+}
+
 function paAddDocSetPerson(person) {
     if (!_paAddDocState) return;
+    if (_paAddDocState.person === person) return;
     _paAddDocState.person = person;
-    const btns = document.querySelectorAll('.pa-add-doc-person-btn');
-    btns.forEach(b => b.classList.toggle('active', b.dataset.person === person));
+    // Re-render pick step so the template list re-filters by scope
+    if (_paAddDocState.step === 'pick' || !_paAddDocState.step) {
+        _paRenderAddDocPick();
+    }
 }
 
 function paAddDocFilter(query) {
@@ -6676,6 +6712,7 @@ function _paRenderAddDocVariables(userVars) {
     if (!pop || !st || !st.selectedTpl) return;
     const item = pendingApprovalData.find(i => i.report_id === st.reportId);
     const initialTitle = _paFormatTemplateTitle(st.selectedTpl, item, null);
+    const body = document.getElementById('paAddDocBody') || pop;
 
     const fields = userVars.map(v => {
         const label = _PA_VAR_LABELS[v] || v;
@@ -6685,7 +6722,7 @@ function _paRenderAddDocVariables(userVars) {
         </div>`;
     }).join('');
 
-    pop.innerHTML = `
+    body.innerHTML = `
         <div class="pa-add-doc-step-title" id="paAddDocStepTitle"><i data-lucide="file-text" class="icon-xs"></i> <span id="paAddDocStepTitleText">${escapeHtml(initialTitle)}</span></div>
         <div class="pa-add-doc-vars">${fields}</div>
         <div class="pa-add-doc-warning" id="paAddDocWarning" style="display:none;"></div>
@@ -6828,7 +6865,8 @@ function _paEnterPreview() {
 
     const pop = document.getElementById('paAddDocPopover');
     if (!pop) return;
-    pop.innerHTML = `
+    const body = document.getElementById('paAddDocBody') || pop;
+    body.innerHTML = `
         <div class="pa-add-doc-step-title"><i data-lucide="eye" class="icon-xs"></i> תצוגה מקדימה</div>
         <div class="pa-add-doc-preview">
             <div class="pa-add-doc-preview-name">${escapeHtml(displayName)}</div>

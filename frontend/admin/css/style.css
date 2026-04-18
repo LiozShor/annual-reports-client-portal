@@ -8402,11 +8402,44 @@ tr:hover .client-edit-link {
     border-radius: var(--radius-md);
     box-shadow: 0 10px 15px -3px rgba(0,0,0,0.12), 0 4px 6px -4px rgba(0,0,0,0.1);
     padding: var(--sp-3);
+    padding-top: 32px;
     z-index: 1100;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+.pa-add-doc-body {
     display: flex;
     flex-direction: column;
     gap: var(--sp-2);
     overflow: hidden;
+    flex: 1 1 auto;
+    min-height: 0;
+}
+.pa-add-doc-close {
+    position: absolute;
+    top: 6px;
+    left: 6px;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    border: none;
+    background: transparent;
+    color: var(--gray-500);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    padding: 0;
+    line-height: 1;
+}
+.pa-add-doc-close:hover {
+    background: var(--gray-100);
+    color: var(--gray-800);
+}
+.pa-add-doc-close:focus-visible {
+    outline: 2px solid var(--primary-400, #818cf8);
+    outline-offset: 1px;
 }
 .pa-add-doc-popover .pa-add-doc-loading,
 .pa-add-doc-popover .pa-add-doc-error,
