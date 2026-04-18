@@ -2,11 +2,11 @@
 
 Active and pending logs. For completed history, see [ARCHIVE-INDEX.md](ARCHIVE-INDEX.md).
 
-**Total logs:** 198 | **Active:** 100 | **Archived:** 98
+**Total logs:** 199 | **Active:** 101 | **Archived:** 98
 
 ## Folder Structure
 
-- `admin-ui/` — Admin UI (31)
+- `admin-ui/` — Admin UI (32)
 - `ai-review/` — AI Review & Classification (32)
 - `capital-statements/` — Capital Statements (4)
 - `client-portal/` — Client Portal & Questionnaires (13)
@@ -21,6 +21,7 @@ Active and pending logs. For completed history, see [ARCHIVE-INDEX.md](ARCHIVE-I
 
 | # | File | Status | Summary |
 |---|------|--------|---------|
+| 301 | [301-pa-queue-search-bar.md](admin-ui/301-pa-queue-search-bar.md) | IMPLEMENTED — NEED TESTING | Client-side search input in PA queue filter bar — matches name, email, spouse; debounced 150ms; clear-X button; no-match vs truly-empty state distinction; composes with server-side year/filing-type filters |
 | 300 | [300-per-template-issuer-suggestion-gate.md](infrastructure/300-per-template-issuer-suggestion-gate.md) | IMPLEMENTED — NEED TESTING (✨ chip disabled on frontend) | Per-template gate for WF02 ✨ issuer extraction: new Airtable `needs_issuer_suggestion` checkbox on templates; `/webhook/extract-issuer-names` loads templates, partitions docs, only calls Haiku for opted-in templates (default false = opt-in). Raw-context `bookkeepers_notes` append still runs for all docs. One-shot cleanup script clears `issuer_name_suggested` on disabled-template docs. **Follow-up:** ✨ accept chip hidden on PA card + doc-manager (commit `ca3e7d5`) — accept clobbered doc-row label with bare issuer; backend writes still run for opted-in templates |
 | 299 | [299-pa-card-issuer-edit-notes-print.md](admin-ui/299-pa-card-issuer-edit-notes-print.md) | IMPLEMENTED — NEED TESTING | PA card parity w/ doc-manager: (1) per-doc pencil → inline issuer edit + `החלף חברה` combobox for T501/T401/T301 (from `company_links`); (2) per-doc note popover — immediate save of `bookkeepers_notes`; (3) questionnaire print button in Q&A section title. Shared `frontend/shared/print-questionnaire.js` replaces doc-manager inline print. No new endpoints |
 | 298 | [298-pa-queue-stacked-cards.md](admin-ui/298-pa-queue-stacked-cards.md) | IMPLEMENTED — NEED TESTING | PA queue redesign: delete master/preview split; stacked full-width cards (`.pa-stack`) with collapsed header (name, age, count badges, folder-open doc-manager link, chevron) + expandable body (DL-295 2-col Q&A \| Docs, notes, questions, actions). First 3 of each page auto-expanded. DL-296 ✨ issuer suggestion chip moves inline into each doc row. Deletes `loadPaPreview`, `loadPaMobilePreview`, `buildPaPreviewHtml`, `_activePaReportId`, `paMobilePreviewModal` |

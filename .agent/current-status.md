@@ -1,6 +1,22 @@
 # Annual Reports CRM - Current Status
 
-**Last Updated:** 2026-04-17 (DL-300 gate shipped; ✨ chip disabled pending UX rework)
+**Last Updated:** 2026-04-18 (DL-301 PA queue search bar)
+
+## DL-301: PA Queue Search Bar — NEED TESTING
+
+Branch `DL-301-admin-panel-search-bar` — awaiting merge approval.
+
+- [ ] Filter bar shows 3 controls: year, filing-type, search input
+- [ ] Typing partial name filters cards instantly, pagination resets to page 1
+- [ ] Typing partial email (e.g. `@gmail`) filters correctly
+- [ ] Typing spouse name shows the couple's card
+- [ ] Clear-X appears with text; clicking resets to full list
+- [ ] Changing year/filing-type while search active: re-fetches, search persists
+- [ ] No-match → "לא נמצאו תוצאות לחיפוש" (NOT "כל השאלונים נסקרו")
+- [ ] Mobile viewport: filter bar wraps gracefully
+- [ ] No console errors
+
+---
 
 ## Session Summary (2026-04-17 — ✨ chip disabled on both surfaces)
 

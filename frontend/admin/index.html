@@ -775,6 +775,19 @@
                             <option value="capital_statement">הצהרות הון</option>
                         </select>
                     </div>
+                    <div class="filter-group" style="flex: 1; max-width: 280px;">
+                        <label for="paSearchInput"><i data-lucide="search" class="icon-sm"></i></label>
+                        <input type="search" id="paSearchInput"
+                               placeholder="חיפוש לפי שם לקוח או אימייל..."
+                               dir="rtl" aria-label="חיפוש בתור ממתיני אישור"
+                               oninput="debouncedFilterPendingApproval()"
+                               style="padding: 6px 10px; font-size: 13px;">
+                        <button class="msg-search-clear" id="paSearchClear" style="display:none"
+                                onclick="clearPaSearch()" title="נקה חיפוש"
+                                aria-label="נקה חיפוש">
+                            <i data-lucide="x" class="icon-xs"></i>
+                        </button>
+                    </div>
                 </div>
 
                 <!-- DL-298: Stacked full-width cards (replaces master/preview split) -->

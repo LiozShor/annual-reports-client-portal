@@ -99,6 +99,7 @@ const debouncedFilterClients = debounce(filterClients, 150);
 const debouncedFilterReminders = debounce(filterReminders, 150);
 const debouncedApplyAIFilters = debounce(applyAIFilters, 150);
 const debouncedFilterQuestionnaires = debounce(filterQuestionnaires, 150);
+const debouncedFilterPendingApproval = debounce(filterPendingApproval, 150);
 const debouncedSearchMessages = debounce(searchMessages, 300); // DL-273: longer debounce for API call
 let activeEntityTab = sessionStorage.getItem('entityTab') || 'annual_report';
 
@@ -5686,6 +5687,7 @@ function showAIToast(message, type, action) {
 // ==================== REVIEW & APPROVE QUEUE (DL-292) ====================
 
 let pendingApprovalData = [];
+let _paFilteredData = [];
 let pendingApprovalLoaded = false;
 let pendingApprovalLoadedAt = 0;
 let _paPage = 1;
@@ -5742,7 +5744,7 @@ async function loadPendingApprovalQueue(silent = false) {
         pendingApprovalLoaded = true;
         pendingApprovalLoadedAt = Date.now();
         _paPage = 1;
-        renderPendingApprovalCards();
+        filterPendingApproval(true); // populates _paFilteredData + renders
         syncPaBadge(pendingApprovalData.length);
     } catch (err) {
         console.error('[pa-queue] load failed', err);
@@ -5773,11 +5775,13 @@ function renderPendingApprovalCards() {
     const emptyState = document.getElementById('paEmptyState');
     if (!container) return;
 
-    const items = pendingApprovalData;
+    const items = _paFilteredData;
 
     if (items.length === 0) {
-        container.innerHTML = '';
-        if (emptyState) emptyState.style.display = '';
+        container.innerHTML = pendingApprovalData.length > 0
+            ? '<div class="empty-state"><p>לא נמצאו תוצאות לחיפוש</p></div>'
+            : '';
+        if (emptyState) emptyState.style.display = pendingApprovalData.length === 0 ? '' : 'none';
         renderPagination('paPagination', 0, 1, PA_PAGE_SIZE, () => {});
         return;
     }
@@ -5793,6 +5797,31 @@ function renderPendingApprovalCards() {
     container.innerHTML = pageItems.map(item => buildPaCard(item)).join('');
     renderPagination('paPagination', items.length, _paPage, PA_PAGE_SIZE, (p) => { _paPage = p; renderPendingApprovalCards(); });
     safeCreateIcons(container);
+}
+
+// DL-301: client-side search filter for PA queue
+function filterPendingApproval(keepPage) {
+    const input = document.getElementById('paSearchInput');
+    const search = (input?.value || '').toLowerCase().trim();
+    const clearBtn = document.getElementById('paSearchClear');
+    if (clearBtn) clearBtn.style.display = search ? '' : 'none';
+
+    _paFilteredData = pendingApprovalData.filter(item => {
+        if (!search) return true;
+        const name   = (item.client_name  || '').toLowerCase();
+        const email  = (item.client_email || '').toLowerCase();
+        const spouse = (item.spouse_name  || '').toLowerCase();
+        return name.includes(search) || email.includes(search) || spouse.includes(search);
+    });
+
+    if (!keepPage) _paPage = 1;
+    renderPendingApprovalCards();
+}
+
+function clearPaSearch() {
+    const input = document.getElementById('paSearchInput');
+    if (input) input.value = '';
+    filterPendingApproval();
 }
 
 // DL-298: toggle expand/collapse state for a single card; only re-renders that card.
