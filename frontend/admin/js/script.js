@@ -6201,6 +6201,12 @@ function renderPaDocTagRow(d, reportId) {
 
 function openPaDocTagMenu(event, tagEl) {
     event.stopPropagation();
+
+    // Toggle: re-clicking the currently-open tag closes the menu.
+    if (tagEl.classList.contains('ai-doc-tag-active')) {
+        closeDocTagMenu();
+        return;
+    }
     closeDocTagMenu();
 
     const currentStatus = tagEl.dataset.status || 'Required_Missing';
@@ -6222,10 +6228,13 @@ function openPaDocTagMenu(event, tagEl) {
         </button>`
     ).join('');
 
+    // Position absolute (document-relative) so the menu scrolls with the page.
     const rect = tagEl.getBoundingClientRect();
-    menu.style.position = 'fixed';
-    menu.style.top = (rect.bottom + 4) + 'px';
-    menu.style.left = rect.left + 'px';
+    const sx = window.scrollX || window.pageXOffset || 0;
+    const sy = window.scrollY || window.pageYOffset || 0;
+    menu.style.position = 'absolute';
+    menu.style.top = (rect.bottom + sy + 4) + 'px';
+    menu.style.left = (rect.left + sx) + 'px';
     menu.dataset.docRecordId = docRecordId;
     menu.dataset.reportId = reportId;
 
@@ -6234,7 +6243,13 @@ function openPaDocTagMenu(event, tagEl) {
 
     requestAnimationFrame(() => {
         document._docTagMenuClose = (e) => {
-            if (!menu.contains(e.target) && e.target !== tagEl) closeDocTagMenu();
+            if (menu.contains(e.target)) return;
+            // Click on the same tag that opened the menu: suppress the bubble
+            // onclick so it doesn't re-open right after we close.
+            if (tagEl.contains(e.target)) {
+                e.stopImmediatePropagation();
+            }
+            closeDocTagMenu();
         };
         document.addEventListener('click', document._docTagMenuClose, { capture: true });
     });
