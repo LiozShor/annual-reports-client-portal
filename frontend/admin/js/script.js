@@ -434,8 +434,8 @@ function _syncReviewsGroupBadge() {
     if (!badge) return;
     const total = (_reviewsAiCount || 0) + (_reviewsPaCount || 0);
     if (total > 0) {
-        badge.textContent = total;
-        badge.style.display = 'inline-flex';
+        badge.textContent = '';
+        badge.style.display = 'inline-block';
     } else {
         badge.style.display = 'none';
     }
