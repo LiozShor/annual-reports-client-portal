@@ -436,7 +436,7 @@ function _syncReviewsGroupBadge() {
     const total = (_reviewsAiCount || 0) + (_reviewsPaCount || 0);
     if (total > 0) {
         if (badge) { badge.textContent = ''; badge.style.display = 'inline-block'; }
-        if (desktopBadge) desktopBadge.style.display = 'inline-block';
+        if (desktopBadge) { desktopBadge.textContent = String(total); desktopBadge.style.display = 'inline-flex'; }
     } else {
         if (badge) badge.style.display = 'none';
         if (desktopBadge) desktopBadge.style.display = 'none';
