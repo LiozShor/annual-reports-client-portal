@@ -41,6 +41,14 @@ export interface ClientInfo {
 export interface AnswerEntry {
   label: string;
   value: string;
+  /**
+   * DL-302: original raw Airtable column key (before `cs_` stripping). Used by
+   * the PA card hover cross-reference to join answers ↔ docs via the
+   * question_mappings table (matched against `airtable_field_name`).
+   */
+  tally_key?: string;
+  /** DL-302: template IDs this answer triggers (filled by question-mapping-join). */
+  template_ids?: string[];
 }
 
 export interface FormattedQuestionnaire {
@@ -127,7 +135,7 @@ export function formatQuestionnaire(
     // email and admin Q&A view show clean Hebrew labels (DL-182 prefixed CS
     // columns to disambiguate them in the shared submissions table).
     const label = key.replace(/^cs_/, '');
-    answerEntries.push({ label, value: formatted });
+    answerEntries.push({ label, value: formatted, tally_key: key });
   }
 
   // Reorder: move insurance fields after withdrawal anchor

@@ -5804,6 +5804,16 @@ function renderPendingApprovalCards() {
     container.innerHTML = pageItems.map(item => buildPaCard(item)).join('');
     renderPagination('paPagination', items.length, _paPage, PA_PAGE_SIZE, (p) => { _paPage = p; renderPendingApprovalCards(); });
     safeCreateIcons(container);
+    bindPaLinkHoverAll(container);
+}
+
+// DL-302: idempotent — guard via data-link-bound so re-renders don't stack listeners.
+function bindPaLinkHoverAll(scope) {
+    (scope || document).querySelectorAll('.pa-card__body').forEach(body => {
+        if (body.dataset.linkBound === '1') return;
+        body.dataset.linkBound = '1';
+        bindPaLinkHover(body);
+    });
 }
 
 // DL-298: toggle expand/collapse state for a single card; only re-renders that card.
@@ -5817,6 +5827,7 @@ function togglePaCard(reportId, ev) {
     if (card) {
         card.outerHTML = buildPaCard(item);
         safeCreateIcons(document.getElementById('paCardsContainer') || document);
+        bindPaLinkHoverAll(document.getElementById('paCardsContainer') || document);
     }
 }
 
@@ -5904,6 +5915,7 @@ function togglePaShowNo(reportId) {
     if (card) {
         card.outerHTML = buildPaCard(item);
         safeCreateIcons(document.getElementById('paCardsContainer') || document);
+        bindPaLinkHoverAll(document.getElementById('paCardsContainer') || document);
     }
 }
 
@@ -5971,10 +5983,19 @@ function buildPaPreviewBody(item) {
             qaHtml += `<div class="pa-preview-subsection">
                 <div class="pa-preview-subtitle">תשובות פתוחות (${freeAnswers.length})</div>
                 <div class="pa-preview-qa">
-                    ${freeAnswers.map(a => `<div class="pa-preview-qa-row">
+                    ${freeAnswers.map((a, i) => {
+                        // DL-302: cross-highlight metadata. template_ids is a comma-joined list
+                        // (server attaches it from question_mappings). Selectable + focusable for
+                        // keyboard parity with the desktop hover.
+                        const tids = Array.isArray(a.template_ids) ? a.template_ids.join(',') : '';
+                        const linkAttr = tids
+                            ? ` data-template-ids="${escapeAttr(tids)}" tabindex="0" role="button" aria-label="${escapeAttr('הדגש מסמכים מקושרים')}"`
+                            : '';
+                        return `<div class="pa-preview-qa-row" data-answer-idx="${i}"${linkAttr}>
                         <span class="pa-preview-qa-label">${escapeHtml(a.label)}</span>
                         <span class="pa-preview-qa-value">${escapeHtml(a.value)}</span>
-                    </div>`).join('')}
+                    </div>`;
+                    }).join('')}
                 </div>
             </div>`;
         }
@@ -6187,7 +6208,10 @@ function renderPaDocTagRow(d, reportId) {
     const rowCls = status === 'Waived' ? 'pa-preview-doc-row pa-preview-doc-row--waived'
                  : status === 'Received' ? 'pa-preview-doc-row pa-preview-doc-row--received'
                  : 'pa-preview-doc-row';
-    return `<div class="${rowCls}" data-doc-id="${escapeAttr(docId)}" data-report-id="${escapeAttr(reportId)}">
+    // DL-302: data-template-id powers the answer↔doc cross-highlight. `d.type` is the
+    // SSOT template id (e.g. "T501"). Orphan flagging happens at wire-up time.
+    const docTemplateId = d.type || d.template_id || '';
+    return `<div class="${rowCls}" data-doc-id="${escapeAttr(docId)}" data-report-id="${escapeAttr(reportId)}" data-template-id="${escapeAttr(docTemplateId)}" tabindex="0">
         <span class="pa-preview-doc-name pa-doc-tag-clickable"
               data-report-id="${escapeAttr(reportId)}"
               data-doc-record-id="${escapeAttr(docRecordId)}"
@@ -6197,6 +6221,134 @@ function renderPaDocTagRow(d, reportId) {
         ${suggestChip}
         <span class="pa-doc-row__actions">${pencilBtn}${noteBtn}</span>
     </div>`;
+}
+
+// ============================================================================
+// DL-302: PA card answer ↔ doc hover cross-highlight (brushing & linking)
+// Hover/focus a free-text answer → tint matching doc rows by template id.
+// Hover/focus a doc row → reverse-highlight the source answer(s).
+// Touch (coarse pointer): tap to pin, tap outside / same row to clear.
+// Orphan docs (no source answer): tooltip "אין שאלה מתאימה", no highlight.
+// ============================================================================
+const _paLinkState = { pinned: null, isCoarse: false };
+
+function _paLinkResolveCard(el) {
+    return el.closest('.pa-preview-cols') || el.closest('.pa-preview-body') || document;
+}
+
+function _paLinkClear(scope) {
+    const root = scope || document;
+    root.querySelectorAll('.pa-link-highlight').forEach(n => n.classList.remove('pa-link-highlight'));
+}
+
+function _paLinkApply(sourceEl) {
+    const card = _paLinkResolveCard(sourceEl);
+    _paLinkClear(card);
+    sourceEl.classList.add('pa-link-highlight');
+    let templateIds = [];
+    if (sourceEl.classList.contains('pa-preview-qa-row')) {
+        const raw = sourceEl.getAttribute('data-template-ids') || '';
+        templateIds = raw.split(',').map(s => s.trim()).filter(Boolean);
+        templateIds.forEach(tid => {
+            card.querySelectorAll(`.pa-preview-doc-row[data-template-id="${CSS.escape(tid)}"]`)
+                .forEach(n => n.classList.add('pa-link-highlight'));
+        });
+    } else if (sourceEl.classList.contains('pa-preview-doc-row')) {
+        const tid = sourceEl.getAttribute('data-template-id') || '';
+        if (!tid) return;
+        card.querySelectorAll('.pa-preview-qa-row[data-template-ids]').forEach(row => {
+            const ids = (row.getAttribute('data-template-ids') || '').split(',').map(s => s.trim());
+            if (ids.includes(tid)) row.classList.add('pa-link-highlight');
+        });
+    }
+}
+
+function _paLinkOn(sourceEl) {
+    if (!sourceEl) return;
+    _paLinkApply(sourceEl);
+}
+
+function _paLinkOff(sourceEl) {
+    // On mobile, only clear via the dedicated outside-click path.
+    if (_paLinkState.pinned) return;
+    _paLinkClear(_paLinkResolveCard(sourceEl));
+}
+
+function _paLinkAnnotateOrphans(card) {
+    // Doc rows whose template id has no matching answer on the left. Marker class
+    // gives the muted dashed-outline + tooltip via CSS / title attr.
+    const answerTids = new Set();
+    card.querySelectorAll('.pa-preview-qa-row[data-template-ids]').forEach(row => {
+        (row.getAttribute('data-template-ids') || '').split(',').forEach(t => {
+            const v = t.trim();
+            if (v) answerTids.add(v);
+        });
+    });
+    card.querySelectorAll('.pa-preview-doc-row[data-template-id]').forEach(row => {
+        const tid = row.getAttribute('data-template-id');
+        if (!tid || !answerTids.has(tid)) {
+            row.classList.add('pa-preview-doc-row--orphan');
+            if (!row.hasAttribute('title')) row.setAttribute('title', 'אין שאלה מתאימה');
+        }
+    });
+}
+
+function bindPaLinkHover(rootEl) {
+    if (!rootEl) return;
+    _paLinkState.isCoarse = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
+    _paLinkAnnotateOrphans(rootEl);
+
+    const isLinkable = (el) =>
+        el && (
+            (el.classList.contains('pa-preview-qa-row') && el.hasAttribute('data-template-ids'))
+            || (el.classList.contains('pa-preview-doc-row') && el.getAttribute('data-template-id')
+                && !el.classList.contains('pa-preview-doc-row--orphan'))
+        );
+
+    rootEl.addEventListener('mouseover', (e) => {
+        if (_paLinkState.isCoarse || _paLinkState.pinned) return;
+        const row = e.target.closest('.pa-preview-qa-row, .pa-preview-doc-row');
+        if (isLinkable(row)) _paLinkOn(row);
+    });
+    rootEl.addEventListener('mouseout', (e) => {
+        if (_paLinkState.isCoarse || _paLinkState.pinned) return;
+        const row = e.target.closest('.pa-preview-qa-row, .pa-preview-doc-row');
+        if (!row) return;
+        const next = e.relatedTarget && e.relatedTarget.closest && e.relatedTarget.closest('.pa-preview-qa-row, .pa-preview-doc-row');
+        if (next === row) return;
+        _paLinkOff(row);
+    });
+    rootEl.addEventListener('focusin', (e) => {
+        if (_paLinkState.pinned) return;
+        const row = e.target.closest('.pa-preview-qa-row, .pa-preview-doc-row');
+        if (isLinkable(row)) _paLinkOn(row);
+    });
+    rootEl.addEventListener('focusout', (e) => {
+        if (_paLinkState.pinned) return;
+        const row = e.target.closest('.pa-preview-qa-row, .pa-preview-doc-row');
+        if (row) _paLinkOff(row);
+    });
+    // Touch: tap to pin, tap same row again to clear. Outside tap handled below.
+    rootEl.addEventListener('click', (e) => {
+        if (!_paLinkState.isCoarse) return;
+        // Don't hijack the existing doc-tag menu / pencil / note buttons
+        if (e.target.closest('.pa-doc-tag-clickable, .pa-doc-row__edit, .pa-doc-row__note, .pa-doc-row__suggest, button')) return;
+        const row = e.target.closest('.pa-preview-qa-row, .pa-preview-doc-row');
+        if (!isLinkable(row)) return;
+        if (_paLinkState.pinned === row) {
+            _paLinkState.pinned = null;
+            _paLinkClear(rootEl);
+        } else {
+            _paLinkState.pinned = row;
+            _paLinkApply(row);
+        }
+    });
+    document.addEventListener('click', (e) => {
+        if (!_paLinkState.pinned) return;
+        if (rootEl.contains(e.target)) return;
+        _paLinkState.pinned = null;
+        _paLinkClear(rootEl);
+    });
 }
 
 function openPaDocTagMenu(event, tagEl) {

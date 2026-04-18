@@ -22,6 +22,7 @@ import {
 } from '../lib/doc-builder';
 import { buildShortName } from '../lib/classification-helpers';
 import { formatQuestionnaire } from '../lib/format-questionnaire';
+import { attachTemplateIds, type QuestionMappingRecord } from '../lib/question-mapping-join';
 import { logError } from '../lib/error-logger';
 import type { Env } from '../lib/types';
 
@@ -34,6 +35,7 @@ const TABLES = {
   TEMPLATES: 'tblQTsbhC6ZBrhspc',
   COMPANY_LINKS: 'tblDQJvIaEgBw2L6T',
   QUESTIONNAIRES: 'tblxEox8MsbliwTZI',
+  QUESTION_MAPPINGS: 'tblWr2sK1YvyLWG3X',
 };
 
 const getField = (val: unknown): unknown =>
@@ -59,7 +61,7 @@ adminPendingApproval.get('/admin-pending-approval', async (c) => {
     const filingType = c.req.query('filing_type') || 'annual_report';
     const airtable = new AirtableClient(c.env.AIRTABLE_BASE_ID, c.env.AIRTABLE_PAT);
 
-    const [reportRecords, categoryRecords, templateRecords, companyLinkRecords] = await Promise.all([
+    const [reportRecords, categoryRecords, templateRecords, companyLinkRecords, questionMappings] = await Promise.all([
       airtable.listAllRecords(TABLES.REPORTS, {
         filterByFormula: `AND({year}=${year}, {stage}='Pending_Approval', {client_is_active}=TRUE(), {filing_type}='${filingType}')`,
       }),
@@ -69,6 +71,10 @@ adminPendingApproval.get('/admin-pending-approval', async (c) => {
         () => airtable.listAllRecords(TABLES.TEMPLATES)),
       getCachedOrFetch(c.env.CACHE_KV, 'cache:company-links', 3600,
         () => airtable.listAllRecords(TABLES.COMPANY_LINKS)),
+      // DL-302: question_mappings → SSOT for answer↔doc cross-highlight on the PA card.
+      // Mappings change rarely; cache for 1h.
+      getCachedOrFetch(c.env.CACHE_KV, 'cache:question-mappings', 3600,
+        () => airtable.listAllRecords(TABLES.QUESTION_MAPPINGS)) as Promise<QuestionMappingRecord[]>,
     ]);
 
     if (reportRecords.length === 0) {
@@ -117,11 +123,15 @@ adminPendingApproval.get('/admin-pending-approval', async (c) => {
       const rf = report.fields as Record<string, unknown>;
 
       const qFields = questionnaireByReport.get(report.id);
-      let answers_summary: { label: string; value: string }[] = [];
-      let answers_all: { label: string; value: string }[] = [];
+      let answers_summary: { label: string; value: string; tally_key?: string; template_ids?: string[] }[] = [];
+      let answers_all: { label: string; value: string; tally_key?: string; template_ids?: string[] }[] = [];
       let submitted_at: string | null = null;
       if (qFields) {
         const formatted = formatQuestionnaire(qFields);
+        // DL-302: attach template_ids to each answer (no-op for entries that
+        // don't match a mapping). The frontend uses this to cross-highlight
+        // answer ↔ doc rows on hover.
+        attachTemplateIds(formatted.answers, questionMappings, filingType);
         answers_all = formatted.answers;
         answers_summary = formatted.answers.filter(a => !isNegativeAnswer(a.value));
         submitted_at = (qFields['תאריך הגשה'] as string) || null;

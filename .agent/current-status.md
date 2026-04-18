@@ -1,6 +1,44 @@
 # Annual Reports CRM - Current Status
 
-**Last Updated:** 2026-04-17 (DL-301 PA add-doc affordance)
+**Last Updated:** 2026-04-18 (DL-302 PA hover cross-reference)
+
+## Session Summary (2026-04-18 — DL-302 PA card Q↔Doc hover cross-highlight)
+
+### DL-302: PA Card Hover Cross-Reference [IMPLEMENTED — NEED TESTING]
+
+PA card now cross-highlights free-text answers ↔ doc rows by template family. Hover (or focus) an answer → the doc(s) it triggered get a tinted bg + 3px start-edge accent bar; hover a doc → the source answer(s) get the same treatment. Mobile (coarse pointer) uses tap-to-pin / outside-tap to clear. Orphan docs (uploaded, AI-classified, DL-301 add-doc) get `title="אין שאלה מתאימה"` and a muted dashed outline on hover.
+
+**Backend join:** `admin-pending-approval` fetches `question_mappings` (tblWr2sK1YvyLWG3X, KV-cached 1h), runs `attachTemplateIds(answers, mappings, filingType)` (new `api/src/lib/question-mapping-join.ts`) and ships `template_ids[]` per answer in the PA payload. `format-questionnaire.ts` now also returns the raw column key as `tally_key` for joining.
+
+**Frontend:** `data-template-ids` on `.pa-preview-qa-row`, `data-template-id` (from `d.type`) on `.pa-preview-doc-row`, both `tabindex="0"`. New `_paLink*` interaction module (idempotent binding via `data-link-bound` on `.pa-card__body`).
+
+**Files changed:**
+```
+api/src/lib/format-questionnaire.ts                                # +tally_key, +template_ids on AnswerEntry
+api/src/lib/question-mapping-join.ts                               # NEW
+api/src/routes/admin-pending-approval.ts                           # fetch mappings (cached) + call attachTemplateIds
+frontend/admin/js/script.js                                        # data attrs, _paLink* module, bindPaLinkHoverAll
+frontend/admin/css/style.css                                       # .pa-link-highlight + orphan rules + focus-visible
+.agent/design-logs/admin-ui/302-pa-card-hover-cross-reference.md   # NEW
+.agent/design-logs/INDEX.md                                        # + DL-302 row
+.agent/current-status.md                                           # this entry
+```
+
+**Active TODOs (DL-302 §7):**
+- [ ] Desktop hover answer with mapping→T501 highlights all T501 doc rows in <100ms; mouse-leave clears.
+- [ ] Desktop hover doc row → source answer highlighted; orphan docs show tooltip + no link highlight.
+- [ ] Keyboard Tab into a row → `:focus-visible` matches hover behavior.
+- [ ] Mobile (iPad Safari + Android Chrome): tap pins, outside-tap clears, same-row tap clears.
+- [ ] Condition `yes` triggers on `"✓ כן"`, not on `"✗ לא"`.
+- [ ] Spouse-scope mappings highlight spouse-side docs only.
+- [ ] No regression in PA card load time (cold mappings fetch <150ms; warm path KV-cached).
+- [ ] No regression on DL-227 status menu, DL-299 notes/pencil, DL-301 add-doc.
+- [ ] RTL: accent bar on start (right) edge in Hebrew.
+- [ ] 30+ docs / 20+ answers card paints in one frame.
+
+Design log: `.agent/design-logs/admin-ui/302-pa-card-hover-cross-reference.md`
+
+---
 
 ## Session Summary (2026-04-17 — DL-301 PA add-doc affordance)
 

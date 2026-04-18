@@ -8714,3 +8714,31 @@ tr:hover .client-edit-link {
     color: var(--gray-500);
     font-style: italic;
 }
+
+/* DL-302: PA card answer↔doc cross-highlight (brushing & linking).
+   Tint matched rows + 3px start-edge accent bar. RTL flips automatically because
+   the parent .pa-preview-cols is dir="rtl"; box-shadow inset coordinates are
+   left/top in physical space but the bar reads as start-edge in Hebrew. */
+.pa-preview-qa-row,
+.pa-preview-doc-row {
+    cursor: default;
+    transition: background 80ms ease, box-shadow 80ms ease;
+}
+.pa-preview-qa-row[data-template-ids],
+.pa-preview-doc-row[data-template-id]:not(.pa-preview-doc-row--orphan) {
+    cursor: pointer;
+}
+.pa-preview-qa-row.pa-link-highlight,
+.pa-preview-doc-row.pa-link-highlight {
+    background: var(--primary-50, #eef2ff);
+    box-shadow: inset 3px 0 0 var(--primary-500, #6366f1);
+}
+.pa-preview-qa-row:focus-visible,
+.pa-preview-doc-row:focus-visible {
+    outline: 2px solid var(--primary-400, #818cf8);
+    outline-offset: 1px;
+}
+.pa-preview-doc-row--orphan:hover {
+    outline: 1px dashed var(--gray-300, #d1d5db);
+    outline-offset: -1px;
+}
