@@ -1,5 +1,39 @@
 # Annual Reports CRM - Current Status
 
+**Last Updated:** 2026-04-17 (DL-301 PA add-doc affordance)
+
+## Session Summary (2026-04-17 — DL-301 PA add-doc affordance)
+
+### DL-301: PA Card Add-Doc Affordance [IMPLEMENTED — NEED TESTING]
+
+Admins can now add a new required doc directly from the PA card, matching doc-manager's template+custom patterns. "+ הוסף מסמך" row at the bottom of each person's doc list opens a popover: search-filterable categorized template list (fetched once per client via `GET_CLIENT_DOCUMENTS`), variables step for templates that need one (e.g. T501 issuer_name), preview, submit. Also supports a bottom free-text custom-doc path (`general_doc`). Duplicate guard on `(template_id, issuer_key)` — T501+Leumi and T501+Poalim both valid, but T501+Poalim twice blocked with an inline warning. Spouse/client person toggle appears only when `item.spouse_name` is truthy. Submit uses `EDIT_DOCUMENTS` `docs_to_create` (existing endpoint, status `Required_Missing` hard-coded). Optimistic local update → re-render card → rollback + toast on failure. Report stays in `Pending_Approval` (no stage auto-regress).
+
+**Files changed:**
+```
+frontend/admin/js/script.js                              # renderPaAddDocRow + popover + wizard + submit loop
+frontend/admin/css/style.css                             # .pa-preview-doc-row--add + .pa-add-doc-popover
+.agent/design-logs/admin-ui/301-pa-add-doc-affordance.md # NEW
+.agent/design-logs/INDEX.md                              # + DL-301 row
+.agent/current-status.md                                 # this entry
+```
+
+**No backend / workflow changes** — `EDIT_DOCUMENTS` already handles single-item `docs_to_create` arrays.
+
+**Test DL-301 — §7:**
+- [ ] PA card (no spouse) → `+ הוסף מסמך` opens popover anchored below the button; template list + custom input visible.
+- [ ] Hebrew search filters template list correctly.
+- [ ] Template with no user-variables → jumps to preview directly.
+- [ ] Template with variable (T501 issuer_name) → variables step appears; empty submit blocks; filled submit → preview.
+- [ ] Confirm on preview → card re-renders with new `Required_Missing` doc row; toast `המסמך נוסף בהצלחה`.
+- [ ] Reload PA queue → newly added doc persists.
+- [ ] Duplicate: T501 + "Hapoalim" twice → second attempt shows `מסמך זה כבר קיים ברשימה` + disabled confirm. Change issuer to "Leumi" → confirm re-enabled.
+- [ ] Custom free-text doc → creates with `template_id: 'general_doc'`; duplicate guard (case-insensitive name match) blocks repeat.
+- [ ] Spouse client: `+ הוסף מסמך` row shows under both client and spouse groups; adding via spouse group persists with `person: 'spouse'`.
+- [ ] Network failure → optimistic row rolls back, toast `שגיאה בהוספת המסמך`, no leftover state.
+- [ ] Report stays in `Pending_Approval` after add (no stage regression).
+- [ ] No regression: waive/receive toggle, note popover, pencil edit, print, approve-and-send still work on a card with freshly added docs.
+
+Design log: `.agent/design-logs/admin-ui/301-pa-add-doc-affordance.md`
 **Last Updated:** 2026-04-17 (DL-300 gate shipped; ✨ chip disabled pending UX rework)
 
 ## Session Summary (2026-04-17 — ✨ chip disabled on both surfaces)
