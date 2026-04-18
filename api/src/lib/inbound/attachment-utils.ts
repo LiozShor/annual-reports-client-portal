@@ -1,5 +1,5 @@
 import type { RawAttachment, AttachmentInfo } from './types';
-import { DOC_EXTENSIONS, SKIP_EXTENSIONS, OFFICE_CONVERTIBLE, ARCHIVE_EXTENSIONS, MAILBOX } from './types';
+import { DOC_EXTENSIONS, SKIP_EXTENSIONS, OFFICE_CONVERTIBLE, ARCHIVE_EXTENSIONS, IMAGE_EXTENSIONS, MAILBOX } from './types';
 import { DRIVE_ID, sanitizeFilename } from '../classification-helpers';
 import type { MSGraphClient } from '../ms-graph';
 
@@ -24,13 +24,15 @@ export function getFileExtension(filename: string): string {
   return filename.slice(idx).toLowerCase();
 }
 
-/** Filter out inline, skippable, and tiny non-document attachments */
+/** Filter out skippable and tiny non-document attachments. */
 export function filterValidAttachments(attachments: RawAttachment[]): RawAttachment[] {
   return attachments.filter((att) => {
-    if (att.isInline) return false;
     const ext = getFileExtension(att.name);
     if (SKIP_EXTENSIONS.has(ext)) return false;
     if (ARCHIVE_EXTENSIONS.has(ext)) return true;
+    // Drop inline only when it's a small image — catches signature logos / tracking pixels.
+    // iPhone Mail sends real PDFs with isInline=true (Content-Disposition: inline preview).
+    if (att.isInline && IMAGE_EXTENSIONS.has(ext) && att.size < 20_000) return false;
     if (!DOC_EXTENSIONS.has(ext) && att.size < 1000) return false;
     return true;
   });
