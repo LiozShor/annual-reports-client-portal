@@ -2,7 +2,7 @@
 
 Active and pending logs. For completed history, see [ARCHIVE-INDEX.md](ARCHIVE-INDEX.md).
 
-**Total logs:** 199 | **Active:** 101 | **Archived:** 98
+**Total logs:** 200 | **Active:** 102 | **Archived:** 98
 
 ## Folder Structure
 
@@ -12,7 +12,7 @@ Active and pending logs. For completed history, see [ARCHIVE-INDEX.md](ARCHIVE-I
 - `client-portal/` — Client Portal & Questionnaires (13)
 - `documents/` — Documents & OneDrive (20)
 - `email/` — Email System (21)
-- `infrastructure/` — Infrastructure & Workflows (18)
+- `infrastructure/` — Infrastructure & Workflows (19)
 - `reminders/` — Reminder System (17)
 - `research/` — Research & Feasibility (7)
 - `security/` — Security & Auth (7)
@@ -21,6 +21,7 @@ Active and pending logs. For completed history, see [ARCHIVE-INDEX.md](ARCHIVE-I
 
 | # | File | Status | Summary |
 |---|------|--------|---------|
+| 304 | [303-inline-attachment-filter.md](infrastructure/303-inline-attachment-filter.md) | IMPLEMENTED — NEED TESTING | Fix inbound pipeline silently dropping PDFs sent from iPhone Mail — `isInline` blanket filter replaced with narrow `isInline && IMAGE_EXTENSIONS && size < 20KB` guard that preserves signature-logo rejection while letting inline PDFs/docs through |
 | 303 | [301-pa-queue-search-bar.md](admin-ui/301-pa-queue-search-bar.md) | IMPLEMENTED — NEED TESTING | Client-side search input in PA queue filter bar — matches name, email, spouse; debounced 150ms; clear-X button; no-match vs truly-empty state distinction; composes with server-side year/filing-type filters |
 | 302 | [302-pa-card-hover-cross-reference.md](admin-ui/302-pa-card-hover-cross-reference.md) | COMPLETED (live 2026-04-18) | PA card answer↔doc cross-highlight (brushing & linking). Backend joins `question_mappings` (tblWr2sK1YvyLWG3X, KV-cached 1h) and attaches `template_ids[]` to each answer in `admin-pending-approval`. Frontend: `data-template-ids` on `.pa-preview-qa-row`, `data-template-id` (`d.type`) on `.pa-preview-doc-row`, `tabindex=0`. New `_paLink*` module: hover/focus apply `.pa-link-highlight` (tinted bg + 3px start-edge bar); coarse-pointer = tap-to-pin / outside-tap clears. Orphan docs get `title="אין שאלה מתאימה"` + dashed outline. v1 covers free-text answers only (yes/no chips not rendered per DL-299) |
 | 301 | [301-pa-add-doc-affordance.md](admin-ui/301-pa-add-doc-affordance.md) | IMPLEMENTED — NEED TESTING | PA card: inline "+ הוסף מסמך" row per person group. Popover reuses doc-manager's template catalog (via `GET_CLIENT_DOCUMENTS`), with variables step + preview, plus free-text custom doc (`general_doc`). Spouse/client toggle when `item.spouse_name`. Immediate save via `EDIT_DOCUMENTS` `docs_to_create` (status `Required_Missing`), optimistic local update + rollback on error. Duplicate guard on `(template_id, issuer_key)`. Report stays in `Pending_Approval`. No backend changes |
