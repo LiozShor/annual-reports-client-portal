@@ -1,0 +1,27 @@
+repos:
+  # 1. Gitleaks — fast regex-based secret scanner (runs in ms)
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.24.2
+    hooks:
+      - id: gitleaks
+
+  # 2. ggshield — GitGuardian scanner (installed via pipx to avoid dep conflicts)
+  # Install: pipx install ggshield && ggshield auth login
+  - repo: local
+    hooks:
+      - id: ggshield
+        name: ggshield
+        language: system
+        entry: ggshield secret scan pre-commit
+        pass_filenames: false
+
+  # 3. Custom PII guard — blocks CPA-IDs and Hebrew text in .agent/ commits
+  - repo: local
+    hooks:
+      - id: agent-pii-guard
+        name: agent-pii-guard
+        entry: python3 .claude/hooks/agent-pii-guard.py
+        language: python
+        pass_filenames: true
+        files: ^\.agent/
+        types: [text]
