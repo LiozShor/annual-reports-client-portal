@@ -1,5 +1,5 @@
 # Design Log 303: Fix Inline Attachment Filter Dropping Legitimate PDFs
-**Status:** [IMPLEMENTED — NEED TESTING]
+**Status:** [COMPLETED]
 **Date:** 2026-04-18
 **Related Logs:** DL-203 (WF05 Worker migration), DL-287 (Cloudflare Queues inbound email), DL-260 (archive extraction inbound)
 

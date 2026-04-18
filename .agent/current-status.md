@@ -2,16 +2,9 @@
 
 **Last Updated:** 2026-04-18 (DL-303 inline attachment filter fix)
 
-## DL-303: Inline Attachment Filter Fix — NEED TESTING
+## DL-303: Inline Attachment Filter Fix — COMPLETED (live 2026-04-18)
 
-Branch `DL-303-inline-attachment-filter-fix` — awaiting `wrangler deploy` + manual test.
-
-- [ ] Confirm original email: query MS Graph for the 2026-04-18 ~16:09 email with Form106_2025.pdf, inspect attachments — verify `isInline: true` on the PDF
-- [ ] After `wrangler deploy`: resend (or replay) the email from iPhone Mail to `reports@moshe-atsits.co.il` — verify PDF lands in client OneDrive + classification record created
-- [ ] Regression: forward email with inline PNG signature (<20KB) — confirm NOT uploaded as client document
-- [ ] Worker logs clean after deploy
-
-Design log: `.agent/design-logs/infrastructure/303-inline-attachment-filter.md`
+iPhone Mail inline PDF bug fixed and verified. Merged to main, deployed (`b1ee2481`).
 
 ---
 
