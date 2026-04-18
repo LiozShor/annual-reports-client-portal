@@ -17,6 +17,69 @@ Branch `DL-301-admin-panel-search-bar` — awaiting merge approval.
 - [ ] No console errors
 
 ---
+**Last Updated:** 2026-04-18 (DL-302 PA hover cross-reference)
+
+## Session Summary (2026-04-18 — DL-302 PA card Q↔Doc hover cross-highlight)
+
+### DL-302: PA Card Hover Cross-Reference [COMPLETED — verified live 2026-04-18]
+
+PA card now cross-highlights free-text answers ↔ doc rows by template family. Hover (or focus) an answer → the doc(s) it triggered get a tinted bg + 3px start-edge accent bar; hover a doc → the source answer(s) get the same treatment. Mobile (coarse pointer) uses tap-to-pin / outside-tap to clear. Orphan docs (uploaded, AI-classified, DL-301 add-doc) get `title="אין שאלה מתאימה"` and a muted dashed outline on hover.
+
+**Backend join:** `admin-pending-approval` fetches `question_mappings` (tblWr2sK1YvyLWG3X, KV-cached 1h), runs `attachTemplateIds(answers, mappings, filingType)` (new `api/src/lib/question-mapping-join.ts`) and ships `template_ids[]` per answer in the PA payload. `format-questionnaire.ts` now also returns the raw column key as `tally_key` for joining.
+
+**Frontend:** `data-template-ids` on `.pa-preview-qa-row`, `data-template-id` (from `d.type`) on `.pa-preview-doc-row`, both `tabindex="0"`. New `_paLink*` interaction module (idempotent binding via `data-link-bound` on `.pa-card__body`).
+
+**Files changed:**
+```
+api/src/lib/format-questionnaire.ts                                # +tally_key, +template_ids on AnswerEntry
+api/src/lib/question-mapping-join.ts                               # NEW
+api/src/routes/admin-pending-approval.ts                           # fetch mappings (cached) + call attachTemplateIds
+frontend/admin/js/script.js                                        # data attrs, _paLink* module, bindPaLinkHoverAll
+frontend/admin/css/style.css                                       # .pa-link-highlight + orphan rules + focus-visible
+.agent/design-logs/admin-ui/302-pa-card-hover-cross-reference.md   # NEW
+.agent/design-logs/INDEX.md                                        # + DL-302 row
+.agent/current-status.md                                           # this entry
+```
+
+**Live verification (2026-04-18):** user confirmed "works perfectly" after the orphan-detection fix (`mapped_template_ids` from backend + `;`-split for multi-template mappings). KV `cache:question-mappings` invalidated and Worker redeployed (version `a0751877-284a-4eb4-a25e-3fdce2c2a03a`). Remaining §7 items folded into the next regression sweep.
+
+Design log: `.agent/design-logs/admin-ui/302-pa-card-hover-cross-reference.md`
+
+---
+
+## Session Summary (2026-04-17 — DL-301 PA add-doc affordance)
+
+### DL-301: PA Card Add-Doc Affordance [IMPLEMENTED — NEED TESTING]
+
+Admins can now add a new required doc directly from the PA card, matching doc-manager's template+custom patterns. "+ הוסף מסמך" row at the bottom of each person's doc list opens a popover: search-filterable categorized template list (fetched once per client via `GET_CLIENT_DOCUMENTS`), variables step for templates that need one (e.g. T501 issuer_name), preview, submit. Also supports a bottom free-text custom-doc path (`general_doc`). Duplicate guard on `(template_id, issuer_key)` — T501+Leumi and T501+Poalim both valid, but T501+Poalim twice blocked with an inline warning. Spouse/client person toggle appears only when `item.spouse_name` is truthy. Submit uses `EDIT_DOCUMENTS` `docs_to_create` (existing endpoint, status `Required_Missing` hard-coded). Optimistic local update → re-render card → rollback + toast on failure. Report stays in `Pending_Approval` (no stage auto-regress).
+
+**Files changed:**
+```
+frontend/admin/js/script.js                              # renderPaAddDocRow + popover + wizard + submit loop
+frontend/admin/css/style.css                             # .pa-preview-doc-row--add + .pa-add-doc-popover
+.agent/design-logs/admin-ui/301-pa-add-doc-affordance.md # NEW
+.agent/design-logs/INDEX.md                              # + DL-301 row
+.agent/current-status.md                                 # this entry
+```
+
+**No backend / workflow changes** — `EDIT_DOCUMENTS` already handles single-item `docs_to_create` arrays.
+
+**Test DL-301 — §7:**
+- [ ] PA card (no spouse) → `+ הוסף מסמך` opens popover anchored below the button; template list + custom input visible.
+- [ ] Hebrew search filters template list correctly.
+- [ ] Template with no user-variables → jumps to preview directly.
+- [ ] Template with variable (T501 issuer_name) → variables step appears; empty submit blocks; filled submit → preview.
+- [ ] Confirm on preview → card re-renders with new `Required_Missing` doc row; toast `המסמך נוסף בהצלחה`.
+- [ ] Reload PA queue → newly added doc persists.
+- [ ] Duplicate: T501 + "Hapoalim" twice → second attempt shows `מסמך זה כבר קיים ברשימה` + disabled confirm. Change issuer to "Leumi" → confirm re-enabled.
+- [ ] Custom free-text doc → creates with `template_id: 'general_doc'`; duplicate guard (case-insensitive name match) blocks repeat.
+- [ ] Spouse client: `+ הוסף מסמך` row shows under both client and spouse groups; adding via spouse group persists with `person: 'spouse'`.
+- [ ] Network failure → optimistic row rolls back, toast `שגיאה בהוספת המסמך`, no leftover state.
+- [ ] Report stays in `Pending_Approval` after add (no stage regression).
+- [ ] No regression: waive/receive toggle, note popover, pencil edit, print, approve-and-send still work on a card with freshly added docs.
+
+Design log: `.agent/design-logs/admin-ui/301-pa-add-doc-affordance.md`
+**Last Updated:** 2026-04-17 (DL-300 gate shipped; ✨ chip disabled pending UX rework)
 
 ## Session Summary (2026-04-17 — ✨ chip disabled on both surfaces)
 
