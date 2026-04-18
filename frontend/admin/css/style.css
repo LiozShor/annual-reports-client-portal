@@ -1573,10 +1573,16 @@ tr:hover .client-view-link {
 /* ==================== AI REVIEW TAB ==================== */
 
 /* Desktop reviews group dot */
+.tab-icon-wrap {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+}
+
 .desktop-reviews-badge {
     position: absolute;
-    top: 8px;
-    inset-inline-start: 6px;
+    top: -4px;
+    inset-inline-start: -4px;
     width: 8px;
     height: 8px;
     border-radius: var(--radius-full);
