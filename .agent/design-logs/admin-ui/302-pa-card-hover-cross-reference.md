@@ -1,5 +1,5 @@
 # Design Log 302: PA Card — Q↔Doc Hover Cross-Highlight
-**Status:** [IMPLEMENTED — NEED TESTING]
+**Status:** [COMPLETED — verified live 2026-04-18]
 **Date:** 2026-04-18
 **Related Logs:** DL-294/DL-295/DL-298 (PA card layout), DL-299 (issuer edit + notes + ✓ chip removal), DL-301 (add-doc affordance), DL-151 (question_mappings table), DL-227 (inline status menu)
 
