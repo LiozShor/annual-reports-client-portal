@@ -1574,14 +1574,14 @@ tr:hover .client-view-link {
 
 /* Desktop reviews group dot */
 .desktop-reviews-badge {
-    display: inline-block;
+    position: absolute;
+    top: 8px;
+    inset-inline-start: 6px;
     width: 8px;
     height: 8px;
     border-radius: var(--radius-full);
     background: var(--danger-500);
-    margin-inline-start: 4px;
-    vertical-align: middle;
-    flex-shrink: 0;
+    pointer-events: none;
 }
 
 /* Tab Badge */
