@@ -291,7 +291,7 @@ document.getElementById('passwordInput').addEventListener('keypress', (e) => {
 // ==================== TABS ====================
 
 const TAB_DROPDOWN_TABS = { send: 'שליחת שאלונים', questionnaires: 'שאלונים שהתקבלו' };
-const TAB_REVIEW_DROPDOWN_TABS = { 'pending-approval': 'סקירה ואישור', 'ai-review': 'סקירת AI' };
+const TAB_REVIEW_DROPDOWN_TABS = { 'pending-approval': 'סקירת שאלונים', 'ai-review': 'סקירת AI' };
 
 function switchTab(tabName, evt) {
     document.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'));
