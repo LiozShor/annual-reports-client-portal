@@ -56,6 +56,12 @@ export interface JoinIndex {
   byTemplateId: Map<string, Set<string>>;
 }
 
+/** `template_ids` may be a single id or `;`-joined list (e.g. `"T002;T003"`). */
+function splitTemplateIds(raw: string | undefined): string[] {
+  if (!raw) return [];
+  return raw.split(';').map(s => s.trim()).filter(Boolean);
+}
+
 /**
  * Pre-build a per-filing-type lookup from the mappings table. Cheap to call
  * per request — we only iterate the mappings once for both directions.
@@ -63,8 +69,9 @@ export interface JoinIndex {
 export function indexMappings(
   mappings: QuestionMappingRecord[],
   filingType: string,
-): { byKey: Map<string, QuestionMappingFields[]> } {
+): { byKey: Map<string, QuestionMappingFields[]>; allTemplateIds: Set<string> } {
   const byKey = new Map<string, QuestionMappingFields[]>();
+  const allTemplateIds = new Set<string>();
   for (const rec of mappings) {
     const f = rec.fields;
     if (!f.template_ids) continue;
@@ -77,8 +84,9 @@ export function indexMappings(
       arr.push(f);
       byKey.set(k, arr);
     }
+    for (const tid of splitTemplateIds(f.template_ids)) allTemplateIds.add(tid);
   }
-  return { byKey };
+  return { byKey, allTemplateIds };
 }
 
 /**
@@ -89,19 +97,21 @@ export function attachTemplateIds(
   answers: AnswerEntry[],
   mappings: QuestionMappingRecord[],
   filingType: string,
-): AnswerEntry[] {
-  const { byKey } = indexMappings(mappings, filingType);
+): { mapped_template_ids: string[] } {
+  const { byKey, allTemplateIds } = indexMappings(mappings, filingType);
   for (const a of answers) {
     const key = a.tally_key || a.label;
     const candidates = byKey.get(key);
     if (!candidates || candidates.length === 0) continue;
     const triggered = new Set<string>();
     for (const m of candidates) {
-      if (!m.template_ids) continue;
       if (!shouldGenerateDocs(m.condition, norm(a.value))) continue;
-      triggered.add(m.template_ids);
+      for (const tid of splitTemplateIds(m.template_ids)) triggered.add(tid);
     }
     if (triggered.size > 0) a.template_ids = Array.from(triggered);
   }
-  return answers;
+  // Returned to the route so the frontend can distinguish "no source rendered
+  // (yes/no question filtered out)" from "no mapping at all (uploaded /
+  // general_doc / DL-301 add-doc)" — only the latter shows the orphan tooltip.
+  return { mapped_template_ids: Array.from(allTemplateIds) };
 }

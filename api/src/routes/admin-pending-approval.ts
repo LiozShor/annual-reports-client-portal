@@ -126,12 +126,15 @@ adminPendingApproval.get('/admin-pending-approval', async (c) => {
       let answers_summary: { label: string; value: string; tally_key?: string; template_ids?: string[] }[] = [];
       let answers_all: { label: string; value: string; tally_key?: string; template_ids?: string[] }[] = [];
       let submitted_at: string | null = null;
+      let mapped_template_ids: string[] = [];
       if (qFields) {
         const formatted = formatQuestionnaire(qFields);
-        // DL-302: attach template_ids to each answer (no-op for entries that
-        // don't match a mapping). The frontend uses this to cross-highlight
-        // answer ↔ doc rows on hover.
-        attachTemplateIds(formatted.answers, questionMappings, filingType);
+        // DL-302: attach template_ids to each answer + return the full set of
+        // template ids that ANY mapping produces (so the frontend can mark only
+        // truly-unmapped docs as orphan, not yes/no docs whose source row is
+        // filtered from the rendered free-answer list).
+        const joinResult = attachTemplateIds(formatted.answers, questionMappings, filingType);
+        mapped_template_ids = joinResult.mapped_template_ids;
         answers_all = formatted.answers;
         answers_summary = formatted.answers.filter(a => !isNegativeAnswer(a.value));
         submitted_at = (qFields['תאריך הגשה'] as string) || null;
@@ -217,6 +220,9 @@ adminPendingApproval.get('/admin-pending-approval', async (c) => {
         client_questions,
         prior_year_placeholder: true,
         docs_first_sent_at: (rf.docs_first_sent_at as string) || null,
+        // DL-302: full set of template ids mapped by question_mappings for this
+        // filing type. Frontend orphan detection on PA card uses this.
+        mapped_template_ids,
       };
     });
 

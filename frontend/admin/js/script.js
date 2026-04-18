@@ -5894,7 +5894,12 @@ function buildPaCard(item) {
         </div>
     </div>` : '';
 
-    return `<div class="pa-card pa-card--stack${isExpanded ? ' pa-card--expanded' : ' pa-card--collapsed'}" data-report-id="${item.report_id}">
+    // DL-302: SSOT for orphan detection on the PA card. Comma-joined set of every
+    // template id that any question_mappings row produces for this filing type.
+    // Empty payload (older cached responses) → frontend falls back to "doc has no
+    // template id at all" definition.
+    const mappedTids = Array.isArray(item.mapped_template_ids) ? item.mapped_template_ids.join(',') : '';
+    return `<div class="pa-card pa-card--stack${isExpanded ? ' pa-card--expanded' : ' pa-card--collapsed'}" data-report-id="${item.report_id}" data-mapped-tids="${escapeAttr(mappedTids)}">
         ${header}
         ${body}
     </div>`;
@@ -6275,21 +6280,30 @@ function _paLinkOff(sourceEl) {
 }
 
 function _paLinkAnnotateOrphans(card) {
-    // Doc rows whose template id has no matching answer on the left. Marker class
-    // gives the muted dashed-outline + tooltip via CSS / title attr.
-    const answerTids = new Set();
-    card.querySelectorAll('.pa-preview-qa-row[data-template-ids]').forEach(row => {
-        (row.getAttribute('data-template-ids') || '').split(',').forEach(t => {
-            const v = t.trim();
-            if (v) answerTids.add(v);
+    // Orphan = no mapping exists in the system at all (uploaded, AI-classified,
+    // or DL-301 add-doc). NOT "no rendered answer matches" — many docs come
+    // from yes/no questions whose source row is filtered out of freeAnswers
+    // (DL-299), and those should stay un-marked.
+    // Source: data-mapped-tids on the card root, set by buildPaCard from the
+    // backend `mapped_template_ids` payload.
+    const cardRoot = card.closest('.pa-card') || card;
+    const mappedRaw = cardRoot.getAttribute('data-mapped-tids') || '';
+    if (mappedRaw) {
+        const mapped = new Set(mappedRaw.split(',').map(s => s.trim()).filter(Boolean));
+        card.querySelectorAll('.pa-preview-doc-row[data-template-id]').forEach(row => {
+            const tid = row.getAttribute('data-template-id');
+            if (!tid || !mapped.has(tid)) {
+                row.classList.add('pa-preview-doc-row--orphan');
+                if (!row.hasAttribute('title')) row.setAttribute('title', 'אין שאלה מתאימה');
+            }
         });
-    });
-    card.querySelectorAll('.pa-preview-doc-row[data-template-id]').forEach(row => {
+        return;
+    }
+    // Fallback (no backend list yet — old cached payload): only mark docs with
+    // no template id at all, never mark mapped-but-unrendered docs as orphans.
+    card.querySelectorAll('.pa-preview-doc-row').forEach(row => {
         const tid = row.getAttribute('data-template-id');
-        if (!tid || !answerTids.has(tid)) {
-            row.classList.add('pa-preview-doc-row--orphan');
-            if (!row.hasAttribute('title')) row.setAttribute('title', 'אין שאלה מתאימה');
-        }
+        if (!tid) row.classList.add('pa-preview-doc-row--orphan');
     });
 }
 
