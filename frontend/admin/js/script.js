@@ -1559,7 +1559,7 @@ function updateActiveFilterCount() {
     countEl.textContent = count > 0 ? count : '';
 }
 
-function toggleStageFilter(stage) {
+function toggleStageFilter(stage, userInitiated = true) {
     const select = document.getElementById('stageFilter');
     const cards = document.querySelectorAll('.stat-card');
 
@@ -1585,8 +1585,8 @@ function toggleStageFilter(stage) {
 
     filterClients();
 
-    // DL-265: On mobile, scroll to the client table after filtering
-    if (window.innerWidth <= 768) {
+    // DL-265: On mobile, scroll to the client table after filtering (only for real user taps, not on initial load)
+    if (userInitiated && window.innerWidth <= 768) {
         document.getElementById('clientsTableContainer')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
 }
