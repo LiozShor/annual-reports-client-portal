@@ -36,6 +36,17 @@ plans/05-postgres-shadow-write/00-overview.md        # Neon+Drizzle dual-write t
 ---
 
 **Last Updated:** 2026-04-19 (DL-304 dashboard stage-3 + PA queue UX polish)
+**Last Updated:** 2026-04-19 (Cloudflare Pages migration + repo private)
+
+## Hosting Migration: GitHub Pages → Cloudflare Pages — COMPLETED (2026-04-19)
+
+- Frontend now served by **Cloudflare Pages** at `docs.moshe-atsits.com` (DNS on CF, auto-managed CNAME).
+- GitHub repo `LiozShor/annual-reports-client-portal` set to **private**; GH Pages unpublished.
+- Removed legacy `.github/workflows/deploy-pages.yml` + `frontend/CNAME` (CF Pages handles deploys + domain).
+- Worker CORS allowlist trimmed: `ALLOWED_ORIGIN` no longer includes `liozshor.github.io` (`api/wrangler.toml`).
+- Worker needs a redeploy to apply CORS change: `cd api && npx wrangler deploy`.
+- `.gitignore` relaxed (private repo) to track `CLAUDE.md`, `docs/`, `SSOT_*.md` so worktrees get full context. Secrets + PII screenshots stay ignored.
+- Verified end-to-end via Playwright: admin login + dashboard stat tiles + client list all work on `docs.moshe-atsits.com`.
 
 ## DL-304: Dashboard stage-3 + PA queue UX polish — IMPLEMENTED, NEED TESTING (live: c41ea77 → 8e74a63)
 

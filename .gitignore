@@ -40,20 +40,13 @@ tmp/
 claude-worktree.cmd
 experts/
 skills-lock.json
-CLAUDE.md
 
 # GitHub config (but keep workflows for deploy)
 .github/*
 !.github/workflows/
 
-# SSOT docs (local reference only)
-SSOT_*.md
-
 # Archive (obsolete files, old plans, superseded docs)
 archive/
-
-# Documentation (architecture, research, schemas — local reference only)
-docs/
 
 # Local reference data
 data/

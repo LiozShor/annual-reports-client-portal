@@ -31,7 +31,7 @@ Replaces a fully manual tax document collection process with end-to-end automati
 | Layer | Technology |
 |-------|-----------|
 | **API** | Cloudflare Workers (TypeScript) |
-| **Frontend** | Static HTML/CSS/JS on GitHub Pages |
+| **Frontend** | Static HTML/CSS/JS on Cloudflare Pages (`docs.moshe-atsits.com`) |
 | **Database** | Airtable |
 | **Automation** | n8n Cloud (scheduled jobs, document service) |
 | **AI Classification** | Claude API (Anthropic) |
@@ -50,7 +50,7 @@ Replaces a fully manual tax document collection process with end-to-end automati
 │       └── lib/                # Shared utilities
 │           └── inbound/        # Email processing pipeline
 │
-├── frontend/                   # GitHub Pages (deployed on push to main)
+├── frontend/                   # Cloudflare Pages (deployed on push to main)
 │   ├── index.html              # Client landing page
 │   ├── view-documents.html     # Client document viewer
 │   ├── document-manager.html   # Office document editor
@@ -91,7 +91,7 @@ npm install
 npx wrangler dev              # Local dev server on :8787
 
 # Frontend (static files)
-# Served via GitHub Pages - just push to main
+# Served via Cloudflare Pages - just push to main
 # For local dev, use any static server:
 npx serve frontend
 ```
