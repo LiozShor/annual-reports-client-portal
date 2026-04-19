@@ -1,6 +1,19 @@
 # Annual Reports CRM - Current Status
 
-**Last Updated:** 2026-04-18 (DL-303 inline attachment filter fix)
+**Last Updated:** 2026-04-19 (DL-304 dashboard stage-3 + PA queue UX polish)
+
+## DL-304: Dashboard stage-3 + PA queue UX polish — IMPLEMENTED, NEED TESTING (live: c41ea77 → 8e74a63)
+
+Frontend-only (GitHub Pages, no Worker deploy). Shipped on main:
+- Stage-3 stat card filters in place (`toggleStageFilter('3')`) instead of jumping to PA queue tab.
+- `approveAndSendFromQueue` advances the matching `clientsData` row `Pending_Approval` → `Collecting_Docs`, recalcs stats, re-applies filter — dashboard updates without manual refresh.
+- PA queue: removed DL-298 auto-expand of first 3 cards (all collapsed by default).
+- Pencil doc-label edit: shows raw `<b>...</b>` tags in input + preserves them on save (was stripping → bold lost on display). Input is now an auto-growing textarea that wraps long names.
+- Approve-and-send slide-out: lock card height → transition collapse → remove only that node (mirrors AI-review pattern). Root-cause bug: render reads `_paFilteredData`, which wasn't being updated alongside `pendingApprovalData`.
+
+Live verification list in `.agent/design-logs/admin-ui/304-stage3-card-filter-and-refresh.md` §4.
+
+---
 
 ## DL-303: Inline Attachment Filter Fix — COMPLETED (live 2026-04-18)
 
