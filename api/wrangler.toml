@@ -9,7 +9,7 @@ subrequests = 10000   # 12-attachment emails need ~300 (fetch + KV ops + redirec
 cpu_ms = 300000       # 5 min CPU — needed for multi-attachment AI classification
 
 [vars]
-ALLOWED_ORIGIN = "https://liozshor.github.io,https://docs.moshe-atsits.com,http://docs.moshe-atsits.com"
+ALLOWED_ORIGIN = "https://docs.moshe-atsits.com,http://docs.moshe-atsits.com"
 AIRTABLE_BASE_ID = "appqBL5RWQN9cPOyh"
 ALERT_EMAIL = "liozshor1@gmail.com"
 

@@ -63,7 +63,7 @@ Expert n8n automation architect using **n8n-MCP tools** for **Moshe Atsits CPA F
 
 ## Quick Reference
 
-**URLs:** n8n: liozshor.app.n8n.cloud · Frontend: liozshor.github.io/annual-reports-client-portal · Workers API: annual-reports-api.liozshor1.workers.dev/webhook · Office email: reports@moshe-atsits.co.il
+**URLs:** n8n: liozshor.app.n8n.cloud · Frontend: docs.moshe-atsits.com (Cloudflare Pages) · Workers API: annual-reports-api.liozshor1.workers.dev/webhook · Office email: reports@moshe-atsits.co.il
 **Airtable:** Base `appqBL5RWQN9cPOyh` — schema: `docs/airtable-schema.md`
 **Secrets:** `.env` at project root. Load: `source C:/Users/liozm/Desktop/moshe/annual-reports/.env`
 **Workflow IDs:** `docs/workflow-ids.md`
