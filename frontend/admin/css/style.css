@@ -7627,14 +7627,22 @@ tr:hover .client-edit-link {
     border-color: var(--gray-400);
 }
 
-/* Card slide-out animation on approve */
-@keyframes pa-slide-out {
-    from { opacity: 1; transform: translateX(0); max-height: 400px; }
-    to   { opacity: 0; transform: translateX(-40px); max-height: 0; padding: 0; margin: 0; overflow: hidden; }
+/* Card slide-out on approve — DL-304 follow-up: transition-based (not keyframe)
+   so we can lock the card's actual height via inline maxHeight first, matching
+   the AI-review pattern. Works for expanded cards that exceed a fixed keyframe. */
+.pa-card {
+    transition: opacity 300ms ease, transform 300ms ease,
+                max-height 350ms ease, margin 350ms ease, padding 350ms ease;
 }
-
 .pa-card--sending {
-    animation: pa-slide-out 300ms ease-in forwards;
+    opacity: 0;
+    transform: translateX(-40px);
+    max-height: 0 !important;
+    margin-top: 0 !important;
+    margin-bottom: 0 !important;
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+    overflow: hidden;
     pointer-events: none;
 }
 

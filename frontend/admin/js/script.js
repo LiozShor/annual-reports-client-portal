@@ -7359,9 +7359,14 @@ async function approveAndSendFromQueue(reportId, clientName) {
         : `לאשר ולשלוח רשימת מסמכים ל-${clientName}?`;
 
     showConfirmDialog(msg, async () => {
-        // Optimistic slide-out
+        // DL-304 follow-up: lock current height so the max-height transition has
+        // something to animate from (pattern borrowed from AI-review removeCard).
         const card = document.querySelector(`.pa-card[data-report-id="${reportId}"]`);
-        if (card) card.classList.add('pa-card--sending');
+        if (card) {
+            card.style.maxHeight = card.offsetHeight + 'px';
+            card.offsetHeight; // force reflow before toggling class
+            card.classList.add('pa-card--sending');
+        }
 
         try {
             const resp = await fetchWithTimeout(
@@ -7373,14 +7378,8 @@ async function approveAndSendFromQueue(reportId, clientName) {
 
             if (data.ok) {
                 showAIToast('נשלח ל' + clientName, 'success');
-                // Remove from local list + expand state
-                pendingApprovalData = pendingApprovalData.filter(i => i.report_id !== reportId);
-                _paExpanded.delete(reportId);
-                syncPaBadge(pendingApprovalData.length);
-                renderPendingApprovalCards();
                 // DL-304: also advance the dashboard client row stage 3 → 4 so the
-                // "התקבל שאלון טרם נשלחו מסמכים" card count + filtered table
-                // update without a manual refresh.
+                // stage-3 card count + filtered table update without a manual refresh.
                 const dashClient = clientsData.find(c => c.report_id === reportId);
                 if (dashClient && dashClient.stage === 'Pending_Approval') {
                     dashClient.stage = 'Collecting_Docs';
@@ -7389,12 +7388,33 @@ async function approveAndSendFromQueue(reportId, clientName) {
                     const currentStageFilter = document.getElementById('stageFilter')?.value || '';
                     toggleStageFilter(currentStageFilter, false);
                 }
+                // DL-304 follow-up: match AI-review pattern — after slide-out ends,
+                // remove the card node directly (no full re-render of the list, so
+                // siblings don't flash/reposition). Update the backing arrays so
+                // counts + future re-renders stay in sync.
+                setTimeout(() => {
+                    if (card) card.remove();
+                    pendingApprovalData = pendingApprovalData.filter(i => i.report_id !== reportId);
+                    _paFilteredData    = _paFilteredData.filter(i => i.report_id !== reportId);
+                    _paExpanded.delete(reportId);
+                    syncPaBadge(pendingApprovalData.length);
+                    // Empty-state fallback
+                    const container = document.getElementById('paCardsContainer');
+                    const emptyState = document.getElementById('paEmptyState');
+                    if (_paFilteredData.length === 0) {
+                        if (pendingApprovalData.length === 0 && container) container.innerHTML = '';
+                        if (emptyState) emptyState.style.display = pendingApprovalData.length === 0 ? '' : 'none';
+                        if (pendingApprovalData.length > 0 && container) {
+                            container.innerHTML = '<div class="empty-state"><p>לא נמצאו תוצאות לחיפוש</p></div>';
+                        }
+                    }
+                }, 360);
             } else {
-                if (card) card.classList.remove('pa-card--sending');
+                if (card) { card.classList.remove('pa-card--sending'); card.style.maxHeight = ''; }
                 showAIToast(data.error || 'שגיאה בשליחה', 'danger');
             }
         } catch (err) {
-            if (card) card.classList.remove('pa-card--sending');
+            if (card) { card.classList.remove('pa-card--sending'); card.style.maxHeight = ''; }
             console.error('[pa-queue] approve failed', err);
             showAIToast('שגיאה בשליחה', 'danger');
         }
