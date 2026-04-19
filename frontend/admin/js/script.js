@@ -306,6 +306,8 @@ function switchTab(tabName, evt) {
         const wrapperBtn = document.querySelector('.tab-dropdown-wrapper[data-group="reviews"] > .tab-item');
         if (wrapperBtn) wrapperBtn.classList.add('active');
         document.getElementById('tabReviewDropdownLabel').textContent = TAB_REVIEW_DROPDOWN_TABS[tabName];
+        _activeReviewSubTab = tabName;
+        _syncReviewsGroupBadge();
     } else if (evt && evt.currentTarget) {
         evt.currentTarget.classList.add('active');
     }
@@ -430,13 +432,17 @@ function switchTabFromBottomNav(tabName, event) {
 
 let _reviewsAiCount = 0;
 let _reviewsPaCount = 0;
+let _activeReviewSubTab = null; // 'pending-approval' | 'ai-review' | null
 function _syncReviewsGroupBadge() {
     const badge = document.getElementById('reviewsBottomBadge');
     const desktopBadge = document.getElementById('reviewsDesktopBadge');
     const total = (_reviewsAiCount || 0) + (_reviewsPaCount || 0);
+    const desktopCount = _activeReviewSubTab === 'pending-approval' ? (_reviewsPaCount || 0)
+        : _activeReviewSubTab === 'ai-review' ? (_reviewsAiCount || 0)
+        : total;
     if (total > 0) {
         if (badge) { badge.textContent = ''; badge.style.display = 'inline-block'; }
-        if (desktopBadge) { desktopBadge.textContent = String(total); desktopBadge.style.display = 'inline-flex'; }
+        if (desktopBadge) { desktopBadge.textContent = String(desktopCount); desktopBadge.style.display = 'inline-flex'; }
     } else {
         if (badge) badge.style.display = 'none';
         if (desktopBadge) desktopBadge.style.display = 'none';
@@ -5895,7 +5901,6 @@ function buildPaCard(item) {
             <div class="pa-card__name">${escapedName}</div>
             <div class="pa-card__meta">
                 <span class="pa-card__id">${escapeHtml(clientId)}</span>
-                ${relDate ? `<span class="pa-card__date">${escapeHtml(relDate)}</span>` : ''}
                 ${priorityHtml}
             </div>
         </div>
