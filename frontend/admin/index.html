@@ -1100,6 +1100,11 @@
             <span>סקירות</span>
             <span class="bottom-nav-badge" id="reviewsBottomBadge" style="display:none;">0</span>
         </button>
+        <button class="bottom-nav-item" onclick="switchTab('review', event)" data-tab="review">
+            <i data-lucide="clipboard-check"></i>
+            <span>מוכנים להכנה</span>
+            <span class="bottom-nav-badge" id="reviewBottomBadge" style="display:none;">0</span>
+        </button>
         <button class="bottom-nav-item" onclick="toggleBottomNavMore(event)" data-tab="more">
             <i data-lucide="more-horizontal"></i>
             <span>עוד</span>
@@ -1131,10 +1136,6 @@
         <div class="bottom-nav-popover" id="bottomNavMorePopover">
             <button onclick="switchTabFromBottomNav('import', event)">
                 <i data-lucide="upload" class="icon-sm"></i> הוספת לקוחות
-            </button>
-            <button onclick="switchTabFromBottomNav('review', event)">
-                <i data-lucide="clipboard-check" class="icon-sm"></i> מוכנים להכנה
-                <span class="bottom-nav-popover-badge" id="reviewBottomBadge" style="display:none;">0</span>
             </button>
             <button onclick="switchTabFromBottomNav('reminders', event)">
                 <i data-lucide="bell" class="icon-sm"></i> תזכורות חודשיות
