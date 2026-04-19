@@ -3879,8 +3879,8 @@ function renderAICards(items, allFilteredItems) {
                     <div class="ai-accordion-stats">
                         ${badgesHtml}
                     </div>
-                    ${docManagerBtn}
                     <span class="ai-accordion-icon">▾</span>
+                    ${docManagerBtn}
                 </div>
                 <div class="ai-accordion-body">
         `;
