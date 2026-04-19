@@ -7523,7 +7523,7 @@ function openPaIssuerEdit(btn) {
     const showSwap = PA_COMPANY_TEMPLATES.includes(templateId) && Object.keys(paCompanyLinks).length > 0;
 
     row.innerHTML = `<div class="pa-issuer-edit-row">
-        <input type="text" class="pa-issuer-edit-input" id="paIssuerInput-${escapeAttr(docId)}" dir="auto" value="${escapeHtml(currentName)}" />
+        <textarea class="pa-issuer-edit-input" id="paIssuerInput-${escapeAttr(docId)}" dir="auto" rows="1" oninput="_paIssuerEditAutoGrow(this)">${escapeHtml(currentName)}</textarea>
         <button class="pa-issuer-edit-save" title="שמור" onclick="savePaIssuerEdit('${escapeAttr(reportId)}', '${escapeAttr(docId)}')"><i data-lucide="check" class="icon-xs"></i></button>
         <button class="pa-issuer-edit-cancel" title="ביטול" onclick="cancelPaIssuerEdit()"><i data-lucide="x" class="icon-xs"></i></button>
         ${showSwap ? `<button class="pa-issuer-swap-toggle" onclick="togglePaIssuerSwap('${escapeAttr(docId)}')" type="button">החלף חברה ▼</button>` : ''}
@@ -7536,13 +7536,20 @@ function openPaIssuerEdit(btn) {
 
     const input = document.getElementById('paIssuerInput-' + docId);
     if (input) {
+        _paIssuerEditAutoGrow(input);
         input.focus();
         input.setSelectionRange(input.value.length, input.value.length);
         input.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') { e.preventDefault(); savePaIssuerEdit(reportId, docId); }
+            if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); savePaIssuerEdit(reportId, docId); }
             else if (e.key === 'Escape') { e.preventDefault(); cancelPaIssuerEdit(); }
         });
     }
+}
+
+function _paIssuerEditAutoGrow(el) {
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = (el.scrollHeight + 2) + 'px';
 }
 
 function _paBuildIssuerSwapList(docId, filter) {
