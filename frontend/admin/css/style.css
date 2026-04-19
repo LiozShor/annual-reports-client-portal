@@ -1756,6 +1756,13 @@ tr:hover .client-view-link {
     background: rgba(255, 255, 255, 0.15);
 }
 
+.ai-accordion-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
+    flex-shrink: 0;
+}
+
 .ai-accordion-icon {
     font-size: var(--text-sm);
     transition: transform var(--transition-base);
