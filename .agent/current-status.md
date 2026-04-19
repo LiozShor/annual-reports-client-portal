@@ -1,5 +1,40 @@
 # Annual Reports CRM - Current Status
 
+**Last Updated:** 2026-04-19 (migration planning pass — plans/ directory)
+
+## Migration Planning: plans/ directory — COMPLETED (read-only, commit 926c1e1)
+
+Read-only planning pass for five modernization tracks. No source code touched. Eight plan files under `plans/` at repo root, each with goal / preconditions / steps / risks / rollback / acceptance / out-of-scope.
+
+**Files added:**
+```
+plans/00-master-plan.md                              # dep graph, status table, current focus = 01
+plans/01-zod-contracts.md                            # packages/shared + Zod at Worker boundary
+plans/02-sentry-observability.md                     # @sentry/cloudflare + PII scrubber
+plans/03-react-migration/00-overview.md              # Vite+React+TS, strangler-fig, islands mode
+plans/03-react-migration/01-dashboard-tiles.md       # PILOT panel
+plans/04-playwright-ci.md                            # 3 golden-path specs, GH Actions
+plans/05-postgres-shadow-write/00-overview.md        # Neon+Drizzle dual-write to audit_logs
+```
+
+**Audit findings baked into plans:**
+- script.js = 11,269 lines, document-manager.js = 3,925 lines
+- All 5 tracks are greenfield (no prior foothold)
+- `api/` is strict TS; `frontend/` has 0 TS files
+- Hard constraints honored: n8n Cloud `$env`/`fetch()` blocked, custom modal system, `repeat(9, 1fr)` stage grid locked, GH Pages deploys `frontend/**`, PII scrub required for Sentry + Playwright artifacts
+
+**Decisions needed before execution:**
+- Pilot panel = dashboard stats tiles (user confirmed)
+- Shadow-write target = `audit_logs` (tblVjLznorm0jrRtd) — verify
+- Hosting mode for React = islands (default; can override)
+- User actions: provision Sentry project (`SENTRY_DSN`) + Neon project (`DATABASE_URL`)
+
+**Current focus:** `plans/01-zod-contracts.md` — smallest blast radius, unblocks plan 03.
+
+**Not pushed** (per CLAUDE.md ask-before-push).
+
+---
+
 **Last Updated:** 2026-04-19 (DL-304 dashboard stage-3 + PA queue UX polish)
 
 ## DL-304: Dashboard stage-3 + PA queue UX polish — IMPLEMENTED, NEED TESTING (live: c41ea77 → 8e74a63)
