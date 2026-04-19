@@ -32,7 +32,8 @@ export function filterValidAttachments(attachments: RawAttachment[]): RawAttachm
     if (ARCHIVE_EXTENSIONS.has(ext)) return true;
     // Drop inline only when it's a small image — catches signature logos / tracking pixels.
     // iPhone Mail sends real PDFs with isInline=true (Content-Disposition: inline preview).
-    if (att.isInline && IMAGE_EXTENSIONS.has(ext) && att.size < 20_000) return false;
+    // 50KB ceiling: Outlook-rendered signature logos are typically 10–40KB (observed ~30KB for office logo).
+    if (att.isInline && IMAGE_EXTENSIONS.has(ext) && att.size < 50_000) return false;
     if (!DOC_EXTENSIONS.has(ext) && att.size < 1000) return false;
     return true;
   });
