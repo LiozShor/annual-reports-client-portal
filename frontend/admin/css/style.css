@@ -8247,6 +8247,12 @@ tr:hover .client-edit-link {
     font-size: var(--text-sm);
     font-family: inherit;
     direction: auto;
+    /* DL-304 follow-up: long doc names must wrap, not scroll */
+    resize: vertical;
+    overflow: auto;
+    white-space: pre-wrap;
+    word-break: break-word;
+    line-height: 1.4;
 }
 .pa-issuer-edit-input:focus {
     outline: none;
