@@ -13,20 +13,24 @@ Coordinate five modernization initiatives across the Worker API and admin fronte
 ## Status table
 | ID | Title | Status | Blocker |
 |----|-------|--------|---------|
+| 00 | Behavior baseline (discovery only) | Not started | — |
 | 01 | Zod + shared API contracts | Not started | — |
 | 02 | Sentry + structured logs | Not started | Sentry project provisioning (user) |
-| 03 | React + Vite + TS (panels) | Not started | 01 partial (at least `/dashboard` shape) |
+| 03 | React + Vite + TS (panels) | Not started | 00 complete + 01 partial (at least `/dashboard` shape) |
 | 04 | Playwright E2E in CI | Not started | 03 pilot merged (selectors stable) |
 | 05 | Postgres (Neon) + Drizzle shadow-write | Not started | Neon project provisioning (user) |
 
 ## Dependency graph
 ```
-01-zod-contracts   ──┐
-                     ├─▶ 03-react-migration (panels)
-02-sentry ───────────┤
-                     └─▶ 04-playwright-ci
+00-behavior-baseline ──────────┐
+                               ▼
+01-zod-contracts   ──┐  03-react-migration (panels)
+                     ├──────▶    │
+02-sentry ───────────┘            ▼
+                             04-playwright-ci
 05-postgres-shadow-write (independent; can start any time after 01)
 ```
+01 and 02 remain parallelizable and do NOT depend on 00.
 
 ## Order validation
 Suggested order is preserved. Rationale:
@@ -37,7 +41,7 @@ Suggested order is preserved. Rationale:
 - **05 last, but parallelizable** — backend-only, independent of the frontend track.
 
 ## Current focus
-`01-zod-contracts` — execute next.
+`00-behavior-baseline` — execute next. Produces the inventories that plan 03 references before any legacy code is removed. 01 and 02 can run in parallel to 00.
 
 ## Partial-foothold flags
 None. Audit confirmed zero prior work on any of the five tracks. `api/tsconfig.json` has `jsx: react-jsx` but that is for Hono SSR, not client React — do not treat as React foothold.

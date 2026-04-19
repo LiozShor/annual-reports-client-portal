@@ -9,6 +9,10 @@ Replace the dashboard stat-tiles section of `frontend/admin/js/script.js` with a
 - `packages/shared` exports `DashboardResponseSchema` + `DashboardResponse` type (plan 01).
 - `frontend/admin-react/` Vite scaffold exists (plan 03 overview).
 - Feature flag `ADMIN_REACT_DASHBOARD_TILES` wired in `frontend/admin/index.html`, defaulting OFF.
+- **Plan 00 inventories exist** and rows covering the dashboard stats-tiles section of script.js (roughly the `// ==================== DASHBOARD ====================` banner at line 704 onward, scoped to stats-tiles render path) have been identified. List those rows in this file before execution:
+  - Functions: (to fill in from `docs/baseline/script-js-functions.md` — e.g. the renderer, the stats calculator, any helper that mutates `_paFilteredData` or equivalent tile state)
+  - Interactions: (to fill in from `docs/baseline/script-js-interactions.md` — tile click handlers, stage-filter toggles)
+  - Network: (to fill in from `docs/baseline/script-js-network.md` — the `fetch('/webhook/dashboard')` call and any refresh triggers)
 
 ## Steps
 1. Grep `frontend/admin/js/script.js` for the stats-tiles section banner (likely `// ===== DASHBOARD STATS =====` or similar). Record line range.
@@ -40,6 +44,8 @@ Replace the dashboard stat-tiles section of `frontend/admin/js/script.js` with a
 - [ ] Staging: no console errors in 10-minute interaction window.
 - [ ] Live verification (per CLAUDE.md): exercise with a real record before marking `COMPLETED` — do not stop at `[IMPLEMENTED — NEED TESTING]` based on tests alone.
 - [ ] Legacy code path preserved under flag for 1 week.
+- [ ] **Behavior-baseline accounting:** every function, handler, and fetch claimed by this panel (per the rows listed in Preconditions) is accounted for with one of: `ported` (reimplemented in React), `deprecated` (explicitly dropped — document why), or `orphan` (grep-confirmed zero external callers; flagged in this plan). No row is silently dropped.
+- [ ] Pre-removal audit from plan 03 overview step 8 executed and recorded before any legacy removal commit.
 
 ## Out of scope
 - Other dashboard sections (client list, PA queue, search) — separate plan files.
