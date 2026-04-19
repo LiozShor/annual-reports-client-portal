@@ -5801,11 +5801,7 @@ function renderPendingApprovalCards() {
 
     const pageItems = items.slice((_paPage - 1) * PA_PAGE_SIZE, _paPage * PA_PAGE_SIZE);
 
-    // DL-298: auto-expand first 3 of the current page (FIFO-oldest-first). Additive — doesn't undo manual collapses on re-render of a single card.
-    for (let i = 0; i < Math.min(3, pageItems.length); i++) {
-        _paExpanded.add(pageItems[i].report_id);
-    }
-
+    // DL-304: all cards collapsed by default (previously auto-expanded first 3 of current page).
     container.innerHTML = pageItems.map(item => buildPaCard(item)).join('');
     renderPagination('paPagination', items.length, _paPage, PA_PAGE_SIZE, (p) => { _paPage = p; renderPendingApprovalCards(); });
     safeCreateIcons(container);
@@ -7382,6 +7378,17 @@ async function approveAndSendFromQueue(reportId, clientName) {
                 _paExpanded.delete(reportId);
                 syncPaBadge(pendingApprovalData.length);
                 renderPendingApprovalCards();
+                // DL-304: also advance the dashboard client row stage 3 → 4 so the
+                // "התקבל שאלון טרם נשלחו מסמכים" card count + filtered table
+                // update without a manual refresh.
+                const dashClient = clientsData.find(c => c.report_id === reportId);
+                if (dashClient && dashClient.stage === 'Pending_Approval') {
+                    dashClient.stage = 'Collecting_Docs';
+                    if (typeof recalculateStats === 'function') recalculateStats();
+                    _clientsBaseKey = '';
+                    const currentStageFilter = document.getElementById('stageFilter')?.value || '';
+                    toggleStageFilter(currentStageFilter, false);
+                }
             } else {
                 if (card) card.classList.remove('pa-card--sending');
                 showAIToast(data.error || 'שגיאה בשליחה', 'danger');
@@ -7509,7 +7516,10 @@ function openPaIssuerEdit(btn) {
     _paActiveIssuerEdit = { reportId, docId, rowEl: row, originalHtml: row.innerHTML };
 
     const { doc } = _paFindDoc(reportId, docId);
-    const currentName = (doc && doc.name ? doc.name : '').replace(/<\/?b>/g, '');
+    // DL-304: keep <b>...</b> markers visible in the edit input so the admin can see
+    // which part is bold and preserve/adjust it. Saving writes the raw value back —
+    // display uses renderDocLabel() which turns `<b>`/`</b>` back into real bold.
+    const currentName = (doc && doc.name ? doc.name : '');
     const showSwap = PA_COMPANY_TEMPLATES.includes(templateId) && Object.keys(paCompanyLinks).length > 0;
 
     row.innerHTML = `<div class="pa-issuer-edit-row">
