@@ -5900,7 +5900,6 @@ function buildPaCard(item) {
         <div class="pa-card__header-main">
             <div class="pa-card__name">${escapedName}</div>
             <div class="pa-card__meta">
-                <span class="pa-card__id">${escapeHtml(clientId)}</span>
                 ${priorityHtml}
             </div>
         </div>
