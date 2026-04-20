@@ -1,5 +1,5 @@
 /**
- * POST /webhook/extract-issuer-names  (DL-293)
+ * POST /webhook/extract-issuer-names  (DL-293, updated DL-310)
  *
  * Called by WF02 after `Upsert Documents` succeeds. Given the batch of docs
  * for one report and the raw free-text context each doc's issuer_name was
@@ -7,11 +7,15 @@
  * (employer, broker, bank, insurer, …) for each doc.
  *
  * Writes:
- *   - `issuer_name_suggested` on each doc where confidence >= 0.5
- *   - appends `[תשובה מהשאלון] <raw>` to `bookkeepers_notes` (if not already present)
+ *   - `issuer_name_suggested` on each doc where confidence >= 0.5 AND the
+ *     template has `needs_issuer_suggestion=true` (DL-300 gate)
  *
  * NEVER mutates `issuer_name` — admin's 1-click accept on the Review & Approve
  * card (DL-292) does that via the existing EDIT_DOCUMENTS endpoint.
+ *
+ * DL-310: removed the `[תשובה מהשאלון] <raw>` append to `bookkeepers_notes` —
+ * the raw questionnaire answer is no longer preserved per-doc. WF02 still sends
+ * `raw_context` / `existing_notes` in the payload; those fields are now ignored.
  */
 
 import { Hono } from 'hono';
@@ -29,7 +33,6 @@ const ANTHROPIC_URL = 'https://api.anthropic.com/v1/messages';
 const MODEL = 'claude-haiku-4-5-20251001';
 const CONFIDENCE_FLOOR = 0.5;
 const MAX_RETRIES = 2;
-const NOTE_PREFIX = '[תשובה מהשאלון]';
 
 interface DocInput {
   doc_record_id: string;
@@ -197,15 +200,6 @@ async function callClaude(
   return results;
 }
 
-function buildNotesUpdate(existing: string | undefined, rawContext: string): string | null {
-  const raw = (rawContext || '').trim();
-  if (!raw) return null;
-  const noteLine = `${NOTE_PREFIX} ${raw}`;
-  const prev = (existing || '').trim();
-  if (prev.includes(noteLine)) return null;
-  return prev ? `${prev}\n\n${noteLine}` : noteLine;
-}
-
 route.post('/extract-issuer-names', async (c) => {
   try {
     const authHeader = c.req.header('Authorization') || '';
@@ -247,9 +241,9 @@ route.post('/extract-issuer-names', async (c) => {
     }
 
     // ---- DL-300: per-template gate ----
-    // Fetch templates, partition docs into llmDocs (needs_issuer_suggestion=true)
-    // vs noteOnlyDocs (still get the bookkeepers_notes append but no Claude call).
-    // If the templates fetch fails, bubble up — don't silently drop suggestions.
+    // Fetch templates, partition docs: llmDocs (needs_issuer_suggestion=true) get
+    // the Haiku call; the rest are counted toward filtered_by_template and ignored
+    // (DL-310 removed the bookkeepers_notes append that used to run for them).
     const airtable = new AirtableClient(c.env.AIRTABLE_BASE_ID, c.env.AIRTABLE_PAT);
     const templateRecords = await airtable.listAllRecords(TEMPLATES_TABLE);
     const templateMap = buildTemplateMap(templateRecords);
@@ -283,32 +277,14 @@ route.post('/extract-issuer-names', async (c) => {
           : null;
       const confident = !!r && suggestion !== null && r.confidence >= CONFIDENCE_FLOOR;
 
-      const fields: Record<string, unknown> = {};
       // Skip suggestion when it adds no new info over the existing issuer_name
       // (e.g. existing "בלאומי" + suggestion "לאומי" → no-op).
       const isNoOp = confident && isNoOpSuggestion(doc.current_issuer_name, suggestion!);
       if (confident && !isNoOp) {
-        fields.issuer_name_suggested = suggestion;
+        updates.push({ id: doc.doc_record_id, fields: { issuer_name_suggested: suggestion } });
         suggested++;
       } else {
         skipped++;
-      }
-
-      const noteUpdate = buildNotesUpdate(doc.existing_notes, doc.raw_context);
-      if (noteUpdate !== null) {
-        fields.bookkeepers_notes = noteUpdate;
-      }
-
-      if (Object.keys(fields).length > 0) {
-        updates.push({ id: doc.doc_record_id, fields });
-      }
-    }
-
-    // Disabled-template docs: still preserve raw context in bookkeepers_notes.
-    for (const doc of noteOnlyDocs) {
-      const noteUpdate = buildNotesUpdate(doc.existing_notes, doc.raw_context);
-      if (noteUpdate !== null) {
-        updates.push({ id: doc.doc_record_id, fields: { bookkeepers_notes: noteUpdate } });
       }
     }
 
