@@ -12,21 +12,40 @@ import re
 import subprocess
 import sys
 
+# Each pattern: (regex, label, use_sanitized_line)
+# use_sanitized_line=True runs the match against a version of the line with
+# inline-code (`...`) and quoted ("..." / '...' / curly-quotes) text stripped —
+# so Hebrew UI labels / button text inside code or quotes don't trigger.
 PATTERNS = [
-    (re.compile(r'\bCPA-\d+\b'), "CPA client ID"),
-    (re.compile(r'[\u0590-\u05FF]{4,}'), "Hebrew text (possible client data)"),
+    (re.compile(r'\bCPA-\d+\b'), "CPA client ID", False),
+    (re.compile(r'[\u0590-\u05FF]{4,}'), "Hebrew text (possible client data)", True),
     # Airtable PAT: starts with 'pat' followed by 14+ base62 chars, then a dot + 64 hex chars
-    (re.compile(r'\bpat[A-Za-z0-9]{14,}\.[a-f0-9]{64}\b'), "Airtable PAT token"),
+    (re.compile(r'\bpat[A-Za-z0-9]{14,}\.[a-f0-9]{64}\b'), "Airtable PAT token", False),
 ]
 
 # Lines that are clearly documenting past incidents — allow them through
 ALLOWLIST_PATTERNS = [
     re.compile(r'Leaked token `pat'),        # incident post-mortem reference
     re.compile(r'rotated.*token'),
-    re.compile(r'#\s*(CPA-\d+)'),           # markdown comment references are usually ok
-    re.compile(r'toast\s+["\u201c]'),        # UI toast message strings in test checklists
-    re.compile(r'נשמר בהצלחה'),              # "saved successfully" toast — not client PII
+    re.compile(r'#\s*(CPA-\d+)'),            # markdown comment references are usually ok
 ]
+
+
+def sanitize_line(line):
+    """
+    Strip inline-code and quoted spans so Hebrew inside them (UI button labels,
+    CSS content, doc-string references, etc.) doesn't trigger the PII check.
+    CPA-IDs and tokens are checked against the RAW line, not the sanitized one.
+    """
+    # Inline code: `...`
+    line = re.sub(r'`[^`\n]*`', '', line)
+    # Double quotes (straight + curly) — non-greedy to handle multiple on one line
+    line = re.sub(r'"[^"\n]*"', '', line)
+    line = re.sub(r'[\u201c][^\u201d\n]*[\u201d]', '', line)
+    # Single quotes — only when used as clear string delimiters (not apostrophes mid-word)
+    # Heuristic: a single quote surrounded by non-letter chars on the outside
+    line = re.sub(r"(?<![A-Za-z])'[^'\n]*'(?![A-Za-z])", '', line)
+    return line
 
 
 def is_allowlisted(line):
@@ -71,8 +90,15 @@ def scan_diff(paths):
                 line = raw_line[1:]  # strip leading '+'
                 if is_allowlisted(line):
                     continue
-                for pattern, label in PATTERNS:
-                    if pattern.search(line):
+                sanitized = None  # lazy-computed
+                for pattern, label, use_sanitized in PATTERNS:
+                    if use_sanitized:
+                        if sanitized is None:
+                            sanitized = sanitize_line(line)
+                        target = sanitized
+                    else:
+                        target = line
+                    if pattern.search(target):
                         found.append((path, dest_lineno, label, line.rstrip()[:120]))
                         break
             elif raw_line.startswith(" "):
@@ -92,8 +118,15 @@ def scan_all(paths):
                 for lineno, line in enumerate(f, 1):
                     if is_allowlisted(line):
                         continue
-                    for pattern, label in PATTERNS:
-                        if pattern.search(line):
+                    sanitized = None
+                    for pattern, label, use_sanitized in PATTERNS:
+                        if use_sanitized:
+                            if sanitized is None:
+                                sanitized = sanitize_line(line)
+                            target = sanitized
+                        else:
+                            target = line
+                        if pattern.search(target):
                             found.append((path, lineno, label, line.rstrip()[:120]))
                             break
         except OSError:
