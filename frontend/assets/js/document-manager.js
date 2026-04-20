@@ -2715,7 +2715,7 @@ function previewApproveEmail() {
     reportId,
     clientName,
     getToken: () => (typeof ADMIN_TOKEN !== 'undefined' ? ADMIN_TOKEN : (typeof authToken !== 'undefined' ? authToken : '')),
-    apiBase: API_BASE,
+    endpoint: ENDPOINTS.APPROVE_AND_SEND,
   });
 }
 

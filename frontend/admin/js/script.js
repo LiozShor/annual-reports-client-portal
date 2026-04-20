@@ -7403,7 +7403,7 @@ function previewApproveEmail(reportId, clientName) {
     reportId,
     clientName,
     getToken: () => authToken,
-    apiBase: API_BASE,
+    endpoint: ENDPOINTS.APPROVE_AND_SEND,
   });
 }
 
