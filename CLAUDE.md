@@ -74,6 +74,8 @@ Expert n8n automation architect using **n8n-MCP tools** for **Moshe Atsits CPA F
 
 **React Islands:** Source at `frontend/admin/react/` (Vite + React 18 + TS strict). Built output at `frontend/admin/react-dist/` (committed). See `frontend/admin/react/README.md` for dev/build/test commands and island bridge contract.
 
+**React-First for New Features (default):** When proposing or implementing a NEW feature, default to a React island if it involves a form with 2+ fields, data fetching + mutation, complex UI state (tabs, inline editing, multi-step flows), or anything that warrants unit tests. Stay in vanilla `script.js` only for trivial additions (button wired to existing fn, wording tweaks, CSS-only changes, quick fixes to existing vanilla flows). **Never rewrite working vanilla code just to "be in React"** — Strangler Fig principle: new growth in React, touch the old only when you have to.
+
 ---
 
 ## Cost Optimization Rules
