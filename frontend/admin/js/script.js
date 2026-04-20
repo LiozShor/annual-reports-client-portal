@@ -375,29 +375,72 @@ function switchTab(tabName, evt) {
     perfEnd('switchTab:' + tabName, _tSwitch);
 }
 
+function openTabDropdown(wrapper) {
+    if (!wrapper) return;
+    const btn = wrapper.querySelector(':scope > .tab-item');
+    const menu = wrapper.querySelector(':scope > .tab-dropdown-menu');
+    if (!btn || !menu || menu.classList.contains('open')) return;
+    closeAllRowMenus();
+    positionFloating(btn, menu);
+    menu.classList.add('open');
+    btn.setAttribute('aria-expanded', 'true');
+    safeCreateIcons();
+}
+
+function closeTabDropdown(wrapper) {
+    if (!wrapper) return;
+    const btn = wrapper.querySelector(':scope > .tab-item');
+    const menu = wrapper.querySelector(':scope > .tab-dropdown-menu');
+    if (menu) menu.classList.remove('open');
+    if (btn) btn.setAttribute('aria-expanded', 'false');
+    const t = wrapper._closeTimer;
+    if (t) { clearTimeout(t); wrapper._closeTimer = null; }
+}
+
 function toggleTabDropdown(event) {
     event.stopPropagation();
-    const btn = event.currentTarget;
-    const menu = btn.parentElement.querySelector('.tab-dropdown-menu');
+    const wrapper = event.currentTarget.parentElement;
+    const menu = wrapper.querySelector(':scope > .tab-dropdown-menu');
     if (!menu) return;
-    const wasOpen = menu.classList.contains('open');
-    closeAllRowMenus();
-    if (!wasOpen) {
-        positionFloating(btn, menu);
-        menu.classList.add('open');
-        btn.setAttribute('aria-expanded', 'true');
-        safeCreateIcons();
-    }
+    if (menu.classList.contains('open')) closeTabDropdown(wrapper);
+    else openTabDropdown(wrapper);
 }
 
 function switchTabFromDropdown(tabName, event) {
     event.stopPropagation();
     const wrapper = event.currentTarget.closest('.tab-dropdown-wrapper');
-    const menu = wrapper?.querySelector('.tab-dropdown-menu');
-    if (menu) menu.classList.remove('open');
-    const wrapperBtn = wrapper?.querySelector(':scope > .tab-item');
-    if (wrapperBtn) wrapperBtn.setAttribute('aria-expanded', 'false');
+    closeTabDropdown(wrapper);
     switchTab(tabName);
+}
+
+// Hover-open for desktop (mouse) only. Touch keeps click-toggle.
+function setupTabDropdownHover() {
+    const mq = window.matchMedia('(hover: hover) and (pointer: fine)');
+    if (!mq.matches) return;
+    const CLOSE_DELAY = 200;
+    document.querySelectorAll('.tab-dropdown-wrapper').forEach(wrapper => {
+        const scheduleClose = () => {
+            if (wrapper._closeTimer) clearTimeout(wrapper._closeTimer);
+            wrapper._closeTimer = setTimeout(() => closeTabDropdown(wrapper), CLOSE_DELAY);
+        };
+        const cancelClose = () => {
+            if (wrapper._closeTimer) { clearTimeout(wrapper._closeTimer); wrapper._closeTimer = null; }
+        };
+        wrapper.addEventListener('mouseenter', () => {
+            cancelClose();
+            // Close siblings so only one is open
+            document.querySelectorAll('.tab-dropdown-wrapper').forEach(w => {
+                if (w !== wrapper) closeTabDropdown(w);
+            });
+            openTabDropdown(wrapper);
+        });
+        wrapper.addEventListener('mouseleave', scheduleClose);
+        const menu = wrapper.querySelector(':scope > .tab-dropdown-menu');
+        if (menu) {
+            menu.addEventListener('mouseenter', cancelClose);
+            menu.addEventListener('mouseleave', scheduleClose);
+        }
+    });
 }
 
 // ==================== MOBILE BOTTOM NAV ====================
@@ -10085,6 +10128,7 @@ populateYearDropdowns();
 document.addEventListener('DOMContentLoaded', () => {
     safeCreateIcons();
     initOfflineDetection();
+    setupTabDropdownHover();
 });
 
 // Initialize

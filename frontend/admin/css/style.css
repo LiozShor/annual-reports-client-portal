@@ -5568,11 +5568,27 @@ tr:hover .client-edit-link {
     box-shadow: var(--shadow-md);
     min-width: 180px;
     padding: var(--sp-1) 0;
+    transform-origin: top center;
 }
 
 .tab-dropdown-menu.open {
     display: block;
-    animation: floatInDown 120ms ease-out;
+    animation: tabDropdownIn 180ms cubic-bezier(.2, .8, .2, 1) both;
+}
+
+@keyframes tabDropdownIn {
+    from { opacity: 0; transform: translateY(-6px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .tab-dropdown-menu.open {
+        animation-duration: 80ms;
+    }
+    @keyframes tabDropdownIn {
+        from { opacity: 0; transform: none; }
+        to   { opacity: 1; transform: none; }
+    }
 }
 
 .tab-dropdown-menu button {
