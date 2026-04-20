@@ -1,0 +1,3 @@
+# Built React island output — treat as generated binary, suppress diffs
+frontend/admin/react-dist/** linguist-generated=true
+frontend/admin/react-dist/** -diff

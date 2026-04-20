@@ -72,6 +72,8 @@ Expert n8n automation architect using **n8n-MCP tools** for **Moshe Atsits CPA F
 
 **On-Demand Docs:** `docs/architecture.md` (system arch, API endpoints) · `docs/airtable-schema.md` (full schema) · `docs/email-design-rules.md` (MANDATORY for email work) · `docs/ui-design-system.md` (quick ref, MANDATORY for UI work) · `docs/ui-design-system-full.md` (full HTML examples, load when building new components) · `docs/common-mistakes.md` (bug patterns from 45+ design logs) · `SSOT_required_documents_from_Tally_input.md` (all 34 templates) · `SSOT_CS_required_documents.md` (capital statements SSOT) · `.agent/current-status.md` (TODOs, open issues) · `.agent/design-logs/INDEX.md` (active logs) · `docs/performance-benchmarks.md` (Workers migration results) · `docs/meeting-with-natan-action-items.md` (stakeholder backlog)
 
+**React Islands:** Source at `frontend/admin/react/` (Vite + React 18 + TS strict). Built output at `frontend/admin/react-dist/` (committed). See `frontend/admin/react/README.md` for dev/build/test commands and island bridge contract.
+
 ---
 
 ## Cost Optimization Rules
