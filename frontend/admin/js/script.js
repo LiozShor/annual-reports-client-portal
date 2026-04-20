@@ -168,6 +168,9 @@ function _showAppUI() {
     if (cw) cw.classList.add('visible');
     startBackgroundRefresh();
     safeCreateIcons();
+    // DL-306: honor ?tab= URL param for deep links (e.g. ?tab=ai-review&client=CPA-XXX)
+    const tabParam = new URLSearchParams(window.location.search).get('tab');
+    if (tabParam) switchTab(tabParam);
 }
 
 function _showLoginUI() {
