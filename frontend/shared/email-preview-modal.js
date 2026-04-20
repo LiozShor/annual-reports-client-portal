@@ -75,7 +75,8 @@
     const body = document.createElement('div');
     body.style.display = 'flex';
     body.style.flexDirection = 'column';
-    body.style.flex = '1';
+    body.style.alignItems = 'stretch';
+    body.style.flex = '1 1 auto';
     body.style.minHeight = '0';
     body.style.padding = '16px';
     body.style.gap = '12px';
@@ -100,13 +101,23 @@
     const wrap = document.createElement('div');
     wrap.className = 'msg-compose-preview-wrap';
     wrap.style.position = 'relative';
-    wrap.style.flex = '1';
+    wrap.style.flex = '1 1 auto';
+    wrap.style.alignSelf = 'stretch';
+    wrap.style.width = '100%';
     wrap.style.minHeight = '0';
+    wrap.style.overflow = 'auto';
+    wrap.style.background = '#fff';
 
     const iframe = document.createElement('iframe');
     iframe.className = 'msg-preview-iframe';
     iframe.setAttribute('sandbox', 'allow-same-origin');
     iframe.setAttribute('srcdoc', '');
+    iframe.style.width = '100%';
+    iframe.style.height = '100%';
+    iframe.style.minHeight = '500px';
+    iframe.style.border = '0';
+    iframe.style.display = 'block';
+    iframe.style.background = '#fff';
 
     const loading = document.createElement('div');
     loading.className = 'msg-preview-loading';
