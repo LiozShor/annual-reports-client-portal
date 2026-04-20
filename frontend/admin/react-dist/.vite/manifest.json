@@ -1,0 +1,8 @@
+{
+  "src/islands/client-detail.tsx": {
+    "file": "client-detail.js",
+    "name": "client-detail",
+    "src": "src/islands/client-detail.tsx",
+    "isEntry": true
+  }
+}

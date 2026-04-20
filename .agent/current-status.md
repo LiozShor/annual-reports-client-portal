@@ -1950,5 +1950,22 @@ N. **Test DL-281: Queue View + Outlook Source of Truth** — verify Outbox-backe
    - [ ] Throttling: 20 rapid dashboard loads = 1 Graph call (60s cache)
    - Design log: `.agent/design-logs/email/281-queued-emails-outbox-source-of-truth.md`
 
+### Test DL-306: React + Vite + TS First Slice (Client Detail Modal)
+
+Branch: `DL-306-react-vite-first-slice` — NOT merged to main. Requires browser testing before merge.
+
+- [ ] Run `cd frontend/admin/react && npm run test` — 3/3 Vitest pass
+- [ ] Run `npm run typecheck` — strict tsc passes
+- [ ] Run `npm run build` — bundle produced in react-dist/
+- [ ] Open admin dashboard in browser → click a client row → React modal opens with name/email/phone
+- [ ] Edit email → Save → toast "נשמר בהצלחה" appears → verify Airtable updated
+- [ ] Edit phone → close ✕ → confirm dialog appears → cancel keeps modal open → save works
+- [ ] Open doc-manager page → pencil/edit icon → React modal opens (second mount point)
+- [ ] Network tab: only ONE GET per open, no duplicate fetches
+- [ ] React Devtools shows `<ClientDetailModal>` tree
+- [ ] Regression: dashboard row menus, stage changes, bulk send still work
+
+Design log: `.agent/design-logs/admin-ui/306-react-vite-ts-first-slice.md`
+
 ### Worktree cleanup (FS-side, manual)
 - This session's worktree at `C:/Users/liozm/Desktop/moshe/worktrees/claude-session-20260416-072032/` had its git metadata corrupted mid-session (HEAD vanished — likely parallel session pruned it). All work was recovered via copy-to-main-and-commit. Inner files cleared, orphaned `.git/worktrees/claude-session-20260416-072032/` gitdir removed, but the now-empty parent dir is locked by this terminal — `rmdir` after closing this Claude session.
