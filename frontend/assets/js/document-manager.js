@@ -3500,16 +3500,16 @@ function updateStickyBar() {
             ? `<button class="btn btn-sm btn-outline" id="dmSilentAdvanceBtn"
                     title="מעביר את הלקוח לשלב איסוף מסמכים. לא יישלח לו מייל."
                     onclick="advanceToCollectingDocsFromDm()">
-                    <i data-lucide="mail-off" class="icon-xs"></i> אשר מבלי לשלוח
+                    <i data-lucide="mail-x" class="icon-xs"></i> אשר מבלי לשלוח
                </button>`
             : '';
         actionsEl.innerHTML = `${sentInfo}
-            <button class="btn btn-secondary btn-sm" onclick="previewApproveEmail()">
-                <i data-lucide="eye" class="icon-xs"></i> תצוגה מקדימה
-            </button>
             <button class="btn btn-success btn-sm" onclick="approveAndSendToClient()">
                 <i data-lucide="send" class="icon-sm"></i> ${sentLabel}
-            </button>${silentBtn}`;
+            </button>${silentBtn}
+            <button class="btn btn-secondary btn-sm" onclick="previewApproveEmail()">
+                <i data-lucide="eye" class="icon-xs"></i> תצוגה מקדימה
+            </button>`;
     }
     if (typeof lucide !== 'undefined') lucide.createIcons();
 }

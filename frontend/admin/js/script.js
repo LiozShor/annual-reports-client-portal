@@ -5950,19 +5950,19 @@ function buildPaCard(item) {
         ${preuploadedBanner}
         ${buildPaPreviewBody(item)}
         <div class="pa-card__actions" onclick="event.stopPropagation()">
-            <button class="btn btn-sm btn-outline pa-btn-questions" onclick="openQuestionsForClient('${item.report_id}')">
-                <i data-lucide="message-circle" class="icon-xs"></i> שאל את הלקוח${qCount > 0 ? ` <span class="pa-questions-badge">${qCount}</span>` : ''}
-            </button>
-            <button class="btn btn-sm btn-outline pa-btn-preview" onclick="previewApproveEmail('${item.report_id}', '${escapedName.replace(/'/g, "\\'")}')">
-                <i data-lucide="eye" class="icon-xs"></i> תצוגה מקדימה
+            <button class="btn btn-sm btn-success pa-btn-approve" onclick="approveAndSendFromQueue('${item.report_id}', '${escapedName.replace(/'/g, "\\'")}')">
+                <i data-lucide="send" class="icon-xs"></i> אשר ושלח
             </button>
             <button class="btn btn-sm btn-outline pa-btn-advance"
                     title="מעביר את הלקוח לשלב איסוף מסמכים. לא יישלח לו מייל."
                     onclick="advanceToCollectingDocs('${item.report_id}', '${escapedName.replace(/'/g, "\\'")}')">
-                <i data-lucide="mail-off" class="icon-xs"></i> אשר מבלי לשלוח
+                <i data-lucide="mail-x" class="icon-xs"></i> אשר מבלי לשלוח
             </button>
-            <button class="btn btn-sm btn-success pa-btn-approve" onclick="approveAndSendFromQueue('${item.report_id}', '${escapedName.replace(/'/g, "\\'")}')">
-                <i data-lucide="send" class="icon-xs"></i> אשר ושלח
+            <button class="btn btn-sm btn-outline pa-btn-preview" onclick="previewApproveEmail('${item.report_id}', '${escapedName.replace(/'/g, "\\'")}')">
+                <i data-lucide="eye" class="icon-xs"></i> תצוגה מקדימה
+            </button>
+            <button class="btn btn-sm btn-outline pa-btn-questions" onclick="openQuestionsForClient('${item.report_id}')">
+                <i data-lucide="message-circle" class="icon-xs"></i> שאל את הלקוח${qCount > 0 ? ` <span class="pa-questions-badge">${qCount}</span>` : ''}
             </button>
         </div>
     </div>` : '';
