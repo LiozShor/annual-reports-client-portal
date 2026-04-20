@@ -1,5 +1,5 @@
 # Design Log 308: Approve-and-Send Email Preview (PA Tab + Doc-Manager)
-**Status:** [IMPLEMENTED — NEED TESTING]
+**Status:** [COMPLETED] (live 2026-04-20)
 **Date:** 2026-04-20
 **Related Logs:** DL-289 (live email preview iframe for reply-compose), DL-292 (PA queue tab), DL-297 (doc-manager sticky action bar), DL-298 (PA stacked cards), DL-299 (shared print-questionnaire helper precedent)
 
