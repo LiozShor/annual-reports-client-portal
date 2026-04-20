@@ -363,6 +363,9 @@
                         </button>
                     </div>
                     <div id="approve-send-row">
+                        <button id="previewApproveBtn" class="btn btn-secondary btn-lg" onclick="previewApproveEmail()">
+                            <i data-lucide="eye" class="icon-sm"></i> תצוגה מקדימה
+                        </button>
                         <button id="approveSendBtn" class="btn btn-success btn-lg" onclick="approveAndSendToClient()">
                             <i data-lucide="send" class="icon-sm"></i> שלח ללקוח
                         </button>
@@ -566,6 +569,7 @@
     <script src="shared/utils.js"></script>
     <script src="assets/js/client-detail-modal.js"></script>
     <script src="shared/print-questionnaire.js"></script>
+    <script src="shared/email-preview-modal.js"></script>
     <script src="assets/js/document-manager.js"></script>
     <!-- React island: Client Detail Modal (loads after shared scripts) -->
     <script src="admin/react-dist/client-detail.js"></script>

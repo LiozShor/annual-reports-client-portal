@@ -2702,6 +2702,23 @@ function showConfirmDialog(message, onConfirm, confirmText = 'אישור', dange
     overlay.querySelector('#_confirmOk').onclick = () => { overlay.remove(); onConfirm(); };
 }
 
+// DL-308: Read-only email preview modal before approve-and-send fires.
+function previewApproveEmail() {
+  if (typeof window.showEmailPreviewModal !== 'function') {
+    console.error('[DL-308] email-preview-modal helper not loaded');
+    return;
+  }
+  // Mirror the state reads from approveAndSendToClient() below.
+  const reportId = REPORT_ID;
+  const clientName = CLIENT_NAME;
+  return window.showEmailPreviewModal({
+    reportId,
+    clientName,
+    getToken: () => (typeof ADMIN_TOKEN !== 'undefined' ? ADMIN_TOKEN : (typeof authToken !== 'undefined' ? authToken : '')),
+    apiBase: API_BASE,
+  });
+}
+
 function approveAndSendToClient() {
     const sentDate = DOCS_FIRST_SENT_AT
         ? new Date(DOCS_FIRST_SENT_AT).toLocaleDateString('he-IL')
@@ -3449,6 +3466,9 @@ function updateStickyBar() {
             ? `<span class="text-muted text-sm" style="margin-inline-end:var(--sp-2)">נשלח ${new Date(DOCS_FIRST_SENT_AT).toLocaleDateString('he-IL')}</span>`
             : '';
         actionsEl.innerHTML = `${sentInfo}
+            <button class="btn btn-secondary btn-sm" onclick="previewApproveEmail()">
+                <i data-lucide="eye" class="icon-xs"></i> תצוגה מקדימה
+            </button>
             <button class="btn btn-success btn-sm" onclick="approveAndSendToClient()">
                 <i data-lucide="send" class="icon-sm"></i> ${sentLabel}
             </button>`;

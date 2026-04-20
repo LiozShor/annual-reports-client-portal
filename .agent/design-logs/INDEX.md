@@ -2,7 +2,7 @@
 
 Active and pending logs. For completed history, see [ARCHIVE-INDEX.md](ARCHIVE-INDEX.md).
 
-**Total logs:** 202 | **Active:** 104 | **Archived:** 98
+**Total logs:** 203 | **Active:** 105 | **Archived:** 98
 
 ## Folder Structure
 
@@ -21,6 +21,7 @@ Active and pending logs. For completed history, see [ARCHIVE-INDEX.md](ARCHIVE-I
 
 | # | File | Status | Summary |
 |---|------|--------|---------|
+| 308 | [308-approve-send-email-preview.md](admin-ui/308-approve-send-email-preview.md) | IMPLEMENTED — NEED TESTING | Read-only email preview modal before approve-and-send. New `?preview=1` dry-run flag on `/webhook/approve-and-send` returns `{subject, html, language}` without sending. New shared helper `frontend/shared/email-preview-modal.js` (DL-299 precedent) reuses DL-289 `.ai-modal-overlay` + iframe srcdoc pattern. Preview buttons in PA card action row and doc-manager header + sticky action bar. No CSS, no backend mutation — parity with real send guaranteed by reusing `buildClientEmail{Subject,Html}` |
 | 307 | [306-preuploaded-docs-indicator-pa-and-dm.md](admin-ui/306-preuploaded-docs-indicator-pa-and-dm.md) | COMPLETED (live 2026-04-20) | PA card + doc-manager info banner when `pending_classifications` exist with `review_status='pending'`. Backend adds `pending_reviews_count` to `/admin-pending-approval` + `/get-client-reports`. Frontend: banner at top of `.pa-card__body` and below doc-manager `.page-header`; "פתח ב־AI Review" opens new tab. Non-blocking; stage=`Pending_Approval` only. Received docs show green ✓ icon in PA doc list. CSS uses `--info-*` tokens |
 | 306 | [306-react-vite-ts-first-slice.md](admin-ui/306-react-vite-ts-first-slice.md) | COMPLETED (live 2026-04-20) | **Learning + system task.** Introduce Vite + React 18 + TS strict + TanStack Query v5 + Vitest via a single island (client detail modal). Unlocks DL-132's "bundler prerequisite" for splitting script.js. Coexists as React island inside existing admin HTML; preserves `openClientDetailModalShared` API via bridge shim; reuses design-system CSS + `window.showConfirmDialog`. Built output committed to `frontend/admin/react-dist/` |
 | 305 | [305-inline-signature-filter-threshold.md](infrastructure/305-inline-signature-filter-threshold.md) | IMPLEMENTED — NEED TESTING | Raise `isInline` image size threshold 20KB → 50KB — DL-303's 20KB cap missed Outlook-rendered signature logos (~30KB); `image002.png` (29.9KB) was ingested as a client document (false positive) |
