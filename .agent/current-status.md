@@ -9,7 +9,7 @@ Branch: `DL-308-approve-send-email-preview` · merged to main · Worker deployed
 Read-only email preview modal before approve-and-send — PA card + doc-manager (static header + sticky action bar). `?preview=1` dry-run flag on `/webhook/approve-and-send`. Shared helper `frontend/shared/email-preview-modal.js` reuses DL-289 iframe-in-box pattern.
 
 Design log: `.agent/design-logs/admin-ui/308-approve-send-email-preview.md`
-**Last Updated:** 2026-04-20 (DL-309 silent stage-advance button — IMPLEMENTED, NEED TESTING)
+**Last Updated:** 2026-04-20 (DL-310 admin panel slowness — IMPLEMENTED, NEED TESTING)
 
 ## DL-309 Silent Stage Advance Button — IMPLEMENTED, NEED TESTING
 
@@ -28,6 +28,27 @@ New silent-advance button on PA card footer + doc-manager sticky bar (sibling to
 - [ ] UX: primary green dominant, secondary outline quieter; RTL reading order primary → silent-advance → ask-client (right to left); info-blue toast (not green); warning line visible in confirm dialog
 
 Design log: `.agent/design-logs/admin-ui/309-silent-stage-advance-button.md`
+
+---
+
+## DL-310 Admin Panel Slowness — IMPLEMENTED, NEED TESTING (2026-04-20)
+
+Branch: `DL-310-admin-slowness` · `frontend/admin/js/script.js` only · no API/CSS changes.
+
+Admin panel long-task audit + surgical perf fixes. Chrome console showed `setTimeout` handler violations of 1.3–1.9s during init and every tab switch. Shipped: Part A perf instrumentation (gated on `window.__ADMIN_PERF__`, zero prod cost) + Part B1/B2/B4/B5/B6 fixes. **B3 (merge `renderClientsTable` loops + chunking) deferred** pending profiling evidence.
+
+**Test checklist:**
+- [ ] **Baseline capture:** open admin → DevTools console → `window.__ADMIN_PERF__ = true` → hard reload (Ctrl+Shift+R) → click around tabs as you normally do → run `copy(JSON.stringify(performance.getEntriesByType('measure').filter(m => m.name.startsWith('dl310:')).map(m => ({name:m.name, dur:+m.duration.toFixed(1)})), null, 2))` → paste into DL-310 Section 8 "Baseline"
+- [ ] **Regression smoke (no flag):** dashboard loads; all 5 tabs switch correctly; reminders, AI review, questionnaires, PA queue render; mutations (bulk send, approve-and-send) still show full-screen overlay
+- [ ] **B1 verify:** switch dashboard → PA queue → AI Review (don't return to dashboard) → Network tab shows **zero** extra `admin-dashboard` requests during the intermediate tab hops
+- [ ] **B2 verify:** wait 60s on a non-dashboard tab → switch back to dashboard → no silent refetch (unless stale >5min)
+- [ ] **B4 verify:** after `window.__ADMIN_PERF__ = true` reload, `safeCreateIcons:full-doc` entries should be rare; most should be `safeCreateIcons:scoped`
+- [ ] **B5 verify:** prefetch entries (`prefetch:step*`) should each be short (<50ms) and spread across frames, not one big burst
+- [ ] **B6 verify:** rapid double-click a tab button → only one set of loaders fires (Network tab)
+- [ ] **Success bar:** re-capture `performance.measure` list → no entry >200ms for `dl310:switchTab:*`, `dl310:loadDashboard:postFetchSync`, `dl310:renderClientsTable:total` → if any exceed, paste numbers back so we can decide whether to ship B3 (merge render loops + `scheduler.yield` chunking)
+- [ ] **Chrome Violation check:** reproduce with `window.__ADMIN_PERF__` OFF → console should show NO `setTimeout handler took >200ms` warnings during tab switching
+
+Design log: `.agent/design-logs/admin-ui/310-admin-panel-slowness.md`
 
 ---
 
