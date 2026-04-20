@@ -5940,7 +5940,7 @@ function buildPaCard(item) {
     const preuploadedBanner = (preuploadedCount > 0 && clientId) ? `<div class="preuploaded-banner" role="status">
         <i data-lucide="info"></i>
         <div class="preuploaded-banner__text">
-            <strong>הלקוח כבר שלח ${escapeHtml(String(preuploadedCount))} מסמכים לא מסווגים</strong>
+            <strong>הלקוח כבר שלח מסמכים שממתינים לסיווג</strong>
             <span>מומלץ לעבור עליהם לפני אישור ושליחה.</span>
         </div>
         <a href="index.html?tab=ai-review&client=${escapeAttr(clientId)}" target="_blank" rel="noopener" class="btn btn-sm preuploaded-banner__btn">פתח ב־AI Review</a>
@@ -6270,9 +6270,10 @@ function renderPaDocTagRow(d, reportId) {
         <i data-lucide="${hasNote ? 'message-square-text' : 'message-square'}" class="icon-xs"></i>
     </button>`;
     // DL-299 follow-up: drop the X/status chip — all docs at Pending_Approval are
-    // Required_Missing. Show a minimal grey text label only for the rare non-Missing
-    // states (Waived/Received). Row stays clickable to open the status menu.
-    const statusLabelInline = (status && status !== 'Required_Missing')
+    // Required_Missing. Show ✓ icon for Received; text label for other non-Missing states.
+    const statusLabelInline = status === 'Received'
+        ? `<span class="pa-doc-row__status-label pa-doc-row__status-label--received" title="התקבל"><i data-lucide="check" class="icon-xs"></i></span>`
+        : (status && status !== 'Required_Missing')
         ? `<span class="pa-doc-row__status-label" title="${escapeHtml(statusLabel(status, true))}">${escapeHtml(statusLabel(status, true))}</span>`
         : '';
     const rowCls = status === 'Waived' ? 'pa-preview-doc-row pa-preview-doc-row--waived'
