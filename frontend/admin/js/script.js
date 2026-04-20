@@ -17,15 +17,47 @@ function perfEnd(name, start) {
 }
 
 // Safe Lucide icon replacement — avoids "No elements found" error when
-// no unprocessed [data-lucide] elements exist in the DOM
+// no unprocessed [data-lucide] elements exist in the DOM.
+// DL-311: When no root is provided, default to the currently-active tab content
+// instead of the full document. Profiling showed full-doc walks were 100-166ms
+// each and were the primary source of 700-900ms setTimeout violations. Scoping
+// to the active tab brings each call to <30ms without requiring every caller
+// (~65 sites across the monolith) to pass a container explicitly.
+function _defaultIconRoot() {
+    try {
+        const activeTab = document.querySelector('.tab-content.active');
+        if (activeTab) return activeTab;
+        // Fallback: main content region before tabs exist (e.g. login screen)
+        return document.getElementById('main-content') || document.body || null;
+    } catch (_) { return null; }
+}
 function safeCreateIcons(rootOrOpts) {
     if (typeof lucide === 'undefined') return;
     const _t = perfStart();
+    let scopedTag = 'scoped';
     try {
-        const opts = rootOrOpts instanceof Element ? { root: rootOrOpts } : rootOrOpts;
+        let opts;
+        if (rootOrOpts instanceof Element) {
+            opts = { root: rootOrOpts };
+        } else if (rootOrOpts && typeof rootOrOpts === 'object') {
+            opts = rootOrOpts;
+            if (!opts.root) {
+                const root = _defaultIconRoot();
+                if (root) opts.root = root; else scopedTag = 'full-doc';
+            }
+        } else {
+            // Undefined / null — auto-scope to active tab
+            const root = _defaultIconRoot();
+            if (root) {
+                opts = { root };
+            } else {
+                opts = undefined;
+                scopedTag = 'full-doc';
+            }
+        }
         lucide.createIcons(opts);
     } catch (_) { /* no unprocessed icons */ }
-    perfEnd(rootOrOpts instanceof Element ? 'safeCreateIcons:scoped' : 'safeCreateIcons:full-doc', _t);
+    perfEnd('safeCreateIcons:' + scopedTag, _t);
 }
 
 const SESSION_FLAG_KEY = 'admin_session_active';
