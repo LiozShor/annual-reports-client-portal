@@ -1,5 +1,5 @@
 # Design Log 309: Silent Stage Advance Button (PA Card + Doc-Manager)
-**Status:** [IMPLEMENTED — NEED TESTING]
+**Status:** [COMPLETED] (live 2026-04-20, tested)
 **Date:** 2026-04-20
 **Related Logs:** DL-267 (auto-advance-zero-docs-to-review), DL-297 (doc-manager stage dropdown), DL-298 (PA stacked cards), DL-304 (PA approve card removal + dashboard sync)
 
