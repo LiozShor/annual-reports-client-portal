@@ -5953,6 +5953,9 @@ function buildPaCard(item) {
             <button class="btn btn-sm btn-outline pa-btn-questions" onclick="openQuestionsForClient('${item.report_id}')">
                 <i data-lucide="message-circle" class="icon-xs"></i> שאל את הלקוח${qCount > 0 ? ` <span class="pa-questions-badge">${qCount}</span>` : ''}
             </button>
+            <button class="btn btn-sm btn-outline pa-btn-preview" onclick="previewApproveEmail('${item.report_id}', '${escapedName.replace(/'/g, "\\'")}')">
+                <i data-lucide="eye" class="icon-xs"></i> תצוגה מקדימה
+            </button>
             <button class="btn btn-sm btn-success pa-btn-approve" onclick="approveAndSendFromQueue('${item.report_id}', '${escapedName.replace(/'/g, "\\'")}')">
                 <i data-lucide="send" class="icon-xs"></i> אשר ושלח
             </button>
@@ -7387,6 +7390,21 @@ async function acceptAllIssuerSuggestions(reportId) {
         console.error('[DL-293] acceptAllIssuerSuggestions failed', err);
         showAIToast('שגיאה בעדכון השמות', 'danger');
     }
+}
+
+// DL-308: Read-only email preview modal before approve-and-send fires.
+function previewApproveEmail(reportId, clientName) {
+  if (typeof window.showEmailPreviewModal !== 'function') {
+    console.error('[DL-308] email-preview-modal helper not loaded');
+    if (typeof showAIToast === 'function') showAIToast('שגיאה בטעינת התצוגה המקדימה', 'danger');
+    return;
+  }
+  return window.showEmailPreviewModal({
+    reportId,
+    clientName,
+    getToken: () => authToken,
+    apiBase: API_BASE,
+  });
 }
 
 async function approveAndSendFromQueue(reportId, clientName) {

@@ -47,6 +47,7 @@ approveAndSend.get('/approve-and-send', async (c) => {
   const clientIp = getClientIp(c.req.raw.headers);
   const reportId = c.req.query('report_id') || '';
   const respondJson = c.req.query('respond') === 'json';
+  const isPreview = c.req.query('preview') === '1';
 
   const errorResponse = (message: string, status: number = 400) => {
     if (respondJson) return c.json({ ok: false, error: message }, status as any);
@@ -100,8 +101,9 @@ approveAndSend.get('/approve-and-send', async (c) => {
     if (!reportId) return errorResponse('Missing report_id');
 
     // Step 2: Check confirm — redirect to confirmation page if not confirmed
+    // Preview mode is read-only and does not require the confirm gate.
     const confirm = c.req.query('confirm');
-    if (confirm !== '1') {
+    if (!isPreview && confirm !== '1') {
       const report = await airtable.getRecord(TABLES.REPORTS, reportId);
       const docsFirstSent = first(report.fields.docs_first_sent_at);
       let redirectUrl = `${FRONTEND_BASE}/approve-confirm.html?report_id=${reportId}&token=${c.req.query('token') || ''}`;
@@ -174,6 +176,17 @@ approveAndSend.get('/approve-and-send', async (c) => {
 
     const subject = buildClientEmailSubject(emailParams);
     const html = buildClientEmailHtml(emailParams);
+
+    // Preview mode — return rendered subject + html, skip send + Airtable writes.
+    if (isPreview) {
+      return c.json({
+        ok: true,
+        subject,
+        html,
+        language,
+        client_email: clientEmail,
+      });
+    }
 
     if (!clientEmail) return errorResponse('No client email on report');
 

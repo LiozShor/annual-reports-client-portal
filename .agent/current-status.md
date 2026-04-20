@@ -1,6 +1,34 @@
 # Annual Reports CRM - Current Status
 
-**Last Updated:** 2026-04-20 (DL-306 pre-uploaded docs indicator — IMPLEMENTED, NEED TESTING)
+**Last Updated:** 2026-04-20 (DL-308 approve-send email preview — IMPLEMENTED, NEED TESTING)
+
+## DL-308 IMPLEMENTED — NEED TESTING (2026-04-20)
+
+Branch: `DL-308-approve-send-email-preview` · feature branch, Worker to be deployed, NOT merged to main yet (frontend changes go live only after merge).
+
+Read-only email preview modal before approve-and-send. New `?preview=1` dry-run flag on `/webhook/approve-and-send` returns `{subject, html, language}` without sending. New shared helper `frontend/shared/email-preview-modal.js` (DL-299 precedent) reuses DL-289 `.ai-modal-overlay` + iframe srcdoc pattern. Preview button (eye icon) in PA card action row between Questions and Approve, and on doc-manager in both the static header and the sticky action bar.
+
+### Test DL-308 — Approve-and-Send Email Preview
+
+- [ ] PA card Preview button opens modal with exact email (iframe srcdoc); no send fires, no Airtable write (verify `docs_first_sent_at` unchanged before/after)
+- [ ] Doc-manager static button (page header) opens the modal
+- [ ] Doc-manager sticky-bar button (visible when no unsaved changes) opens the modal
+- [ ] HE-only client (source_language blank/`he`): single Hebrew card rendered inside preview
+- [ ] EN client (source_language=`en`): bilingual side-by-side HE+EN cards rendered inside preview
+- [ ] DL-244 rejected-uploads callout renders inside preview identically to sent email
+- [ ] DL-259 client questions block renders inside preview
+- [ ] Off-hours (after 20:00 IL) preview does NOT schedule a deferred send
+- [ ] Loading spinner visible while fetching; inline error on 500 (no crash)
+- [ ] Close via X, backdrop click, Escape all dismiss the modal; re-opening works (idempotent)
+- [ ] Zero-docs email variant renders correctly
+- [ ] End-to-end: open preview → close → click real Approve → email actually sent, stage advances `Pending_Approval` → `Collecting_Docs`, `docs_first_sent_at` populated
+- [ ] `curl "$API_BASE/webhook/approve-and-send?report_id=rec...&preview=1" -H "Authorization: Bearer $TOKEN"` returns JSON with `subject`, `html`, `language`; Airtable unchanged
+- [ ] Merge to main and confirm GitHub Pages frontend serves the new buttons
+
+Design log: `.agent/design-logs/admin-ui/308-approve-send-email-preview.md`
+
+---
+
 
 ## DL-306 COMPLETED (live 2026-04-20)
 
