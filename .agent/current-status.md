@@ -2,7 +2,7 @@
 
 **Last Updated:** 2026-04-20 (DL-306 pre-uploaded docs indicator — IMPLEMENTED, NEED TESTING)
 
-## DL-306 Active TODOs (NEED TESTING)
+## DL-306 COMPLETED (live 2026-04-20)
 
 Branch: `DL-306-preuploaded-docs-indicator` · commits `1406022`, `cab2da4`, `af7208e`, `78fa4cd` · **not pushed, not deployed**.
 
