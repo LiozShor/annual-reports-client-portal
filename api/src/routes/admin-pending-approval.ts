@@ -97,9 +97,18 @@ adminPendingApproval.get('/admin-pending-approval', async (c) => {
     const docParts = reportIds.map(id => `FIND('${id}', ARRAYJOIN({report_record_id}))`);
     const docFormula = docParts.length === 1 ? docParts[0] : `OR(${docParts.join(',')})`;
 
-    const pendingParts = reportIds.map(id => `FIND('${id}', ARRAYJOIN({report}))`);
-    const pendingReportFormula = pendingParts.length === 1 ? pendingParts[0] : `OR(${pendingParts.join(',')})`;
-    const pendingFormula = `AND({review_status}='pending', ${pendingReportFormula})`;
+    // Build client_id → report_id map for pending classification grouping.
+    // Airtable formula ARRAYJOIN({report}) returns display names, not record IDs,
+    // so we filter by client_id + year (direct fields) instead.
+    const clientIdToReportId = new Map<string, string>();
+    for (const r of reportRecords) {
+      const cid = String((r.fields as Record<string, unknown>).client_id || '');
+      if (cid) clientIdToReportId.set(cid, r.id);
+    }
+    const clientIds = Array.from(clientIdToReportId.keys());
+    const pendingClientParts = clientIds.map(cid => `{client_id}='${cid}'`);
+    const pendingClientFormula = pendingClientParts.length === 1 ? pendingClientParts[0] : `OR(${pendingClientParts.join(',')})`;
+    const pendingFormula = `AND(OR({review_status}='', {review_status}='pending'), {year}=${year}, ${pendingClientFormula})`;
 
     const [questionnaireRecords, docRecords, pendingRecords] = await Promise.all([
       airtable.listAllRecords(TABLES.QUESTIONNAIRES, { filterByFormula: idFormula }),
@@ -109,9 +118,9 @@ adminPendingApproval.get('/admin-pending-approval', async (c) => {
 
     const pendingByReport = new Map<string, number>();
     for (const p of pendingRecords) {
-      const rep = (p.fields as Record<string, unknown>).report;
-      const rid = Array.isArray(rep) ? rep[0] : rep;
-      if (typeof rid === 'string') {
+      const cid = String((p.fields as Record<string, unknown>).client_id || '');
+      const rid = clientIdToReportId.get(cid);
+      if (rid) {
         pendingByReport.set(rid, (pendingByReport.get(rid) || 0) + 1);
       }
     }
