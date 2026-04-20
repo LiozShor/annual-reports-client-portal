@@ -120,7 +120,7 @@ router.get('/get-client-reports', async (c) => {
     if (reportIds.length > 0) {
       const pendingParts = reportIds.map(id => `FIND('${id}', ARRAYJOIN({report}))`);
       const pendingReportFormula = pendingParts.length === 1 ? pendingParts[0] : `OR(${pendingParts.join(',')})`;
-      const pendingFormula = `AND({review_status}='pending', ${pendingReportFormula})`;
+      const pendingFormula = `AND(OR({review_status}='', {review_status}='pending'), ${pendingReportFormula})`;
       const pendingRecords = await airtable.listAllRecords(TABLES.PENDING_CLASSIFICATIONS, { filterByFormula: pendingFormula });
       for (const p of pendingRecords) {
         const rep = (p.fields as Record<string, unknown>).report;

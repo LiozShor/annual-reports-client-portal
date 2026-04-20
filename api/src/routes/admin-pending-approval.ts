@@ -99,7 +99,7 @@ adminPendingApproval.get('/admin-pending-approval', async (c) => {
 
     const pendingParts = reportIds.map(id => `FIND('${id}', ARRAYJOIN({report}))`);
     const pendingReportFormula = pendingParts.length === 1 ? pendingParts[0] : `OR(${pendingParts.join(',')})`;
-    const pendingFormula = `AND({review_status}='pending', ${pendingReportFormula})`;
+    const pendingFormula = `AND(OR({review_status}='', {review_status}='pending'), ${pendingReportFormula})`;
 
     const [questionnaireRecords, docRecords, pendingRecords] = await Promise.all([
       airtable.listAllRecords(TABLES.QUESTIONNAIRES, { filterByFormula: idFormula }),
