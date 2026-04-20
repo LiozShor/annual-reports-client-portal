@@ -1,17 +1,17 @@
 // Configuration — API_BASE, ADMIN_TOKEN_KEY, STAGES, STAGE_NUM_TO_KEY
 // are loaded from shared/constants.js
 
-// DL-310: Guarded performance instrumentation — zero cost when window.__ADMIN_PERF__ is off.
+// DL-311: Guarded performance instrumentation — zero cost when window.__ADMIN_PERF__ is off.
 // Enable in DevTools console: `window.__ADMIN_PERF__ = true` then reproduce; read via
-// `performance.getEntriesByType('measure').filter(m => m.name.startsWith('dl310:'))`.
+// `performance.getEntriesByType('measure').filter(m => m.name.startsWith('dl311:'))`.
 function perfStart() {
     return window.__ADMIN_PERF__ ? performance.now() : 0;
 }
 function perfEnd(name, start) {
     if (!window.__ADMIN_PERF__ || !start) return;
     const dur = performance.now() - start;
-    try { performance.measure('dl310:' + name, { start, end: performance.now() }); } catch (_) {}
-    if (dur > 50) console.log(`[DL310 PERF] ${name} ${dur.toFixed(1)}ms`);
+    try { performance.measure('dl311:' + name, { start, end: performance.now() }); } catch (_) {}
+    if (dur > 50) console.log(`[DL311 PERF] ${name} ${dur.toFixed(1)}ms`);
 }
 
 // Safe Lucide icon replacement — avoids "No elements found" error when
@@ -43,7 +43,7 @@ let pendingClientsLoaded = false;
 // Staleness timestamps — SWR: show cached data, refresh if stale (DL-247)
 let dashboardLoadedAt = 0;
 let pendingClientsLoadedAt = 0;
-const STALE_AFTER_MS = 300000; // DL-310 B2: 5min — was 30s; visibilitychange + 5min auto-refresh handle real-time freshness, so 30s triggered too many full renders during natural workflows
+const STALE_AFTER_MS = 300000; // DL-311 B2: 5min — was 30s; visibilitychange + 5min auto-refresh handle real-time freshness, so 30s triggered too many full renders during natural workflows
 
 // DL-256: Pagination state
 let _clientsPage = 1;
@@ -312,7 +312,7 @@ document.getElementById('passwordInput').addEventListener('keypress', (e) => {
 const TAB_DROPDOWN_TABS = { send: 'שליחת שאלונים', questionnaires: 'שאלונים שהתקבלו' };
 const TAB_REVIEW_DROPDOWN_TABS = { 'pending-approval': 'סקירת שאלונים', 'ai-review': 'סקירת AI' };
 
-// DL-310 B6: leading-edge debounce to prevent double-click from re-entering the
+// DL-311 B6: leading-edge debounce to prevent double-click from re-entering the
 // load pipeline twice. 150ms is short enough to feel instant but blocks accidental
 // duplicate taps on mobile and rapid keyboard nav.
 let _lastSwitchTabAt = 0;
@@ -341,13 +341,13 @@ function switchTab(tabName, evt) {
     }
     const activeTabEl = document.getElementById(`tab-${tabName}`);
     activeTabEl.classList.add('active');
-    // DL-310 B4: scope icon replacement to just the activated tab content, not full doc
+    // DL-311 B4: scope icon replacement to just the activated tab content, not full doc
     safeCreateIcons(activeTabEl);
 
     // Sync bottom nav active state (mobile)
     syncBottomNav(tabName);
 
-    // DL-310 B1: Only re-load dashboard data when landing ON the dashboard tab.
+    // DL-311 B1: Only re-load dashboard data when landing ON the dashboard tab.
     // Previously loadDashboard fired on every tab switch (even when user was moving
     // AWAY from dashboard), causing a 1.5-1.9s render burst each time once data
     // went stale. Dashboard data stays fresh via visibilitychange + 5min auto-refresh.
@@ -795,7 +795,7 @@ async function loadDashboard(silent = false) {
         dashboardLoaded = true;
         dashboardLoadedAt = Date.now();
 
-        // DL-310: measure full post-fetch sync block
+        // DL-311: measure full post-fetch sync block
         const _tSync = perfStart();
 
         // Update stats (recalculate client-side to exclude deactivated)
@@ -818,7 +818,7 @@ async function loadDashboard(silent = false) {
         toggleStageFilter(currentStageFilter, false); // Pass false to prevent re-filtering
         perfEnd('loadDashboard:toggleStageFilter', _tFilter);
 
-        // DL-310 B4: scope icon replacement to the dashboard tab only (was full-doc walk)
+        // DL-311 B4: scope icon replacement to the dashboard tab only (was full-doc walk)
         const dashboardTabEl = document.getElementById('tab-dashboard');
         safeCreateIcons(dashboardTabEl || undefined);
         perfEnd('loadDashboard:postFetchSync', _tSync);
@@ -834,7 +834,7 @@ async function loadDashboard(silent = false) {
             }
         }
 
-        // DL-310 B5: Stagger prefetch loaders — each gets its own frame instead of
+        // DL-311 B5: Stagger prefetch loaders — each gets its own frame instead of
         // all firing inside a single requestIdleCallback (which bundles 7 render
         // bursts into one long task). Uses scheduler.postTask('background') when
         // available, falling back to setTimeout(16ms) chain.
@@ -875,7 +875,7 @@ async function loadDashboard(silent = false) {
             }
             const step = prefetchPipeline[_prefetchIdx++];
             const _tStep = perfStart();
-            try { step(); } catch (e) { console.warn('[DL310] prefetch step failed', e); }
+            try { step(); } catch (e) { console.warn('[DL311] prefetch step failed', e); }
             perfEnd('prefetch:step' + _prefetchIdx, _tStep);
             postBg(runNext);
         };

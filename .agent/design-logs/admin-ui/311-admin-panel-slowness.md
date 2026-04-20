@@ -1,4 +1,4 @@
-# Design Log 310: Admin Panel Slowness — Long Tasks & Redundant Tab-Switch Reloads
+# Design Log 311: Admin Panel Slowness — Long Tasks & Redundant Tab-Switch Reloads
 **Status:** [IMPLEMENTED — NEED TESTING]
 **Date:** 2026-04-20
 **Related Logs:** DL-254 (dashboard load perf), DL-247 (tab SWR), DL-265 (entity tab spinner), DL-132 (monolith refactor risk), DL-256 (table pagination)
@@ -104,8 +104,8 @@ Gate all perf marks on `window.__ADMIN_PERF__`. No prod cost when off.
 | File | Action | Description |
 |------|--------|-------------|
 | `frontend/admin/js/script.js` | Modify | Parts A + B (one file) |
-| `.agent/design-logs/admin-ui/310-admin-panel-slowness.md` | Create | This log |
-| `.agent/design-logs/INDEX.md` | Modify | Add DL-310 entry |
+| `.agent/design-logs/admin-ui/311-admin-panel-slowness.md` | Create | This log |
+| `.agent/design-logs/INDEX.md` | Modify | Add DL-311 entry |
 | `.agent/current-status.md` | Modify | Update active TODOs |
 
 ### Final Step (Always)
@@ -129,7 +129,7 @@ Housekeeping — update status to `[IMPLEMENTED — NEED TESTING]`, copy Section
 Part A instrumentation **and** Part B1/B2/B4/B5/B6 shipped together — the instrumentation is gated on `window.__ADMIN_PERF__` so it's zero-cost in prod, and the fixes are independent of profiling (they're correctness/hygiene improvements). **B3 (merge renderClientsTable loops + `scheduler.yield` chunking) intentionally deferred** pending user-run profiling numbers — if violations persist after B1/B2/B4/B5/B6, B3 is the next lever.
 
 ### Changes landed in `frontend/admin/js/script.js`
-- **Instrumentation helpers** (`perfStart`/`perfEnd`) near top of file. Prefix `dl310:` on all measures. Marks >50ms also `console.log`.
+- **Instrumentation helpers** (`perfStart`/`perfEnd`) near top of file. Prefix `dl311:` on all measures. Marks >50ms also `console.log`.
 - **`safeCreateIcons`** now measured; tags each call as `scoped` vs `full-doc` so the audit is data-driven.
 - **B1 — `switchTab`:** only calls `loadDashboard(true)` when `tabName === 'dashboard'`. For the `review` tab, only loads dashboard data on first visit (when `!dashboardLoaded`). Other tabs use their own loaders.
 - **B2 — `STALE_AFTER_MS`:** 30 000 → 300 000 (5 min). Visibilitychange + 5-min auto-refresh intervals handle real-time freshness.
@@ -143,7 +143,7 @@ Part A instrumentation **and** Part B1/B2/B4/B5/B6 shipped together — the inst
 ### Testing instructions for user
 See Section 7 and the commit message. Summary: set `window.__ADMIN_PERF__ = true` in DevTools console, reproduce, then:
 ```js
-copy(JSON.stringify(performance.getEntriesByType('measure').filter(m => m.name.startsWith('dl310:')).map(m => ({name:m.name, dur:+m.duration.toFixed(1)})), null, 2))
+copy(JSON.stringify(performance.getEntriesByType('measure').filter(m => m.name.startsWith('dl311:')).map(m => ({name:m.name, dur:+m.duration.toFixed(1)})), null, 2))
 ```
 Paste back into conversation.
 
