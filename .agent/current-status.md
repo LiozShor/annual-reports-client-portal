@@ -1,5 +1,35 @@
 # Annual Reports CRM - Current Status
 
+**Last Updated:** 2026-04-20 (DL-306 pre-uploaded docs indicator — IMPLEMENTED, NEED TESTING)
+
+## DL-306 Active TODOs (NEED TESTING)
+
+Branch: `DL-306-preuploaded-docs-indicator` · commits `1406022`, `cab2da4`, `af7208e`, `78fa4cd` · **not pushed, not deployed**.
+
+**End-to-end (live data — CPA-AAA with 16 pending, CPA-BBB with 6 pending):**
+- [ ] PA tab → expand CPA-AAA card → Hebrew info banner ("client already sent N unclassified documents") + "open in AI Review" button visible
+- [ ] Same for CPA-BBB (6 pending)
+- [ ] Click the AI Review button → new tab opens `index.html?tab=ai-review&client=CPA-AAA`, accordion auto-scrolled + expanded
+- [ ] Doc-manager for CPA-AAA → banner visible below page header
+- [ ] Approve-and-send from CPA-BBB PA card with banner visible → succeeds normally (non-blocking)
+
+**Negative / regression:**
+- [ ] CPA with 0 pending → no banner
+- [ ] CPA in `Collecting_Docs` → no doc-manager banner (scope = `Pending_Approval` only)
+- [ ] All-reviewed CPA → no banner (review_status filter works)
+- [ ] AI Review without `?client=` loads normally
+- [ ] DL-244 `.rejected-uploads-list` visually unaffected
+- [ ] Dashboard stage-3 count unchanged
+
+**Data integrity:**
+- [ ] Spot-check `pending_reviews_count` in devtools network response vs direct Airtable query for CPA-AAA
+
+**Deploy steps (after approval):**
+- [ ] `wrangler deploy` from `api/`
+- [ ] Push branch + merge to main (Cloudflare Pages auto-deploys frontend from main)
+
+---
+
 **Last Updated:** 2026-04-19 (migration planning pass — plans/ directory)
 
 ## Migration Planning: plans/ directory — COMPLETED (read-only, commit 926c1e1)
@@ -857,7 +887,7 @@ Verify each item once deploy & credential change have settled. Design log: `.age
 - **Problem:** When office member (Natan) forwards a client email to the inbox, the client note showed Natan's email instead of the client's email. Also, spouse (Tal/bigeltal@gmail.com) sent the email but note should show primary client email (Shlomit/bigelmanit@gmail.com).
 - **Fix 1 — processor.ts:** `summarizeAndSaveNote()` now receives `reportClientEmail` (from report's `client_email` lookup field) instead of `metadata.senderEmail`. Falls back to `clientMatch.email` if lookup is empty.
 - **Fix 2 — frontend:** Added `replace(/[\n\r\t]/g, ...)` pre-sanitization before `JSON.parse(client_notes)` in both `document-manager.js` and `admin/js/script.js`. Airtable long text fields can convert `\n` escapes into literal newlines, breaking JSON parse.
-- **Backfill:** Fixed CPA-XXX's note data in Airtable (re-serialized with proper JSON escaping + corrected sender_email). Added `/webhook/backfill-note-sender` temp endpoint.
+- **Backfill:** Fixed CPA-BBB's note data in Airtable (re-serialized with proper JSON escaping + corrected sender_email). Added `/webhook/backfill-note-sender` temp endpoint.
 - All changes merged to main.
 
 ---
