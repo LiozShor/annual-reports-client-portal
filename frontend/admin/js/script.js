@@ -1,9 +1,11 @@
 // Configuration — API_BASE, ADMIN_TOKEN_KEY, STAGES, STAGE_NUM_TO_KEY
 // are loaded from shared/constants.js
 
-// DL-311: Guarded performance instrumentation — zero cost when window.__ADMIN_PERF__ is off.
-// Enable in DevTools console: `window.__ADMIN_PERF__ = true` then reproduce; read via
-// `performance.getEntriesByType('measure').filter(m => m.name.startsWith('dl311:'))`.
+// DL-311: Guarded performance instrumentation — zero cost when disabled.
+// Enable (persists across reload): `localStorage.ADMIN_PERF='1'; location.reload()`
+// Disable: `localStorage.removeItem('ADMIN_PERF'); location.reload()`
+// Read measures: `performance.getEntriesByType('measure').filter(m => m.name.startsWith('dl311:'))`.
+try { if (localStorage.getItem('ADMIN_PERF') === '1') window.__ADMIN_PERF__ = true; } catch (_) {}
 function perfStart() {
     return window.__ADMIN_PERF__ ? performance.now() : 0;
 }
