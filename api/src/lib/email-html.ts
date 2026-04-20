@@ -272,9 +272,9 @@ export function buildRejectedUploadsCallout(
     for (const entry of items) {
       const rawDate = entry.received_at || '';
       let dateStr = rawDate;
-      if (/^\d{4}-\d{2}-\d{2}$/.test(rawDate)) {
-        const [y, m, d] = rawDate.split('-');
-        dateStr = `${d}/${m}/${y}`;
+      const m = rawDate.match(/^(\d{4})-(\d{2})-(\d{2})/);
+      if (m) {
+        dateStr = `${m[3]}/${m[2]}/${m[1]}`;
       }
       let rowText = `\u2022 ${esc(entry.filename)} \u00B7 ${dateStr}`;
       if (entry.notes && entry.notes.trim()) {
