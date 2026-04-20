@@ -10,12 +10,15 @@
  * frontend/admin/css/style.css lines 3212-3238). No new CSS required.
  *
  * Exposed globally so classic <script> tags can use it:
- *   window.showEmailPreviewModal({ reportId, clientName, getToken, apiBase })
+ *   window.showEmailPreviewModal({ reportId, clientName, getToken, endpoint })
+ *
+ * `endpoint` is the full URL to the approve-and-send Worker route
+ * (e.g. ENDPOINTS.APPROVE_AND_SEND). Helper appends `?report_id=...&preview=1`.
  */
 (function () {
   'use strict';
 
-  window.showEmailPreviewModal = async function ({ reportId, clientName, getToken, apiBase }) {
+  window.showEmailPreviewModal = async function ({ reportId, clientName, getToken, endpoint }) {
     // 1) Idempotency: close any pre-existing preview overlay first.
     const existing = document.querySelector('.ai-modal-overlay.email-preview-overlay');
     if (existing) {
@@ -176,7 +179,8 @@
     }
 
     try {
-      const url = `${apiBase}/webhook/approve-and-send?report_id=${encodeURIComponent(reportId)}&preview=1`;
+      const sep = endpoint.indexOf('?') === -1 ? '?' : '&';
+      const url = `${endpoint}${sep}report_id=${encodeURIComponent(reportId)}&preview=1`;
       const resp = await fetch(url, {
         headers: { Authorization: `Bearer ${getToken()}` }
       });
