@@ -35,8 +35,12 @@ window.mountClientDetail = function (element: HTMLElement, props: MountProps): v
   root.render(
     <StrictMode>
       <QueryClientProvider client={queryClient}>
-        <ClientDetailModal reportId={props.reportId} onClose={handleClose} />
-        {process.env.NODE_ENV === 'development' && <ReactQueryDevtools initialIsOpen={false} />}
+        <ClientDetailModal
+          reportId={props.reportId}
+          onClose={handleClose}
+          onSaved={props.ctx?.onSaved}
+        />
+        {import.meta.env.DEV && <ReactQueryDevtools initialIsOpen={false} />}
       </QueryClientProvider>
     </StrictMode>
   )

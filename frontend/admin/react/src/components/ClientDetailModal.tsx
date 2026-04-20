@@ -5,6 +5,7 @@ import type { ClientDetail } from '@/types/client'
 interface Props {
   reportId: string
   onClose: () => void
+  onSaved?: (updated: Partial<ClientDetail>) => void
 }
 
 interface DraftState {
@@ -29,9 +30,9 @@ function isDirtyCheck(draft: DraftState, client: ClientDetail): boolean {
   )
 }
 
-export function ClientDetailModal({ reportId, onClose }: Props) {
+export function ClientDetailModal({ reportId, onClose, onSaved }: Props) {
   const { data: client, isLoading, isError, error } = useClient(reportId)
-  const { mutate, isPending } = useUpdateClient(reportId)
+  const { mutate, isPending } = useUpdateClient(reportId, onSaved)
   const [draft, setDraft] = useState<DraftState | null>(null)
 
   // Sync draft when data first loads (don't overwrite user edits on refetch)

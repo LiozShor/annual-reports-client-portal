@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { fetchClient, updateClient } from '@/lib/apiClient'
-import type { ClientUpdatePayload } from '@/types/client'
+import type { ClientDetail, ClientUpdatePayload } from '@/types/client'
 
 export function clientQueryKey(reportId: string) {
   return ['client', reportId] as const
@@ -14,7 +14,7 @@ export function useClient(reportId: string) {
   })
 }
 
-export function useUpdateClient(reportId: string) {
+export function useUpdateClient(reportId: string, onSaved?: (updated: Partial<ClientDetail>) => void) {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (payload: ClientUpdatePayload) => updateClient(payload),
@@ -33,8 +33,9 @@ export function useUpdateClient(reportId: string) {
       }
       window.showAIToast('שגיאה בשמירה', 'error')
     },
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
       window.showAIToast('נשמר בהצלחה', 'success')
+      onSaved?.(variables)
     },
     onSettled: () => {
       void qc.invalidateQueries({ queryKey: clientQueryKey(reportId) })
