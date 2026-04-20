@@ -9,6 +9,25 @@ Branch: `DL-308-approve-send-email-preview` · merged to main · Worker deployed
 Read-only email preview modal before approve-and-send — PA card + doc-manager (static header + sticky action bar). `?preview=1` dry-run flag on `/webhook/approve-and-send`. Shared helper `frontend/shared/email-preview-modal.js` reuses DL-289 iframe-in-box pattern.
 
 Design log: `.agent/design-logs/admin-ui/308-approve-send-email-preview.md`
+**Last Updated:** 2026-04-20 (DL-309 silent stage-advance button — IMPLEMENTED, NEED TESTING)
+
+## DL-309 Silent Stage Advance Button — IMPLEMENTED, NEED TESTING
+
+Branch: `DL-308-silent-stage-advance` (branch kept original name; log renumbered 308→309 to avoid collision with the approve-send preview DL that landed first on main).
+
+New silent-advance button on PA card footer + doc-manager sticky bar (sibling to primary approve-and-send); advances stage 3 → Collecting_Docs without sending the doc-request email. Zero backend changes.
+
+**Test checklist:**
+- [ ] PA queue: click silent-advance on stage-3 client → confirm dialog → card slides out, dashboard stage-3 count decrements, row moves to stage 4 without refresh
+- [ ] NO email sent: Outlook Sent empty + `email_messages` Airtable has no new row for that client
+- [ ] Airtable: `stage` = `Collecting_Docs`; `docs_first_sent_at` unchanged
+- [ ] Doc-manager stage ≤ 3: silent-advance button visible next to primary send → click → confirm → stage advances → button self-hides
+- [ ] Doc-manager stage ≥ 4: button NOT rendered
+- [ ] Cancel confirm → no state change, no network call
+- [ ] Error path: blocked endpoint → danger toast, no stage change
+- [ ] UX: primary green dominant, secondary outline quieter; RTL reading order primary → silent-advance → ask-client (right to left); info-blue toast (not green); warning line visible in confirm dialog
+
+Design log: `.agent/design-logs/admin-ui/309-silent-stage-advance-button.md`
 
 ---
 

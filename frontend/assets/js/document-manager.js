@@ -2795,6 +2795,37 @@ function approveAndSendToClient() {
     );
 }
 
+function advanceToCollectingDocsFromDm() {
+    showConfirmDialog(
+        `להעביר את הלקוח לשלב איסוף מסמכים?\n⚠ לא יישלח אליו מייל עם רשימת המסמכים.`,
+        async () => {
+            try {
+                const res = await fetchWithTimeout(ENDPOINTS.ADMIN_CHANGE_STAGE, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${ADMIN_TOKEN}`
+                    },
+                    body: JSON.stringify({ token: ADMIN_TOKEN, report_id: REPORT_ID, target_stage: 'Collecting_Docs' })
+                }, FETCH_TIMEOUTS.mutate);
+                const data = await res.json();
+                if (data.ok) {
+                    CURRENT_STAGE = 'Collecting_Docs';
+                    showToast('הלקוח הועבר לאיסוף מסמכים — ללא מייל', 'info');
+                    updateStickyBar();
+                } else {
+                    showToast(data.error || 'שגיאה', 'error');
+                }
+            } catch (e) {
+                console.error('[silent-advance] CATCH:', e);
+                showToast('שגיאה בהעברת השלב. נסה שנית.', 'error');
+            }
+        },
+        'אשר מבלי לשלוח',
+        false
+    );
+}
+
 function updateSentBadge() {
     const el = document.getElementById('sentBadge');
     if (!el) return;
@@ -3465,13 +3496,20 @@ function updateStickyBar() {
         const sentInfo = DOCS_FIRST_SENT_AT
             ? `<span class="text-muted text-sm" style="margin-inline-end:var(--sp-2)">נשלח ${new Date(DOCS_FIRST_SENT_AT).toLocaleDateString('he-IL')}</span>`
             : '';
+        const silentBtn = (STAGE_ORDER[CURRENT_STAGE] || 0) <= 3
+            ? `<button class="btn btn-sm btn-outline" id="dmSilentAdvanceBtn"
+                    title="מעביר את הלקוח לשלב איסוף מסמכים. לא יישלח לו מייל."
+                    onclick="advanceToCollectingDocsFromDm()">
+                    <i data-lucide="mail-off" class="icon-xs"></i> אשר מבלי לשלוח
+               </button>`
+            : '';
         actionsEl.innerHTML = `${sentInfo}
             <button class="btn btn-secondary btn-sm" onclick="previewApproveEmail()">
                 <i data-lucide="eye" class="icon-xs"></i> תצוגה מקדימה
             </button>
             <button class="btn btn-success btn-sm" onclick="approveAndSendToClient()">
                 <i data-lucide="send" class="icon-sm"></i> ${sentLabel}
-            </button>`;
+            </button>${silentBtn}`;
     }
     if (typeof lucide !== 'undefined') lucide.createIcons();
 }

@@ -5956,6 +5956,11 @@ function buildPaCard(item) {
             <button class="btn btn-sm btn-outline pa-btn-preview" onclick="previewApproveEmail('${item.report_id}', '${escapedName.replace(/'/g, "\\'")}')">
                 <i data-lucide="eye" class="icon-xs"></i> תצוגה מקדימה
             </button>
+            <button class="btn btn-sm btn-outline pa-btn-advance"
+                    title="מעביר את הלקוח לשלב איסוף מסמכים. לא יישלח לו מייל."
+                    onclick="advanceToCollectingDocs('${item.report_id}', '${escapedName.replace(/'/g, "\\'")}')">
+                <i data-lucide="mail-off" class="icon-xs"></i> אשר מבלי לשלוח
+            </button>
             <button class="btn btn-sm btn-success pa-btn-approve" onclick="approveAndSendFromQueue('${item.report_id}', '${escapedName.replace(/'/g, "\\'")}')">
                 <i data-lucide="send" class="icon-xs"></i> אשר ושלח
             </button>
@@ -7477,6 +7482,63 @@ async function approveAndSendFromQueue(reportId, clientName) {
             showAIToast('שגיאה בשליחה', 'danger');
         }
     }, sentDate ? 'שלח שוב' : 'אשר ושלח', false);
+}
+
+// DL-308: Silent stage 3→4 advance without sending doc-request email.
+async function advanceToCollectingDocs(reportId, clientName) {
+    const item = pendingApprovalData.find(i => i.report_id === reportId);
+    if (!item) return;
+    const msg = `להעביר את ${clientName} לשלב איסוף מסמכים?\n\u26a0 לא יישלח אליו מייל עם רשימת המסמכים.`;
+    showConfirmDialog(msg, async () => {
+        const card = document.querySelector(`.pa-card[data-report-id="${reportId}"]`);
+        if (card) {
+            card.style.maxHeight = card.offsetHeight + 'px';
+            card.offsetHeight;
+            card.classList.add('pa-card--sending');
+        }
+        try {
+            const resp = await fetchWithTimeout(ENDPOINTS.ADMIN_CHANGE_STAGE, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
+                body: JSON.stringify({ token: authToken, report_id: reportId, target_stage: 'Collecting_Docs' })
+            }, FETCH_TIMEOUTS.mutate);
+            const data = await resp.json();
+            if (data.ok) {
+                showAIToast(`${clientName} הועבר לאיסוף מסמכים — ללא מייל`, 'info');
+                const dashClient = clientsData.find(c => c.report_id === reportId);
+                if (dashClient && dashClient.stage === 'Pending_Approval') {
+                    dashClient.stage = 'Collecting_Docs';
+                    if (typeof recalculateStats === 'function') recalculateStats();
+                    _clientsBaseKey = '';
+                    const currentStageFilter = document.getElementById('stageFilter')?.value || '';
+                    toggleStageFilter(currentStageFilter, false);
+                }
+                setTimeout(() => {
+                    if (card) card.remove();
+                    pendingApprovalData = pendingApprovalData.filter(i => i.report_id !== reportId);
+                    _paFilteredData = _paFilteredData.filter(i => i.report_id !== reportId);
+                    _paExpanded.delete(reportId);
+                    syncPaBadge(pendingApprovalData.length);
+                    const container = document.getElementById('paCardsContainer');
+                    const emptyState = document.getElementById('paEmptyState');
+                    if (_paFilteredData.length === 0) {
+                        if (pendingApprovalData.length === 0 && container) container.innerHTML = '';
+                        if (emptyState) emptyState.style.display = pendingApprovalData.length === 0 ? '' : 'none';
+                        if (pendingApprovalData.length > 0 && container) {
+                            container.innerHTML = '<div class="empty-state"><p>לא נמצאו תוצאות לחיפוש</p></div>';
+                        }
+                    }
+                }, 360);
+            } else {
+                if (card) { card.classList.remove('pa-card--sending'); card.style.maxHeight = ''; }
+                showAIToast(data.error || 'שגיאה', 'danger');
+            }
+        } catch (err) {
+            if (card) { card.classList.remove('pa-card--sending'); card.style.maxHeight = ''; }
+            console.error('[DL-308] advance failed', err);
+            showAIToast('שגיאה', 'danger');
+        }
+    }, 'אשר מבלי לשלוח', false);
 }
 
 function openQuestionsForClient(reportId) {
