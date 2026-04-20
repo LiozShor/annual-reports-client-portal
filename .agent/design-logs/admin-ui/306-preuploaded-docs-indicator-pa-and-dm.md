@@ -1,5 +1,5 @@
 # Design Log 306: Pre-Uploaded Docs Indicator on PA Card + Doc Manager
-**Status:** [IMPLEMENTED — NEED TESTING]
+**Status:** [COMPLETED (live 2026-04-20)]
 **Date:** 2026-04-20
 **Related Logs:** DL-290 (pending_review count alignment), DL-292/294/295/298 (PA queue redesign — stacked cards), DL-244 (rejected-uploads callout pattern), DL-238 (AI Review unified tab)
 
