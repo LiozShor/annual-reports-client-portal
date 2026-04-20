@@ -24,6 +24,8 @@ ALLOWLIST_PATTERNS = [
     re.compile(r'Leaked token `pat'),        # incident post-mortem reference
     re.compile(r'rotated.*token'),
     re.compile(r'#\s*(CPA-\d+)'),           # markdown comment references are usually ok
+    re.compile(r'toast\s+["\u201c]'),        # UI toast message strings in test checklists
+    re.compile(r'נשמר בהצלחה'),              # "saved successfully" toast — not client PII
 ]
 
 

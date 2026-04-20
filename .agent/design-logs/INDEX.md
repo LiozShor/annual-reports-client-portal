@@ -2,7 +2,7 @@
 
 Active and pending logs. For completed history, see [ARCHIVE-INDEX.md](ARCHIVE-INDEX.md).
 
-**Total logs:** 201 | **Active:** 103 | **Archived:** 98
+**Total logs:** 202 | **Active:** 104 | **Archived:** 98
 
 ## Folder Structure
 
@@ -21,7 +21,8 @@ Active and pending logs. For completed history, see [ARCHIVE-INDEX.md](ARCHIVE-I
 
 | # | File | Status | Summary |
 |---|------|--------|---------|
-| 306 | [305-inline-signature-filter-threshold.md](infrastructure/305-inline-signature-filter-threshold.md) | IMPLEMENTED — NEED TESTING | Raise `isInline` image size threshold 20KB → 50KB — DL-303's 20KB cap missed Outlook-rendered signature logos (~30KB); `image002.png` (29.9KB) was ingested as a client document (false positive) |
+| 306 | [306-react-vite-ts-first-slice.md](admin-ui/306-react-vite-ts-first-slice.md) | COMPLETED (live 2026-04-20) | **Learning + system task.** Introduce Vite + React 18 + TS strict + TanStack Query v5 + Vitest via a single island (client detail modal). Unlocks DL-132's "bundler prerequisite" for splitting script.js. Coexists as React island inside existing admin HTML; preserves `openClientDetailModalShared` API via bridge shim; reuses design-system CSS + `window.showConfirmDialog`. Built output committed to `frontend/admin/react-dist/` |
+| 305 | [305-inline-signature-filter-threshold.md](infrastructure/305-inline-signature-filter-threshold.md) | IMPLEMENTED — NEED TESTING | Raise `isInline` image size threshold 20KB → 50KB — DL-303's 20KB cap missed Outlook-rendered signature logos (~30KB); `image002.png` (29.9KB) was ingested as a client document (false positive) |
 | 305 | [304-stage3-card-filter-and-refresh.md](admin-ui/304-stage3-card-filter-and-refresh.md) | IMPLEMENTED — NEED TESTING | Dashboard stage-3 stat card (received-questionnaire / docs-not-sent) now filters in place via `toggleStageFilter('3')` instead of hijacking to the PA queue tab. `approveAndSendFromQueue` success path also advances the matching `clientsData` row from `Pending_Approval` → `Collecting_Docs`, recalcs stats, and re-applies the current stage filter — so the stage-3 count + filtered table update without a manual refresh. PA queue no longer auto-expands the first 3 cards on navigation (all collapsed by default). Pencil doc-label edit now shows raw `<b>...</b>` tags in the input and keeps them on save (was stripping + losing bold on display) |
 | 304 | [303-inline-attachment-filter.md](infrastructure/303-inline-attachment-filter.md) | COMPLETED (live 2026-04-18) | Fix inbound pipeline silently dropping PDFs sent from iPhone Mail — `isInline` blanket filter replaced with narrow `isInline && IMAGE_EXTENSIONS && size < 20KB` guard that preserves signature-logo rejection while letting inline PDFs/docs through |
 | 303 | [301-pa-queue-search-bar.md](admin-ui/301-pa-queue-search-bar.md) | IMPLEMENTED — NEED TESTING | Client-side search input in PA queue filter bar — matches name, email, spouse; debounced 150ms; clear-X button; no-match vs truly-empty state distinction; composes with server-side year/filing-type filters |

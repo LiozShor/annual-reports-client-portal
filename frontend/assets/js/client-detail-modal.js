@@ -1,144 +1,38 @@
-// Shared client detail modal (DL-293) — used by admin dashboard + document-manager.
-// Expects these globals/utilities to be loaded on the page:
-//   ENDPOINTS.ADMIN_UPDATE_CLIENT, fetchWithTimeout, FETCH_TIMEOUTS,
-//   showConfirmDialog, escapeHtml.
-// Expects modal markup with IDs: clientDetailModal, clientDetailReportId,
-//   clientDetailName, clientDetailEmail, clientDetailCcEmail, clientDetailPhone,
-//   clientDetailLoading, clientDetailFields, clientDetailSavingOverlay.
-//
-// ctx shape: { authToken, toast: (msg, type) => void, onSaved?: (client, prev) => void }
+/**
+ * Bridge shim — delegates to React island (DL-306).
+ * Public API preserved: openClientDetailModalShared + closeClientDetailModal
+ * The React bundle (react-dist/client-detail.js) must load before this script.
+ */
 
-function _cdmEl(id) { return document.getElementById(id); }
+const CLIENT_DETAIL_CONTAINER_ID = 'react-client-detail-root'
 
-function _cdmIsValidEmail(email) {
-    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-}
+function openClientDetailModalShared(reportId, ctx) {
+  // Remove any stale root from a previous open
+  closeClientDetailModal(true)
 
-async function openClientDetailModalShared(reportId, ctx) {
-    window._clientDetailCtx = ctx || {};
-    _cdmEl('clientDetailReportId').value = reportId;
-    _cdmEl('clientDetailName').value = '';
-    _cdmEl('clientDetailEmail').value = '';
-    _cdmEl('clientDetailCcEmail').value = '';
-    _cdmEl('clientDetailPhone').value = '';
-    window._clientDetailSnapshot = null;
+  const el = document.createElement('div')
+  el.id = CLIENT_DETAIL_CONTAINER_ID
+  document.body.appendChild(el)
 
-    _cdmEl('clientDetailLoading').style.display = '';
-    _cdmEl('clientDetailFields').style.display = 'none';
-    _cdmEl('clientDetailSavingOverlay').style.display = 'none';
-    _cdmEl('clientDetailModal').classList.add('show');
-
-    try {
-        const response = await fetchWithTimeout(ENDPOINTS.ADMIN_UPDATE_CLIENT, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ token: ctx.authToken, report_id: reportId, action: 'get' })
-        }, FETCH_TIMEOUTS.load);
-        const data = await response.json();
-
-        if (!data.ok) throw new Error(data.error || 'שגיאה בטעינה');
-
-        _cdmEl('clientDetailName').value = data.client.name || '';
-        _cdmEl('clientDetailEmail').value = data.client.email || '';
-        _cdmEl('clientDetailCcEmail').value = data.client.cc_email || '';
-        _cdmEl('clientDetailPhone').value = data.client.phone || '';
-
-        window._clientDetailSnapshot = {
-            name: data.client.name || '',
-            email: data.client.email || '',
-            cc_email: data.client.cc_email || '',
-            phone: data.client.phone || ''
-        };
-
-        _cdmEl('clientDetailLoading').style.display = 'none';
-        _cdmEl('clientDetailFields').style.display = '';
-    } catch (error) {
-        closeClientDetailModal(true);
-        if (ctx && ctx.toast) ctx.toast('שגיאה בטעינת פרטי לקוח: ' + error.message, 'danger');
-    }
+  window.mountClientDetail(el, {
+    reportId,
+    ctx: {
+      onClose: () => closeClientDetailModal(true),
+      onSaved: ctx?.onSaved ?? null,
+    },
+  })
 }
 
 function closeClientDetailModal(skipDirtyCheck) {
-    const snap = window._clientDetailSnapshot;
-    if (!skipDirtyCheck && snap) {
-        const name = _cdmEl('clientDetailName').value.trim();
-        const email = _cdmEl('clientDetailEmail').value.trim().toLowerCase();
-        const cc_email = _cdmEl('clientDetailCcEmail').value.trim().toLowerCase();
-        const phone = _cdmEl('clientDetailPhone').value.trim();
-        const isDirty = name !== snap.name || email !== snap.email
-            || cc_email !== snap.cc_email || phone !== snap.phone;
-        if (isDirty) {
-            showConfirmDialog('יש שינויים שלא נשמרו. לסגור בלי לשמור?', _doCloseClientDetailModal, 'סגור בלי לשמור', true);
-            return;
-        }
-    }
-    _doCloseClientDetailModal();
-}
+  const el = document.getElementById(CLIENT_DETAIL_CONTAINER_ID)
+  if (!el) return
 
-function _doCloseClientDetailModal() {
-    _cdmEl('clientDetailModal').classList.remove('show');
-    _cdmEl('clientDetailReportId').value = '';
-    _cdmEl('clientDetailName').value = '';
-    _cdmEl('clientDetailEmail').value = '';
-    _cdmEl('clientDetailCcEmail').value = '';
-    _cdmEl('clientDetailPhone').value = '';
-    window._clientDetailSnapshot = null;
-    window._clientDetailCtx = null;
-}
-
-async function saveClientDetails() {
-    const ctx = window._clientDetailCtx || {};
-    const reportId = _cdmEl('clientDetailReportId').value;
-    const name = _cdmEl('clientDetailName').value.trim();
-    const email = _cdmEl('clientDetailEmail').value.trim().toLowerCase();
-    const cc_email = _cdmEl('clientDetailCcEmail').value.trim().toLowerCase();
-    const phone = _cdmEl('clientDetailPhone').value.trim();
-
-    if (!name) {
-        if (ctx.toast) ctx.toast('יש להזין שם', 'warning');
-        return;
-    }
-    if (!_cdmIsValidEmail(email)) {
-        if (ctx.toast) ctx.toast('כתובת אימייל לא תקינה', 'warning');
-        return;
-    }
-
-    _cdmEl('clientDetailSavingOverlay').style.display = '';
-    try {
-        const response = await fetchWithTimeout(ENDPOINTS.ADMIN_UPDATE_CLIENT, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ token: ctx.authToken, report_id: reportId, action: 'update', name, email, cc_email, phone })
-        }, FETCH_TIMEOUTS.mutate);
-        const data = await response.json();
-
-        if (!data.ok) throw new Error(data.error || 'שגיאה בשמירה');
-
-        const prev = window._clientDetailSnapshot;
-        const updated = { name, email, cc_email, phone, report_id: reportId };
-
-        if (typeof ctx.onSaved === 'function') {
-            try { ctx.onSaved(updated, prev); } catch (e) { console.error('onSaved threw:', e); }
-        }
-
-        _doCloseClientDetailModal();
-    } catch (error) {
-        _cdmEl('clientDetailSavingOverlay').style.display = 'none';
-        if (ctx.toast) ctx.toast('שגיאה בשמירה: ' + error.message, 'danger');
-    }
-}
-
-// Helper: build Hebrew change-summary lines (used by dashboard onSaved)
-function buildClientDetailChanges(updated, prev) {
-    const fieldLabels = { name: 'שם', email: 'אימייל', cc_email: 'אימייל בן/בת זוג', phone: 'טלפון' };
-    const lines = [];
-    if (!prev) return lines;
-    for (const [key, label] of Object.entries(fieldLabels)) {
-        const oldVal = prev[key] || '';
-        const newVal = updated[key] || '';
-        if (oldVal !== newVal) {
-            lines.push(`${label}: ${escapeHtml(oldVal || '—')} ← ${escapeHtml(newVal)}`);
-        }
-    }
-    return lines;
+  // skipDirtyCheck = true  → called from inside React's onClose callback (after
+  //   the component has already run its own confirm dialog); safe to unmount.
+  // skipDirtyCheck = false/undefined → called from outside (e.g. an external
+  //   close button). In v1 the dirty-check lives entirely inside the React
+  //   component and is only reachable via the in-modal ✕ button, so there is no
+  //   clean way to trigger it from here. We force-unmount in both branches for
+  //   now; a future iteration can expose a requestClose() handle on the root.
+  window.unmountClientDetail(el)
 }
