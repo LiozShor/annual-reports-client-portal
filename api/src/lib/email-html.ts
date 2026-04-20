@@ -245,9 +245,6 @@ export function buildRejectedUploadsCallout(
   const title = isHe
     ? 'מסמכים שקיבלנו ממך בעבר'
     : 'Files we received from you previously';
-  const subtitle = isHe
-    ? 'שים לב — לא ניתן היה לשלב את המסמכים הבאים. אם הם רלוונטיים, אנא שלח אותם שוב באיכות טובה.'
-    : 'Note — we received the following files but couldn\'t use them. If they are relevant, please resend them clearly.';
 
   // Group entries by reason
   const fallbackReason = isHe ? 'אחר' : 'Other';
@@ -288,8 +285,7 @@ export function buildRejectedUploadsCallout(
   return `<table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 16px 0;">` +
     `<tr><td style="background:#FEF3C7;border:1px solid #F59E0B;border-radius:8px;padding:20px;">` +
     `<table width="100%" cellpadding="0" cellspacing="0" border="0">` +
-    `<tr><td style="font-size:16px;font-weight:700;color:#92400E;padding-bottom:8px;text-align:${align};direction:${dir};font-family:${FONT};">${title}</td></tr>` +
-    `<tr><td style="font-size:14px;color:#78350F;padding-bottom:12px;text-align:${align};direction:${dir};font-family:${FONT};">${subtitle}</td></tr>` +
+    `<tr><td style="font-size:16px;font-weight:700;color:#92400E;padding-bottom:12px;text-align:${align};direction:${dir};font-family:${FONT};">${title}</td></tr>` +
     `<tr><td style="padding:0;"><table width="100%" cellpadding="0" cellspacing="0" border="0">${groupsHtml}</table></td></tr>` +
     `</table></td></tr></table>`;
 }
