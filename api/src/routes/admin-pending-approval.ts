@@ -36,6 +36,7 @@ const TABLES = {
   COMPANY_LINKS: 'tblDQJvIaEgBw2L6T',
   QUESTIONNAIRES: 'tblxEox8MsbliwTZI',
   QUESTION_MAPPINGS: 'tblWr2sK1YvyLWG3X',
+  PENDING_CLASSIFICATIONS: 'tbloiSDN3rwRcl1ii',
 };
 
 const getField = (val: unknown): unknown =>
@@ -96,10 +97,24 @@ adminPendingApproval.get('/admin-pending-approval', async (c) => {
     const docParts = reportIds.map(id => `FIND('${id}', ARRAYJOIN({report_record_id}))`);
     const docFormula = docParts.length === 1 ? docParts[0] : `OR(${docParts.join(',')})`;
 
-    const [questionnaireRecords, docRecords] = await Promise.all([
+    const pendingParts = reportIds.map(id => `FIND('${id}', ARRAYJOIN({report}))`);
+    const pendingReportFormula = pendingParts.length === 1 ? pendingParts[0] : `OR(${pendingParts.join(',')})`;
+    const pendingFormula = `AND({review_status}='pending', ${pendingReportFormula})`;
+
+    const [questionnaireRecords, docRecords, pendingRecords] = await Promise.all([
       airtable.listAllRecords(TABLES.QUESTIONNAIRES, { filterByFormula: idFormula }),
       airtable.listAllRecords(TABLES.DOCUMENTS, { filterByFormula: docFormula }),
+      airtable.listAllRecords(TABLES.PENDING_CLASSIFICATIONS, { filterByFormula: pendingFormula }),
     ]);
+
+    const pendingByReport = new Map<string, number>();
+    for (const p of pendingRecords) {
+      const rep = (p.fields as Record<string, unknown>).report;
+      const rid = Array.isArray(rep) ? rep[0] : rep;
+      if (typeof rid === 'string') {
+        pendingByReport.set(rid, (pendingByReport.get(rid) || 0) + 1);
+      }
+    }
 
     const questionnaireByReport = new Map<string, Record<string, unknown>>();
     for (const q of questionnaireRecords) {
@@ -223,6 +238,8 @@ adminPendingApproval.get('/admin-pending-approval', async (c) => {
         // DL-302: full set of template ids mapped by question_mappings for this
         // filing type. Frontend orphan detection on PA card uses this.
         mapped_template_ids,
+        // DL-306: count of pending AI classifications for this report
+        pending_reviews_count: pendingByReport.get(report.id) || 0,
       };
     });
 

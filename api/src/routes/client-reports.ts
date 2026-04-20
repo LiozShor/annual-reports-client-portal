@@ -11,6 +11,7 @@ const router = new Hono<{ Bindings: Env }>();
 const TABLES = {
   CLIENTS: 'tblFFttFScDRZ7Ah5',
   REPORTS: 'tbls7m3hmHC4hhQVy',
+  PENDING_CLASSIFICATIONS: 'tbloiSDN3rwRcl1ii',
 };
 
 const FILING_CONFIG: Record<string, { label_he: string; label_en: string }> = {
@@ -113,6 +114,23 @@ router.get('/get-client-reports', async (c) => {
     const clientCcEmail = clientRec ? String(clientRec.fields.cc_email || '') : '';
     const clientPhone = clientRec ? String(clientRec.fields.phone || '') : '';
 
+    // DL-306: fetch pending AI classifications for all reports, grouped by report id
+    const reportIds = reports.map(r => r.id).filter(Boolean);
+    const pendingByReport = new Map<string, number>();
+    if (reportIds.length > 0) {
+      const pendingParts = reportIds.map(id => `FIND('${id}', ARRAYJOIN({report}))`);
+      const pendingReportFormula = pendingParts.length === 1 ? pendingParts[0] : `OR(${pendingParts.join(',')})`;
+      const pendingFormula = `AND({review_status}='pending', ${pendingReportFormula})`;
+      const pendingRecords = await airtable.listAllRecords(TABLES.PENDING_CLASSIFICATIONS, { filterByFormula: pendingFormula });
+      for (const p of pendingRecords) {
+        const rep = (p.fields as Record<string, unknown>).report;
+        const rid = Array.isArray(rep) ? rep[0] : rep;
+        if (typeof rid === 'string') {
+          pendingByReport.set(rid, (pendingByReport.get(rid) || 0) + 1);
+        }
+      }
+    }
+
     // ---- Build response ----
     const reportItems = await Promise.all(
       reports
@@ -138,6 +156,8 @@ router.get('/get-client-reports', async (c) => {
             docs_received: parseInt(String(f['docs_received_count'])) || 0,
             rejected_uploads_log: (f['rejected_uploads_log'] as string) || '',
             queued_send_at: (f['queued_send_at'] as string) || null,
+            // DL-306: count of pending AI classifications for this report
+            pending_reviews_count: pendingByReport.get(r.id) || 0,
           };
 
           // Client mode: generate a token for each report
