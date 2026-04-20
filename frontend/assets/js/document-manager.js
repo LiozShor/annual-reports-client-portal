@@ -19,6 +19,8 @@ let CLIENT_PHONE = '';
 // ENDPOINTS loaded from shared/endpoints.js
 let DOCS_FIRST_SENT_AT = null;
 let QUEUED_SEND_AT = null;
+// DL-306: resolved CPA client_id for linking to AI Review (works for both client_id and report_id URL flows)
+let RESOLVED_CLIENT_ID = CLIENT_ID || '';
 
 // DL-281: queued_send_at on Airtable doesn't auto-clear after 08:00 delivery
 // (Exchange has no callback). Treat the field as live only while the next
@@ -371,6 +373,7 @@ async function loadDocuments(reportId) {
 
         initDocumentDropdown();
         displayDocuments();
+        renderPreuploadedBanner(reportId);
         updateStats();
         document.getElementById('loading').style.display = 'none';
         document.getElementById('content').style.display = 'block';
@@ -423,6 +426,7 @@ async function loadClientReports(clientId) {
         if (!data.ok) throw new Error(data.error || 'Failed to load reports');
 
         allReports = data.reports || [];
+        if (data.client_id) RESOLVED_CLIENT_ID = data.client_id;
         CLIENT_EMAIL = data.client_email || '';
         CLIENT_CC_EMAIL = data.cc_email || '';
         CLIENT_PHONE = data.client_phone || '';
@@ -463,6 +467,7 @@ async function discoverSiblingReports(reportId) {
         if (!data.ok || !data.reports) return;
 
         allReports = data.reports;
+        if (data.client_id) RESOLVED_CLIENT_ID = data.client_id;
         // DL-293: populate contact info when loading via report_id
         if (data.client_email !== undefined) CLIENT_EMAIL = data.client_email || '';
         if (data.cc_email !== undefined) CLIENT_CC_EMAIL = data.cc_email || '';
@@ -473,6 +478,31 @@ async function discoverSiblingReports(reportId) {
     } catch (e) {
         // Non-fatal — just no tabs
     }
+}
+
+// DL-306: Render info banner when client has unclassified pre-uploaded docs (stage=Pending_Approval only)
+function renderPreuploadedBanner(reportId) {
+    const container = document.getElementById('preuploaded-docs-banner');
+    if (!container) return;
+    container.innerHTML = '';
+    if (CURRENT_STAGE !== 'Pending_Approval') return;
+    const report = (allReports || []).find(r => r.report_id === reportId);
+    const count = Number(report && report.pending_reviews_count) || 0;
+    if (count <= 0) return;
+    const cpaId = RESOLVED_CLIENT_ID || CLIENT_ID || '';
+    if (!cpaId) return;
+    const safeCount = String(count);
+    const safeCpa = encodeURIComponent(cpaId);
+    container.innerHTML = `
+<div class="preuploaded-banner" role="status">
+  <i data-lucide="info"></i>
+  <div class="preuploaded-banner__text">
+    <strong>הלקוח כבר שלח ${safeCount} מסמכים לא מסווגים</strong>
+    <span>מומלץ לעבור עליהם לפני אישור ושליחה.</span>
+  </div>
+  <a href="admin/index.html?tab=ai-review&client=${safeCpa}" target="_blank" rel="noopener" class="btn btn-sm preuploaded-banner__btn">פתח ב־AI Review</a>
+</div>`;
+    if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
 // Render filing type tabs for multi-report clients
@@ -652,6 +682,7 @@ function restoreFromCache(reportId) {
     // Re-render
     initDocumentDropdown();
     displayDocuments();
+    renderPreuploadedBanner(reportId);
     updateStats();
     document.getElementById('secondaryZone').style.display = '';
     setTimeout(initIcons, 50);

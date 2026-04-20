@@ -3870,7 +3870,7 @@ function renderAICards(items, allFilteredItems) {
             : '';
 
         html += `
-            <div class="ai-accordion" data-client="${escapeHtml(clientName)}">
+            <div class="ai-accordion" data-client="${escapeHtml(clientName)}" data-client-id="${escapeAttr(clientId || '')}">
                 <div class="ai-accordion-header" onclick="toggleAIAccordion(this)">
                     <div class="ai-accordion-title">
                         <i data-lucide="user" class="icon-sm"></i>
@@ -4018,6 +4018,24 @@ function renderAICards(items, allFilteredItems) {
     });
 
     safeCreateIcons(container);
+
+    // DL-306: deep-link from PA banner — auto-scroll + expand matching accordion once per page load
+    if (!window.__dl306DeepLinkHandled) {
+        try {
+            const deepLinkClient = new URLSearchParams(window.location.search).get('client');
+            if (deepLinkClient) {
+                const target = container.querySelector(`.ai-accordion[data-client-id="${CSS.escape(deepLinkClient)}"]`);
+                if (target) {
+                    window.__dl306DeepLinkHandled = true;
+                    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    if (!target.classList.contains('open')) {
+                        const header = target.querySelector('.ai-accordion-header');
+                        if (header) toggleAIAccordion(header);
+                    }
+                }
+            }
+        } catch (e) { /* no-op */ }
+    }
 
     // DL-210: Show review-done prompt for clients where all items are already reviewed
     for (const [clientName, clientItems] of Object.entries(groups)) {
@@ -5914,7 +5932,19 @@ function buildPaCard(item) {
         </div>
     </div>`;
 
+    // DL-306: pre-uploaded docs indicator — banner shown when client has unclassified docs
+    const preuploadedCount = Number(item.pending_reviews_count) || 0;
+    const preuploadedBanner = (preuploadedCount > 0 && clientId) ? `<div class="preuploaded-banner" role="status">
+        <i data-lucide="info"></i>
+        <div class="preuploaded-banner__text">
+            <strong>הלקוח כבר שלח ${escapeHtml(String(preuploadedCount))} מסמכים לא מסווגים</strong>
+            <span>מומלץ לעבור עליהם לפני אישור ושליחה.</span>
+        </div>
+        <a href="index.html?tab=ai-review&client=${escapeAttr(clientId)}" target="_blank" rel="noopener" class="btn btn-sm preuploaded-banner__btn">פתח ב־AI Review</a>
+    </div>` : '';
+
     const body = isExpanded ? `<div class="pa-card__body">
+        ${preuploadedBanner}
         ${buildPaPreviewBody(item)}
         <div class="pa-card__actions" onclick="event.stopPropagation()">
             <button class="btn btn-sm btn-outline pa-btn-questions" onclick="openQuestionsForClient('${item.report_id}')">
