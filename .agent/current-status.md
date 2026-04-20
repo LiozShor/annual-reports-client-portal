@@ -1,22 +1,12 @@
 # Annual Reports CRM - Current Status
 
-**Last Updated:** 2026-04-20 (DL-313 hover-open tab dropdowns — IMPLEMENTED, NEED TESTING)
+**Last Updated:** 2026-04-20 (DL-313 hover-open tab dropdowns — COMPLETED, live)
 
-## DL-313 Hover-Open Tab Dropdowns — IMPLEMENTED, NEED TESTING
+## DL-313 COMPLETED (live 2026-04-20)
 
-Branch: `DL-313-hover-tab-dropdowns`.
+Branch: `DL-313-hover-tab-dropdowns` · merged to main · tests passed.
 
-Admin top-nav `[Questionnaires]` / `[Reviews]` dropdowns now open on hover (desktop mouse only, gated by `@media (hover: hover) and (pointer: fine)`) with a 180ms fade + `translateY(-6px→0)` cubic-bezier animation. Click-toggle preserved. 200ms close-delay timer per-wrapper prevents flicker across the trigger→menu gap. Sibling auto-close on hover. Mobile bottom-nav popovers untouched. `prefers-reduced-motion` fallback.
-
-**Test checklist:**
-- [ ] Desktop Chrome: hover `[Questionnaires]` opens with visible fade+slide; cursor-away closes after ~200ms
-- [ ] Hover `שאלונים` → cursor crosses into the menu → stays open; click item → navigates + closes
-- [ ] Hover `שאלונים`, then hover `[Reviews]` → first closes, second opens (no two-open state)
-- [ ] Click parity: click `[Questionnaires]` opens, click again closes; `aria-expanded` toggles correctly
-- [ ] Keyboard: Tab to trigger, Enter opens, outside-click closes
-- [ ] Touch (DevTools or real phone): tap opens, hover does NOT fire; bottom-nav popovers unaffected
-- [ ] `prefers-reduced-motion: reduce` — shortened/no translate
-- [ ] No regression in row menus, client detail modal, or other floating elements
+Hover-open tab dropdowns with 180ms fade-slide; click-toggle preserved; 200ms close-delay; `prefers-reduced-motion` fallback.
 
 Design log: `.agent/design-logs/admin-ui/313-hover-tab-dropdowns.md`
 
