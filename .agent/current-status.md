@@ -10,6 +10,27 @@ Read-only email preview modal before approve-and-send — PA card + doc-manager 
 
 Design log: `.agent/design-logs/admin-ui/308-approve-send-email-preview.md`
 **Last Updated:** 2026-04-20 (DL-309 silent stage-advance button — COMPLETED, live)
+**Last Updated:** 2026-04-20 (DL-310 remove `[תשובה מהשאלון]` note append — IMPLEMENTED, NEED TESTING)
+
+## DL-310 Remove `[תשובה מהשאלון]` Raw-Answer Note Append — IMPLEMENTED, NEED TESTING
+
+Branch: `DL-310-remove-questionnaire-answer-note`.
+
+Removes the DL-296 `[תשובה מהשאלון] <raw>` append to `bookkeepers_notes` from `/webhook/extract-issuer-names`. DL-300 ✨ `issuer_name_suggested` LLM path preserved. WF02 payload untouched — extra `raw_context` / `existing_notes` fields now silently ignored. One-shot backfill script `scripts/dl310-strip-questionnaire-note.py` strips historical tagged blocks from the documents table (dry-run by default; `--apply` to commit).
+
+**Test checklist:**
+- [ ] `wrangler deploy` from `api/` succeeds
+- [ ] `wrangler tail` — POST non-opted-in-template payload → `{ok:true, filtered_by_template≥1}`, no Airtable PATCH
+- [ ] POST opted-in-template payload → `{suggested:1}`, Airtable writes `issuer_name_suggested` only (no `bookkeepers_notes` change)
+- [ ] Submit real Tally questionnaire end-to-end → new doc rows have clean `bookkeepers_notes`
+- [ ] Run `python3 scripts/dl310-strip-questionnaire-note.py` (dry-run) → spot-check 3+ preview diffs
+- [ ] Run `--apply` → re-run finds 0 matches (idempotent)
+- [ ] Open PA card for a formerly-tagged client → no `[תשובה מהשאלון]` visible
+- [ ] DL-300 regression: opted-in template still receives `issuer_name_suggested`
+
+Design log: `.agent/design-logs/infrastructure/310-remove-questionnaire-answer-note.md`
+
+---
 
 ## DL-309 COMPLETED (live 2026-04-20)
 
