@@ -497,7 +497,7 @@ function renderPreuploadedBanner(reportId) {
 <div class="preuploaded-banner" role="status">
   <i data-lucide="info"></i>
   <div class="preuploaded-banner__text">
-    <strong>הלקוח כבר שלח ${safeCount} מסמכים לא מסווגים</strong>
+    <strong>הלקוח כבר שלח מסמכים שממתינים לסיווג</strong>
     <span>מומלץ לעבור עליהם לפני אישור ושליחה.</span>
   </div>
   <a href="admin/index.html?tab=ai-review&client=${safeCpa}" target="_blank" rel="noopener" class="btn btn-sm preuploaded-banner__btn">פתח ב־AI Review</a>

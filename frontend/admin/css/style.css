@@ -8772,6 +8772,12 @@ tr:hover .client-edit-link {
     color: var(--gray-500);
     font-style: italic;
 }
+.pa-doc-row__status-label--received {
+    color: var(--success-600, #16a34a);
+    font-style: normal;
+    display: inline-flex;
+    align-items: center;
+}
 
 /* DL-302: PA card answer↔doc cross-highlight (brushing & linking).
    Tint matched rows + 3px start-edge accent bar. RTL flips automatically because
