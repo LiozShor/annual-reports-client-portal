@@ -114,18 +114,22 @@ router.get('/get-client-reports', async (c) => {
     const clientCcEmail = clientRec ? String(clientRec.fields.cc_email || '') : '';
     const clientPhone = clientRec ? String(clientRec.fields.phone || '') : '';
 
-    // DL-306: fetch pending AI classifications for all reports, grouped by report id
-    const reportIds = reports.map(r => r.id).filter(Boolean);
+    // DL-306: fetch pending AI classifications grouped by report.
+    // Filter by client_id + year (direct fields) — Airtable formula ARRAYJOIN({report})
+    // returns display names not record IDs, so linked-record FIND is unreliable.
     const pendingByReport = new Map<string, number>();
-    if (reportIds.length > 0) {
-      const pendingParts = reportIds.map(id => `FIND('${id}', ARRAYJOIN({report}))`);
-      const pendingReportFormula = pendingParts.length === 1 ? pendingParts[0] : `OR(${pendingParts.join(',')})`;
-      const pendingFormula = `AND(OR({review_status}='', {review_status}='pending'), ${pendingReportFormula})`;
+    if (reports.length > 0) {
+      const yearToReportId = new Map<number, string>();
+      for (const r of reports) {
+        const yr = Number((r.fields as Record<string, unknown>).year) || 0;
+        if (yr && !yearToReportId.has(yr)) yearToReportId.set(yr, r.id);
+      }
+      const pendingFormula = `AND(OR({review_status}='', {review_status}='pending'), {client_id}='${clientId}')`;
       const pendingRecords = await airtable.listAllRecords(TABLES.PENDING_CLASSIFICATIONS, { filterByFormula: pendingFormula });
       for (const p of pendingRecords) {
-        const rep = (p.fields as Record<string, unknown>).report;
-        const rid = Array.isArray(rep) ? rep[0] : rep;
-        if (typeof rid === 'string') {
+        const yr = Number((p.fields as Record<string, unknown>).year) || 0;
+        const rid = yearToReportId.get(yr);
+        if (rid) {
           pendingByReport.set(rid, (pendingByReport.get(rid) || 0) + 1);
         }
       }
