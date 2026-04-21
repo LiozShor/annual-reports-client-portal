@@ -11,7 +11,7 @@ import { splitPdf } from '../lib/pdf-split';
 import { computeSha256 } from '../lib/inbound/attachment-utils';
 import { classifyAttachment } from '../lib/inbound/document-classifier';
 import type { ProcessingContext, AttachmentInfo, ClassificationResult } from '../lib/inbound/types';
-import { getCachedOrFetch, invalidateCache } from '../lib/cache';
+import { getCachedOrFetch, invalidateCache, invalidatePendingClassificationsCache } from '../lib/cache';
 import { logError } from '../lib/error-logger';
 import { checkAutoAdvanceToReview } from '../lib/auto-advance';
 import { isLastReference } from '../lib/file-refcount';
@@ -104,6 +104,10 @@ classifications.get('/get-pending-classifications', async (c) => {
       return c.json({ ok: false, error: 'Unauthorized' }, 401);
     }
 
+    // DL-318: Response-level KV cache keyed by filing_type (60 s TTL)
+    const filingType = c.req.query('filing_type') || 'annual_report';
+    const cacheKey = `cache:pending_classifications:${filingType}`;
+    const result = await getCachedOrFetch(c.env.CACHE_KV, cacheKey, 60, async () => {
     // ---- Step 1: Search classifications ----
     const records = await airtable.listAllRecords(TABLES.CLASSIFICATIONS, {
       filterByFormula: `AND({notification_status} = '', {review_status} != 'splitting')`,
@@ -111,7 +115,7 @@ classifications.get('/get-pending-classifications', async (c) => {
     });
 
     if (records.length === 0) {
-      return c.json({ ok: true, items: [], stats: EMPTY_STATS });
+      return { ok: true, items: [], stats: EMPTY_STATS };
     }
 
     // ---- Step 2: DL-112 file hash dedup ----
@@ -125,7 +129,7 @@ classifications.get('/get-pending-classifications', async (c) => {
     });
 
     // ---- Step 3: DL-102 inactive client filter + DL-216/DL-238 filing_type filter ----
-    const filingType = c.req.query('filing_type') || 'annual_report'; // DL-238: 'all' = no filter
+    // (filingType already extracted above for cache key)
 
     // Collect unique report IDs
     const reportIdSet = new Set<string>();
@@ -338,7 +342,6 @@ classifications.get('/get-pending-classifications', async (c) => {
         all_docs: reportDocs?.all || [],
         docs_received_count: (reportDocs?.all || []).filter((d: any) => d.status === 'Received').length,
         docs_total_count: (reportDocs?.all || []).length,
-        email_body_text: (f.email_body_text as string) || '',
         review_status: (f.review_status as string) || 'pending',
         notes: (f.notes as string) || '',
         reviewed_at: (f.reviewed_at as string) || '',
@@ -376,7 +379,7 @@ classifications.get('/get-pending-classifications', async (c) => {
       high_confidence: items.filter(i => (i.ai_confidence as number) >= 0.85).length,
     };
 
-    // ---- Step 8: MS Graph batch URL resolution (non-fatal) ----
+    // ---- Step 8: MS Graph batch URL resolution (non-fatal, KV-cached per item) ----
     const itemIdSet = new Set<string>();
     for (const item of items) {
       const itemId = item.onedrive_item_id as string | undefined;
@@ -385,13 +388,38 @@ classifications.get('/get-pending-classifications', async (c) => {
 
     if (itemIdSet.size > 0) {
       try {
-        const msGraph = new MSGraphClient(c.env, c.executionCtx);
-        const urlMap = await msGraph.batchResolveUrls(Array.from(itemIdSet));
+        // DL-318: Check KV for already-resolved webUrls; only call Graph for misses
+        const kvHits = new Map<string, string>();
+        const missIds: string[] = [];
+        await Promise.all(Array.from(itemIdSet).map(async (itemId) => {
+          const cached = await c.env.CACHE_KV.get(`cache:onedrive_weburl:${itemId}`);
+          if (cached) {
+            kvHits.set(itemId, cached);
+          } else {
+            missIds.push(itemId);
+          }
+        }));
+
+        // Apply KV hits immediately
         for (const item of items) {
           const itemId = item.onedrive_item_id as string | undefined;
-          if (itemId && urlMap.has(itemId)) {
-            const resolved = urlMap.get(itemId)!;
-            if (resolved.webUrl) item.file_url = resolved.webUrl;
+          if (itemId && kvHits.has(itemId)) item.file_url = kvHits.get(itemId)!;
+        }
+
+        // Fetch misses from MS Graph
+        if (missIds.length > 0) {
+          const msGraph = new MSGraphClient(c.env, c.executionCtx);
+          const urlMap = await msGraph.batchResolveUrls(missIds);
+          for (const item of items) {
+            const itemId = item.onedrive_item_id as string | undefined;
+            if (itemId && urlMap.has(itemId)) {
+              const resolved = urlMap.get(itemId)!;
+              if (resolved.webUrl) {
+                item.file_url = resolved.webUrl;
+                // Cache for 1 hour — webUrls are stable
+                c.env.CACHE_KV.put(`cache:onedrive_weburl:${itemId}`, resolved.webUrl, { expirationTtl: 3600 }).catch(() => {});
+              }
+            }
           }
         }
       } catch (err) {
@@ -401,7 +429,10 @@ classifications.get('/get-pending-classifications', async (c) => {
     }
 
     // ---- Step 9: Return ----
-    return c.json({ ok: true, items, stats });
+    return { ok: true as const, items, stats };
+    }); // end getCachedOrFetch
+
+    return c.json(result);
   } catch (err) {
     console.error('[classifications] Unhandled error:', (err as Error).message);
     logError(c.executionCtx, c.env, {
@@ -607,6 +638,7 @@ classifications.post('/review-classification', async (c) => {
       const newDocId = created[0]?.id || '';
 
       invalidateCache(c.env.CACHE_KV, 'cache:documents_non_waived');
+      invalidatePendingClassificationsCache(c.env.CACHE_KV);
 
       return c.json({
         ok: true,
@@ -1072,6 +1104,7 @@ classifications.post('/review-classification', async (c) => {
 
       // Step E: invalidate doc cache.
       invalidateCache(c.env.CACHE_KV, 'cache:documents_non_waived');
+      invalidatePendingClassificationsCache(c.env.CACHE_KV);
 
       return c.json({
         ok: true,
@@ -1739,6 +1772,8 @@ classifications.post('/review-classification', async (c) => {
     // ---- Step 8: Return response ----
     // DL-254: Invalidate documents cache after approve/reject/reassign changes doc status
     invalidateCache(c.env.CACHE_KV, 'cache:documents_non_waived');
+    // DL-318: Invalidate pending-classifications response cache
+    invalidatePendingClassificationsCache(c.env.CACHE_KV);
 
     return c.json({
       ok: true,

@@ -2,11 +2,11 @@
 
 Active and pending logs. For completed history, see [ARCHIVE-INDEX.md](ARCHIVE-INDEX.md).
 
-**Total logs:** 208 | **Active:** 110 | **Archived:** 98
+**Total logs:** 209 | **Active:** 111 | **Archived:** 98
 
 ## Folder Structure
 
-- `admin-ui/` — Admin UI (32)
+- `admin-ui/` — Admin UI (33)
 - `ai-review/` — AI Review & Classification (32)
 - `capital-statements/` — Capital Statements (4)
 - `client-portal/` — Client Portal & Questionnaires (13)
@@ -21,6 +21,7 @@ Active and pending logs. For completed history, see [ARCHIVE-INDEX.md](ARCHIVE-I
 
 | # | File | Status | Summary |
 |---|------|--------|---------|
+| 318 | [318-ai-review-endpoint-perf.md](admin-ui/318-ai-review-endpoint-perf.md) | IMPLEMENTED — NEED TESTING | KV response-level cache (60 s TTL) for `/webhook/get-pending-classifications` keyed by `filing_type` (3 keys: `annual_report`, `capital_statements`, `all`); explicit invalidation on writes (3 sites: `also_match`, `review-classification`, processor classifier); drop dead field `email_body_text`; cache MS Graph webURL resolutions in KV (1 h TTL, checked in parallel before batch call). Target: p50 < 1.5 s warm, p95 < 3 s warm, zero `TimeoutError` on 10 consecutive AI Review tab clicks. |
 | 317 | [317-fetch-only-prefetch.md](admin-ui/317-fetch-only-prefetch.md) | IMPLEMENTED — NEED TESTING | Split FETCH from RENDER for 5 heavy tab loaders (`loadPendingClients`, `loadAIClassifications`, `loadPendingApprovalQueue`, `loadReminders`, `loadQuestionnaires`). Prefetch pipeline now warms data cache + updates cheap badges/stats; heavy table/card render deferred to first tab click via per-loader `*EverRendered` flag. Each loader gains `prefetchOnly` param; 5 loaders re-added to `postBg`-staggered prefetch chain. `loadAIReviewCount` removed from pipeline (redundant with `loadAIClassifications(true, true)` hitting same endpoint via dedup). New perf marks `dl317:<name>:fetch` + `dl317:<name>:render`. Cache-bust v=272 → v=273 |
 | 315 | [315-pre-questionnaire-classifier-fallback.md](ai-review/315-pre-questionnaire-classifier-fallback.md) | IMPLEMENTED — NEED TESTING | Classifier fallback for docs arriving before client submits Tally questionnaire. Processor's `if (requiredDocs.length > 0)` guard at `processor.ts:788` dropped; new `fallbackMode` + `filingType` options on `classifyAttachment` swap in full filing-type-scoped `ALL_TEMPLATE_IDS` enum and rewrite the system-prompt "only match required" rule. `findBestDocMatch` + recovery agent skipped in fallback mode. New Airtable `pre_questionnaire` checkbox on `pending_classifications` (field id `flduTUbhFFqdI2qzi`); `ClassificationResult.preQuestionnaire` propagates through processor → field write → `classifications.ts` GET → new `.ai-pre-questionnaire-badge` on AI Review card (warning tone, `טרם מולא שאלון`). Trigger: `requiredDocs.length === 0` OR stage ∈ {Send_Questionnaire, Waiting_For_Answers}. Doc-manager badge scoped out (fallback classifications don't link to a `documents` row until office reassigns). DL-315 one-off `POST /webhook/backfill-dl315?clientId=CPA-XXX&dryRun=1` in `backfill.ts` replays classifier on historical null-template rows, writes matched_template + `pre_questionnaire: true` via `airtable.updateRecord` |
 | 314 | [314-svg-sprite-icons.md](admin-ui/314-svg-sprite-icons.md) | IMPLEMENTED — NEED TESTING | Replace Lucide runtime DOM-replacement with inline SVG sprite (admin panel only). DL-311 profiling proved `safeCreateIcons:full-doc` (100–166ms each) was the remaining bottleneck after surgical fixes — every Chrome `setTimeout >700ms` violation was the browser bundling several Lucide DOM walks. Solution: 86-icon sprite at `frontend/assets/icons/icons.svg` inlined into `admin/index.html`; new `icon(name, sizeClass)` helper for dynamic templates; 136 static `<i data-lucide>` + 175 template-literal occurrences swapped to `<svg><use href="#icon-NAME"/></svg>`; `safeCreateIcons` neutered to no-op shim; Lucide CDN `<script>` removed. Build script `scripts/build-icon-sprite.mjs` is npm-free (native fetch to unpkg). Client portal / doc-manager / view-documents keep Lucide runtime — out of scope |
