@@ -45,6 +45,13 @@ let pendingClientsLoaded = false;
 // Staleness timestamps — SWR: show cached data, refresh if stale (DL-247)
 let dashboardLoadedAt = 0;
 let pendingClientsLoadedAt = 0;
+// DL-317: EverRendered flags — fetch-only prefetch warms data cache; render
+// deferred to first switchTab. First click on each tab flips the flag.
+let pendingClientsEverRendered = false;
+let aiClassificationsEverRendered = false;
+let pendingApprovalEverRendered = false;
+let remindersEverRendered = false;
+let questionnairesEverRendered = false;
 const STALE_AFTER_MS = 300000; // DL-311 B2: 5min — was 30s; visibilitychange + 5min auto-refresh handle real-time freshness, so 30s triggered too many full renders during natural workflows
 
 // DL-256: Pagination state
@@ -892,15 +899,16 @@ async function loadDashboard(silent = false) {
                 setTimeout(cb, 16);
             }
         };
-        // DL-311 follow-up (post-DL-314): Prefetch ONLY lightweight dashboard
-        // accessories (badge counts, side panels). Heavy tab loaders
-        // (loadPendingClients, loadAIClassifications, loadPendingApprovalQueue,
-        // loadQuestionnaires, loadReminders) are NOT prefetched here — each
-        // would trigger a 600–1300ms render burst on initial dashboard load.
-        // They now load lazily on first tab click; SWR keeps them fresh after.
-        // The visible cost: first click on each tab pays its own render once.
+        // DL-317: Fetch-only prefetch for heavy tab loaders — warms data cache,
+        // defers render to first tab click. Light accessories (badge counts,
+        // side panels) still run in full. Heavy loaders pass prefetchOnly=true
+        // so they fetch+cache but skip their render burst. First switchTab
+        // then paints cached data instantly (dl317:*:render mark) without
+        // an extra fetch.
+        // Note: loadAIReviewCount removed — loadAIClassifications(true, true)
+        // hits the same endpoint via deduplicatedFetch and updates the same
+        // badge, making it redundant (also kills its 407ms setTimeout violation).
         const prefetchPipeline = [
-            () => loadAIReviewCount(),
             () => loadReminderCount(),
             () => loadRecentMessages(), // DL-261
             () => loadQueuedEmails(), // DL-281
@@ -912,6 +920,12 @@ async function loadDashboard(silent = false) {
                 }
             },
             () => updateActiveFilterCount(), // DL-214
+            // DL-317: Fetch-only prefetch — warms data cache, defers render to tab click.
+            () => loadPendingClients(true, true),
+            () => loadAIClassifications(true, true),
+            () => loadPendingApprovalQueue(true, true),
+            () => loadReminders(true, true),
+            () => loadQuestionnaires(true, true),
         ];
         const _tPrefetchSchedule = perfStart();
         let _prefetchIdx = 0;
@@ -2848,14 +2862,22 @@ async function addSecondFilingType(reportId) {
 
 let pendingClients = [];
 
-async function loadPendingClients(silent = false) {
+async function loadPendingClients(silent = false, prefetchOnly = false) {
     if (!authToken) return;
     // DL-247: SWR — skip if fresh, otherwise fetch silently
     const isFresh = pendingClientsLoaded && (Date.now() - pendingClientsLoadedAt < STALE_AFTER_MS);
+
+    // DL-317: SWR — paint cached data instantly on first switchTab after a prefetch landed
+    if (!prefetchOnly && pendingClientsLoaded && !pendingClientsEverRendered) {
+        const _tR = perfStart();
+        renderPendingClients();
+        pendingClientsEverRendered = true;
+        perfEnd('dl317:pendingClients:render', _tR);
+    }
+
     if (silent && isFresh) return;
 
-
-
+    const _tF = perfStart();
     try {
         const year = document.getElementById('sendYearFilter').value;
         const response = await deduplicatedFetch(`${ENDPOINTS.ADMIN_PENDING}?year=${year}&filing_type=${activeEntityTab}`, { headers: { 'Authorization': `Bearer ${authToken}` } }, FETCH_TIMEOUTS.load);
@@ -2868,11 +2890,18 @@ async function loadPendingClients(silent = false) {
         pendingClients = data.clients || [];
         pendingClientsLoaded = true;
         pendingClientsLoadedAt = Date.now();
-        renderPendingClients();
-
     } catch (error) {
-
         if (!silent) showModal('error', 'שגיאה', 'לא ניתן לטעון את הרשימה');
+        perfEnd('dl317:pendingClients:fetch', _tF);
+        return;
+    }
+    perfEnd('dl317:pendingClients:fetch', _tF);
+
+    if (!prefetchOnly) {
+        const _tR = perfStart();
+        renderPendingClients();
+        pendingClientsEverRendered = true;
+        perfEnd('dl317:pendingClients:render', _tR);
     }
 }
 
@@ -3691,14 +3720,23 @@ async function loadDocPreview(recordId) {
     }
 }
 
-async function loadAIClassifications(silent = false) {
+async function loadAIClassifications(silent = false, prefetchOnly = false) {
     if (!authToken) return;
     // DL-247: SWR — skip if fresh, otherwise fetch silently
     const isFresh = aiReviewLoaded && (Date.now() - aiReviewLoadedAt < STALE_AFTER_MS);
+
+    // DL-317: SWR — paint cached data instantly on first switchTab after a prefetch landed
+    if (!prefetchOnly && aiReviewLoaded && !aiClassificationsEverRendered && aiClassificationsData.length > 0) {
+        const _tR = perfStart();
+        resetPreviewPanel();
+        applyAIFilters();
+        aiClassificationsEverRendered = true;
+        perfEnd('dl317:aiClassifications:render', _tR);
+    }
+
     if (silent && isFresh) return;
 
-
-
+    const _tF = perfStart();
     try {
         const response = await deduplicatedFetch(`${ENDPOINTS.GET_PENDING_CLASSIFICATIONS}?filing_type=all`, { headers: { 'Authorization': `Bearer ${authToken}` } }, FETCH_TIMEOUTS.slow); // DL-238: unified view
         const data = await response.json();
@@ -3727,6 +3765,7 @@ async function loadAIClassifications(silent = false) {
                 const pendingForBadge = newItems.filter(i => (i.review_status || 'pending') === 'pending');
                 const uniqueClients = new Set(pendingForBadge.map(i => i.client_id).filter(Boolean)).size;
                 syncAIBadge(badge, uniqueClients);
+                perfEnd('dl317:aiClassifications:fetch', _tF);
                 return;
             }
         }
@@ -3734,18 +3773,27 @@ async function loadAIClassifications(silent = false) {
         aiClassificationsData = newItems;
         aiReviewLoaded = true;
         aiReviewLoadedAt = Date.now();
-        resetPreviewPanel();
 
+        // Cheap updates run even in prefetch — users see correct badge/stats before clicking the tab
         updateAIStats(data.stats || {});
-        applyAIFilters();
-
-        // Update tab badge — show unique client count (not doc count)
         const badge = document.getElementById('aiReviewTabBadge');
         const pendingForBadge = newItems.filter(i => (i.review_status || 'pending') === 'pending');
         const uniqueClients = new Set(pendingForBadge.map(i => i.client_id).filter(Boolean)).size;
         syncAIBadge(badge, uniqueClients);
-    } catch (error) {
 
+        perfEnd('dl317:aiClassifications:fetch', _tF);
+
+        // Heavy render deferred until user clicks the tab
+        if (!prefetchOnly) {
+            const _tR = perfStart();
+            resetPreviewPanel();
+            applyAIFilters();
+            aiClassificationsEverRendered = true;
+            perfEnd('dl317:aiClassifications:render', _tR);
+        }
+        return;
+    } catch (error) {
+        perfEnd('dl317:aiClassifications:fetch', _tF);
         console.error('AI review load failed', error);
         if (!silent) {
             const container = document.getElementById('aiCardsContainer');
@@ -5880,15 +5928,26 @@ function initPaYearFilter() {
     }
 }
 
-async function loadPendingApprovalQueue(silent = false) {
+async function loadPendingApprovalQueue(silent = false, prefetchOnly = false) {
     if (!authToken) return;
     initPaYearFilter();
     const isFresh = pendingApprovalLoaded && (Date.now() - pendingApprovalLoadedAt < STALE_AFTER_MS);
+
+    // DL-317: SWR — paint cached data instantly on first switchTab after a prefetch landed
+    if (!prefetchOnly && pendingApprovalLoaded && !pendingApprovalEverRendered) {
+        const _tR = perfStart();
+        _paPage = 1;
+        filterPendingApproval(true);
+        pendingApprovalEverRendered = true;
+        perfEnd('dl317:pendingApproval:render', _tR);
+    }
+
     if (silent && isFresh) return;
 
     const year = document.getElementById('paYearFilter')?.value || String(new Date().getFullYear() - 1);
     const filingType = document.getElementById('paFilingTypeFilter')?.value || 'annual_report';
 
+    const _tF = perfStart();
     try {
         const resp = await deduplicatedFetch(
             `${ENDPOINTS.ADMIN_PENDING_APPROVAL}?year=${encodeURIComponent(year)}&filing_type=${encodeURIComponent(filingType)}`,
@@ -5904,10 +5963,20 @@ async function loadPendingApprovalQueue(silent = false) {
         paCompanyLinks = data.company_links || {}; // DL-299: for החלף חברה combobox on issuer edit
         pendingApprovalLoaded = true;
         pendingApprovalLoadedAt = Date.now();
-        _paPage = 1;
-        filterPendingApproval(true); // populates _paFilteredData + renders
+        // Cheap badge update runs even in prefetch
         syncPaBadge(pendingApprovalData.length);
+        perfEnd('dl317:pendingApproval:fetch', _tF);
+
+        if (!prefetchOnly) {
+            const _tR = perfStart();
+            _paPage = 1;
+            filterPendingApproval(true); // populates _paFilteredData + renders
+            pendingApprovalEverRendered = true;
+            perfEnd('dl317:pendingApproval:render', _tR);
+        }
+        return;
     } catch (err) {
+        perfEnd('dl317:pendingApproval:fetch', _tF);
         console.error('[pa-queue] load failed', err);
         if (!silent) {
             const c = document.getElementById('paCardsContainer');
@@ -8089,14 +8158,22 @@ let reminderLoadedAt = 0;
 let reminderDefaultMax = null; // null = unlimited
 let activeCardFilter = 'scheduled';
 
-async function loadReminders(silent = false) {
+async function loadReminders(silent = false, prefetchOnly = false) {
     if (!authToken) return;
     // DL-247: SWR — skip if fresh (POST-based, no deduplicatedFetch)
     const isFresh = reminderLoaded && (Date.now() - reminderLoadedAt < STALE_AFTER_MS);
+
+    // DL-317: SWR — paint cached data instantly on first switchTab after a prefetch landed
+    if (!prefetchOnly && reminderLoaded && !remindersEverRendered) {
+        const _tR = perfStart();
+        filterReminders();
+        remindersEverRendered = true;
+        perfEnd('dl317:reminders:render', _tR);
+    }
+
     if (silent && isFresh) return;
 
-
-
+    const _tF = perfStart();
     try {
         const response = await fetchWithTimeout(ENDPOINTS.ADMIN_REMINDERS, {
             method: 'POST',
@@ -8116,9 +8193,19 @@ async function loadReminders(silent = false) {
         reminderLoaded = true;
         reminderLoadedAt = Date.now();
         reminderDefaultMax = data.default_max !== undefined ? data.default_max : null;
+        // Cheap stats update runs even in prefetch
         updateReminderStats(data.stats || {});
-        filterReminders();
+        perfEnd('dl317:reminders:fetch', _tF);
+
+        if (!prefetchOnly) {
+            const _tR = perfStart();
+            filterReminders();
+            remindersEverRendered = true;
+            perfEnd('dl317:reminders:render', _tR);
+        }
+        return;
     } catch (error) {
+        perfEnd('dl317:reminders:fetch', _tF);
 
         console.error('Reminders load failed');
         if (!silent) {
@@ -10170,15 +10257,23 @@ function initQuestionnaireYearFilter() {
     }
 }
 
-async function loadQuestionnaires(silent = false) {
+async function loadQuestionnaires(silent = false, prefetchOnly = false) {
     if (!authToken) return;
     initQuestionnaireYearFilter();
     // DL-247: SWR — skip if fresh, otherwise fetch silently
     const isFresh = questionnaireLoaded && (Date.now() - questionnaireLoadedAt < STALE_AFTER_MS);
+
+    // DL-317: SWR — paint cached data instantly on first switchTab after a prefetch landed
+    if (!prefetchOnly && questionnaireLoaded && !questionnairesEverRendered) {
+        const _tR = perfStart();
+        filterQuestionnaires();
+        questionnairesEverRendered = true;
+        perfEnd('dl317:questionnaires:render', _tR);
+    }
+
     if (silent && isFresh) return;
 
-
-
+    const _tF = perfStart();
     try {
         const year = document.getElementById('questionnaireYearFilter')?.value || String(new Date().getFullYear() - 1);
         const response = await deduplicatedFetch(
@@ -10198,11 +10293,19 @@ async function loadQuestionnaires(silent = false) {
         questionnairesData = data.items || [];
         questionnaireLoaded = true;
         questionnaireLoadedAt = Date.now();
+        // Cheap stats update runs even in prefetch
         updateQuestionnaireStats();
-        filterQuestionnaires();
+        perfEnd('dl317:questionnaires:fetch', _tF);
 
+        if (!prefetchOnly) {
+            const _tR = perfStart();
+            filterQuestionnaires();
+            questionnairesEverRendered = true;
+            perfEnd('dl317:questionnaires:render', _tR);
+        }
+        return;
     } catch (error) {
-
+        perfEnd('dl317:questionnaires:fetch', _tF);
         if (!silent) showModal('error', 'שגיאה בטעינת שאלונים', error.message || 'לא ניתן לטעון את השאלונים');
     }
 }

@@ -1,6 +1,26 @@
 # Annual Reports CRM - Current Status
 
-**Last Updated:** 2026-04-20 (DL-313 hover-open tab dropdowns — COMPLETED, live)
+**Last Updated:** 2026-04-21 (DL-317 fetch-only prefetch — IMPLEMENTED, NEED TESTING)
+
+## DL-317 Fetch-Only Prefetch for Heavy Tab Loaders — IMPLEMENTED, NEED TESTING (2026-04-21)
+
+Branch: `DL-317-fetch-only-prefetch` · admin panel only · `script.js?v=273`
+
+Split FETCH from RENDER for 5 heavy tab loaders (`loadPendingClients`, `loadAIClassifications`, `loadPendingApprovalQueue`, `loadReminders`, `loadQuestionnaires`). Prefetch now warms the data cache + updates cheap badges/stats; heavy table/card DOM render is deferred until the user clicks the tab (via per-loader `*EverRendered` flag). `loadAIReviewCount` removed from prefetch pipeline (redundant with `loadAIClassifications(true, true)` hitting the same endpoint via `deduplicatedFetch`).
+
+**Test checklist (per Section 7 of the design log):**
+- [ ] `localStorage.ADMIN_PERF='1'; location.reload()` → wait ~3s → console: `performance.getEntriesByType('measure').filter(m=>m.name.startsWith('dl317:'))`. Each `dl317:<name>:fetch` fires once during prefetch (~50–150ms).
+- [ ] Click **Send**, **AI Review**, **Pending Approval**, **Reminders**, **Questionnaires** once each. Each `dl317:<name>:render` fires once (~200–500ms) — no refetch.
+- [ ] `dl311:switchTab:*` measures drop below 50ms (render cost now lives in `dl317:*:render`).
+- [ ] Verify **AI Review badge count is correct BEFORE clicking the AI Review tab** (proves `loadAIClassifications` prefetch ran and `syncAIBadge` fired).
+- [ ] Chrome console: no `setTimeout handler took >300ms` violations attributable to the 5 heavy loaders. (372ms `loadRecentMessages`+`loadQueuedEmails` bundle is tracked as DL-316 follow-up.)
+- [ ] SWR stale-refresh: wait >5min, switch tabs → cached data renders instantly, background refetch lands shortly after.
+- [ ] Cold-click regression: reload and click a heavy tab within ~200ms (before prefetch lands) — fetch + render happen inline, no error.
+- [ ] Accordion on AI Review tab does NOT collapse on silent refresh (fingerprint comparison still works).
+
+Design log: `.agent/design-logs/admin-ui/317-fetch-only-prefetch.md`
+
+---
 
 ## DL-313 COMPLETED (live 2026-04-20)
 
