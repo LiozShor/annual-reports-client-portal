@@ -892,6 +892,13 @@ async function loadDashboard(silent = false) {
                 setTimeout(cb, 16);
             }
         };
+        // DL-311 follow-up (post-DL-314): Prefetch ONLY lightweight dashboard
+        // accessories (badge counts, side panels). Heavy tab loaders
+        // (loadPendingClients, loadAIClassifications, loadPendingApprovalQueue,
+        // loadQuestionnaires, loadReminders) are NOT prefetched here — each
+        // would trigger a 600–1300ms render burst on initial dashboard load.
+        // They now load lazily on first tab click; SWR keeps them fresh after.
+        // The visible cost: first click on each tab pays its own render once.
         const prefetchPipeline = [
             () => loadAIReviewCount(),
             () => loadReminderCount(),
@@ -904,11 +911,6 @@ async function loadDashboard(silent = false) {
                     }, 5 * 60 * 1000);
                 }
             },
-            () => { if (!pendingClientsLoaded) loadPendingClients(true); },
-            () => { if (!aiReviewLoaded) loadAIClassifications(true); }, // DL-247
-            () => { if (!pendingApprovalLoaded) loadPendingApprovalQueue(true); }, // DL-292
-            () => { if (!questionnaireLoaded) loadQuestionnaires(true); },
-            () => { if (!reminderLoaded) loadReminders(true); },
             () => updateActiveFilterCount(), // DL-214
         ];
         const _tPrefetchSchedule = perfStart();
