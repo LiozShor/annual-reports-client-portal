@@ -28,6 +28,21 @@ Design log: `.agent/design-logs/ai-review/319-approve-creates-required-doc.md`
 ---
 
 ## DL-316 AI Review Tab React Port Scoping — DRAFT
+**Last Updated:** 2026-04-21 (AI Review reassigned/rejected card titles — LIVE)
+
+## AI Review card title fallback — LIVE
+
+Reviewed cards in the AI Review tab no longer show "לא ידוע" for rejected/reassigned docs. Rejected → attachment filename. Reassigned → target doc's short name (joined via shared `onedrive_item_id` across `all_docs` + `other_report_docs`), with filename as final fallback when the target is missing (target archived/overridden).
+
+- `api/src/routes/classifications.ts` — expose `onedrive_item_id` on each `all_docs` entry
+- `frontend/admin/js/script.js` — branch `displayName` by `review_status` in `renderReviewedCard`
+- Deployed Worker version `31fd1707-e9fe-4308-b5a2-7d85303c4dad`; admin cache bumped to `v=278`
+
+Side task: stale OneDrive item for one client replaced after re-upload (classifications + documents rows patched with new itemId via one-off script — pattern: MS Graph `/me/drive/root:/<path>` → Airtable `filterByFormula={onedrive_item_id}='<stale>'` → PATCH `onedrive_item_id` + `file_url`).
+
+---
+
+**Last Updated:** 2026-04-21 (DL-316 AI Review React port scoping — DRAFT, decision doc only)
 
 ## DL-316 AI Review Tab React Port Scoping — DRAFT
 
