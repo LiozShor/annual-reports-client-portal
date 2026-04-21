@@ -1126,6 +1126,12 @@ function displayDocuments() {
                         <div class="doc-name-group">
                             <span class="document-icon"><i data-lucide="file-text" class="icon-sm"></i></span>
                             <div class="document-name" id="docname-${doc.id}">${sanitizeDocHtml(displayName)}</div>
+                            ${doc.shared_ref_count && doc.shared_ref_count > 1
+                                ? `<span class="dm-shared-ref-chip" title="${escapeHtml('קשור ל-' + (doc.shared_ref_count - 1) + ' מסמכים נוספים' + (Array.isArray(doc.shared_with_titles) && doc.shared_with_titles.length ? ':\n' + doc.shared_with_titles.map(t => (t || '').replace(/<[^>]+>/g, '')).join('\n') : ''))}">
+                                    <i data-lucide="link-2" class="icon-xs"></i>
+                                    <span>×${doc.shared_ref_count}</span>
+                                   </span>`
+                                : ''}
                             <button type="button" class="name-edit-btn${isWaived ? ' action-hidden' : ''}"
                                 ${!isWaived ? `onclick="startNameEdit('${doc.id}')"` : ''}
                                 title="שנה שם מסמך"><i data-lucide="pencil" class="icon-xs"></i></button>

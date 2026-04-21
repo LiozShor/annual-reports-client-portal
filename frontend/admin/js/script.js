@@ -4241,6 +4241,9 @@ function renderAICard(item) {
                 : `onclick="approveAIClassification('${escapeAttr(item.id)}')"`}>
                 ${icon('check', 'icon-sm')} נכון
             </button>
+            <button class="btn btn-link btn-sm" onclick="showAIAlsoMatchModal('${escapeAttr(item.id)}')" title="DL-314: שייך את אותו קובץ למספר מסמכים">
+                <i data-lucide="link-2" class="icon-sm"></i> גם תואם ל...
+            </button>
             <button class="btn btn-link btn-sm" onclick="showAIReassignModal('${escapeAttr(item.id)}')">
                 ${icon('arrow-right-left', 'icon-sm')} לא נכון, שייך מחדש
             </button>
@@ -4344,6 +4347,9 @@ function renderAICard(item) {
                 ? 'aria-disabled="true" title="לא ניתן לאשר מסמך שלא נדרש — יש לשייך מחדש או לדחות"'
                 : `onclick="approveAIClassification('${escapeAttr(item.id)}')"`}>
                 ${icon('check', 'icon-sm')} נכון
+            </button>
+            <button class="btn btn-link btn-sm" onclick="showAIAlsoMatchModal('${escapeAttr(item.id)}')" title="DL-314: שייך את אותו קובץ למספר מסמכים">
+                <i data-lucide="link-2" class="icon-sm"></i> גם תואם ל...
             </button>
             <button class="btn btn-link btn-sm" onclick="showAIReassignModal('${escapeAttr(item.id)}')">
                 ${icon('arrow-right-left', 'icon-sm')} לא נכון, שייך מחדש
@@ -5229,6 +5235,152 @@ async function submitAIReassign(recordId, templateId, docRecordId, loadingText, 
     } catch (error) {
         clearCardLoading(recordId);
         showModal('error', 'שגיאה', error.message);
+    }
+}
+
+// =============================================================================
+// DL-314: Multi-template match ("גם תואם ל...")
+// =============================================================================
+// One AI Review file → N doc records. Admin picks additional templates via a
+// checkbox modal. POSTs action='also_match' with additional_targets[].
+// Server shares one onedrive_item_id across all target records.
+
+function showAIAlsoMatchModal(recordId) {
+    const item = aiClassificationsData.find(i => i.id === recordId);
+    if (!item) return;
+
+    const ownDocs = item.all_docs || item.missing_docs || [];
+    const otherDocs = item.other_report_docs || [];
+    const primaryTemplateId = item.matched_template_id;
+
+    // Only show templates the admin can actually link TO: status must not already
+    // be Received (those would conflict; v1 aborts whole batch on conflict).
+    // Exclude the primary matched template — that one gets the standard approve.
+    const buildRow = (d, ft) => {
+        const isReceived = (d.status || '').toLowerCase() === 'received';
+        const isPrimary = d.template_id === primaryTemplateId && ft === item.filing_type;
+        if (isReceived || isPrimary) return null;
+        const docId = d.doc_record_id || '';
+        const label = d.name_html || d.name_short || d.name || d.template_id;
+        const person = d.person || 'client';
+        const personLabel = person === 'spouse' ? 'בן/בת זוג' : 'לקוח';
+        return `
+            <label class="ai-also-match-row" data-template-id="${escapeAttr(d.template_id)}" data-doc-record-id="${escapeAttr(docId)}" data-filing-type="${escapeAttr(ft)}" data-report-id="${escapeAttr(ft === item.filing_type ? (item.report_record_id || '') : (item.other_report_id || ''))}">
+                <input type="checkbox" class="ai-also-match-checkbox">
+                <span class="ai-also-match-person">${escapeHtml(personLabel)}</span>
+                <span class="ai-also-match-label">${renderDocLabel(label)}</span>
+            </label>
+        `;
+    };
+
+    const ownRows = ownDocs.map(d => buildRow(d, item.filing_type)).filter(Boolean).join('');
+    const otherFt = item.other_filing_type || (item.filing_type === 'annual_report' ? 'capital_statement' : 'annual_report');
+    const otherRows = otherDocs.map(d => buildRow(d, otherFt)).filter(Boolean).join('');
+    const otherFtLabel = otherFt === 'capital_statement' ? 'הצהרת הון' : 'דוח שנתי';
+
+    const existing = document.getElementById('aiAlsoMatchModal');
+    if (existing) existing.remove();
+
+    const overlay = document.createElement('div');
+    overlay.id = 'aiAlsoMatchModal';
+    overlay.className = 'ai-modal-overlay';
+    overlay.innerHTML = `
+        <div class="ai-modal-panel ai-also-match-panel" dir="rtl" style="max-width:560px;">
+            <div class="ai-modal-header">
+                <h3 style="margin:0;">גם תואם ל...</h3>
+                <button class="ai-modal-close" onclick="closeAIAlsoMatchModal()" aria-label="סגור">×</button>
+            </div>
+            <div class="ai-modal-body">
+                <p style="margin:0 0 12px 0;font-size:14px;color:var(--text-secondary);">
+                    בחר מסמכים נוספים שאותו קובץ מכסה. ייווצרו רשומות נפרדות עבור כל מסמך, אך כולן יצביעו על אותו קובץ OneDrive.
+                </p>
+                <div class="ai-also-match-file" style="padding:8px 10px;background:var(--bg-secondary);border-radius:6px;margin-bottom:12px;font-size:13px;">
+                    <i data-lucide="file" class="icon-sm" style="display:inline;vertical-align:middle;"></i>
+                    ${escapeHtml(item.attachment_name || 'ללא שם')}
+                </div>
+                <div class="ai-also-match-list" style="max-height:320px;overflow-y:auto;">
+                    ${ownRows || '<div style="padding:12px;color:var(--text-secondary);font-size:13px;">אין מסמכים חסרים בדוח זה</div>'}
+                    ${otherRows ? `
+                        <div class="ai-also-match-divider" style="margin:12px 0 6px 0;padding:4px 0;border-top:1px solid var(--border-subtle);font-size:12px;color:var(--text-secondary);">
+                            ${escapeHtml(otherFtLabel)}
+                        </div>
+                        ${otherRows}
+                    ` : ''}
+                </div>
+            </div>
+            <div class="ai-modal-footer">
+                <button class="btn btn-ghost btn-sm" onclick="closeAIAlsoMatchModal()">ביטול</button>
+                <button class="btn btn-success btn-sm" id="aiAlsoMatchConfirmBtn" onclick="confirmAIAlsoMatch('${escapeAttr(recordId)}')" disabled>
+                    <i data-lucide="link-2" class="icon-sm"></i> שייך לכל המסמכים
+                </button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(overlay);
+
+    // Enable confirm when any row is checked
+    const confirmBtn = overlay.querySelector('#aiAlsoMatchConfirmBtn');
+    overlay.querySelectorAll('.ai-also-match-checkbox').forEach(cb => {
+        cb.addEventListener('change', () => {
+            const any = overlay.querySelectorAll('.ai-also-match-checkbox:checked').length > 0;
+            confirmBtn.disabled = !any;
+        });
+    });
+
+    overlay.classList.add('show');
+    safeCreateIcons();
+}
+
+function closeAIAlsoMatchModal() {
+    const el = document.getElementById('aiAlsoMatchModal');
+    if (el) el.remove();
+}
+
+async function confirmAIAlsoMatch(recordId) {
+    const overlay = document.getElementById('aiAlsoMatchModal');
+    if (!overlay) return;
+    const checked = Array.from(overlay.querySelectorAll('.ai-also-match-row')).filter(row =>
+        row.querySelector('.ai-also-match-checkbox')?.checked
+    );
+    if (checked.length === 0) return;
+
+    const additional_targets = checked.map(row => ({
+        template_id: row.dataset.templateId,
+        doc_record_id: row.dataset.docRecordId || undefined,
+        target_report_id: row.dataset.reportId || undefined,
+    }));
+
+    closeAIAlsoMatchModal();
+    setCardLoading(recordId, `משייך ל-${additional_targets.length} מסמכים...`);
+
+    try {
+        const response = await fetchWithTimeout(ENDPOINTS.REVIEW_CLASSIFICATION, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                token: authToken,
+                classification_id: recordId,
+                action: 'also_match',
+                additional_targets,
+            }),
+        }, FETCH_TIMEOUTS.mutate);
+
+        const data = await parseAIResponse(response);
+        clearCardLoading(recordId);
+
+        if (data._conflict || (data.conflicts && data.conflicts.length > 0)) {
+            const lines = (data.conflicts || []).map(c => `• ${(c.doc_title || c.template_id).replace(/<[^>]+>/g, '')}`).join('\n');
+            showModal('error', 'מסמכים כבר קיימים', `לא ניתן לשייך — המסמכים הבאים כבר התקבלו:\n${lines}\n\nבטל את הסימון שלהם או השתמש ב"שינוי שיוך" פרטני.`);
+            return;
+        }
+
+        if (!data.ok) throw new Error(formatAIResponseError(data));
+
+        showAIToast(`שויך ל-${data.linked_count || additional_targets.length} מסמכים`, 'success');
+        transitionCardToReviewed(recordId, 'approved', data);
+    } catch (error) {
+        clearCardLoading(recordId);
+        showModal('error', 'שגיאה', error.message || 'שגיאה לא ידועה');
     }
 }
 

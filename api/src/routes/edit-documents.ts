@@ -8,10 +8,13 @@
 import { Hono } from 'hono';
 import { verifyToken } from '../lib/token';
 import { AirtableClient } from '../lib/airtable';
+import { MSGraphClient } from '../lib/ms-graph';
 import { logSecurity, getClientIp } from '../lib/security-log';
 import { logAudit } from '../lib/audit-log';
 import { logError } from '../lib/error-logger';
 import { checkAutoAdvanceToReview } from '../lib/auto-advance';
+import { isLastReference } from '../lib/file-refcount';
+import { DRIVE_ID } from '../lib/classification-helpers';
 import type { Env } from '../lib/types';
 
 const editDocuments = new Hono<{ Bindings: Env }>();
@@ -49,6 +52,42 @@ function fireN8n(
       console.error(`[n8n-webhook] ${path} failed:`, err.message);
     })
   );
+}
+
+/**
+ * DL-314: Move a OneDrive file to the year-level ארכיון folder.
+ * Mirrors classifications.ts `moveFileToArchive` — kept local here to avoid
+ * cross-route import churn.
+ */
+async function moveFileToArchiveInline(msGraph: MSGraphClient, itemId: string) {
+  try {
+    const fileInfo = await msGraph.get(`/drives/${DRIVE_ID}/items/${itemId}?$select=id,name,parentReference`);
+    const filingFolderId = fileInfo?.parentReference?.id;
+    if (!filingFolderId) return;
+    const filingFolderInfo = await msGraph.get(`/drives/${DRIVE_ID}/items/${filingFolderId}?$select=id,name,parentReference`);
+    const yearFolderId = filingFolderInfo?.parentReference?.id || filingFolderId;
+    let archiveFolderId: string | null = null;
+    try {
+      const created = await msGraph.post(`/drives/${DRIVE_ID}/items/${yearFolderId}/children`, {
+        name: 'ארכיון',
+        folder: {},
+        '@microsoft.graph.conflictBehavior': 'fail',
+      });
+      archiveFolderId = created?.id;
+    } catch {
+      try {
+        const existing = await msGraph.get(`/drives/${DRIVE_ID}/items/${yearFolderId}:/${encodeURIComponent('ארכיון')}:`);
+        archiveFolderId = existing?.id;
+      } catch {
+        /* non-fatal */
+      }
+    }
+    if (archiveFolderId) {
+      await msGraph.patch(`/drives/${DRIVE_ID}/items/${itemId}`, { parentReference: { id: archiveFolderId } });
+    }
+  } catch (err) {
+    console.error('[edit-documents.moveFileToArchiveInline] Failed:', (err as Error).message);
+  }
 }
 
 /** Convert markdown bold **text** to HTML <b>text</b> */
@@ -333,6 +372,21 @@ editDocuments.post('/edit-documents', async (c) => {
     const updateMap = buildUpdateMap(data);
     const updates = Array.from(updateMap.values());
 
+    // DL-314: identify docs losing their file reference — if this was the LAST
+    // ref for a shared OneDrive item, archive the physical file after the update.
+    const archiveCandidates: Array<{ docId: string; onedriveItemId: string }> = [];
+    for (const entry of updates) {
+      if (entry.status === 'Required_Missing' || entry.status === 'Waived') {
+        try {
+          const rec = await airtable.getRecord(TABLES.DOCUMENTS, entry.id as string);
+          const itemId = (rec.fields as Record<string, unknown>).onedrive_item_id as string;
+          if (itemId) archiveCandidates.push({ docId: entry.id as string, onedriveItemId: itemId });
+        } catch {
+          // non-fatal — record may not exist
+        }
+      }
+    }
+
     if (updates.length > 0) {
       const airtableUpdates = updates.map(u => ({
         id: u.id as string,
@@ -351,6 +405,24 @@ editDocuments.post('/edit-documents', async (c) => {
     if (createItems.length > 0) {
       // Use upsert with document_uid to prevent duplicates
       await airtable.upsertRecords(TABLES.DOCUMENTS, createItems, ['document_uid']);
+    }
+
+    // ---- DL-314: archive OneDrive file when LAST reference is released ----
+    if (archiveCandidates.length > 0) {
+      c.executionCtx.waitUntil((async () => {
+        const msGraph = new MSGraphClient(c.env, c.executionCtx);
+        for (const cand of archiveCandidates) {
+          try {
+            if (await isLastReference(airtable, cand.onedriveItemId, cand.docId)) {
+              await moveFileToArchiveInline(msGraph, cand.onedriveItemId);
+            } else {
+              console.log('[edit-documents] skip archive — file still referenced', cand.onedriveItemId);
+            }
+          } catch (err) {
+            console.error('[edit-documents] archive failed for', cand.onedriveItemId, (err as Error).message);
+          }
+        }
+      })());
     }
 
     // ---- Check completion & advance stage (DL-267) ----
