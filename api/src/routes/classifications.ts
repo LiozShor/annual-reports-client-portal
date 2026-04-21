@@ -14,6 +14,7 @@ import type { ProcessingContext, AttachmentInfo, ClassificationResult } from '..
 import { getCachedOrFetch, invalidateCache } from '../lib/cache';
 import { logError } from '../lib/error-logger';
 import { checkAutoAdvanceToReview } from '../lib/auto-advance';
+import { isLastReference } from '../lib/file-refcount';
 import type { Env } from '../lib/types';
 
 const classifications = new Hono<{ Bindings: Env }>();
@@ -417,7 +418,7 @@ classifications.post('/review-classification', async (c) => {
 
     // ---- Step 1: Validate request ----
     const body = await c.req.json() as Record<string, unknown>;
-    const { token, classification_id, action, reassign_template_id, reassign_doc_record_id, notes, new_doc_name, force_overwrite, approve_mode, target_report_id } = body as {
+    const { token, classification_id, action, reassign_template_id, reassign_doc_record_id, notes, new_doc_name, force_overwrite, approve_mode, target_report_id, additional_targets } = body as {
       token: string;
       classification_id: string;
       action: string;
@@ -428,6 +429,13 @@ classifications.post('/review-classification', async (c) => {
       force_overwrite?: boolean;
       approve_mode?: 'override' | 'merge' | 'keep_both';
       target_report_id?: string; // DL-239: cross-filing-type reassign
+      // DL-314: multi-template match — one file → N doc records
+      additional_targets?: Array<{
+        template_id: string;
+        doc_record_id?: string;
+        target_report_id?: string;
+        new_doc_name?: string;
+      }>;
     };
 
     if (!token) {
@@ -454,7 +462,7 @@ classifications.post('/review-classification', async (c) => {
       return c.json({ ok: false, error: 'Missing classification_id or action' }, 400);
     }
 
-    if (!['approve', 'reject', 'reassign', 'split', 'classify-segment', 'finalize-split', 'request-remaining-contract', 'update-contract-period', 're-classify'].includes(action)) {
+    if (!['approve', 'reject', 'reassign', 'split', 'classify-segment', 'finalize-split', 'request-remaining-contract', 'update-contract-period', 're-classify', 'also_match'].includes(action)) {
       return c.json({ ok: false, error: `Invalid action: ${action}` }, 400);
     }
 
@@ -925,6 +933,154 @@ classifications.post('/review-classification', async (c) => {
       return c.json({ ok: true, action: 'finalize-split' });
     }
 
+    // ---- DL-314: also_match — fan out one classification file to N doc records ----
+    if (action === 'also_match') {
+      if (!Array.isArray(additional_targets) || additional_targets.length === 0) {
+        return c.json({ ok: false, error: 'additional_targets[] required for also_match action' }, 400);
+      }
+
+      const sharedItemId = clsFields.onedrive_item_id as string;
+      const sharedFileUrl = clsFields.file_url as string;
+      const sharedFileHash = clsFields.file_hash as string;
+      if (!sharedItemId || !sharedFileUrl) {
+        return c.json({ ok: false, error: 'Classification has no file to share' }, 400);
+      }
+
+      const sourceReportId = getField(clsFields.report) as string;
+      const sourceReport = sourceReportId ? await airtable.getRecord(TABLES.REPORTS, sourceReportId) : null;
+      const sourceClientId = sourceReport ? String(getField((sourceReport.fields as any).client_id) || '') : '';
+
+      // Step A: resolve every target to a concrete Airtable doc record.
+      // Step B: validate same-client + pre-flight conflict check. Abort batch on ANY conflict.
+      const resolvedTargets: Array<{
+        docId: string;
+        fields: Record<string, unknown>;
+        reportId: string;
+        templateId: string;
+        isNewlyCreated: boolean;
+      }> = [];
+      const conflicts: Array<{ template_id: string; doc_title: string; existing_name: string }> = [];
+
+      for (const t of additional_targets) {
+        const tReportId = t.target_report_id || sourceReportId;
+        if (!tReportId) {
+          return c.json({ ok: false, error: 'Missing target_report_id for one or more targets' }, 400);
+        }
+
+        // Cross-client leak guard: verify each target_report_id belongs to same client
+        if (tReportId !== sourceReportId) {
+          const targetReport = await airtable.getRecord(TABLES.REPORTS, tReportId);
+          const tClientId = String(getField((targetReport.fields as any).client_id) || '');
+          if (!tClientId || tClientId !== sourceClientId) {
+            return c.json({ ok: false, error: `target_report_id ${tReportId} belongs to a different client` }, 400);
+          }
+        }
+
+        let targetDocRec: any = null;
+        let isNewlyCreated = false;
+
+        if (t.doc_record_id) {
+          targetDocRec = await airtable.getRecord(TABLES.DOCUMENTS, t.doc_record_id);
+        } else if (t.template_id === 'general_doc' && t.new_doc_name) {
+          const issuerKey = t.new_doc_name.toLowerCase().replace(/[^a-zA-Zא-ת0-9\s]/g, '').replace(/\s+/g, '_');
+          const docUid = `${tReportId}_general_doc_client_${issuerKey}`;
+          const created = await airtable.createRecords(TABLES.DOCUMENTS, [{
+            fields: {
+              type: 'general_doc',
+              issuer_name: t.new_doc_name,
+              issuer_name_en: t.new_doc_name,
+              issuer_key: t.new_doc_name,
+              category: 'general',
+              person: 'client',
+              status: 'Required_Missing',
+              report: [tReportId],
+              document_uid: docUid,
+              document_key: docUid,
+            },
+          }]);
+          targetDocRec = created[0];
+          isNewlyCreated = true;
+        } else {
+          const found = await airtable.listAllRecords(TABLES.DOCUMENTS, {
+            filterByFormula: `AND({type} = '${t.template_id}', FIND('${tReportId}', ARRAYJOIN({report})))`,
+            maxRecords: 1,
+          });
+          targetDocRec = found[0];
+        }
+
+        if (!targetDocRec) {
+          return c.json({ ok: false, error: `Target doc not found for template ${t.template_id}` }, 404);
+        }
+
+        const tFields = targetDocRec.fields as Record<string, unknown>;
+
+        // Per-target conflict guard — v1 aborts the whole batch on any conflict.
+        if (tFields.status === 'Received' && tFields.onedrive_item_id && tFields.onedrive_item_id !== sharedItemId) {
+          conflicts.push({
+            template_id: t.template_id,
+            doc_title: String(tFields.issuer_name || ''),
+            existing_name: String(tFields.source_attachment_name || ''),
+          });
+        }
+
+        resolvedTargets.push({
+          docId: targetDocRec.id,
+          fields: tFields,
+          reportId: tReportId,
+          templateId: t.template_id,
+          isNewlyCreated,
+        });
+      }
+
+      if (conflicts.length > 0) {
+        return c.json({ ok: false, conflict: true, conflicts, error: 'One or more targets already have approved files' }, 409);
+      }
+
+      // Step C: write shared file pointer onto every target record.
+      const now = new Date().toISOString();
+      const createdDocIds: string[] = [];
+      for (const r of resolvedTargets) {
+        const update: Record<string, unknown> = {
+          status: 'Received',
+          review_status: 'approved_shared',
+          reviewed_by: 'Natan',
+          reviewed_at: now,
+          file_url: sharedFileUrl,
+          onedrive_item_id: sharedItemId,
+          file_hash: sharedFileHash || null,
+          ai_confidence: clsFields.ai_confidence ?? null,
+          ai_reason: `Multi-match from ${clsFields.matched_template_id || 'classification'}: ${clsFields.ai_reason || ''}`,
+          source_attachment_name: clsFields.attachment_name || null,
+          source_sender_email: sanitizeEmail(clsFields.sender_email),
+          uploaded_at: clsFields.received_at || null,
+        };
+        await airtable.updateRecord(TABLES.DOCUMENTS, r.docId, stripEmpty(update));
+        createdDocIds.push(r.docId);
+      }
+
+      // Step D: stage auto-advance for source + any distinct target reports.
+      const distinctReports = Array.from(new Set([sourceReportId, ...resolvedTargets.map(r => r.reportId)].filter(Boolean)));
+      for (const rid of distinctReports) {
+        try {
+          await checkAutoAdvanceToReview(airtable, rid);
+        } catch (err) {
+          console.error('[also_match] stage check failed for', rid, (err as Error).message);
+        }
+      }
+
+      // Step E: invalidate doc cache.
+      invalidateCache(c.env.CACHE_KV, 'cache:documents_non_waived');
+
+      return c.json({
+        ok: true,
+        action: 'also_match',
+        classification_id,
+        shared_onedrive_item_id: sharedItemId,
+        created_doc_ids: createdDocIds,
+        linked_count: createdDocIds.length,
+      });
+    }
+
     if (action === 'approve') {
       // Approve: update source document with classification data
       // If no direct document link, look up by matched_template_id + report
@@ -1079,9 +1235,15 @@ classifications.post('/review-classification', async (c) => {
       } else {
         // Standard approve or override: update source document with classification data
         // DL-224: If overriding, move the old file to ארכיון
+        // DL-314: Only archive if this record is the LAST reference to the file
         if (resolvedMode === 'override' && targetDocFields.onedrive_item_id) {
-          const msGraph = new MSGraphClient(c.env, c.executionCtx);
-          await moveFileToArchive(msGraph, targetDocFields.onedrive_item_id as string);
+          const oldItemId = targetDocFields.onedrive_item_id as string;
+          if (await isLastReference(airtable, oldItemId, approveDocId)) {
+            const msGraph = new MSGraphClient(c.env, c.executionCtx);
+            await moveFileToArchive(msGraph, oldItemId);
+          } else {
+            console.log('[review-classification] approve override: skip archive — file still referenced by siblings', oldItemId);
+          }
         }
         const docUpdate: Record<string, unknown> = {
           status: 'Received',
@@ -1375,9 +1537,15 @@ classifications.post('/review-classification', async (c) => {
       } else {
         // Standard reassign or override
         // DL-224: If overriding, move the old file to ארכיון
+        // DL-314: Only archive if this record is the LAST reference to the file
         if (reassignMode === 'override' && targetDocFields_r.onedrive_item_id) {
-          const msGraph = new MSGraphClient(c.env, c.executionCtx);
-          await moveFileToArchive(msGraph, targetDocFields_r.onedrive_item_id as string);
+          const oldItemId = targetDocFields_r.onedrive_item_id as string;
+          if (await isLastReference(airtable, oldItemId, targetDoc.id)) {
+            const msGraph = new MSGraphClient(c.env, c.executionCtx);
+            await moveFileToArchive(msGraph, oldItemId);
+          } else {
+            console.log('[review-classification] reassign override: skip archive — file still referenced by siblings', oldItemId);
+          }
         }
         await airtable.updateRecord(TABLES.DOCUMENTS, targetDoc.id, stripEmpty({
           status: 'Received',
@@ -1464,7 +1632,11 @@ classifications.post('/review-classification', async (c) => {
             }
           }
         } else if (action === 'reject') {
-          moveToArchive = true;
+          // DL-314: Only archive if no OTHER doc record holds this file
+          moveToArchive = await isLastReference(airtable, itemId, docId);
+          if (!moveToArchive) {
+            console.log('[review-classification] reject: skip archive — file still referenced by other doc(s)', itemId);
+          }
           // No rename for reject
         } else if (action === 'reassign') {
           // DL-240: no subfolder move — file stays in filing type root, just rename

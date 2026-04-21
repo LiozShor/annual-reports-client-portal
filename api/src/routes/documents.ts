@@ -178,6 +178,31 @@ documents.get('/get-client-documents', async (c) => {
         ...r.fields as Record<string, unknown>,
       }));
 
+    // ---- DL-314: compute shared_ref_count per doc (local, from the docs we just loaded) ----
+    // Docs that share the same `onedrive_item_id` (multi-match siblings) get a ref count
+    // and a list of sibling issuer_names so the frontend can render the 🔗 chip.
+    // NOTE: limited to the current report's docs — cross-report siblings are detected
+    // at archive time (via the Airtable filterByFormula in `isLastReference`), not here.
+    const sharedRefCounts = new Map<string, { count: number; titles: string[] }>();
+    for (const d of docs) {
+      const itemId = typeof d.onedrive_item_id === 'string' ? d.onedrive_item_id : '';
+      if (!itemId || d.status !== 'Received') continue;
+      const entry = sharedRefCounts.get(itemId) || { count: 0, titles: [] };
+      entry.count += 1;
+      const title = typeof d.issuer_name === 'string' ? d.issuer_name : '';
+      if (title) entry.titles.push(title);
+      sharedRefCounts.set(itemId, entry);
+    }
+    // Patch each doc in place — the field survives through groupDocsByPerson / formatForOfficeMode.
+    for (const d of docs) {
+      const itemId = typeof d.onedrive_item_id === 'string' ? d.onedrive_item_id : '';
+      const entry = itemId ? sharedRefCounts.get(itemId) : null;
+      if (entry && entry.count > 1) {
+        (d as Record<string, unknown>).shared_ref_count = entry.count;
+        (d as Record<string, unknown>).shared_with_titles = entry.titles.filter(t => t !== d.issuer_name);
+      }
+    }
+
     // ---- Build Report Context ----
     const rf = reportRec.fields as Record<string, unknown>;
     const report: ReportContext = {

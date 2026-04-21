@@ -2572,3 +2572,23 @@ body {
     margin-inline-start: auto;
     flex-shrink: 0;
 }
+
+/* DL-314: Shared OneDrive file ref-count chip (multi-template match) */
+.dm-shared-ref-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    padding: 2px 8px;
+    margin-inline-start: 6px;
+    border: 1px solid var(--info-300, #93C5FD);
+    border-radius: var(--radius-full, 999px);
+    background: var(--info-50, #EEF4FF);
+    color: var(--info-800, #1E40AF);
+    font-size: 11px;
+    font-weight: 500;
+    line-height: 1.4;
+    white-space: nowrap;
+    cursor: help;
+}
+.dm-shared-ref-chip .icon-xs { width: 11px; height: 11px; }
+

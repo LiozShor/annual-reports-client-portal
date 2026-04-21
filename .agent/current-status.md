@@ -1,6 +1,22 @@
 # Annual Reports CRM - Current Status
 
-**Last Updated:** 2026-04-20 (DL-313 hover-open tab dropdowns — COMPLETED, live)
+**Last Updated:** 2026-04-21 (DL-314 multi-template match in AI Review — IMPLEMENTED, NEED TESTING)
+
+## DL-314 Multi-Template Match in AI Review — IMPLEMENTED, NEED TESTING
+
+Branch: `DL-314-multi-template-match`.
+
+One AI Review card → N doc records sharing one `onedrive_item_id`. Admin picks additional templates via "גם תואם ל..." checkbox modal. Reference-count gate added to all archive call sites (approve override, reassign override, reject, edit-documents revert-to-missing). `/get-client-documents` surfaces `shared_ref_count` + `shared_with_titles[]` per doc row; doc-manager shows `🔗 ×N` chip.
+
+Design log: `.agent/design-logs/ai-review/314-multi-template-match.md`
+
+### Active TODOs (DL-314)
+- Live end-to-end test per Section 7 checklist (CPA-XXX, multi-match 3 templates, cross-person, cross-filing AR↔CS, revert middle, revert last → archive).
+- Add "Also matches..." button to reviewed-approved card state (currently only rendered pre-approve).
+- Consolidate `moveFileToArchive` into a single shared module if a third call site appears (currently duplicated in classifications.ts + edit-documents.ts).
+- DL-315 follow-up: per-target conflict resolution UI (v1 aborts whole batch on any conflict).
+
+---
 
 ## DL-313 COMPLETED (live 2026-04-20)
 

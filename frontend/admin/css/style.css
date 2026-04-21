@@ -8822,3 +8822,60 @@ tr:hover .client-edit-link {
     outline: 1px dashed var(--gray-300, #d1d5db);
     outline-offset: -1px;
 }
+
+/* DL-314: "גם תואם ל..." multi-match picker rows */
+.ai-also-match-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.12s ease;
+}
+.ai-also-match-row:hover {
+    background: var(--bg-secondary, #F8FAFC);
+}
+.ai-also-match-row input[type="checkbox"]:checked ~ .ai-also-match-label {
+    font-weight: 600;
+}
+.ai-also-match-row input[type="checkbox"] {
+    flex-shrink: 0;
+}
+.ai-also-match-person {
+    font-size: 11px;
+    color: var(--text-secondary, #64748B);
+    padding: 1px 6px;
+    border: 1px solid var(--border-subtle, #E2E8F0);
+    border-radius: 999px;
+    white-space: nowrap;
+}
+.ai-also-match-label {
+    flex: 1;
+    font-size: 13px;
+    min-width: 0;
+}
+.ai-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--border-subtle, #E2E8F0);
+}
+.ai-modal-close {
+    background: none;
+    border: 0;
+    font-size: 20px;
+    cursor: pointer;
+    color: var(--text-secondary, #64748B);
+}
+.ai-modal-body { padding: 14px 16px; }
+.ai-modal-footer {
+    display: flex;
+    justify-content: flex-start;
+    gap: 8px;
+    padding: 12px 16px;
+    border-top: 1px solid var(--border-subtle, #E2E8F0);
+}
+
