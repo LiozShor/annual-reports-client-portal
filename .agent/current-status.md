@@ -1,6 +1,25 @@
 # Annual Reports CRM - Current Status
 
-**Last Updated:** 2026-04-20 (DL-308 approve-send email preview — COMPLETED, live)
+**Last Updated:** 2026-04-21 (DL-314 SVG sprite icons — IMPLEMENTED, NEED TESTING)
+
+## DL-314 SVG Sprite Icons — IMPLEMENTED, NEED TESTING (2026-04-21)
+
+Branch: `DL-314-svg-sprite-icons` · admin panel only · `script.js?v=271`
+
+Replaces Lucide runtime DOM-replacement (the remaining bottleneck after DL-311) with a static SVG sprite + `<use>` references. DL-311 profiling proved every top setTimeout-violation offender was `safeCreateIcons:full-doc` at 100–166ms. New approach: zero JS at icon-render time — sprite parsed once, every `<use href="#icon-NAME">` is a free browser primitive.
+
+**Test checklist (in priority order):**
+- [ ] **Smoke:** hard-refresh admin (Ctrl+Shift+R), verify Network shows `script.js?v=271` and `lucide.min.js` is NOT loaded. Login screen icon (lock) visible.
+- [ ] **Visual regression:** click through every tab — dashboard stat cards, PA queue cards, AI review, reminders, questionnaires, send. Every icon that was there before is there now, same size, same color.
+- [ ] **Dynamic icons:** stage badges (8 different icons depending on stage), row-action buttons (send, bell-ring, archive), filter chips, popover icons all render correctly.
+- [ ] **Modals & toasts:** trigger a confirm dialog, a stage dropdown, a docs popover, a toast (e.g. via failed action) → icons render in each.
+- [ ] **Perf check:** `localStorage.ADMIN_PERF='1'; location.reload()` → click 3 tabs → console: `copy(JSON.stringify(performance.getEntriesByType('measure').filter(m=>m.name.startsWith('dl311:')).map(m=>({n:m.name,d:+m.duration.toFixed(1)})).sort((a,b)=>b.d-a.d).slice(0,15),null,2))` → expect ZERO `safeCreateIcons:*` entries.
+- [ ] **Chrome Violations:** flag OFF, hard reload, click tabs as you normally do. **No `setTimeout handler took >200ms` warnings** — this is the success bar from DL-311 we previously missed.
+- [ ] **Out-of-scope regression:** open `/view-documents/?...` and `/doc-manager` (client portal) — they STILL use Lucide runtime, icons should still render normally. (Future DL if we want to extend.)
+
+Design log: `.agent/design-logs/admin-ui/314-svg-sprite-icons.md`
+
+---
 
 ## DL-308 COMPLETED (live 2026-04-20)
 

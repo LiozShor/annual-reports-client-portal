@@ -2,7 +2,7 @@
 
 Active and pending logs. For completed history, see [ARCHIVE-INDEX.md](ARCHIVE-INDEX.md).
 
-**Total logs:** 206 | **Active:** 108 | **Archived:** 98
+**Total logs:** 207 | **Active:** 109 | **Archived:** 98
 
 ## Folder Structure
 
@@ -21,6 +21,7 @@ Active and pending logs. For completed history, see [ARCHIVE-INDEX.md](ARCHIVE-I
 
 | # | File | Status | Summary |
 |---|------|--------|---------|
+| 314 | [314-svg-sprite-icons.md](admin-ui/314-svg-sprite-icons.md) | IMPLEMENTED — NEED TESTING | Replace Lucide runtime DOM-replacement with inline SVG sprite (admin panel only). DL-311 profiling proved `safeCreateIcons:full-doc` (100–166ms each) was the remaining bottleneck after surgical fixes — every Chrome `setTimeout >700ms` violation was the browser bundling several Lucide DOM walks. Solution: 86-icon sprite at `frontend/assets/icons/icons.svg` inlined into `admin/index.html`; new `icon(name, sizeClass)` helper for dynamic templates; 136 static `<i data-lucide>` + 175 template-literal occurrences swapped to `<svg><use href="#icon-NAME"/></svg>`; `safeCreateIcons` neutered to no-op shim; Lucide CDN `<script>` removed. Build script `scripts/build-icon-sprite.mjs` is npm-free (native fetch to unpkg). Client portal / doc-manager / view-documents keep Lucide runtime — out of scope |
 | 311 | [311-admin-panel-slowness.md](admin-ui/311-admin-panel-slowness.md) | IMPLEMENTED — NEED TESTING | Admin panel long-task audit — switchTab unconditionally reloads dashboard + `STALE_AFTER_MS=30s` triggers repeat full renders; `renderClientsTable` runs two loops (table + mobile cards); `safeCreateIcons()` called unscoped on full DOM post-render; 7 prefetch loaders bundled in one `requestIdleCallback`. Plan: Part A adds `window.__ADMIN_PERF__`-gated `performance.mark/measure`; Part B applies 6 surgical fixes (remove `loadDashboard` from non-dashboard tab switch, bump staleness to 5min, merge render loops + `scheduler.yield` chunking, scope icons, stagger prefetch pump, debounce `switchTab`). script.js-only, no module split (DL-132) |
 | 309 | [309-silent-stage-advance-button.md](admin-ui/309-silent-stage-advance-button.md) | IMPLEMENTED — NEED TESTING | New silent-advance button on PA card footer + doc-manager sticky bar (sibling to primary approve-and-send). Advances stage 3 → Collecting_Docs via `ADMIN_CHANGE_STAGE` without sending the doc-request email. Doc-manager button gated by `STAGE_ORDER[CURRENT_STAGE] <= 3`; self-hides after advance. Icon `mail-off`, outline style, info-blue toast (not green) to avoid implying email was sent. Zero backend changes |
 | 308 | [308-approve-send-email-preview.md](admin-ui/308-approve-send-email-preview.md) | COMPLETED (live 2026-04-20) | Read-only email preview modal before approve-and-send. New `?preview=1` dry-run flag on `/webhook/approve-and-send` returns `{subject, html, language}` without sending. New shared helper `frontend/shared/email-preview-modal.js` (DL-299 precedent) reuses DL-289 `.ai-modal-overlay` + iframe srcdoc pattern. Preview buttons in PA card action row and doc-manager header + sticky action bar. No CSS, no backend mutation — parity with real send guaranteed by reusing `buildClientEmail{Subject,Html}` |
