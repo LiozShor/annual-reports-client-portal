@@ -13,6 +13,27 @@ Recommendation: don't port the AI Review tab today. Wait for the next non-trivia
 - [ ] If no trigger fires by **2026-10-21** (6 months), reassess: stable-enough-to-leave-alone, or latent pain built up?
 
 Design log: `.agent/design-logs/ai-review/316-react-port-scoping.md`
+**Last Updated:** 2026-04-21 (DL-318 AI Review endpoint perf — IMPLEMENTED, NEED TESTING)
+
+## DL-318 AI Review Endpoint Perf — IMPLEMENTED, NEED TESTING
+
+Branch: `DL-318-ai-review-endpoint-perf`. Worker deploy required.
+
+KV response-level cache (60 s TTL) for `/webhook/get-pending-classifications` (3 keys: `annual_report`, `capital_statements`, `all`). Explicit invalidation on writes (3 sites: `also_match` handler creates docs, `review-classification` POST, processor classifier write). Drop dead field `email_body_text` (zero consumers in `script.js`). Cache MS Graph webURL resolutions in KV (1 h TTL, parallel hit check before batch call).
+
+**Test checklist (per Section 7 of the design log):**
+- [ ] Deploy: `cd api && npx wrangler deploy` (DO NOT use bare `npx tsc` on Windows)
+- [ ] `wrangler tail --format=pretty` for 60 s → no errors on startup
+- [ ] Admin perf: `localStorage.ADMIN_PERF='1'; location.reload()` → AI Review tab
+  - [ ] Cold load (first open): `dl317:aiClassifications:fetch` < 3 s
+  - [ ] Warm load (second open within 60 s): `dl317:aiClassifications:fetch` < 500 ms
+- [ ] Approve one classification, reload AI Review within 60 s → badge count decrements (invalidation works)
+- [ ] 10 consecutive AI Review tab clicks → zero `TimeoutError`
+- [ ] `pre_questionnaire` badge still renders (DL-315 parity)
+- [ ] Doc-row filter chips + dedup working (DL-314 + DL-112 parity)
+- [ ] OneDrive "open file" link (`file_url`) resolves on cards
+
+Design log: `.agent/design-logs/admin-ui/318-ai-review-endpoint-perf.md`
 
 ---
 
