@@ -2,7 +2,7 @@
 
 Active and pending logs. For completed history, see [ARCHIVE-INDEX.md](ARCHIVE-INDEX.md).
 
-**Total logs:** 209 | **Active:** 111 | **Archived:** 98
+**Total logs:** 210 | **Active:** 112 | **Archived:** 98
 
 ## Folder Structure
 
@@ -21,6 +21,7 @@ Active and pending logs. For completed history, see [ARCHIVE-INDEX.md](ARCHIVE-I
 
 | # | File | Status | Summary |
 |---|------|--------|---------|
+| 319 | [319-approve-creates-required-doc.md](ai-review/319-approve-creates-required-doc.md) | IMPLEMENTED — NEED TESTING | Flip DL-057 disabled "נכון" button on AI Review full-match + fuzzy-match cards into active "נכון - הוסף מסמך זה לרשימת המסמכים הדרושים" when `item.is_unrequested && item.matched_template_id`. New wrapper `approveAIClassificationAddRequired(id, templateId)` POSTs `create_if_missing:true` + `template_id` to `/webhook/review-classification`; backend approve action creates a minimal `Required_Missing` DOCUMENTS row (server-side `matched_template_id` wins, typecast:true, race-check before create) then runs the existing approve flow unchanged. Unmatched-file fallback (no `matched_template_id`) preserves DL-057 disabled state. Mobile preview + issuer-mismatch unchanged |
 | 318 | [318-ai-review-endpoint-perf.md](admin-ui/318-ai-review-endpoint-perf.md) | IMPLEMENTED — NEED TESTING | KV response-level cache (60 s TTL) for `/webhook/get-pending-classifications` keyed by `filing_type` (3 keys: `annual_report`, `capital_statements`, `all`); explicit invalidation on writes (3 sites: `also_match`, `review-classification`, processor classifier); drop dead field `email_body_text`; cache MS Graph webURL resolutions in KV (1 h TTL, checked in parallel before batch call). Target: p50 < 1.5 s warm, p95 < 3 s warm, zero `TimeoutError` on 10 consecutive AI Review tab clicks. |
 | 317 | [317-fetch-only-prefetch.md](admin-ui/317-fetch-only-prefetch.md) | IMPLEMENTED — NEED TESTING | Split FETCH from RENDER for 5 heavy tab loaders (`loadPendingClients`, `loadAIClassifications`, `loadPendingApprovalQueue`, `loadReminders`, `loadQuestionnaires`). Prefetch pipeline now warms data cache + updates cheap badges/stats; heavy table/card render deferred to first tab click via per-loader `*EverRendered` flag. Each loader gains `prefetchOnly` param; 5 loaders re-added to `postBg`-staggered prefetch chain. `loadAIReviewCount` removed from pipeline (redundant with `loadAIClassifications(true, true)` hitting same endpoint via dedup). New perf marks `dl317:<name>:fetch` + `dl317:<name>:render`. Cache-bust v=272 → v=273 |
 | 316 | [316-react-port-scoping.md](ai-review/316-react-port-scoping.md) | DRAFT | Scoping-only decision doc for porting AI Review tab from vanilla `script.js` (~3,500 LOC) to a React island following DL-306 precedent. Research-backed cost estimate: ~5 weeks / 1 dev for full-tab port (scaffold, master list, card rendering, approve/reassign/reject, split modal, preview, Vitest, event-bus to doc-manager, cutover). Recommendation: **don't port today** — Strangler Fig, wait for forcing function (next non-trivial AI Review feature or recurring bug). Reassess 2026-10-21 if no trigger fires. File:line anchors for all 6 flow groups inventoried (master list, card rendering, inline actions, PDF preview, split, reassign) + shared-helper ownership (`createDocCombobox` also powers DL-292). No code written |

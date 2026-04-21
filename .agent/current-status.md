@@ -1,6 +1,33 @@
 # Annual Reports CRM - Current Status
 
-**Last Updated:** 2026-04-21 (DL-316 AI Review React port scoping — DRAFT, decision doc only)
+**Last Updated:** 2026-04-21 (DL-319 approve-creates-required-doc — IMPLEMENTED, NEED TESTING)
+
+## DL-319 Approve-as-Required Button — IMPLEMENTED, NEED TESTING
+
+Branch: `claude-session-20260421-091040`. Worker deploy required.
+
+Flipped DL-057: on AI Review full-match + fuzzy-match cards, the "נכון" button is no longer disabled when the matched template is not in the client's required list — instead it reads **"נכון - הוסף מסמך זה לרשימת המסמכים הדרושים"** and atomically creates a `Required_Missing` DOCUMENTS row then runs the normal approve flow. New body fields on `/webhook/review-classification` approve action: `create_if_missing: true` + `template_id`. Server-side `matched_template_id` wins over client body. Unmatched-file fallback (no `matched_template_id`) still uses DL-057 disabled behavior.
+
+**Test checklist (per Section 7 of the design log):**
+- [ ] Deploy: `cd api && npx wrangler deploy`
+- [ ] `wrangler tail` briefly — no errors on startup
+- [ ] curl: approve + `create_if_missing:true` + valid `template_id` → 200; new DOCUMENTS row with `type=<template>`, `status='Received'`; classification approved
+- [ ] curl: `create_if_missing:true` with empty `template_id` → 400
+- [ ] curl: `create_if_missing:true` when a doc of that template already exists → uses existing row (no duplicate)
+- [ ] curl: mismatched client `template_id` vs classification's `matched_template_id` → server uses `matched_template_id`, logs the mismatch
+- [ ] Admin UI (after merge to main — GitHub Pages live): full-match card with unrequested doc shows active green button with "נכון - הוסף מסמך זה לרשימת המסמכים הדרושים"; click completes end-to-end (doc appears in Document Manager as Received, card leaves queue)
+- [ ] Admin UI: fuzzy-match card — same end-to-end
+- [ ] Admin UI: regular required-doc approve still shows plain "נכון" and uses `approveAIClassification`
+- [ ] Admin UI: unmatched card (`is_unrequested=true`, no `matched_template_id`) still shows disabled button (DL-057 fallback)
+- [ ] Regression: issuer-mismatch card (~L4654) still disabled per DL-057
+- [ ] Regression: mobile preview drawer (~L667) unchanged
+- [ ] Regression: conflict flow (target doc already Received) still returns 409 with conflict modal
+
+Design log: `.agent/design-logs/ai-review/319-approve-creates-required-doc.md`
+
+---
+
+## DL-316 AI Review Tab React Port Scoping — DRAFT
 
 ## DL-316 AI Review Tab React Port Scoping — DRAFT
 

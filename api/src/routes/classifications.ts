@@ -451,7 +451,7 @@ classifications.post('/review-classification', async (c) => {
 
     // ---- Step 1: Validate request ----
     const body = await c.req.json() as Record<string, unknown>;
-    const { token, classification_id, action, reassign_template_id, reassign_doc_record_id, notes, new_doc_name, force_overwrite, approve_mode, target_report_id, additional_targets } = body as {
+    const { token, classification_id, action, reassign_template_id, reassign_doc_record_id, notes, new_doc_name, force_overwrite, approve_mode, target_report_id, additional_targets, create_if_missing, template_id } = body as {
       token: string;
       classification_id: string;
       action: string;
@@ -469,6 +469,9 @@ classifications.post('/review-classification', async (c) => {
         target_report_id?: string;
         new_doc_name?: string;
       }>;
+      // DL-319: atomically create required-doc row when none exists, then approve
+      create_if_missing?: boolean;
+      template_id?: string;
     };
 
     if (!token) {
@@ -1149,6 +1152,48 @@ classifications.post('/review-classification', async (c) => {
           console.log('[review-classification] approve: no reportId to lookup');
         }
       }
+      // ---- DL-319: create_if_missing — atomically create required-doc row then approve ----
+      if (!approveDocId && create_if_missing === true) {
+        if (!template_id || typeof template_id !== 'string' || !template_id.trim()) {
+          return c.json({ ok: false, error: 'template_id required when create_if_missing is true' }, 400);
+        }
+        const reportId = getField(clsFields.report) as string;
+        if (!reportId) {
+          return c.json({ ok: false, error: 'Cannot create required doc: no report linked to this classification' }, 400);
+        }
+        // Server-side value always wins — don't trust the client's template_id blindly
+        const serverTemplateId = (clsFields.matched_template_id as string) || template_id.trim();
+        if (template_id.trim() !== serverTemplateId) {
+          console.warn('[review-classification] approve create_if_missing: client template_id mismatch',
+            JSON.stringify({ client: template_id.trim(), server: serverTemplateId }));
+        }
+        // Race guard: re-check for existing row before creating (small window, no Airtable unique constraint)
+        const raceCheck = await airtable.listAllRecords(TABLES.DOCUMENTS, {
+          filterByFormula: `AND({type} = '${serverTemplateId}', FIND('${reportId}', ARRAYJOIN({report_record_id})))`,
+          maxRecords: 1,
+        });
+        if (raceCheck.length > 0) {
+          // Another concurrent request already created the row — use it
+          const racePick = raceCheck.find(d => (d.fields as any).status === 'Required_Missing') || raceCheck[0];
+          approveDocId = racePick.id;
+          sourceDoc = racePick;
+          console.log('[review-classification] approve create_if_missing: race winner found existing row', approveDocId);
+        } else {
+          // Create a minimal required-doc placeholder row; approve flow below will flip it to Received
+          const newDocFields: Record<string, unknown> = {
+            type: serverTemplateId,
+            report: [reportId],
+            status: 'Required_Missing',
+          };
+          const created = await airtable.createRecords(TABLES.DOCUMENTS, [{ fields: newDocFields }], { typecast: true });
+          const newRec = created[0];
+          approveDocId = newRec.id;
+          sourceDoc = newRec;
+          console.log('[review-classification] approve create_if_missing: created required-doc row', approveDocId, 'type:', serverTemplateId);
+        }
+      }
+      // ---- end DL-319 ----
+
       if (!approveDocId) {
         console.log('[review-classification] approve: FAILED - no doc found');
         return c.json({ ok: false, error: 'Cannot approve: no matching document found' }, 400);
