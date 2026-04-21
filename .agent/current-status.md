@@ -1,5 +1,27 @@
 # Annual Reports CRM - Current Status
 
+**Last Updated:** 2026-04-21 (DL-314 pre-questionnaire classifier fallback — IMPLEMENTED, NEED TESTING)
+
+## DL-314 Classifier Fallback for Pre-Questionnaire Docs — IMPLEMENTED, NEED TESTING
+
+Branch: `DL-314-classifier-full-catalog-fallback`.
+
+Inbound email pipeline now runs the AI classifier even when the client has no `required_documents` yet (stages `Send_Questionnaire` / `Waiting_For_Answers`). Classifier's tool enum + system prompt swap to the full filing-type-scoped template catalog in fallback mode; `findBestDocMatch` + recovery agent skipped. New Airtable `pre_questionnaire` checkbox field on `pending_classifications` (id `flduTUbhFFqdI2qzi`) surfaces as a `טרם מולא שאלון` warning badge on AI Review cards. One-off backfill endpoint `/webhook/backfill-dl314` covers CPA-XXX.
+
+**Test checklist:**
+- [ ] `wrangler deploy` from `api/` succeeds, `wrangler tail` clean on startup
+- [ ] Send email + PDF to `reports@moshe-atsits.co.il` from a client at stage `Waiting_For_Answers` → `pending_classifications` row has `matched_template_id` populated, `pre_questionnaire = true`, `review_status = 'pending'`
+- [ ] AI Review tab shows `טרם מולא שאלון` badge on the new card (warning-tone pill)
+- [ ] Regression: stage-4 (`Collecting_Docs`) email classifies normally, `pre_questionnaire = false`, no badge
+- [ ] Backfill CPA-XXX dry run: `curl -X POST '<worker-url>/webhook/backfill-dl314?clientId=CPA-XXX&dryRun=1' -H "Authorization: Bearer <admin-token>"` → review `results[]` JSON, confirm template choices look reasonable
+- [ ] Backfill CPA-XXX apply: re-run with `dryRun=0` → rows updated, verify in AI Review
+- [ ] Backfill endpoint deleted in follow-up commit before main merge
+- [ ] `wrangler tail` shows exactly one Anthropic call per attachment (no 429 storms)
+
+Design log: `.agent/design-logs/ai-review/314-pre-questionnaire-classifier-fallback.md`
+
+---
+
 **Last Updated:** 2026-04-20 (DL-313 hover-open tab dropdowns — COMPLETED, live)
 
 ## DL-313 COMPLETED (live 2026-04-20)

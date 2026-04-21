@@ -304,12 +304,24 @@ CS-T022 - ת.ז בנקאית חשבון ייפוי כוח (Power of Attorney Ban
 // Anthropic tool definition — strict schema
 // ---------------------------------------------------------------------------
 
+// DL-314: Filter ALL_TEMPLATE_IDS by filing_type for pre-questionnaire fallback.
+function scopedCatalog(filingType?: string): string[] {
+  if (filingType === 'capital_statement') return ALL_TEMPLATE_IDS.filter(t => t.startsWith('CS-'));
+  if (filingType === 'annual_report')     return ALL_TEMPLATE_IDS.filter(t => !t.startsWith('CS-'));
+  return [...ALL_TEMPLATE_IDS];
+}
+
 // DL-278: Tool schema built dynamically — enum scoped to client's required template IDs only.
 // The AI can ONLY pick from templates the office assigned to this client.
-function buildClassifyTool(requiredDocs: AirtableRecord<DocFields>[]) {
+// DL-314: In fallbackMode (no required_docs / pre-questionnaire), enum = full catalog scoped to filing_type.
+function buildClassifyTool(
+  requiredDocs: AirtableRecord<DocFields>[],
+  opts?: { fallbackMode?: boolean; filingType?: string },
+) {
   const clientTemplateIds = [...new Set(requiredDocs.map(d => d.fields.type))];
-  // Fallback to full list only if no required docs (shouldn't happen in practice)
-  const templateEnum = clientTemplateIds.length > 0 ? clientTemplateIds : [...ALL_TEMPLATE_IDS];
+  const templateEnum = opts?.fallbackMode
+    ? scopedCatalog(opts.filingType)
+    : (clientTemplateIds.length > 0 ? clientTemplateIds : [...ALL_TEMPLATE_IDS]);
 
   return {
     name: 'classify_document',
@@ -367,7 +379,7 @@ function buildClassifyTool(requiredDocs: AirtableRecord<DocFields>[]) {
             { type: 'string', enum: templateEnum },
             { type: 'null' }
           ],
-          description: 'Template ID to assign. ONLY choose from the client\'s required documents listed above. Set to null if confidence < 0.5 or the document does not match any required template.'
+          description: 'Template ID to assign. Choose from the enum values above. Set to null if confidence < 0.5 or the document does not match any template.'
         }
       },
       required: ['evidence', 'issuer_name', 'confidence', 'additional_matches', 'contract_period', 'matched_template_id']
@@ -396,14 +408,30 @@ function arrayBufferToBase64(buffer: ArrayBuffer): string {
 function buildSystemPrompt(
   clientName: string,
   requiredDocs: AirtableRecord<DocFields>[],
+  opts?: { fallbackMode?: boolean; filingType?: string },
 ): Array<{type: 'text'; text: string; cache_control?: {type: 'ephemeral'}}> {
-  const docsCtx = requiredDocs.length > 0
-    ? requiredDocs.map(d => {
-        const p = d.fields.person === 'spouse' ? ' (spouse)' : '';
-        const name = (d.fields.issuer_name || '').replace(/<\/?b>/g, '');
-        return `- ${d.fields.type}: ${name}${p ? ' ' + p : ''}`;
-      }).join('\n')
-    : 'No required documents found for this client.';
+  // DL-314: In fallback mode, the client has no required_docs yet (questionnaire not submitted).
+  // Swap in a catalog listing scoped to filing_type, and relax the "only match required" rule.
+  const fallback = !!opts?.fallbackMode;
+  const scope = fallback ? scopedCatalog(opts?.filingType) : [];
+
+  const docsCtx = fallback
+    ? `⚠️ CLIENT HAS NOT SUBMITTED QUESTIONNAIRE YET — no tailored required-documents list exists.
+Classify against the full ${opts?.filingType === 'capital_statement' ? 'Capital Statement' : opts?.filingType === 'annual_report' ? 'Annual Report' : 'full'} template catalog below. Pick the best-fitting template based on the document content.
+
+Catalog (filing type: ${opts?.filingType ?? 'unknown'}):
+${scope.map(t => `- ${t}: ${TEMPLATE_TITLES[t] ?? ''}`).join('\n')}`
+    : requiredDocs.length > 0
+      ? requiredDocs.map(d => {
+          const p = d.fields.person === 'spouse' ? ' (spouse)' : '';
+          const name = (d.fields.issuer_name || '').replace(/<\/?b>/g, '');
+          return `- ${d.fields.type}: ${name}${p ? ' ' + p : ''}`;
+        }).join('\n')
+      : 'No required documents found for this client.';
+
+  const requiredDocsHeader = fallback
+    ? 'Available templates (no required-docs list — client has not submitted questionnaire):'
+    : "The client's required documents (not yet received):";
 
   const text = `You are a document classifier for an Israeli CPA firm's tax document collection system.
 
@@ -411,7 +439,7 @@ ${DOC_TYPE_REFERENCE}
 
 Client name: ${clientName}
 
-The client's required documents (not yet received):
+${requiredDocsHeader}
 ${docsCtx}
 
 Classification rules:
@@ -478,7 +506,7 @@ Commonly confused pairs — pay special attention:
 - T201 (Form 106 for CLIENT) vs T202 (Form 106 for SPOUSE). Compare the employee name on the form to the client name.
 - Maternity leave (דמי לידה) from NII → always T302, regardless of whether the person is the client or spouse.
 
-Note: If the document does NOT match any of the client's required documents, set matched_template_id to null. Do NOT invent a classification — only match against the required documents listed above.
+Note: ${fallback ? 'Classify against the full catalog above. Set matched_template_id to null only if confidence < 0.5 or no template fits.' : "If the document does NOT match any of the client's required documents, set matched_template_id to null. Do NOT invent a classification — only match against the required documents listed above."}
 
 IMPORTANT — Capital Statement (CS-T*) vs Annual Report (T*) templates:
 - CS-T* templates are for Capital Statement (הצהרת הון) documents — bank IDs, property contracts, vehicle registrations, balance confirmations, pay slips, etc.
@@ -744,8 +772,19 @@ export async function classifyAttachment(
   attachment: AttachmentInfo,
   requiredDocs: AirtableRecord<DocFields>[],
   clientName: string,
-  emailMetadata: { subject: string; bodyPreview: string; senderName: string; senderEmail: string },
+  emailMetadata: {
+    subject: string;
+    bodyPreview: string;
+    senderName: string;
+    senderEmail: string;
+    /** DL-314: classify against full filing-type catalog when client has no required_docs yet */
+    fallbackMode?: boolean;
+    /** DL-314: filing_type of the active report, used to scope the fallback catalog */
+    filingType?: string;
+  },
 ): Promise<ClassificationResult> {
+  const fallbackMode = !!emailMetadata.fallbackMode;
+  const filingType = emailMetadata.filingType;
   // Build content array based on file type
   const content: Array<Record<string, unknown>> = [];
   const sizeKB = Math.round(attachment.size / 1024);
@@ -807,9 +846,9 @@ export async function classifyAttachment(
   const body = {
     model: 'claude-haiku-4-5-20251001',
     max_tokens: 512,
-    system: buildSystemPrompt(clientName, requiredDocs),
+    system: buildSystemPrompt(clientName, requiredDocs, { fallbackMode, filingType }),
     messages: [{ role: 'user', content }],
-    tools: [buildClassifyTool(requiredDocs)],
+    tools: [buildClassifyTool(requiredDocs, { fallbackMode, filingType })],
     tool_choice: { type: 'tool', name: 'classify_document' },
   };
 
@@ -884,6 +923,7 @@ export async function classifyAttachment(
         matchedDocRecordId: null,
         matchedDocName: null,
         matchQuality: null,
+        preQuestionnaire: fallbackMode,
       };
     }
 
@@ -893,7 +933,8 @@ export async function classifyAttachment(
 
     let matchQuality: string | null = null;
 
-    if (input.template_id) {
+    // DL-314: In fallback mode there are no real required_docs to match against — skip matcher + recovery.
+    if (input.template_id && !fallbackMode) {
       const match = findBestDocMatch(input.template_id, input.issuer_name, requiredDocs);
       matchedDocRecordId = match.docId;
       matchedDocName = match.matchedDocName;
@@ -901,7 +942,7 @@ export async function classifyAttachment(
     }
 
     // DL-278: Recovery agent — if classifier returned good evidence but null template, try to recover
-    if (!input.template_id && input.confidence >= 0.5 && input.reason.length > 10) {
+    if (!fallbackMode && !input.template_id && input.confidence >= 0.5 && input.reason.length > 10) {
       console.warn(`[classifier] Null template with conf=${input.confidence} for "${attachment.name}" — invoking recovery agent`);
       const recovered = await recoverTemplateId(
         pCtx.env.ANTHROPIC_API_KEY,
@@ -920,9 +961,10 @@ export async function classifyAttachment(
       }
     }
 
-    // Process additional matches (dual-filing)
+    // Process additional matches (dual-filing).
+    // DL-314: fallbackMode has no required_docs, so dual-filing matching is meaningless — skip.
     const additionalMatches: AdditionalMatch[] = [];
-    if (input.additional_matches && input.additional_matches.length > 0) {
+    if (!fallbackMode && input.additional_matches && input.additional_matches.length > 0) {
       for (const am of input.additional_matches) {
         if (!am.template_id || am.confidence < 0.5) continue;
         const amMatch = findBestDocMatch(am.template_id, am.issuer_name || '', requiredDocs);
@@ -953,6 +995,7 @@ export async function classifyAttachment(
       matchQuality,
       additionalMatches: additionalMatches.length > 0 ? additionalMatches : undefined,
       contractPeriod,
+      preQuestionnaire: fallbackMode,
     };
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
@@ -964,6 +1007,7 @@ export async function classifyAttachment(
       matchedDocRecordId: null,
       matchedDocName: null,
       matchQuality: null,
+      preQuestionnaire: fallbackMode,
     };
   }
 }
