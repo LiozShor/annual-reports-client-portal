@@ -1,5 +1,21 @@
 # Annual Reports CRM - Current Status
 
+**Last Updated:** 2026-04-21 (DL-316 AI Review React port scoping — DRAFT, decision doc only)
+
+## DL-316 AI Review Tab React Port Scoping — DRAFT
+
+Branch: `DL-316-ai-review-react-port-scoping`. **No code written** — scoping-only design log.
+
+Recommendation: don't port the AI Review tab today. Wait for the next non-trivial AI Review feature request (or recurring bug) to serve as the forcing function — at that point the ~5-week port (~3,500 LOC across `script.js`) is justified as the cheapest way to ship the new feature and removes the heaviest remaining chunk of the vanilla monolith. Reference log captures surface inventory, file:line anchors for all 6 flow groups, shared-helper ownership (`createDocCombobox` also powers DL-292 pending-approval queue), effort estimates by slice, and coexistence strategy (freeze + escape hatch, event-bus to vanilla doc-manager).
+
+**Review trigger:**
+- [ ] Next AI Review feature request → reopen DL-316 before starting vanilla work; if feature touches ≥2 of the 6 groups, open a port DL instead
+- [ ] If no trigger fires by **2026-10-21** (6 months), reassess: stable-enough-to-leave-alone, or latent pain built up?
+
+Design log: `.agent/design-logs/ai-review/316-react-port-scoping.md`
+
+---
+
 **Last Updated:** 2026-04-21 (DL-315 pre-questionnaire classifier fallback — IMPLEMENTED, NEED TESTING)
 
 ## DL-315 Classifier Fallback for Pre-Questionnaire Docs — IMPLEMENTED, NEED TESTING
