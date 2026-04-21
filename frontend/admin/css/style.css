@@ -1877,7 +1877,9 @@ tr:hover .client-view-link {
 .ai-file-info {
     display: flex;
     align-items: center;
+    flex-wrap: wrap;
     gap: var(--sp-2);
+    row-gap: var(--sp-1);
     min-width: 0;
     flex: 1;
 }
