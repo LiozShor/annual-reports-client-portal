@@ -1,5 +1,5 @@
-# Design Log 314: Classifier Fallback for Pre-Questionnaire Inbound Docs
-**Status:** [BEING IMPLEMENTED — DL-314]
+# Design Log 315: Classifier Fallback for Pre-Questionnaire Inbound Docs
+**Status:** [BEING IMPLEMENTED — DL-315]
 **Date:** 2026-04-21
 **Related Logs:** DL-203 (WF05 Worker migration), DL-207 (WF05 Worker full gap audit), DL-259 (inbound notes all stages), DL-278 (classification recovery agent)
 
@@ -99,7 +99,7 @@ Attachments arriving at stage 1 or 2 land in AI Review with a template assignmen
 | `api/src/lib/inbound/document-classifier.ts` | Modify | `scopedCatalog` helper; `fallbackMode` + `filingType` in options; rewritten prompt + tool enum for fallback; set `preQuestionnaire` on return |
 | `api/src/lib/inbound/processor.ts` | Modify | Drop `requiredDocs.length > 0` guard; compute `fallbackMode`; pass options; write `pre_questionnaire` in `classFields` |
 | `api/src/routes/classifications.ts` | Modify | Map `pre_questionnaire` through GET response |
-| `api/src/routes/backfill-dl314.ts` | Create | One-off endpoint `POST /webhook/backfill-dl314` (guarded by shared secret, deleted before merge) |
+| `api/src/routes/backfill-dl315.ts` | Create | One-off endpoint `POST /webhook/backfill-dl315` (guarded by shared secret, deleted before merge) |
 | `api/src/index.ts` | Modify | Register backfill route |
 | `frontend/admin/js/script.js` | Modify | Render `ai-badge--warning` on AI Review card when `pre_questionnaire` |
 | `frontend/admin/document-manager.html` + `frontend/assets/js/*.js` | Modify | Same badge on doc-manager rows |

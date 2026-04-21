@@ -304,7 +304,7 @@ CS-T022 - ת.ז בנקאית חשבון ייפוי כוח (Power of Attorney Ban
 // Anthropic tool definition — strict schema
 // ---------------------------------------------------------------------------
 
-// DL-314: Filter ALL_TEMPLATE_IDS by filing_type for pre-questionnaire fallback.
+// DL-315: Filter ALL_TEMPLATE_IDS by filing_type for pre-questionnaire fallback.
 function scopedCatalog(filingType?: string): string[] {
   if (filingType === 'capital_statement') return ALL_TEMPLATE_IDS.filter(t => t.startsWith('CS-'));
   if (filingType === 'annual_report')     return ALL_TEMPLATE_IDS.filter(t => !t.startsWith('CS-'));
@@ -313,7 +313,7 @@ function scopedCatalog(filingType?: string): string[] {
 
 // DL-278: Tool schema built dynamically — enum scoped to client's required template IDs only.
 // The AI can ONLY pick from templates the office assigned to this client.
-// DL-314: In fallbackMode (no required_docs / pre-questionnaire), enum = full catalog scoped to filing_type.
+// DL-315: In fallbackMode (no required_docs / pre-questionnaire), enum = full catalog scoped to filing_type.
 function buildClassifyTool(
   requiredDocs: AirtableRecord<DocFields>[],
   opts?: { fallbackMode?: boolean; filingType?: string },
@@ -410,7 +410,7 @@ function buildSystemPrompt(
   requiredDocs: AirtableRecord<DocFields>[],
   opts?: { fallbackMode?: boolean; filingType?: string },
 ): Array<{type: 'text'; text: string; cache_control?: {type: 'ephemeral'}}> {
-  // DL-314: In fallback mode, the client has no required_docs yet (questionnaire not submitted).
+  // DL-315: In fallback mode, the client has no required_docs yet (questionnaire not submitted).
   // Swap in a catalog listing scoped to filing_type, and relax the "only match required" rule.
   const fallback = !!opts?.fallbackMode;
   const scope = fallback ? scopedCatalog(opts?.filingType) : [];
@@ -777,9 +777,9 @@ export async function classifyAttachment(
     bodyPreview: string;
     senderName: string;
     senderEmail: string;
-    /** DL-314: classify against full filing-type catalog when client has no required_docs yet */
+    /** DL-315: classify against full filing-type catalog when client has no required_docs yet */
     fallbackMode?: boolean;
-    /** DL-314: filing_type of the active report, used to scope the fallback catalog */
+    /** DL-315: filing_type of the active report, used to scope the fallback catalog */
     filingType?: string;
   },
 ): Promise<ClassificationResult> {
@@ -933,7 +933,7 @@ export async function classifyAttachment(
 
     let matchQuality: string | null = null;
 
-    // DL-314: In fallback mode there are no real required_docs to match against — skip matcher + recovery.
+    // DL-315: In fallback mode there are no real required_docs to match against — skip matcher + recovery.
     if (input.template_id && !fallbackMode) {
       const match = findBestDocMatch(input.template_id, input.issuer_name, requiredDocs);
       matchedDocRecordId = match.docId;
@@ -962,7 +962,7 @@ export async function classifyAttachment(
     }
 
     // Process additional matches (dual-filing).
-    // DL-314: fallbackMode has no required_docs, so dual-filing matching is meaningless — skip.
+    // DL-315: fallbackMode has no required_docs, so dual-filing matching is meaningless — skip.
     const additionalMatches: AdditionalMatch[] = [];
     if (!fallbackMode && input.additional_matches && input.additional_matches.length > 0) {
       for (const am of input.additional_matches) {

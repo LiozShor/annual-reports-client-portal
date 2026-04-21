@@ -1924,7 +1924,7 @@ tr:hover .client-view-link {
     flex-shrink: 0;
 }
 
-/* DL-314: Pre-questionnaire classification badge — warning tone since confidence is structural */
+/* DL-315: Pre-questionnaire classification badge — warning tone since confidence is structural */
 .ai-pre-questionnaire-badge {
     display: inline-flex;
     align-items: center;
