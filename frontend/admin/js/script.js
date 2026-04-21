@@ -4592,11 +4592,16 @@ function renderReviewedCard(item, reviewStatus) {
     let displayName;
     if (reviewStatus === 'rejected') {
         displayName = item.attachment_name || item.matched_short_name || item.matched_template_name || 'לא ידוע';
-    } else if (reviewStatus === 'reassigned' && item.onedrive_item_id) {
+    } else if (reviewStatus === 'reassigned') {
         const siblings = [...(item.all_docs || []), ...(item.other_report_docs || [])];
-        const target = siblings.find(d => d.onedrive_item_id === item.onedrive_item_id && d.status === 'Received');
+        const target = item.onedrive_item_id
+            ? siblings.find(d => d.onedrive_item_id === item.onedrive_item_id && d.status === 'Received')
+            : null;
         const targetName = target?.name_short || target?.name;
-        displayName = appendContractPeriod(targetName || item.matched_short_name || item.matched_template_name || 'לא ידוע', item);
+        displayName = appendContractPeriod(
+            targetName || item.matched_short_name || item.matched_template_name || item.attachment_name || 'לא ידוע',
+            item
+        );
     } else {
         displayName = appendContractPeriod(item.matched_short_name || item.matched_template_name || 'לא ידוע', item);
     }
