@@ -4586,8 +4586,20 @@ function renderReviewedCard(item, reviewStatus) {
         } catch { /* ignore parse errors */ }
     }
 
-    // Classification info — use API-resolved short name + period
-    const displayName = appendContractPeriod(item.matched_short_name || item.matched_template_name || 'לא ידוע', item);
+    // Classification info — use API-resolved short name + period.
+    // For rejected: fall back to filename (the match was dismissed).
+    // For reassigned: look up the new target doc (shares onedrive_item_id) and show its name.
+    let displayName;
+    if (reviewStatus === 'rejected') {
+        displayName = item.attachment_name || item.matched_short_name || item.matched_template_name || 'לא ידוע';
+    } else if (reviewStatus === 'reassigned' && item.onedrive_item_id) {
+        const siblings = [...(item.all_docs || []), ...(item.other_report_docs || [])];
+        const target = siblings.find(d => d.onedrive_item_id === item.onedrive_item_id && d.status === 'Received');
+        const targetName = target?.name_short || target?.name;
+        displayName = appendContractPeriod(targetName || item.matched_short_name || item.matched_template_name || 'לא ידוע', item);
+    } else {
+        displayName = appendContractPeriod(item.matched_short_name || item.matched_template_name || 'לא ידוע', item);
+    }
 
     // DL-271: Request missing period buttons on reviewed rental contract cards
     let reviewedPeriodBtns = '';
