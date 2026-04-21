@@ -4465,7 +4465,7 @@ function renderAICard(item) {
                     <span class="ai-file-name clickable-preview" ${senderTooltip ? `title="${escapeAttr(senderTooltip)}"` : ''}>${escapeHtml(item.attachment_name || 'ללא שם')}</span>
                     ${item.filing_type ? `<span class="ai-filing-type-badge ai-ft-${escapeAttr(item.filing_type)}">${escapeHtml(FILING_TYPE_LABELS[item.filing_type] || item.filing_type)}</span>` : ''}
                     ${item.is_duplicate ? '<span class="ai-duplicate-badge" title="קובץ כפול — אותו קובץ כבר קיים במערכת">כפול</span>' : ''}
-                    ${item.is_unrequested ? '<span class="ai-unrequested-badge" title="מסמך שלא נדרש מהלקוח">לא נדרש</span>' : ''}
+                    ${item.is_unrequested && !item.pre_questionnaire ? '<span class="ai-unrequested-badge" title="מסמך שלא נדרש מהלקוח">לא נדרש</span>' : ''}
                     ${item.pre_questionnaire ? '<span class="ai-pre-questionnaire-badge" title="הלקוח טרם מילא את השאלון — הסיווג בוצע מול הקטלוג המלא">טרם מולא שאלון</span>' : ''}
 
                     ${evidenceIcon}
