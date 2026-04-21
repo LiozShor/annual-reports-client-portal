@@ -198,11 +198,13 @@ function createSubmitLock(button, { loadingText } = {}) {
 
 // --- Request Deduplication (GET only) ---
 
+const DEDUP_WINDOW_MS = 3000;
 const _inflightRequests = new Map();
 
 /**
  * Deduplicate identical GET requests.
  * If an identical request is already in-flight, returns the same promise.
+ * DL-321: keep resolved entries for ${DEDUP_WINDOW_MS}ms so prefetch + tab-click collapse.
  * @param {string} url
  * @param {RequestInit} [options={}]
  * @param {number} [timeoutMs]
@@ -214,14 +216,41 @@ async function deduplicatedFetch(url, options = {}, timeoutMs) {
         return fetchWithTimeout(url, options, timeoutMs);
     }
 
-    if (!_inflightRequests.has(url)) {
+    const entry = _inflightRequests.get(url);
+    const now = Date.now();
+    const isStaleOrMissing = !entry || (entry.settledAt !== null && (now - entry.settledAt) >= DEDUP_WINDOW_MS);
+
+    if (isStaleOrMissing) {
+        // Create a new entry or replace stale one
+        const newEntry = { promise: null, settledAt: null, timeoutId: null };
+
         const promise = fetchWithTimeout(url, options, timeoutMs)
-            .finally(() => _inflightRequests.delete(url));
-        _inflightRequests.set(url, promise);
+            .then(response => {
+                // Success: mark settled and schedule cleanup
+                newEntry.settledAt = Date.now();
+                newEntry.timeoutId = setTimeout(() => {
+                    // Only delete if this entry is still the current one
+                    if (_inflightRequests.get(url) === newEntry) {
+                        _inflightRequests.delete(url);
+                    }
+                }, DEDUP_WINDOW_MS);
+                return response;
+            })
+            .catch(error => {
+                // Failure: delete immediately, do not cache error
+                if (_inflightRequests.get(url) === newEntry) {
+                    _inflightRequests.delete(url);
+                }
+                throw error;
+            });
+
+        newEntry.promise = promise;
+        _inflightRequests.set(url, newEntry);
     }
 
+    const currentEntry = _inflightRequests.get(url);
     // DL-247: Clone for each consumer — Response body can only be read once
-    return _inflightRequests.get(url).then(r => r.clone());
+    return currentEntry.promise.then(r => r.clone());
 }
 
 // --- Session Storage Cache (for view-documents) ---

@@ -1,6 +1,32 @@
 # Annual Reports CRM - Current Status
 
-**Last Updated:** 2026-04-21 (DL-319 approve-creates-required-doc — IMPLEMENTED, NEED TESTING)
+**Last Updated:** 2026-04-21 (DL-321 AI Review endpoint perf bundle — IMPLEMENTED, NEED TESTING)
+
+## DL-321 AI Review Endpoint Perf Bundle — IMPLEMENTED, NEED TESTING
+
+Branch: `DL-321-ai-review-perf-bundle`. Worker deploy required; frontend deploy via main merge.
+
+Five-part bundle to reduce AI Review endpoint latency from 14–17 s cold to ~2–4 s:
+1. Scope DOCUMENTS fetch to reports in pending-classifications (N+1 fix via report-ID filter + chunked OR query)
+2. Memoize buildShortName per-request (regex-heavy, called per item)
+3. Delete dead `loadAIReviewCount` function (removed from pipeline in DL-317, orphaned)
+4. Widen `deduplicatedFetch` dedup window from instant to 3 s post-resolve (collapse prefetch + click requests)
+5. Add idle-refresh dialog helper (5 min hidden + re-focus, respects open modals/inputs)
+
+**Test checklist:**
+- [ ] `./node_modules/.bin/tsc --noEmit` on `api/` passes
+- [ ] `cd api && npx wrangler deploy` succeeds
+- [ ] `wrangler tail` clean for 60 s
+- [ ] Curl cold path: < 5 s (`curl -w '%{time_total}\n' ... /webhook/get-pending-classifications?filing_type=all`)
+- [ ] 10× tab-click test: `localStorage.ADMIN_PERF='1'`, zero `TimeoutError`, all fetches < 5 s after first
+- [ ] Warm path (click within 3 s of prefetch): `dl317:aiClassifications:fetch` < 500 ms
+- [ ] Parity: AI cards render, pre_questionnaire badge, shared_ref_count chip, file hash dedup, tab badge count correct
+- [ ] Idle-refresh: appears after 6 min hidden + visible, respects open modal, "המשך" resets timer, "רענן" reloads
+- [ ] Ask user before merging to main
+
+Design log: `.agent/design-logs/admin-ui/321-ai-review-perf-bundle.md`
+
+---
 
 ## DL-319 Approve-as-Required Button — IMPLEMENTED, NEED TESTING
 

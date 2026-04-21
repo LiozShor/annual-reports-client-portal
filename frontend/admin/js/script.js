@@ -906,9 +906,7 @@ async function loadDashboard(silent = false) {
         // so they fetch+cache but skip their render burst. First switchTab
         // then paints cached data instantly (dl317:*:render mark) without
         // an extra fetch.
-        // Note: loadAIReviewCount removed — loadAIClassifications(true, true)
-        // hits the same endpoint via deduplicatedFetch and updates the same
-        // badge, making it redundant (also kills its 407ms setTimeout violation).
+        // Note: loadAIReviewCount removed in DL-321 — loadAIClassifications(true, true) handles badge updates.
         const prefetchPipeline = [
             () => loadReminderCount(),
             () => loadRecentMessages(), // DL-261
@@ -2464,25 +2462,6 @@ document.addEventListener('visibilitychange', () => {
 });
 
 // Load AI review pending count for tab badge
-async function loadAIReviewCount() {
-    const badge = document.getElementById('aiReviewTabBadge');
-    try {
-        const resp = await deduplicatedFetch(`${ENDPOINTS.GET_PENDING_CLASSIFICATIONS}?filing_type=all`, { headers: { 'Authorization': `Bearer ${authToken}` } }, FETCH_TIMEOUTS.slow); // DL-254: must match loadAIClassifications timeout (shared via dedup)
-        const data = await resp.json();
-        badge.classList.remove('ai-badge-loading');
-        if (data.ok && data.items) {
-            const pending = data.items.filter(i => (i.review_status || 'pending') === 'pending');
-            const uniqueClients = new Set(pending.map(i => i.client_id).filter(Boolean)).size;
-            syncAIBadge(badge, uniqueClients);
-        } else {
-            syncAIBadge(badge, 0);
-        }
-    } catch (e) {
-        // Fetch failed - hide the loading badge
-        badge.classList.remove('ai-badge-loading');
-        badge.style.display = 'none';
-    }
-}
 
 // ==================== IMPORT ====================
 
