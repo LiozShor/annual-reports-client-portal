@@ -59,10 +59,16 @@ async function main() {
 
     console.log(`Fetching ${names.length} Lucide icons (v${LUCIDE_VERSION})…`);
     const symbols = [];
+    // Stroke attributes set ON the symbol element so they apply to all child paths
+    // via SVG presentation-attribute inheritance, regardless of how the outer
+    // <svg><use href="#sym"/></svg> wrapper attributes propagate through the
+    // <use> shadow tree (which varies by browser). Lucide's source paths have
+    // no stroke attrs of their own and rely on inheritance from the parent svg.
+    const STROKE_ATTRS = 'fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"';
     for (const name of names) {
         try {
             const { viewBox, inner } = await fetchIcon(name);
-            symbols.push(`  <symbol id="icon-${name}" viewBox="${viewBox}">${inner}</symbol>`);
+            symbols.push(`  <symbol id="icon-${name}" viewBox="${viewBox}" ${STROKE_ATTRS}>${inner}</symbol>`);
             process.stdout.write('.');
         } catch (err) {
             process.stdout.write('\n');
