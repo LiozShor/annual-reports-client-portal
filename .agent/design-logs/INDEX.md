@@ -2,7 +2,7 @@
 
 Active and pending logs. For completed history, see [ARCHIVE-INDEX.md](ARCHIVE-INDEX.md).
 
-**Total logs:** 206 | **Active:** 108 | **Archived:** 98
+**Total logs:** 208 | **Active:** 110 | **Archived:** 98
 
 ## Folder Structure
 
@@ -21,6 +21,7 @@ Active and pending logs. For completed history, see [ARCHIVE-INDEX.md](ARCHIVE-I
 
 | # | File | Status | Summary |
 |---|------|--------|---------|
+| 314 | [314-svg-sprite-icons.md](admin-ui/314-svg-sprite-icons.md) | IMPLEMENTED — NEED TESTING | Replace Lucide runtime DOM-replacement with inline SVG sprite (admin panel only). DL-311 profiling proved `safeCreateIcons:full-doc` (100–166ms each) was the remaining bottleneck after surgical fixes — every Chrome `setTimeout >700ms` violation was the browser bundling several Lucide DOM walks. Solution: 86-icon sprite at `frontend/assets/icons/icons.svg` inlined into `admin/index.html`; new `icon(name, sizeClass)` helper for dynamic templates; 136 static `<i data-lucide>` + 175 template-literal occurrences swapped to `<svg><use href="#icon-NAME"/></svg>`; `safeCreateIcons` neutered to no-op shim; Lucide CDN `<script>` removed. Build script `scripts/build-icon-sprite.mjs` is npm-free (native fetch to unpkg). Client portal / doc-manager / view-documents keep Lucide runtime — out of scope |
 | 313 | [313-hover-tab-dropdowns.md](admin-ui/313-hover-tab-dropdowns.md) | COMPLETED (live 2026-04-20) | Admin top-nav [Questionnaires] / [Reviews] dropdowns open on hover (desktop mouse only, gated by `@media (hover: hover) and (pointer: fine)`) with 180ms fade + translateY(-6px→0) cubic-bezier ease-out and `transform-origin: top`. Click-toggle preserved for keyboard/touch; `aria-expanded` sync via new `openTabDropdown`/`closeTabDropdown` helpers. 200ms close-delay timer (per-wrapper) bridges the trigger→menu gap; sibling auto-close on hover. Mobile bottom-nav popovers untouched. `prefers-reduced-motion` fallback |
 | 311 | [311-admin-panel-slowness.md](admin-ui/311-admin-panel-slowness.md) | IMPLEMENTED — NEED TESTING | Admin panel long-task audit — switchTab unconditionally reloads dashboard + `STALE_AFTER_MS=30s` triggers repeat full renders; `renderClientsTable` runs two loops (table + mobile cards); `safeCreateIcons()` called unscoped on full DOM post-render; 7 prefetch loaders bundled in one `requestIdleCallback`. Plan: Part A adds `window.__ADMIN_PERF__`-gated `performance.mark/measure`; Part B applies 6 surgical fixes (remove `loadDashboard` from non-dashboard tab switch, bump staleness to 5min, merge render loops + `scheduler.yield` chunking, scope icons, stagger prefetch pump, debounce `switchTab`). script.js-only, no module split (DL-132) |
 | 310 | [310-remove-questionnaire-answer-note.md](infrastructure/310-remove-questionnaire-answer-note.md) | IMPLEMENTED — NEED TESTING | Remove `[תשובה מהשאלון] <raw>` append to `bookkeepers_notes` (DL-296 feature). Endpoint keeps DL-300 ✨ `issuer_name_suggested` LLM path; note-append + `noteOnlyDocs` loop deleted. Backfill script strips historical tagged blocks from documents table (dry-run by default). WF02 payload left untouched — extra fields silently ignored |

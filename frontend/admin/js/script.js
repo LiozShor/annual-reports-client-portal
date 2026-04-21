@@ -16,16 +16,16 @@ function perfEnd(name, start) {
     if (dur > 50) console.log(`[DL311 PERF] ${name} ${dur.toFixed(1)}ms`);
 }
 
-// Safe Lucide icon replacement — avoids "No elements found" error when
-// no unprocessed [data-lucide] elements exist in the DOM
-function safeCreateIcons(rootOrOpts) {
-    if (typeof lucide === 'undefined') return;
-    const _t = perfStart();
-    try {
-        const opts = rootOrOpts instanceof Element ? { root: rootOrOpts } : rootOrOpts;
-        lucide.createIcons(opts);
-    } catch (_) { /* no unprocessed icons */ }
-    perfEnd(rootOrOpts instanceof Element ? 'safeCreateIcons:scoped' : 'safeCreateIcons:full-doc', _t);
+// DL-314: safeCreateIcons is now a no-op — sprite <use> references render natively,
+// no DOM walk needed. Kept as a shim for any call sites we miss; delete in a follow-up.
+function safeCreateIcons(_rootOrOpts) { /* no-op since DL-314 */ }
+
+// DL-314: Inline SVG from sprite — replaces Lucide's runtime DOM walk.
+// Sprite lives at the top of admin/index.html; icons referenced as #icon-NAME.
+// `stroke="currentColor"` lets existing CSS color rules (e.g. var(--brand-500)) keep working.
+function icon(name, sizeClass) {
+    const cls = sizeClass ? `icon ${sizeClass}` : 'icon';
+    return `<svg class="${cls}" aria-hidden="true" focusable="false" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"><use href="#icon-${name}"/></svg>`;
 }
 
 const SESSION_FLAG_KEY = 'admin_session_active';
@@ -660,13 +660,13 @@ function buildMobilePreviewFooter(item, footer) {
                 <button class="btn btn-success btn-sm" ${approveDisabled
                     ? 'aria-disabled="true" title="לא ניתן לאשר מסמך שלא נדרש"'
                     : `onclick="approveAIClassification('${escapeAttr(item.id)}'); closeMobilePreview();"`}>
-                    <i data-lucide="check" class="icon-sm"></i> נכון
+                    ${icon('check', 'icon-sm')} נכון
                 </button>
                 <button class="btn btn-link btn-sm" onclick="closeMobilePreview(); showAIReassignModal('${escapeAttr(item.id)}')">
-                    <i data-lucide="arrow-right-left" class="icon-sm"></i> לא נכון, שייך מחדש
+                    ${icon('arrow-right-left', 'icon-sm')} לא נכון, שייך מחדש
                 </button>
                 <button class="btn btn-outline-danger btn-sm" onclick="rejectAIClassification('${escapeAttr(item.id)}'); closeMobilePreview();">
-                    <i data-lucide="x" class="icon-sm"></i> מסמך לא רלוונטי
+                    ${icon('x', 'icon-sm')} מסמך לא רלוונטי
                 </button>
             </div>`;
 
@@ -683,10 +683,10 @@ function buildMobilePreviewFooter(item, footer) {
         actionsHtml = `
             <div class="ai-card-actions">
                 <button class="btn btn-link btn-sm" onclick="closeMobilePreview(); showAIReassignModal('${escapeAttr(item.id)}')">
-                    <i data-lucide="arrow-right-left" class="icon-sm"></i> שייך מחדש
+                    ${icon('arrow-right-left', 'icon-sm')} שייך מחדש
                 </button>
                 <button class="btn btn-outline-danger btn-sm" onclick="rejectAIClassification('${escapeAttr(item.id)}'); closeMobilePreview();">
-                    <i data-lucide="x" class="icon-sm"></i> מסמך לא רלוונטי
+                    ${icon('x', 'icon-sm')} מסמך לא רלוונטי
                 </button>
             </div>`;
 
@@ -703,17 +703,17 @@ function buildMobilePreviewFooter(item, footer) {
         actionsHtml = `
             <div class="ai-card-actions">
                 <button class="btn btn-link btn-sm" onclick="closeMobilePreview(); showAIReassignModal('${escapeAttr(item.id)}')">
-                    <i data-lucide="arrow-right-left" class="icon-sm"></i> שייך ידנית
+                    ${icon('arrow-right-left', 'icon-sm')} שייך ידנית
                 </button>
                 <button class="btn btn-outline-danger btn-sm" onclick="rejectAIClassification('${escapeAttr(item.id)}'); closeMobilePreview();">
-                    <i data-lucide="x" class="icon-sm"></i> מסמך לא רלוונטי
+                    ${icon('x', 'icon-sm')} מסמך לא רלוונטי
                 </button>
             </div>`;
     }
 
     const clientName = item.client_name || '';
     const clientHeader = clientName
-        ? `<div class="mobile-preview-client"><i data-lucide="user" class="icon-sm"></i> ${escapeHtml(clientName)}</div>`
+        ? `<div class="mobile-preview-client">${icon('user', 'icon-sm')} ${escapeHtml(clientName)}</div>`
         : '';
 
     // DL-270: Contract period banner for mobile preview — editable
@@ -735,10 +735,10 @@ function buildMobilePreviewFooter(item, footer) {
             const statusText = cp ? 'חוזה חלקי' : 'לא זוהו תאריכים';
             let mobileBtns = '';
             if (startMonth && startMonth > 1) {
-                mobileBtns += `<button class="btn btn-outline btn-sm btn-request-period" data-record-id="${rid}" data-gap="before" onclick="event.stopPropagation(); requestMissingPeriod('${rid}', 1, ${startMonth - 1}, this)"><i data-lucide="plus" class="icon-sm"></i> בקש חוזה ${formatPeriodLabel(1, startMonth - 1, year)}</button>`;
+                mobileBtns += `<button class="btn btn-outline btn-sm btn-request-period" data-record-id="${rid}" data-gap="before" onclick="event.stopPropagation(); requestMissingPeriod('${rid}', 1, ${startMonth - 1}, this)">${icon('plus', 'icon-sm')} בקש חוזה ${formatPeriodLabel(1, startMonth - 1, year)}</button>`;
             }
             if (endMonth && endMonth < 12) {
-                mobileBtns += `<button class="btn btn-outline btn-sm btn-request-period" data-record-id="${rid}" data-gap="after" onclick="event.stopPropagation(); requestMissingPeriod('${rid}', ${endMonth + 1}, 12, this)"><i data-lucide="plus" class="icon-sm"></i> בקש חוזה ${formatPeriodLabel(endMonth + 1, 12, year)}</button>`;
+                mobileBtns += `<button class="btn btn-outline btn-sm btn-request-period" data-record-id="${rid}" data-gap="after" onclick="event.stopPropagation(); requestMissingPeriod('${rid}', ${endMonth + 1}, 12, this)">${icon('plus', 'icon-sm')} בקש חוזה ${formatPeriodLabel(endMonth + 1, 12, year)}</button>`;
             }
             mobileContractBanner = `
             <div class="ai-contract-period-banner" data-record-id="${rid}">
@@ -1044,7 +1044,7 @@ function renderMessages() {
     if (_allMessages.length === 0) {
         container.innerHTML = `
             <div class="msg-empty">
-                <i data-lucide="inbox" class="icon-2xl"></i>
+                ${icon('inbox', 'icon-2xl')}
                 <p>אין הודעות אחרונות</p>
             </div>`;
         safeCreateIcons(container);
@@ -1064,7 +1064,7 @@ function renderMessages() {
         const repliesHtml = replies.length > 0
             ? `<div class="msg-thread-replies">${replies.map((r, i) => `
                 <div class="msg-office-reply">
-                    <div class="msg-reply-label"><i data-lucide="corner-down-left" class="icon-xs"></i> ${replies.length > 1 ? `תגובת המשרד #${i + 1}` : 'תגובת המשרד'}</div>
+                    <div class="msg-reply-label">${icon('corner-down-left', 'icon-xs')} ${replies.length > 1 ? `תגובת המשרד #${i + 1}` : 'תגובת המשרד'}</div>
                     <div class="msg-reply-text">${escapeHtml(r.summary)}</div>
                     <div class="msg-reply-date">${formatRelativeTime(r.date)}</div>
                 </div>`).join('')}</div>`
@@ -1079,9 +1079,9 @@ function renderMessages() {
                 ${repliesHtml}
             </div>
             <div class="msg-actions">
-                <button class="msg-action-btn" title="השב ללקוח" onclick="event.stopPropagation(); showReplyInput('${noteId}', '${reportId}')"><i data-lucide="message-square" class="icon-xs"></i></button>
-                <button class="msg-action-btn" title="פתח בניהול מסמכים" onclick="window.open('../document-manager.html?${navParam}', '_blank')"><i data-lucide="folder-open" class="icon-xs"></i></button>
-                <button class="msg-action-btn msg-action-btn--success" title="סמן כטופל" onclick="markMessageHandled('${noteId}', '${reportId}')"><i data-lucide="check" class="icon-sm"></i></button>
+                <button class="msg-action-btn" title="השב ללקוח" onclick="event.stopPropagation(); showReplyInput('${noteId}', '${reportId}')">${icon('message-square', 'icon-xs')}</button>
+                <button class="msg-action-btn" title="פתח בניהול מסמכים" onclick="window.open('../document-manager.html?${navParam}', '_blank')">${icon('folder-open', 'icon-xs')}</button>
+                <button class="msg-action-btn msg-action-btn--success" title="סמן כטופל" onclick="markMessageHandled('${noteId}', '${reportId}')">${icon('check', 'icon-sm')}</button>
             </div>
         </div>`;
     }).join('');
@@ -1143,11 +1143,11 @@ function showReplyInput(noteId, reportId) {
     replyZone.innerHTML = `
         <div class="msg-reply-textarea-wrap" dir="rtl">
             <textarea class="msg-reply-textarea" placeholder="הקלד תגובה..." dir="rtl" rows="2"></textarea>
-            <button type="button" class="msg-reply-expand-btn" title="הרחב חלון כתיבה"><i data-lucide="maximize-2" class="icon-xs"></i></button>
+            <button type="button" class="msg-reply-expand-btn" title="הרחב חלון כתיבה">${icon('maximize-2', 'icon-xs')}</button>
         </div>
         <div class="msg-reply-buttons">
             <button class="btn btn-sm btn-primary msg-reply-send" disabled>
-                <i data-lucide="send" class="icon-xs"></i> שלח תגובה
+                ${icon('send', 'icon-xs')} שלח תגובה
             </button>
             <button class="btn btn-sm btn-ghost msg-reply-cancel">ביטול</button>
         </div>
@@ -1186,7 +1186,7 @@ function showReplyInput(noteId, reportId) {
 async function sendReply(noteId, reportId, commentText, sendBtn, replyZone, row) {
     if (!commentText) return;
     sendBtn.disabled = true;
-    sendBtn.innerHTML = '<i data-lucide="loader" class="icon-xs spin"></i> שולח...';
+    sendBtn.innerHTML = `${icon('loader', 'icon-xs spin')} שולח...`;
     safeCreateIcons(sendBtn);
 
     try {
@@ -1217,7 +1217,7 @@ async function sendReply(noteId, reportId, commentText, sendBtn, replyZone, row)
         }
     } catch (err) {
         sendBtn.disabled = false;
-        sendBtn.innerHTML = '<i data-lucide="send" class="icon-xs"></i> שלח תגובה';
+        sendBtn.innerHTML = `${icon('send', 'icon-xs')} שלח תגובה`;
         safeCreateIcons(sendBtn);
         showAIToast('שגיאה בשליחת תגובה: ' + (err.message || 'Unknown error'), 'error');
     }
@@ -1278,7 +1278,7 @@ function expandReplyCompose(noteId, reportId, initialText, onCollapse, clientNam
         <div class="ai-modal-panel msg-compose-modal" dir="rtl">
             <div class="msg-compose-header">
                 <div class="msg-compose-title">כתיבת תגובה</div>
-                <button type="button" class="msg-compose-collapse-btn" title="כווץ חזרה"><i data-lucide="minimize-2" class="icon-sm"></i></button>
+                <button type="button" class="msg-compose-collapse-btn" title="כווץ חזרה">${icon('minimize-2', 'icon-sm')}</button>
             </div>
             <div class="msg-compose-grid">
                 <div class="msg-compose-pane">
@@ -1295,7 +1295,7 @@ function expandReplyCompose(noteId, reportId, initialText, onCollapse, clientNam
             <div class="msg-compose-footer">
                 <button class="btn btn-sm btn-ghost msg-compose-cancel">ביטול</button>
                 <button class="btn btn-sm btn-primary msg-compose-send" disabled>
-                    <i data-lucide="send" class="icon-xs"></i> שלח תגובה
+                    ${icon('send', 'icon-xs')} שלח תגובה
                 </button>
             </div>
         </div>
@@ -1398,7 +1398,7 @@ function expandReplyCompose(noteId, reportId, initialText, onCollapse, clientNam
         // Make sure the compact reply zone exists with the text, then trigger sendReply
         // Simplest: directly POST via the same pipeline, then close modal + run post-prompt
         sendBtn.disabled = true;
-        sendBtn.innerHTML = '<i data-lucide="loader" class="icon-xs spin"></i> שולח...';
+        sendBtn.innerHTML = `${icon('loader', 'icon-xs spin')} שולח...`;
         safeCreateIcons(sendBtn);
         fetchWithTimeout(ENDPOINTS.ADMIN_SEND_COMMENT, {
             method: 'POST',
@@ -1445,7 +1445,7 @@ function renderClientsTable(clients) {
         if (!dashboardLoaded) return;
         container.innerHTML = `
             <div class="empty-state">
-                <div class="empty-state-icon"><i data-lucide="folder-open" class="icon-2xl"></i></div>
+                <div class="empty-state-icon">${icon('folder-open', 'icon-2xl')}</div>
                 <p>לא נמצאו לקוחות</p>
             </div>
         `;
@@ -1501,7 +1501,7 @@ function renderClientsTable(clients) {
                             ${escapeHtml(client.name)}
                         </strong>
                         <a class="client-edit-link" href="javascript:void(0)" onclick="event.stopPropagation(); openClientDetailModal('${rid}')" title="עריכת פרטים">
-                            <i data-lucide="pencil" class="icon-xs"></i>
+                            ${icon('pencil', 'icon-xs')}
                         </a>
                     </div>
                 </td>
@@ -1509,7 +1509,7 @@ function renderClientsTable(clients) {
                     <span id="stage-badge-${rid}" class="stage-badge ${stage.class} clickable"
                         onclick="openStageDropdown(event, '${rid}', '${escapeAttr(client.stage)}')"
                         title="לחץ לשינוי שלב">
-                        <i data-lucide="${stage.icon}" class="icon-sm"></i> ${stage.label} <span class="stage-caret">&#x25BE;</span>
+                        ${icon(stage.icon, 'icon-sm')} ${stage.label} <span class="stage-caret">&#x25BE;</span>
                     </span>
                 </td>
                 <td>
@@ -1534,22 +1534,22 @@ function renderClientsTable(clients) {
                 </td>
                 <td>
                     ${client.stage === 'Send_Questionnaire' ?
-                `<button class="action-btn send" onclick="sendSingle('${rid}')" title="שלח שאלון"><i data-lucide="send" class="icon-sm"></i></button>` :
+                `<button class="action-btn send" onclick="sendSingle('${rid}')" title="שלח שאלון">${icon('send', 'icon-sm')}</button>` :
                 ''}
                     ${(client.stage === 'Waiting_For_Answers' || client.stage === 'Collecting_Docs') ?
-                `<button class="action-btn reminder-set-btn" onclick="sendDashboardReminder('${rid}', '${cName}')" title="שלח תזכורת"><i data-lucide="bell-ring" class="icon-sm"></i></button>` :
+                `<button class="action-btn reminder-set-btn" onclick="sendDashboardReminder('${rid}', '${cName}')" title="שלח תזכורת">${icon('bell-ring', 'icon-sm')}</button>` :
                 ''}
                     <div class="row-overflow-dropdown">
                         <button class="action-btn overflow" onclick="toggleRowMenu(this, event)" title="פעולות נוספות">⋮</button>
                         <div class="row-menu">
-                            <button onclick="viewClient('${rid}'); closeAllRowMenus();"><i data-lucide="external-link"></i> צפייה כלקוח</button>
+                            <button onclick="viewClient('${rid}'); closeAllRowMenus();">${icon('external-link')} צפייה כלקוח</button>
                             ${stageNum >= 3 ?
-                `<button onclick="viewQuestionnaire('${rid}'); closeAllRowMenus();"><i data-lucide="file-text"></i> צפה בשאלון</button>` : ''}
+                `<button onclick="viewQuestionnaire('${rid}'); closeAllRowMenus();">${icon('file-text')} צפה בשאלון</button>` : ''}
                             ${isActive && otherType ?
-                `<button onclick="addSecondFilingType('${rid}'); closeAllRowMenus();"><i data-lucide="file-plus"></i> הוסף ${otherTypeLabel}</button>` : ''}
+                `<button onclick="addSecondFilingType('${rid}'); closeAllRowMenus();">${icon('file-plus')} הוסף ${otherTypeLabel}</button>` : ''}
                             ${isActive ?
-                `<button class="danger" onclick="deactivateClient('${rid}', '${cName}'); closeAllRowMenus();"><i data-lucide="archive"></i> העבר לארכיון</button>` :
-                `<button onclick="reactivateClient('${rid}'); closeAllRowMenus();"><i data-lucide="archive-restore"></i> הפעל מחדש</button>`}
+                `<button class="danger" onclick="deactivateClient('${rid}', '${cName}'); closeAllRowMenus();">${icon('archive')} העבר לארכיון</button>` :
+                `<button onclick="reactivateClient('${rid}'); closeAllRowMenus();">${icon('archive-restore')} הפעל מחדש</button>`}
                         </div>
                     </div>
                 </td>
@@ -1582,7 +1582,7 @@ function renderClientsTable(clients) {
                     <span id="stage-badge-m-${rid}" class="stage-badge ${stage.class} clickable"
                         onclick="openStageDropdown(event, '${rid}', '${escapeAttr(client.stage)}')"
                         title="לחץ לשינוי שלב">
-                        <i data-lucide="${stage.icon}" class="icon-sm"></i> ${stage.label}
+                        ${icon(stage.icon, 'icon-sm')} ${stage.label}
                     </span>
                 </div>
             </div>
@@ -1601,20 +1601,20 @@ function renderClientsTable(clients) {
             </div>
             <div class="mobile-card-actions">
                 ${client.stage === 'Send_Questionnaire' ?
-                    `<button class="action-btn send" onclick="sendSingle('${rid}')" title="שלח שאלון"><i data-lucide="send" class="icon-sm"></i></button>` : ''}
+                    `<button class="action-btn send" onclick="sendSingle('${rid}')" title="שלח שאלון">${icon('send', 'icon-sm')}</button>` : ''}
                 ${(client.stage === 'Waiting_For_Answers' || client.stage === 'Collecting_Docs') ?
-                    `<button class="action-btn reminder-set-btn" onclick="sendDashboardReminder('${rid}', '${cName}')" title="שלח תזכורת"><i data-lucide="bell-ring" class="icon-sm"></i></button>` : ''}
+                    `<button class="action-btn reminder-set-btn" onclick="sendDashboardReminder('${rid}', '${cName}')" title="שלח תזכורת">${icon('bell-ring', 'icon-sm')}</button>` : ''}
                 <div class="row-overflow-dropdown">
                     <button class="action-btn overflow" onclick="toggleRowMenu(this, event)" title="פעולות נוספות">⋮</button>
                     <div class="row-menu">
-                        <button onclick="viewClient('${rid}'); closeAllRowMenus();"><i data-lucide="external-link"></i> צפייה כלקוח</button>
+                        <button onclick="viewClient('${rid}'); closeAllRowMenus();">${icon('external-link')} צפייה כלקוח</button>
                         ${stageNum >= 3 ?
-                            `<button onclick="viewQuestionnaire('${rid}'); closeAllRowMenus();"><i data-lucide="file-text"></i> צפה בשאלון</button>` : ''}
+                            `<button onclick="viewQuestionnaire('${rid}'); closeAllRowMenus();">${icon('file-text')} צפה בשאלון</button>` : ''}
                         ${isActive && mOtherType ?
-                            `<button onclick="addSecondFilingType('${rid}'); closeAllRowMenus();"><i data-lucide="file-plus"></i> הוסף ${mOtherTypeLabel}</button>` : ''}
+                            `<button onclick="addSecondFilingType('${rid}'); closeAllRowMenus();">${icon('file-plus')} הוסף ${mOtherTypeLabel}</button>` : ''}
                         ${isActive ?
-                            `<button class="danger" onclick="deactivateClient('${rid}', '${cName}'); closeAllRowMenus();"><i data-lucide="archive"></i> העבר לארכיון</button>` :
-                            `<button onclick="reactivateClient('${rid}'); closeAllRowMenus();"><i data-lucide="archive-restore"></i> הפעל מחדש</button>`}
+                            `<button class="danger" onclick="deactivateClient('${rid}', '${cName}'); closeAllRowMenus();">${icon('archive')} העבר לארכיון</button>` :
+                            `<button onclick="reactivateClient('${rid}'); closeAllRowMenus();">${icon('archive-restore')} הפעל מחדש</button>`}
                     </div>
                 </div>
             </div>
@@ -1832,7 +1832,7 @@ function openStageDropdown(event, reportId, currentStage) {
         const isBackward = info.num < currentNum;
         html += `<button class="stage-dropdown-option ${isActive ? 'active' : ''} ${isBackward ? 'warning' : ''}"
                     onclick="changeClientStage('${escapeAttr(reportId)}', '${key}')" ${isActive ? 'disabled' : ''}>
-                    <i data-lucide="${info.icon}" class="icon-sm"></i>
+                    ${icon(info.icon, 'icon-sm')}
                     ${info.label}
                     ${isBackward ? '<span class="backward-badge">← אחורה</span>' : ''}
                 </button>`;
@@ -1928,7 +1928,7 @@ function updateClientStageInPlace(reportId, newStage) {
 
     badge.className = `stage-badge ${stage.class} clickable`;
     badge.setAttribute('onclick', `openStageDropdown(event, '${escapeAttr(reportId)}', '${escapeAttr(newStage)}')`);
-    badge.innerHTML = `<i data-lucide="${stage.icon}" class="icon-sm"></i> ${stage.label} <span class="stage-caret">&#x25BE;</span>`;
+    badge.innerHTML = `${icon(stage.icon, 'icon-sm')} ${stage.label} <span class="stage-caret">&#x25BE;</span>`;
 
     safeCreateIcons();
 }
@@ -2067,7 +2067,7 @@ function renderQueuedEmailsModal() {
     overlay.innerHTML = `
         <div class="ai-modal-panel">
             <div class="ai-modal-panel-header">
-                <i data-lucide="clock" class="icon"></i>
+                ${icon('clock')}
                 בתור לשליחה ב-08:00 (${rows.length})
             </div>
             <div class="ai-modal-panel-body">
@@ -2329,7 +2329,7 @@ function renderHistoryPopover(popover, history) {
     if (!history.length) {
         popover.innerHTML = `
             <div class="docs-popover-title" style="text-align:center;padding:16px;">
-                <i data-lucide="clock" style="width:20px;height:20px;margin-bottom:8px;opacity:0.4;"></i>
+                ${icon('clock')}
                 <div>לא נשלחו תזכורות</div>
             </div>`;
         safeCreateIcons({ attrs: { class: 'icon-sm' } });
@@ -2357,7 +2357,7 @@ function copyToClipboard(text, btn) {
         showAIToast('הועתק', 'success');
         if (btn) {
             const origHTML = btn.innerHTML;
-            btn.innerHTML = '<i data-lucide="check" class="icon-xs"></i>';
+            btn.innerHTML = `${icon('check', 'icon-xs')}`;
             safeCreateIcons();
             setTimeout(() => {
                 btn.innerHTML = origHTML;
@@ -2371,7 +2371,7 @@ function copyToClipboard(text, btn) {
 
 function refreshData() {
     // DL-247: Spin the refresh button while loading
-    // Add class to BUTTON (not SVG) — lucide.createIcons() replaces SVG nodes
+    // Add class to BUTTON (not SVG) — DL-314: SVG sprite uses <use> refs, not replacement
     const btn = document.querySelector('[onclick="refreshData()"]');
     if (btn) btn.classList.add('is-refreshing');
     const stopSpin = () => { if (btn) btn.classList.remove('is-refreshing'); };
@@ -2883,7 +2883,7 @@ function renderPendingClients() {
     if (pendingClients.length === 0) {
         container.innerHTML = `
             <div class="empty-state">
-                <div class="empty-state-icon"><i data-lucide="circle-check" class="icon-2xl"></i></div>
+                <div class="empty-state-icon">${icon('circle-check', 'icon-2xl')}</div>
                 <p>אין לקוחות ממתינים לשליחת שאלון</p>
             </div>
         `;
@@ -2917,7 +2917,7 @@ function renderPendingClients() {
                 <td>
                     <div class="email-cell">
                         <a href="mailto:${escapeAttr(client.email)}" class="email-link">${escapeHtml(client.email)}</a>
-                        <button class="copy-email-btn" onclick="event.stopPropagation(); copyToClipboard('${escapeAttr(client.email)}', this)" title="העתק אימייל"><i data-lucide="copy" class="icon-xs"></i></button>
+                        <button class="copy-email-btn" onclick="event.stopPropagation(); copyToClipboard('${escapeAttr(client.email)}', this)" title="העתק אימייל">${icon('copy', 'icon-xs')}</button>
                     </div>
                 </td>
             </tr>
@@ -2939,7 +2939,7 @@ function renderPendingClients() {
             <div class="mobile-card-secondary">
                 <div class="email-cell">
                     <a href="mailto:${escapeAttr(client.email)}" class="email-link">${escapeHtml(client.email)}</a>
-                    <button class="copy-email-btn" onclick="event.stopPropagation(); copyToClipboard('${escapeAttr(client.email)}', this)" title="העתק אימייל"><i data-lucide="copy" class="icon-xs"></i></button>
+                    <button class="copy-email-btn" onclick="event.stopPropagation(); copyToClipboard('${escapeAttr(client.email)}', this)" title="העתק אימייל">${icon('copy', 'icon-xs')}</button>
                 </div>
             </div>
         </li>`;
@@ -3109,7 +3109,7 @@ function renderReviewTable(queue) {
     if (!queue || queue.length === 0) {
         container.innerHTML = `
             <div class="empty-state">
-                <div class="empty-state-icon"><i data-lucide="inbox" class="icon-2xl"></i></div>
+                <div class="empty-state-icon">${icon('inbox', 'icon-2xl')}</div>
                 <p>אין לקוחות מוכנים להכנה כרגע</p>
             </div>
         `;
@@ -3165,7 +3165,7 @@ function renderReviewTable(queue) {
                 <td>
                     <div class="email-cell">
                         <a href="mailto:${escapeAttr(client.email)}" class="email-link">${escapeHtml(client.email)}</a>
-                        <button class="copy-email-btn" onclick="event.stopPropagation(); copyToClipboard('${escapeAttr(client.email)}', this)" title="העתק אימייל"><i data-lucide="copy" class="icon-xs"></i></button>
+                        <button class="copy-email-btn" onclick="event.stopPropagation(); copyToClipboard('${escapeAttr(client.email)}', this)" title="העתק אימייל">${icon('copy', 'icon-xs')}</button>
                     </div>
                 </td>
                 <td>${client.year}</td>
@@ -3173,8 +3173,8 @@ function renderReviewTable(queue) {
                 <td>${dateStr}</td>
                 <td><span class="waiting-badge ${waitingClass}">${waitingText}</span></td>
                 <td>
-                    <button class="action-btn view" onclick="viewClient('${escapeAttr(client.report_id)}')" title="צפה בתיק"><i data-lucide="eye" class="icon-sm"></i></button>
-                    <button class="action-btn complete" onclick="markComplete('${escapeOnclick(client.report_id)}', '${escapeOnclick(client.name)}')" title="סמן כהושלם"><i data-lucide="circle-check" class="icon-sm"></i></button>
+                    <button class="action-btn view" onclick="viewClient('${escapeAttr(client.report_id)}')" title="צפה בתיק">${icon('eye', 'icon-sm')}</button>
+                    <button class="action-btn complete" onclick="markComplete('${escapeOnclick(client.report_id)}', '${escapeOnclick(client.name)}')" title="סמן כהושלם">${icon('circle-check', 'icon-sm')}</button>
                 </td>
             </tr>
         `;
@@ -3211,12 +3211,12 @@ function renderReviewTable(queue) {
                 <span class="mobile-card-detail"><span class="label">השלמה</span> ${dateStr}</span>
                 <div class="email-cell">
                     <a href="mailto:${escapeAttr(client.email)}" class="email-link">${escapeHtml(client.email)}</a>
-                    <button class="copy-email-btn" onclick="event.stopPropagation(); copyToClipboard('${escapeAttr(client.email)}', this)" title="העתק אימייל"><i data-lucide="copy" class="icon-xs"></i></button>
+                    <button class="copy-email-btn" onclick="event.stopPropagation(); copyToClipboard('${escapeAttr(client.email)}', this)" title="העתק אימייל">${icon('copy', 'icon-xs')}</button>
                 </div>
             </div>
             <div class="mobile-card-actions">
-                <button class="action-btn view" onclick="viewClient('${escapeAttr(client.report_id)}')" title="צפה בתיק"><i data-lucide="eye" class="icon-sm"></i></button>
-                <button class="action-btn complete" onclick="markComplete('${escapeOnclick(client.report_id)}', '${escapeOnclick(client.name)}')" title="סמן כהושלם"><i data-lucide="circle-check" class="icon-sm"></i></button>
+                <button class="action-btn view" onclick="viewClient('${escapeAttr(client.report_id)}')" title="צפה בתיק">${icon('eye', 'icon-sm')}</button>
+                <button class="action-btn complete" onclick="markComplete('${escapeOnclick(client.report_id)}', '${escapeOnclick(client.name)}')" title="סמן כהושלם">${icon('circle-check', 'icon-sm')}</button>
             </div>
         </li>`;
     }
@@ -3749,10 +3749,10 @@ async function loadAIClassifications(silent = false) {
             const container = document.getElementById('aiCardsContainer');
             container.innerHTML = `
                 <div class="empty-state">
-                    <div class="empty-state-icon"><i data-lucide="alert-triangle" class="icon-2xl"></i></div>
+                    <div class="empty-state-icon">${icon('alert-triangle', 'icon-2xl')}</div>
                     <p style="color: var(--danger-500);">לא ניתן לטעון את הסיווגים. נסה שוב.</p>
                     <button class="btn btn-secondary mt-4" onclick="loadAIClassifications()">
-                        <i data-lucide="refresh-cw" class="icon-sm"></i> נסה שוב
+                        ${icon('refresh-cw', 'icon-sm')} נסה שוב
                     </button>
                 </div>
             `;
@@ -3912,7 +3912,7 @@ function renderAICards(items, allFilteredItems) {
             emptyState.style.display = 'none';
             container.innerHTML = `
                 <div class="empty-state">
-                    <div class="empty-state-icon"><i data-lucide="filter-x" class="icon-2xl"></i></div>
+                    <div class="empty-state-icon">${icon('filter-x', 'icon-2xl')}</div>
                     <p>אין תוצאות לסינון הנוכחי</p>
                 </div>
             `;
@@ -3988,7 +3988,7 @@ function renderAICards(items, allFilteredItems) {
             ? `<a href="../document-manager.html?client_id=${encodeURIComponent(clientId)}"
                  target="_blank" class="ai-doc-manager-link"
                  onclick="event.stopPropagation()" title="לניהול המסמכים">
-                 <i data-lucide="folder-open" class="icon-xs"></i>
+                 ${icon('folder-open', 'icon-xs')}
                </a>`
             : '';
 
@@ -3996,7 +3996,7 @@ function renderAICards(items, allFilteredItems) {
             <div class="ai-accordion" data-client="${escapeHtml(clientName)}" data-client-id="${escapeAttr(clientId || '')}">
                 <div class="ai-accordion-header" onclick="toggleAIAccordion(this)">
                     <div class="ai-accordion-title">
-                        <i data-lucide="user" class="icon-sm"></i>
+                        ${icon('user', 'icon-sm')}
                         ${escapeHtml(clientName)}
                     </div>
                     <div class="ai-accordion-stats">
@@ -4026,7 +4026,7 @@ function renderAICards(items, allFilteredItems) {
                     const rawDate = n.date || '';
                     const dateStr = rawDate.match(/^(\d{4})-(\d{2})-(\d{2})/) ? rawDate.slice(0, 10).replace(/^(\d{4})-(\d{2})-(\d{2})/, '$3-$2-$1') : rawDate;
                     return `<div class="ai-cn-entry">
-                        <i data-lucide="${iconName}" class="icon-sm ${iconClass}"></i>
+                        ${icon(iconName, 'icon-sm ${iconClass}')}
                         <span class="ai-cn-date">${escapeHtml(dateStr)}</span>
                         <span class="ai-cn-summary">${escapeHtml(n.summary)}</span>
                     </div>`;
@@ -4213,11 +4213,11 @@ function renderAICard(item) {
     const viewFileBtn = `<button class="btn btn-ghost btn-sm ai-preview-btn"
         onclick="event.stopPropagation(); loadDocPreview('${escapeAttr(item.id)}')"
         title="תצוגה מקדימה">
-        <i data-lucide="eye" class="icon-sm"></i> תצוגה מקדימה
+        ${icon('eye', 'icon-sm')} תצוגה מקדימה
     </button>`;
 
     const evidenceIcon = item.ai_reason
-        ? `<span class="ai-evidence-trigger" data-tooltip="${escapeAttr(friendlyAIReason(item.ai_reason))}"><i data-lucide="bot" class="icon-sm"></i>?</span>`
+        ? `<span class="ai-evidence-trigger" data-tooltip="${escapeAttr(friendlyAIReason(item.ai_reason))}">${icon('bot', 'icon-sm')}?</span>`
         : '';
 
     let classificationHtml = '';
@@ -4237,13 +4237,13 @@ function renderAICard(item) {
             <button class="btn btn-success btn-sm" ${approveDisabled
                 ? 'aria-disabled="true" title="לא ניתן לאשר מסמך שלא נדרש — יש לשייך מחדש או לדחות"'
                 : `onclick="approveAIClassification('${escapeAttr(item.id)}')"`}>
-                <i data-lucide="check" class="icon-sm"></i> נכון
+                ${icon('check', 'icon-sm')} נכון
             </button>
             <button class="btn btn-link btn-sm" onclick="showAIReassignModal('${escapeAttr(item.id)}')">
-                <i data-lucide="arrow-right-left" class="icon-sm"></i> לא נכון, שייך מחדש
+                ${icon('arrow-right-left', 'icon-sm')} לא נכון, שייך מחדש
             </button>
             <button class="btn btn-outline-danger btn-sm" onclick="rejectAIClassification('${escapeAttr(item.id)}')">
-                <i data-lucide="x" class="icon-sm"></i> מסמך לא רלוונטי
+                ${icon('x', 'icon-sm')} מסמך לא רלוונטי
             </button>
         `;
 
@@ -4287,13 +4287,13 @@ function renderAICard(item) {
             actionsHtml = `
                 <button class="btn btn-success btn-sm btn-ai-comparison-assign" disabled
                     onclick="quickAssignSelected('${escapeAttr(item.id)}')">
-                    <i data-lucide="check" class="icon-sm"></i> אישור ושיוך
+                    ${icon('check', 'icon-sm')} אישור ושיוך
                 </button>
                 <button class="btn btn-link btn-sm" onclick="showAIReassignModal('${escapeAttr(item.id)}')">
-                    <i data-lucide="arrow-right-left" class="icon-sm"></i> לא מצאתי ברשימה
+                    ${icon('arrow-right-left', 'icon-sm')} לא מצאתי ברשימה
                 </button>
                 <button class="btn btn-outline-danger btn-sm" onclick="rejectAIClassification('${escapeAttr(item.id)}')">
-                    <i data-lucide="x" class="icon-sm"></i> מסמך לא רלוונטי
+                    ${icon('x', 'icon-sm')} מסמך לא רלוונטי
                 </button>
             `;
         } else {
@@ -4309,11 +4309,11 @@ function renderAICard(item) {
                     <div class="doc-combobox-container" data-record-id="${escapeAttr(item.id)}"></div>
                     <button class="btn btn-success btn-sm btn-ai-assign-confirm" disabled
                         onclick="assignAIUnmatched('${escapeAttr(item.id)}', this)">
-                        <i data-lucide="check" class="icon-sm"></i> שייך
+                        ${icon('check', 'icon-sm')} שייך
                     </button>
                 </div>
                 <button class="btn btn-outline-danger btn-sm" onclick="rejectAIClassification('${escapeAttr(item.id)}')">
-                    <i data-lucide="x" class="icon-sm"></i> מסמך לא רלוונטי
+                    ${icon('x', 'icon-sm')} מסמך לא רלוונטי
                 </button>
             `;
         }
@@ -4341,13 +4341,13 @@ function renderAICard(item) {
             <button class="btn btn-success btn-sm" ${fuzzyApproveDisabled
                 ? 'aria-disabled="true" title="לא ניתן לאשר מסמך שלא נדרש — יש לשייך מחדש או לדחות"'
                 : `onclick="approveAIClassification('${escapeAttr(item.id)}')"`}>
-                <i data-lucide="check" class="icon-sm"></i> נכון
+                ${icon('check', 'icon-sm')} נכון
             </button>
             <button class="btn btn-link btn-sm" onclick="showAIReassignModal('${escapeAttr(item.id)}')">
-                <i data-lucide="arrow-right-left" class="icon-sm"></i> לא נכון, שייך מחדש
+                ${icon('arrow-right-left', 'icon-sm')} לא נכון, שייך מחדש
             </button>
             <button class="btn btn-outline-danger btn-sm" onclick="rejectAIClassification('${escapeAttr(item.id)}')">
-                <i data-lucide="x" class="icon-sm"></i> מסמך לא רלוונטי
+                ${icon('x', 'icon-sm')} מסמך לא רלוונטי
             </button>
         `;
 
@@ -4367,11 +4367,11 @@ function renderAICard(item) {
                 <div class="doc-combobox-container" data-record-id="${escapeAttr(item.id)}"></div>
                 <button class="btn btn-success btn-sm btn-ai-assign-confirm" disabled
                     onclick="assignAIUnmatched('${escapeAttr(item.id)}', this)">
-                    <i data-lucide="check" class="icon-sm"></i> שייך
+                    ${icon('check', 'icon-sm')} שייך
                 </button>
             </div>
             <button class="btn btn-outline-danger btn-sm" onclick="rejectAIClassification('${escapeAttr(item.id)}')">
-                <i data-lucide="x" class="icon-sm"></i> מסמך לא רלוונטי
+                ${icon('x', 'icon-sm')} מסמך לא רלוונטי
             </button>
         `;
     }
@@ -4382,7 +4382,7 @@ function renderAICard(item) {
                 <button class="btn btn-outline btn-sm ai-split-btn"
                     onclick="event.stopPropagation(); openSplitModal('${escapeAttr(item.id)}')"
                     title="פיצול PDF — ${item.page_count} עמודים">
-                    <i data-lucide="scissors" class="icon-sm"></i> פיצול PDF
+                    ${icon('scissors', 'icon-sm')} פיצול PDF
                 </button>
             </div>` : '';
 
@@ -4419,7 +4419,7 @@ function renderAICard(item) {
                 <button class="btn btn-outline btn-sm btn-request-period" data-record-id="${rid}" data-gap="before"
                     onclick="event.stopPropagation(); requestMissingPeriod('${rid}', 1, ${startMonth - 1}, this)"
                     title="בקש חוזה לתקופה שלפני">
-                    <i data-lucide="plus" class="icon-sm"></i> בקש חוזה ${beforeLabel}
+                    ${icon('plus', 'icon-sm')} בקש חוזה ${beforeLabel}
                 </button>`;
             }
             if (endMonth && endMonth < 12) {
@@ -4428,7 +4428,7 @@ function renderAICard(item) {
                 <button class="btn btn-outline btn-sm btn-request-period" data-record-id="${rid}" data-gap="after"
                     onclick="event.stopPropagation(); requestMissingPeriod('${rid}', ${endMonth + 1}, 12, this)"
                     title="בקש חוזה לתקופה שאחרי">
-                    <i data-lucide="plus" class="icon-sm"></i> בקש חוזה ${afterLabel}
+                    ${icon('plus', 'icon-sm')} בקש חוזה ${afterLabel}
                 </button>`;
             }
 
@@ -4489,7 +4489,7 @@ function renderReviewedCard(item, reviewStatus) {
     const viewFileBtn = `<button class="btn btn-ghost btn-sm ai-preview-btn"
         onclick="event.stopPropagation(); loadDocPreview('${escapeAttr(item.id)}')"
         title="תצוגה מקדימה">
-        <i data-lucide="eye" class="icon-sm"></i> תצוגה מקדימה
+        ${icon('eye', 'icon-sm')} תצוגה מקדימה
     </button>`;
 
     // Status lozenge
@@ -4535,10 +4535,10 @@ function renderReviewedCard(item, reviewStatus) {
         const year = item.year || new Date(cp.endDate).getFullYear();
         let btns = '';
         if (startMonth > 1) {
-            btns += `<button class="btn btn-outline btn-sm btn-request-period" data-record-id="${rid}" onclick="event.stopPropagation(); requestMissingPeriod('${rid}', 1, ${startMonth - 1}, this)"><i data-lucide="plus" class="icon-sm"></i> בקש חוזה ${formatPeriodLabel(1, startMonth - 1, year)}</button>`;
+            btns += `<button class="btn btn-outline btn-sm btn-request-period" data-record-id="${rid}" onclick="event.stopPropagation(); requestMissingPeriod('${rid}', 1, ${startMonth - 1}, this)">${icon('plus', 'icon-sm')} בקש חוזה ${formatPeriodLabel(1, startMonth - 1, year)}</button>`;
         }
         if (endMonth < 12) {
-            btns += `<button class="btn btn-outline btn-sm btn-request-period" data-record-id="${rid}" onclick="event.stopPropagation(); requestMissingPeriod('${rid}', ${endMonth + 1}, 12, this)"><i data-lucide="plus" class="icon-sm"></i> בקש חוזה ${formatPeriodLabel(endMonth + 1, 12, year)}</button>`;
+            btns += `<button class="btn btn-outline btn-sm btn-request-period" data-record-id="${rid}" onclick="event.stopPropagation(); requestMissingPeriod('${rid}', ${endMonth + 1}, 12, this)">${icon('plus', 'icon-sm')} בקש חוזה ${formatPeriodLabel(endMonth + 1, 12, year)}</button>`;
         }
         if (btns) {
             reviewedPeriodBtns = `<div class="ai-contract-period-banner" data-record-id="${rid}">${btns}</div>`;
@@ -4549,7 +4549,7 @@ function renderReviewedCard(item, reviewStatus) {
     const canChangeDecision = true;
     const actionsHtml = canChangeDecision
         ? `<button class="ai-change-decision-btn" onclick="startReReview('${escapeAttr(item.id)}')">
-               <i data-lucide="rotate-ccw" class="icon-sm"></i> שנה החלטה
+               ${icon('rotate-ccw', 'icon-sm')} שנה החלטה
            </button>`
         : '';
 
@@ -4597,13 +4597,13 @@ function startReReview(recordId) {
             <button class="btn btn-success btn-sm" ${approveDisabled
                 ? 'aria-disabled="true" title="לא ניתן לאשר מסמך שלא נדרש — יש לשייך מחדש או לדחות"'
                 : `onclick="approveAIClassification('${escapeAttr(recordId)}')"`}>
-                <i data-lucide="check" class="icon-sm"></i> נכון
+                ${icon('check', 'icon-sm')} נכון
             </button>
             <button class="btn btn-link btn-sm" onclick="showAIReassignModal('${escapeAttr(recordId)}')">
-                <i data-lucide="arrow-right-left" class="icon-sm"></i> לא נכון, שייך מחדש
+                ${icon('arrow-right-left', 'icon-sm')} לא נכון, שייך מחדש
             </button>
             <button class="btn btn-outline-danger btn-sm" onclick="rejectAIClassification('${escapeAttr(recordId)}')">
-                <i data-lucide="x" class="icon-sm"></i> מסמך לא רלוונטי
+                ${icon('x', 'icon-sm')} מסמך לא רלוונטי
             </button>
             <button class="btn btn-ghost btn-sm" onclick="cancelReReview('${escapeAttr(recordId)}')">
                 ביטול
@@ -4613,10 +4613,10 @@ function startReReview(recordId) {
         // unmatched or issuer-mismatch — show reject + reassign
         actionsHtml = `
             <button class="btn btn-link btn-sm" onclick="showAIReassignModal('${escapeAttr(recordId)}')">
-                <i data-lucide="arrow-right-left" class="icon-sm"></i> לא נכון, שייך מחדש
+                ${icon('arrow-right-left', 'icon-sm')} לא נכון, שייך מחדש
             </button>
             <button class="btn btn-outline-danger btn-sm" onclick="rejectAIClassification('${escapeAttr(recordId)}')">
-                <i data-lucide="x" class="icon-sm"></i> מסמך לא רלוונטי
+                ${icon('x', 'icon-sm')} מסמך לא רלוונטי
             </button>
             <button class="btn btn-ghost btn-sm" onclick="cancelReReview('${escapeAttr(recordId)}')">
                 ביטול
@@ -4869,7 +4869,7 @@ async function saveContractPeriod(recordId, startDate, endDate) {
             } else if (endMonth < 12) {
                 const missingLabel = `${endMonth + 1}-12/${year}`;
                 if (existingBtn) {
-                    existingBtn.innerHTML = `<i data-lucide="plus" class="icon-sm"></i> בקש חוזה ${missingLabel}`;
+                    existingBtn.innerHTML = `${icon('plus', 'icon-sm')} בקש חוזה ${missingLabel}`;
                     existingBtn.disabled = false;
                     safeCreateIcons();
                 } else {
@@ -4877,7 +4877,7 @@ async function saveContractPeriod(recordId, startDate, endDate) {
                     btn.className = 'btn btn-outline btn-sm btn-request-period';
                     btn.dataset.recordId = recordId;
                     btn.onclick = (e) => { e.stopPropagation(); requestRemainingContract(recordId, btn); };
-                    btn.innerHTML = `<i data-lucide="plus" class="icon-sm"></i> בקש חוזה ${missingLabel}`;
+                    btn.innerHTML = `${icon('plus', 'icon-sm')} בקש חוזה ${missingLabel}`;
                     banner.appendChild(btn);
                     safeCreateIcons();
                 }
@@ -4895,7 +4895,7 @@ async function saveContractPeriod(recordId, startDate, endDate) {
 // DL-269/271: Request missing contract period (before or after)
 async function requestMissingPeriod(recordId, startMonth, endMonth, btn) {
     try {
-        if (btn) { btn.disabled = true; btn.innerHTML = '<i data-lucide="loader" class="icon-sm spin"></i> מבקש...'; safeCreateIcons(); }
+        if (btn) { btn.disabled = true; btn.innerHTML = `${icon('loader', 'icon-sm spin')} מבקש...`; safeCreateIcons(); }
 
         const response = await fetchWithTimeout(ENDPOINTS.REVIEW_CLASSIFICATION, {
             method: 'POST',
@@ -4911,21 +4911,21 @@ async function requestMissingPeriod(recordId, startMonth, endMonth, btn) {
 
         const data = await response.json();
         if (!data.ok) {
-            if (btn) { btn.disabled = false; btn.innerHTML = '<i data-lucide="plus" class="icon-sm"></i> בקש חוזה'; safeCreateIcons(); }
+            if (btn) { btn.disabled = false; btn.innerHTML = `${icon('plus', 'icon-sm')} בקש חוזה`; safeCreateIcons(); }
             showModal('error', 'שגיאה', data.error || 'Unknown error');
             return;
         }
 
         if (btn) {
             btn.disabled = true;
-            btn.innerHTML = '<i data-lucide="check" class="icon-sm"></i> נוסף';
+            btn.innerHTML = `${icon('check', 'icon-sm')} נוסף`;
             btn.classList.remove('btn-outline');
             btn.classList.add('btn-success');
             safeCreateIcons();
         }
         showAIToast(`נוסף מסמך חסר: חוזה שכירות ${data.period_label}`, 'success');
     } catch (error) {
-        if (btn) { btn.disabled = false; btn.innerHTML = '<i data-lucide="plus" class="icon-sm"></i> בקש חוזה'; safeCreateIcons(); }
+        if (btn) { btn.disabled = false; btn.innerHTML = `${icon('plus', 'icon-sm')} בקש חוזה`; safeCreateIcons(); }
         showModal('error', 'שגיאה', error.message);
     }
 }
@@ -5109,7 +5109,7 @@ function showAIReassignModal(recordId) {
 
     const fileInfoEl = document.getElementById('aiReassignFileInfo');
     if (item) {
-        fileInfoEl.innerHTML = `<i data-lucide="file" class="icon-sm" style="display:inline;vertical-align:middle;"></i> ${escapeHtml(item.attachment_name || 'ללא שם')}`;
+        fileInfoEl.innerHTML = `${icon('file', 'icon-sm')} ${escapeHtml(item.attachment_name || 'ללא שם')}`;
     } else {
         fileInfoEl.textContent = '';
     }
@@ -5315,13 +5315,13 @@ function showClientReviewDonePrompt(clientName) {
     prompt.className = 'ai-review-done-prompt';
     prompt.innerHTML = `
         <div class="ai-review-done-content">
-            <i data-lucide="check-circle-2" class="icon-md ai-review-done-icon"></i>
+            ${icon('check-circle-2', 'icon-md ai-review-done-icon')}
             <div class="ai-review-done-text">
                 <strong>כל המסמכים נבדקו!</strong>
                 <span class="ai-review-done-stats">${statParts.join(' · ')}</span>
             </div>
             <button class="btn btn-success btn-sm ai-review-done-btn" onclick="dismissClientReview('${escapeOnclick(clientName)}')">
-                <i data-lucide="check" class="icon-xs"></i>
+                ${icon('check', 'icon-xs')}
                 סיום בדיקה
             </button>
         </div>
@@ -5807,9 +5807,9 @@ function showAIToast(message, type, action) {
     toast.className = 'ai-toast ai-toast-' + (type || 'success');
 
     if (type === 'danger') {
-        toastIcon.setAttribute('data-lucide', 'x-circle');
+        toastIcon.innerHTML = icon('x-circle'); // DL-314: sprite
     } else {
-        toastIcon.setAttribute('data-lucide', 'check-circle');
+        toastIcon.innerHTML = icon('check-circle'); // DL-314: sprite
     }
 
     // Action button
@@ -6036,7 +6036,7 @@ function buildPaCard(item) {
 
     const clientId = item.client_id || '';
     const docMgrLink = clientId
-        ? `<a href="../document-manager.html?client_id=${encodeURIComponent(clientId)}" target="_blank" class="ai-doc-manager-link" onclick="event.stopPropagation()" title="לניהול המסמכים"><i data-lucide="folder-open" class="icon-xs"></i></a>`
+        ? `<a href="../document-manager.html?client_id=${encodeURIComponent(clientId)}" target="_blank" class="ai-doc-manager-link" onclick="event.stopPropagation()" title="לניהול המסמכים">${icon('folder-open', 'icon-xs')}</a>`
         : '';
 
     const header = `<div class="pa-card__header" onclick="togglePaCard('${item.report_id}', event)">
@@ -6050,7 +6050,7 @@ function buildPaCard(item) {
         <div class="pa-card__header-actions">
             ${docMgrLink}
             <button class="pa-card__chevron" aria-label="${isExpanded ? 'כווץ' : 'הרחב'}" onclick="togglePaCard('${item.report_id}', event)">
-                <i data-lucide="${isExpanded ? 'chevron-up' : 'chevron-down'}" class="icon-sm"></i>
+                ${icon(isExpanded ? 'chevron-up' : 'chevron-down', 'icon-sm')}
             </button>
         </div>
     </div>`;
@@ -6058,7 +6058,7 @@ function buildPaCard(item) {
     // DL-306: pre-uploaded docs indicator — banner shown when client has unclassified docs
     const preuploadedCount = Number(item.pending_reviews_count) || 0;
     const preuploadedBanner = (preuploadedCount > 0 && clientId) ? `<div class="preuploaded-banner" role="status">
-        <i data-lucide="info"></i>
+        ${icon('info')}
         <div class="preuploaded-banner__text">
             <strong>הלקוח כבר שלח מסמכים שממתינים לסיווג</strong>
             <span>מומלץ לעבור עליהם לפני אישור ושליחה.</span>
@@ -6071,18 +6071,18 @@ function buildPaCard(item) {
         ${buildPaPreviewBody(item)}
         <div class="pa-card__actions" onclick="event.stopPropagation()">
             <button class="btn btn-sm btn-success pa-btn-approve" onclick="approveAndSendFromQueue('${item.report_id}', '${escapedName.replace(/'/g, "\\'")}')">
-                <i data-lucide="send" class="icon-xs"></i> אשר ושלח
+                ${icon('send', 'icon-xs')} אשר ושלח
             </button>
             <button class="btn btn-sm btn-outline pa-btn-advance"
                     title="מעביר את הלקוח לשלב איסוף מסמכים. לא יישלח לו מייל."
                     onclick="advanceToCollectingDocs('${item.report_id}', '${escapedName.replace(/'/g, "\\'")}')">
-                <i data-lucide="mail-x" class="icon-xs"></i> אשר מבלי לשלוח
+                ${icon('mail-x', 'icon-xs')} אשר מבלי לשלוח
             </button>
             <button class="btn btn-sm btn-outline pa-btn-preview" onclick="previewApproveEmail('${item.report_id}', '${escapedName.replace(/'/g, "\\'")}')">
-                <i data-lucide="eye" class="icon-xs"></i> תצוגה מקדימה
+                ${icon('eye', 'icon-xs')} תצוגה מקדימה
             </button>
             <button class="btn btn-sm btn-outline pa-btn-questions" onclick="openQuestionsForClient('${item.report_id}')">
-                <i data-lucide="message-circle" class="icon-xs"></i> שאל את הלקוח${qCount > 0 ? ` <span class="pa-questions-badge">${qCount}</span>` : ''}
+                ${icon('message-circle', 'icon-xs')} שאל את הלקוח${qCount > 0 ? ` <span class="pa-questions-badge">${qCount}</span>` : ''}
             </button>
         </div>
     </div>` : '';
@@ -6138,10 +6138,10 @@ function buildPaPreviewHeader(item) {
             ${escapeHtml(filingLabel)} · ${escapeHtml(String(item.year || ''))}${relDate ? ` · הוגש ${escapeHtml(relDate)}` : ''}${item.spouse_name ? ` · ${escapeHtml(item.spouse_name)}` : ''}
         </div>
         <div class="pa-preview-stats">
-            <span class="pa-preview-stat" title="תשובות שאלון"><i data-lucide="file-text" class="icon-xs"></i> ${answersCount}</span>
-            <span class="pa-preview-stat" title="מסמכים"><i data-lucide="folder" class="icon-xs"></i> ${docsCount}</span>
-            <span class="pa-preview-stat${notesCount ? '' : ' pa-preview-stat--empty'}" title="הערות"><i data-lucide="message-square" class="icon-xs"></i> ${notesCount}</span>
-            <span class="pa-preview-stat${questionsCount ? '' : ' pa-preview-stat--empty'}" title="שאלות ללקוח"><i data-lucide="message-circle" class="icon-xs"></i> ${questionsCount}</span>
+            <span class="pa-preview-stat" title="תשובות שאלון">${icon('file-text', 'icon-xs')} ${answersCount}</span>
+            <span class="pa-preview-stat" title="מסמכים">${icon('folder', 'icon-xs')} ${docsCount}</span>
+            <span class="pa-preview-stat${notesCount ? '' : ' pa-preview-stat--empty'}" title="הערות">${icon('message-square', 'icon-xs')} ${notesCount}</span>
+            <span class="pa-preview-stat${questionsCount ? '' : ' pa-preview-stat--empty'}" title="שאלות ללקוח">${icon('message-circle', 'icon-xs')} ${questionsCount}</span>
         </div>
     </div>`;
 }
@@ -6169,9 +6169,9 @@ function buildPaPreviewBody(item) {
     if (answersAll.length > 0) {
         qaHtml += `<div class="pa-preview-section">
             <div class="pa-preview-section-title">
-                <span><i data-lucide="file-text" class="icon-sm"></i> תשובות שאלון</span>
+                <span>${icon('file-text', 'icon-sm')} תשובות שאלון</span>
                 <button class="pa-print-btn" onclick="event.stopPropagation(); printPaQuestionnaire('${item.report_id}')" title="הדפס שאלון">
-                    <i data-lucide="printer" class="icon-xs"></i> הדפסה
+                    ${icon('printer', 'icon-xs')} הדפסה
                 </button>
             </div>`;
 
@@ -6201,7 +6201,7 @@ function buildPaPreviewBody(item) {
         if (noAnswers.length > 0) {
             qaHtml += `<div class="pa-preview-subsection">
                 <button class="pa-preview-toggle" onclick="togglePaShowNo('${item.report_id}')">
-                    <i data-lucide="${showNo ? 'chevron-up' : 'chevron-down'}" class="icon-xs"></i>
+                    ${icon(showNo ? 'chevron-up' : 'chevron-down', 'icon-xs')}
                     ${showNo ? 'הסתר' : 'הצג'} תשובות "לא" (${noAnswers.length})
                 </button>
                 ${showNo ? `<div class="pa-yes-chips-grid" style="margin-top:var(--sp-2);">
@@ -6217,7 +6217,7 @@ function buildPaPreviewBody(item) {
     let docsHtml = '';
     if (docGroups.length > 0) {
         docsHtml = `<div class="pa-preview-section">
-            <div class="pa-preview-section-title"><i data-lucide="folder" class="icon-sm"></i> רשימת מסמכים</div>
+            <div class="pa-preview-section-title">${icon('folder', 'icon-sm')} רשימת מסמכים</div>
             ${docGroups.map(group => {
                 const personLabel = group.person_label || (group.person === 'spouse' ? `מסמכים של ${item.spouse_name || 'בן/בת הזוג'}` : `מסמכים של ${item.client_name}`);
                 const cats = Array.isArray(group.categories) ? group.categories : [];
@@ -6294,7 +6294,7 @@ function buildPaPreviewBody(item) {
                 ? `<div class="msg-thread-replies">${replies.map((r, i) => {
                         const rText = (r.summary || r.raw_snippet || r.text || '').toString().trim();
                         return `<div class="msg-office-reply">
-                            <div class="msg-reply-label"><i data-lucide="corner-down-left" class="icon-xs"></i> ${replies.length > 1 ? `תגובת המשרד #${i + 1}` : 'תגובת המשרד'}</div>
+                            <div class="msg-reply-label">${icon('corner-down-left', 'icon-xs')} ${replies.length > 1 ? `תגובת המשרד #${i + 1}` : 'תגובת המשרד'}</div>
                             <div class="msg-reply-text">${escapeHtml(rText)}</div>
                             <div class="msg-reply-date">${escapeHtml(r.date ? formatRelativeTime(r.date) : '')}</div>
                         </div>`;
@@ -6319,7 +6319,7 @@ function buildPaPreviewBody(item) {
 
     if (messagesHtml || plainNotes) {
         html += `<div class="pa-preview-section">
-            <div class="pa-preview-section-title"><i data-lucide="message-square" class="icon-sm"></i> הערות</div>
+            <div class="pa-preview-section-title">${icon('message-square', 'icon-sm')} הערות</div>
             ${messagesHtml ? `<div class="pa-notes-messages">${messagesHtml}</div>` : ''}
             ${plainNotes ? `<div class="pa-preview-notes">${escapeHtml(plainNotes)}</div>` : ''}
         </div>`;
@@ -6328,7 +6328,7 @@ function buildPaPreviewBody(item) {
     // ========== QUESTIONS FOR CLIENT ==========
     if (questions.length > 0) {
         html += `<div class="pa-preview-section">
-            <div class="pa-preview-section-title"><i data-lucide="message-circle" class="icon-sm"></i> שאלות ללקוח (${questions.length})</div>
+            <div class="pa-preview-section-title">${icon('message-circle', 'icon-sm')} שאלות ללקוח (${questions.length})</div>
             ${questions.map((q, i) => `<div class="pa-preview-question">
                 <span class="pa-preview-qnum">${i + 1}.</span>
                 <div style="flex:1;">
@@ -6387,7 +6387,7 @@ function renderPaDocTagRow(d, reportId) {
         data-doc-id="${escapeAttr(docId)}"
         data-template-id="${escapeAttr(templateId)}"
         onclick="event.stopPropagation(); openPaIssuerEdit(this)">
-        <i data-lucide="pencil" class="icon-xs"></i>
+        ${icon('pencil', 'icon-xs')}
     </button>`;
     // DL-299: per-doc bookkeepers_notes popover
     const noteBtn = `<button class="pa-doc-row__note ${hasNote ? 'pa-doc-row__note--has-content' : ''}"
@@ -6395,12 +6395,12 @@ function renderPaDocTagRow(d, reportId) {
         data-report-id="${escapeAttr(reportId)}"
         data-doc-id="${escapeAttr(docId)}"
         onclick="event.stopPropagation(); openPaDocNotePopover(event, this)">
-        <i data-lucide="${hasNote ? 'message-square-text' : 'message-square'}" class="icon-xs"></i>
+        ${icon(hasNote ? 'message-square-text' : 'message-square', 'icon-xs')}
     </button>`;
     // DL-299 follow-up: drop the X/status chip — all docs at Pending_Approval are
     // Required_Missing. Show ✓ icon for Received; text label for other non-Missing states.
     const statusLabelInline = status === 'Received'
-        ? `<span class="pa-doc-row__status-label pa-doc-row__status-label--received" title="התקבל"><i data-lucide="check" class="icon-xs"></i></span>`
+        ? `<span class="pa-doc-row__status-label pa-doc-row__status-label--received" title="התקבל">${icon('check', 'icon-xs')}</span>`
         : (status && status !== 'Required_Missing')
         ? `<span class="pa-doc-row__status-label" title="${escapeHtml(statusLabel(status, true))}">${escapeHtml(statusLabel(status, true))}</span>`
         : '';
@@ -6749,7 +6749,7 @@ function renderPaAddDocRow(reportId, person) {
         role="button" tabindex="0"
         onclick="openPaAddDocPopover(event, this)"
         onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openPaAddDocPopover(event, this);}">
-        <span class="pa-add-doc-icon"><i data-lucide="plus" class="icon-xs"></i></span>
+        <span class="pa-add-doc-icon">${icon('plus', 'icon-xs')}</span>
         <span class="pa-add-doc-label">הוסף מסמך</span>
     </div>`;
 }
@@ -6846,7 +6846,7 @@ function openPaAddDocPopover(event, rowEl) {
     pop.onclick = (e) => e.stopPropagation();
     pop.innerHTML = `
         <button type="button" class="pa-add-doc-close" aria-label="סגור" title="סגור" onclick="closePaAddDocPopover()">
-            <i data-lucide="x" class="icon-xs"></i>
+            ${icon('x', 'icon-xs')}
         </button>
         <div class="pa-add-doc-body" id="paAddDocBody"><div class="pa-add-doc-loading">טוען תבניות…</div></div>`;
     document.body.appendChild(pop);
@@ -6951,7 +6951,7 @@ function _paRenderAddDocPick() {
             <input type="text" id="paAddDocCustomInput" placeholder="שם המסמך..." dir="auto"
                 onkeydown="if(event.key==='Enter'){event.preventDefault();paAddCustomDocSubmit();}">
             <button type="button" class="pa-add-doc-custom-btn" onclick="paAddCustomDocSubmit()">
-                <i data-lucide="plus" class="icon-xs"></i> הוסף
+                ${icon('plus', 'icon-xs')} הוסף
             </button>
         </div>
         <div class="pa-add-doc-warning" id="paAddDocWarning" style="display:none;"></div>`;
@@ -7098,15 +7098,15 @@ function _paRenderAddDocVariables(userVars) {
     }).join('');
 
     body.innerHTML = `
-        <div class="pa-add-doc-step-title" id="paAddDocStepTitle"><i data-lucide="file-text" class="icon-xs"></i> <span id="paAddDocStepTitleText">${escapeHtml(initialTitle)}</span></div>
+        <div class="pa-add-doc-step-title" id="paAddDocStepTitle">${icon('file-text', 'icon-xs')} <span id="paAddDocStepTitleText">${escapeHtml(initialTitle)}</span></div>
         <div class="pa-add-doc-vars">${fields}</div>
         <div class="pa-add-doc-warning" id="paAddDocWarning" style="display:none;"></div>
         <div class="pa-add-doc-actions">
             <button type="button" class="btn btn-sm" onclick="paAddDocBackToPick()">
-                <i data-lucide="arrow-right" class="icon-xs"></i> חזור
+                ${icon('arrow-right', 'icon-xs')} חזור
             </button>
             <button type="button" class="btn btn-sm btn-primary" onclick="paAddDocConfirmVariables()">
-                הבא <i data-lucide="arrow-left" class="icon-xs"></i>
+                הבא ${icon('arrow-left', 'icon-xs')}
             </button>
         </div>`;
     safeCreateIcons(pop);
@@ -7242,7 +7242,7 @@ function _paEnterPreview() {
     if (!pop) return;
     const body = document.getElementById('paAddDocBody') || pop;
     body.innerHTML = `
-        <div class="pa-add-doc-step-title"><i data-lucide="eye" class="icon-xs"></i> תצוגה מקדימה</div>
+        <div class="pa-add-doc-step-title">${icon('eye', 'icon-xs')} תצוגה מקדימה</div>
         <div class="pa-add-doc-preview">
             <div class="pa-add-doc-preview-name">${escapeHtml(displayName)}</div>
             <div class="pa-add-doc-preview-meta">
@@ -7253,10 +7253,10 @@ function _paEnterPreview() {
         <div class="pa-add-doc-warning" id="paAddDocWarning" style="${isDup ? '' : 'display:none;'}">${isDup ? 'מסמך זה כבר קיים ברשימה' : ''}</div>
         <div class="pa-add-doc-actions">
             <button type="button" class="btn btn-sm" onclick="paAddDocBackToPick()">
-                <i data-lucide="arrow-right" class="icon-xs"></i> חזור
+                ${icon('arrow-right', 'icon-xs')} חזור
             </button>
             <button type="button" class="btn btn-sm btn-success" id="paAddDocConfirmBtn" onclick="paAddDocConfirm()" ${isDup ? 'disabled' : ''}>
-                <i data-lucide="check" class="icon-xs"></i> הוסף לרשימה
+                ${icon('check', 'icon-xs')} הוסף לרשימה
             </button>
         </div>`;
     safeCreateIcons(pop);
@@ -7685,7 +7685,7 @@ function renderPaQuestionsModal() {
     const qs = _paQuestionsEditState;
     if (qs.length === 0) {
         body.innerHTML = `<p style="color:var(--gray-500);margin-bottom:var(--sp-4);">אין שאלות ללקוח עדיין.</p>
-            <button class="btn btn-ghost btn-sm" onclick="addPaQuestion()"><i data-lucide="plus" class="icon-sm"></i> הוסף שאלה</button>`;
+            <button class="btn btn-ghost btn-sm" onclick="addPaQuestion()">${icon('plus', 'icon-sm')} הוסף שאלה</button>`;
         safeCreateIcons(body);
         return;
     }
@@ -7695,9 +7695,9 @@ function renderPaQuestionsModal() {
             <textarea class="pa-question-input" rows="2" placeholder="שאלה ללקוח..." oninput="updatePaQuestion(${idx}, 'text', this.value)">${escapeHtml(q.text || '')}</textarea>
             ${q.answer ? `<div class="pa-question-answer">↳ תשובה: ${escapeHtml(q.answer)}</div>` : ''}
         </div>
-        <button class="btn btn-ghost btn-sm" onclick="deletePaQuestion(${idx})"><i data-lucide="trash-2" class="icon-sm"></i></button>
+        <button class="btn btn-ghost btn-sm" onclick="deletePaQuestion(${idx})">${icon('trash-2', 'icon-sm')}</button>
     </div>`).join('') +
-    `<button class="btn btn-ghost btn-sm" style="margin-top:var(--sp-3)" onclick="addPaQuestion()"><i data-lucide="plus" class="icon-sm"></i> הוסף שאלה</button>`;
+    `<button class="btn btn-ghost btn-sm" style="margin-top:var(--sp-3)" onclick="addPaQuestion()">${icon('plus', 'icon-sm')} הוסף שאלה</button>`;
     safeCreateIcons(body);
 }
 
@@ -7745,7 +7745,7 @@ async function savePaClientQuestions() {
         console.error('[pa-queue] save questions failed', err);
         showAIToast('שגיאה בשמירה', 'danger');
     } finally {
-        if (saveBtn) { saveBtn.disabled = false; saveBtn.innerHTML = '<i data-lucide="save" class="icon-sm"></i> שמור'; safeCreateIcons(saveBtn); }
+        if (saveBtn) { saveBtn.disabled = false; saveBtn.innerHTML = `${icon('save', 'icon-sm')} שמור`; safeCreateIcons(saveBtn); }
     }
 }
 
@@ -7784,8 +7784,8 @@ function openPaIssuerEdit(btn) {
 
     row.innerHTML = `<div class="pa-issuer-edit-row">
         <textarea class="pa-issuer-edit-input" id="paIssuerInput-${escapeAttr(docId)}" dir="auto" rows="1" oninput="_paIssuerEditAutoGrow(this)">${escapeHtml(currentName)}</textarea>
-        <button class="pa-issuer-edit-save" title="שמור" onclick="savePaIssuerEdit('${escapeAttr(reportId)}', '${escapeAttr(docId)}')"><i data-lucide="check" class="icon-xs"></i></button>
-        <button class="pa-issuer-edit-cancel" title="ביטול" onclick="cancelPaIssuerEdit()"><i data-lucide="x" class="icon-xs"></i></button>
+        <button class="pa-issuer-edit-save" title="שמור" onclick="savePaIssuerEdit('${escapeAttr(reportId)}', '${escapeAttr(docId)}')">${icon('check', 'icon-xs')}</button>
+        <button class="pa-issuer-edit-cancel" title="ביטול" onclick="cancelPaIssuerEdit()">${icon('x', 'icon-xs')}</button>
         ${showSwap ? `<button class="pa-issuer-swap-toggle" onclick="togglePaIssuerSwap('${escapeAttr(docId)}')" type="button">החלף חברה ▼</button>` : ''}
     </div>
     ${showSwap ? `<div class="pa-issuer-swap-combo" id="paIssuerSwap-${escapeAttr(docId)}" style="display:none;">
@@ -8020,7 +8020,7 @@ async function closePaDocNotePopover() {
     if (btn) {
         const has = !!newText.trim();
         btn.classList.toggle('pa-doc-row__note--has-content', has);
-        btn.innerHTML = `<i data-lucide="${has ? 'message-square-text' : 'message-square'}" class="icon-xs"></i>`;
+        btn.innerHTML = `${icon(has ? 'message-square-text' : 'message-square', 'icon-xs')}`;
         btn.title = has ? 'ערוך הערה' : 'הוסף הערה';
         safeCreateIcons(btn);
     }
@@ -8045,7 +8045,7 @@ async function closePaDocNotePopover() {
         if (btn) {
             const has = !!originalNote.trim();
             btn.classList.toggle('pa-doc-row__note--has-content', has);
-            btn.innerHTML = `<i data-lucide="${has ? 'message-square-text' : 'message-square'}" class="icon-xs"></i>`;
+            btn.innerHTML = `${icon(has ? 'message-square-text' : 'message-square', 'icon-xs')}`;
             safeCreateIcons(btn);
         }
         showAIToast('שגיאה בשמירת ההערה', 'danger');
@@ -8122,10 +8122,10 @@ async function loadReminders(silent = false) {
         if (!silent) {
             document.getElementById('reminderTableContainer').innerHTML = `
                 <div class="empty-state">
-                    <div class="empty-state-icon"><i data-lucide="alert-triangle" class="icon-2xl"></i></div>
+                    <div class="empty-state-icon">${icon('alert-triangle', 'icon-2xl')}</div>
                     <p style="color: var(--danger-500);">לא ניתן לטעון את התזכורות. נסה שוב.</p>
                     <button class="btn btn-secondary mt-4" onclick="loadReminders()">
-                        <i data-lucide="refresh-cw" class="icon-sm"></i> נסה שוב
+                        ${icon('refresh-cw', 'icon-sm')} נסה שוב
                     </button>
                 </div>
             `;
@@ -8265,7 +8265,7 @@ function renderRemindersTable(typeA, typeB) {
     if (totalA === 0 && totalB === 0) {
         container.innerHTML = `
             <div class="empty-state">
-                <div class="empty-state-icon"><i data-lucide="bell" class="icon-2xl"></i></div>
+                <div class="empty-state-icon">${icon('bell', 'icon-2xl')}</div>
                 <p>${remindersData.length === 0 ? 'אין תזכורות מתוזמנות' : 'אין תוצאות לסינון הנוכחי'}</p>
             </div>
         `;
@@ -8278,9 +8278,9 @@ function renderRemindersTable(typeA, typeB) {
     // --- Type A: Haven't filled questionnaire (stage 2) ---
     html += `<div class="reminder-section${openSections.has(0) ? ' open' : ''}">`;
     html += `<div class="reminder-section-header reminder-section-a" onclick="toggleReminderSection(this)">
-        <i data-lucide="chevron-left" class="icon-sm reminder-chevron"></i>
+        ${icon('chevron-left', 'icon-sm reminder-chevron')}
         <input type="checkbox" class="reminder-section-select-all" onclick="event.stopPropagation()" onchange="toggleSectionSelectAll(this)" title="בחר הכל">
-        <i data-lucide="clipboard-list" class="icon-sm"></i>
+        ${icon('clipboard-list', 'icon-sm')}
         <h3>לא מילאו שאלון</h3>
         <span class="reminder-section-count">${totalA}</span>
     </div>`;
@@ -8297,9 +8297,9 @@ function renderRemindersTable(typeA, typeB) {
     // --- Type B: Filled but missing docs (stage 4) ---
     html += `<div class="reminder-section${openSections.has(1) ? ' open' : ''}">`;
     html += `<div class="reminder-section-header reminder-section-b" onclick="toggleReminderSection(this)">
-        <i data-lucide="chevron-left" class="icon-sm reminder-chevron"></i>
+        ${icon('chevron-left', 'icon-sm reminder-chevron')}
         <input type="checkbox" class="reminder-section-select-all" onclick="event.stopPropagation()" onchange="toggleSectionSelectAll(this)" title="בחר הכל">
-        <i data-lucide="folder-open" class="icon-sm"></i>
+        ${icon('folder-open', 'icon-sm')}
         <h3>חסרים מסמכים</h3>
         <span class="reminder-section-count">${totalB}</span>
     </div>`;
@@ -8386,7 +8386,7 @@ function buildReminderTable(items, showDocs) {
                 </td>
                 ` : ''}
                 <td class="reminder-date-cell" title="לחץ לצפייה בהיסטוריית שליחה" onclick="toggleHistoryPopover(event, '${escapeAttr(r.report_id)}')" tabindex="0" role="button" aria-label="היסטוריית שליחה" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleHistoryPopover(event,'${escapeAttr(r.report_id)}');}">${r.last_reminder_sent_at ? `<span class="reminder-date">${formatDateHe(r.last_reminder_sent_at.split('T')[0])}</span>` : '-'}</td>
-                <td${isSuppressed ? '' : ` class="reminder-date-cell editable-date" title="לחץ לעריכת תאריך" onclick="editReminderDate('${escapeAttr(r.report_id)}', this)" tabindex="0" role="button" aria-label="ערוך תאריך" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();editReminderDate('${escapeAttr(r.report_id)}',this);}"`}>${isSuppressed ? '-' : `<span class="reminder-date ${dateClass}">${nextDate}<i data-lucide="pencil" class="edit-pencil"></i></span>`}</td>
+                <td${isSuppressed ? '' : ` class="reminder-date-cell editable-date" title="לחץ לעריכת תאריך" onclick="editReminderDate('${escapeAttr(r.report_id)}', this)" tabindex="0" role="button" aria-label="ערוך תאריך" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();editReminderDate('${escapeAttr(r.report_id)}',this);}"`}>${isSuppressed ? '-' : `<span class="reminder-date ${dateClass}">${nextDate}${icon('pencil', 'edit-pencil')}</span>`}</td>
                 <td class="reminder-date-cell" title="לחץ לצפייה בהיסטוריית שליחה" onclick="toggleHistoryPopover(event, '${escapeAttr(r.report_id)}')" tabindex="0" role="button" aria-label="היסטוריית שליחה" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleHistoryPopover(event,'${escapeAttr(r.report_id)}');}">${r.reminder_count || 0}</td>
                 <td>${maxCellHtml}</td>
                 <td>
@@ -8406,7 +8406,7 @@ function buildReminderTable(items, showDocs) {
                     <div class="reminder-row-actions">
                         ${!r.reminder_suppress ? `
                             <button class="action-btn send" onclick="reminderAction('send_now', '${escapeAttr(r.report_id)}')" title="שלח עכשיו">
-                                <i data-lucide="send" class="icon-sm"></i>
+                                ${icon('send', 'icon-sm')}
                             </button>
                         ` : ''}
 
@@ -8462,7 +8462,7 @@ function buildReminderTable(items, showDocs) {
                 ${!isSuppressed ? `
                     <span class="mobile-card-detail editable-date" onclick="editReminderDate('${escapeAttr(r.report_id)}', this)">
                         <span class="label">הבא</span>
-                        <span class="reminder-date ${dateClass}">${nextDate} <i data-lucide="pencil" class="edit-pencil"></i></span>
+                        <span class="reminder-date ${dateClass}">${nextDate} ${icon('pencil', 'edit-pencil')}</span>
                     </span>
                 ` : ''}
                 <span class="mobile-card-detail" onclick="toggleHistoryPopover(event, '${escapeAttr(r.report_id)}')" style="cursor:pointer">
@@ -8481,7 +8481,7 @@ function buildReminderTable(items, showDocs) {
             ${!isSuppressed ? `
                 <div class="mobile-card-actions">
                     <button class="action-btn send" onclick="reminderAction('send_now', '${escapeAttr(r.report_id)}')" title="שלח עכשיו">
-                        <i data-lucide="send" class="icon-sm"></i>
+                        ${icon('send', 'icon-sm')}
                     </button>
                 </div>
             ` : ''}
@@ -9414,32 +9414,32 @@ function openClientContextMenu(e) {
     const stageNum = STAGES[stage]?.num || 0;
     if (isActive) {
         if (stage === 'Send_Questionnaire') {
-            items += `<button onclick="sendSingle('${rid}'); closeAllRowMenus();"><i data-lucide="send"></i> שלח שאלון</button>`;
+            items += `<button onclick="sendSingle('${rid}'); closeAllRowMenus();">${icon('send')} שלח שאלון</button>`;
         }
         if (stage === 'Waiting_For_Answers' || stage === 'Collecting_Docs') {
-            items += `<button onclick="sendDashboardReminder('${rid}', '${cName}'); closeAllRowMenus();"><i data-lucide="bell-ring"></i> שלח תזכורת</button>`;
+            items += `<button onclick="sendDashboardReminder('${rid}', '${cName}'); closeAllRowMenus();">${icon('bell-ring')} שלח תזכורת</button>`;
         }
         if (stage === 'Send_Questionnaire' || stage === 'Waiting_For_Answers') {
-            items += `<button onclick="openAssistedQuestionnaire('${rid}', '${cName}'); closeAllRowMenus();"><i data-lucide="user-pen"></i> מלא שאלון במקום הלקוח</button>`;
+            items += `<button onclick="openAssistedQuestionnaire('${rid}', '${cName}'); closeAllRowMenus();">${icon('user-pen')} מלא שאלון במקום הלקוח</button>`;
         }
         if (stageNum >= 3) {
-            items += `<button onclick="viewQuestionnaire('${rid}'); closeAllRowMenus();"><i data-lucide="file-text"></i> צפה בשאלון</button>`;
+            items += `<button onclick="viewQuestionnaire('${rid}'); closeAllRowMenus();">${icon('file-text')} צפה בשאלון</button>`;
         }
-        items += `<button onclick="viewClient('${rid}'); closeAllRowMenus();"><i data-lucide="external-link"></i> צפייה כלקוח</button>`;
+        items += `<button onclick="viewClient('${rid}'); closeAllRowMenus();">${icon('external-link')} צפייה כלקוח</button>`;
         const ctxClient = clientsData.find(c => c.report_id === rid);
         if (ctxClient) {
             const ctxOtherType = getClientOtherFilingType(ctxClient.email, ctxClient.year);
             if (ctxOtherType) {
                 const ctxLabel = FILING_TYPE_LABELS[ctxOtherType];
-                items += `<button onclick="addSecondFilingType('${rid}'); closeAllRowMenus();"><i data-lucide="file-plus"></i> הוסף ${ctxLabel}</button>`;
+                items += `<button onclick="addSecondFilingType('${rid}'); closeAllRowMenus();">${icon('file-plus')} הוסף ${ctxLabel}</button>`;
             }
         }
         items += `<hr>`;
-        items += `<button class="danger" onclick="deactivateClient('${rid}', '${cName}'); closeAllRowMenus();"><i data-lucide="archive"></i> העבר לארכיון</button>`;
+        items += `<button class="danger" onclick="deactivateClient('${rid}', '${cName}'); closeAllRowMenus();">${icon('archive')} העבר לארכיון</button>`;
     } else {
-        items += `<button onclick="viewClient('${rid}'); closeAllRowMenus();"><i data-lucide="external-link"></i> צפייה כלקוח</button>`;
+        items += `<button onclick="viewClient('${rid}'); closeAllRowMenus();">${icon('external-link')} צפייה כלקוח</button>`;
         items += `<hr>`;
-        items += `<button onclick="reactivateClient('${rid}'); closeAllRowMenus();"><i data-lucide="archive-restore"></i> הפעל מחדש</button>`;
+        items += `<button onclick="reactivateClient('${rid}'); closeAllRowMenus();">${icon('archive-restore')} הפעל מחדש</button>`;
     }
 
     menu.innerHTML = items;
@@ -9516,10 +9516,10 @@ function updateClientSelectedCount() {
 
     // In archive mode, switch archive button to reactivate
     if (showArchivedMode) {
-        archiveBtn.innerHTML = '<i data-lucide="archive-restore" class="icon-sm"></i> הפעל מחדש';
+        archiveBtn.innerHTML = `${icon('archive-restore', 'icon-sm')} הפעל מחדש`;
         archiveBtn.className = 'btn btn-sm btn-outline-success';
     } else {
-        archiveBtn.innerHTML = '<i data-lucide="archive" class="icon-sm"></i> העבר לארכיון';
+        archiveBtn.innerHTML = `${icon('archive', 'icon-sm')} העבר לארכיון`;
         archiveBtn.className = 'btn btn-sm btn-danger';
     }
     safeCreateIcons();
@@ -9666,11 +9666,11 @@ function hideLoading() {
 
 function showModal(type, title, body, stats = null, action = null) {
     const icons = {
-        success: '<i data-lucide="circle-check" class="icon-2xl"></i>',
-        error: '<i data-lucide="circle-alert" class="icon-2xl"></i>',
-        warning: '<i data-lucide="alert-triangle" class="icon-2xl"></i>'
+        success: `${icon('circle-check', 'icon-2xl')}`,
+        error: `${icon('circle-alert', 'icon-2xl')}`,
+        warning: `${icon('alert-triangle', 'icon-2xl')}`
     };
-    document.getElementById('modalIcon').innerHTML = icons[type] || '<i data-lucide="circle-check" class="icon-2xl"></i>';
+    document.getElementById('modalIcon').innerHTML = icons[type] || `${icon('circle-check', 'icon-2xl')}`;
     document.getElementById('modalTitle').textContent = title;
     document.getElementById('modalBody').textContent = body;
 
@@ -9845,13 +9845,13 @@ function showApproveConflictDialog(docTitle, existingName, newName, onMerge, onK
     footerEl.innerHTML = `
         <div style="display:flex;flex-direction:column;gap:8px;width:100%">
             <button class="btn btn-primary" id="conflictMergeBtn">
-                <i data-lucide="merge" class="icon-sm"></i> מזג קבצים
+                ${icon('merge', 'icon-sm')} מזג קבצים
             </button>
             <button class="btn btn-outline" id="conflictKeepBothBtn">
-                <i data-lucide="copy-plus" class="icon-sm"></i> שמור שניהם
+                ${icon('copy-plus', 'icon-sm')} שמור שניהם
             </button>
             <button class="btn confirm-btn-danger" id="conflictOverrideBtn">
-                <i data-lucide="replace" class="icon-sm"></i> החלף קובץ
+                ${icon('replace', 'icon-sm')} החלף קובץ
             </button>
             <button class="btn btn-ghost" id="conflictCancelBtn">ביטול</button>
         </div>
@@ -10270,7 +10270,7 @@ function renderQuestionnairesTable(items) {
     if (!items || items.length === 0) {
         container.innerHTML = `
             <div class="empty-state">
-                <div class="empty-state-icon"><i data-lucide="file-text" class="icon-2xl"></i></div>
+                <div class="empty-state-icon">${icon('file-text', 'icon-2xl')}</div>
                 <p>${questionnairesData.length === 0 ? 'אין שאלונים שהוגשו לשנה זו' : 'לא נמצאו תוצאות לחיפוש'}</p>
             </div>`;
         safeCreateIcons();
@@ -10315,18 +10315,18 @@ function renderQuestionnairesTable(items) {
                     </td>
                     <td style="font-weight:600;">${escapeHtml(name)}</td>
                     <td>${escapeHtml(spouse)}</td>
-                    <td>${stage ? `<span class="stage-badge ${stage.class}"><i data-lucide="${stage.icon}" class="icon-sm"></i> ${stage.label}</span>` : '—'}</td>
+                    <td>${stage ? `<span class="stage-badge ${stage.class}">${icon(stage.icon, 'icon-sm')} ${stage.label}</span>` : '—'}</td>
                     <td>${date}</td>
                     <td class="qa-actions-cell" onclick="event.stopPropagation();">
                         <div class="qa-actions-inner">
                             <button class="action-btn view" onclick="navigateToDocManager('${id}')" title="מנהל מסמכים">
-                                <i data-lucide="folder-open" class="icon-sm"></i>
+                                ${icon('folder-open', 'icon-sm')}
                             </button>
                             <button class="action-btn" style="background:var(--gray-100);color:var(--gray-600);" onclick="printSingleQuestionnaire('${id}')" title="הדפס שאלון">
-                                <i data-lucide="printer" class="icon-sm"></i>
+                                ${icon('printer', 'icon-sm')}
                             </button>
                             <button class="expand-toggle" id="toggle-${id}" onclick="toggleQuestionnaireDetail('${id}')" title="הצג/הסתר תשובות">
-                                <i data-lucide="chevron-left" class="icon-sm"></i>
+                                ${icon('chevron-left', 'icon-sm')}
                             </button>
                         </div>
                     </td>
@@ -10359,7 +10359,7 @@ function renderQuestionnairesTable(items) {
                 </span>
                 <div class="mobile-card-info">
                     <span class="mobile-card-name" style="cursor:default">${escapeHtml(name)}</span>
-                    ${stage ? `<span class="stage-badge ${stage.class}"><i data-lucide="${stage.icon}" class="icon-sm"></i> ${stage.label}</span>` : ''}
+                    ${stage ? `<span class="stage-badge ${stage.class}">${icon(stage.icon, 'icon-sm')} ${stage.label}</span>` : ''}
                 </div>
             </div>
             <div class="mobile-card-secondary">
@@ -10368,13 +10368,13 @@ function renderQuestionnairesTable(items) {
             </div>
             <div class="mobile-card-actions">
                 <button class="action-btn view" onclick="navigateToDocManager('${id}')" title="מנהל מסמכים">
-                    <i data-lucide="folder-open" class="icon-sm"></i>
+                    ${icon('folder-open', 'icon-sm')}
                 </button>
                 <button class="action-btn" style="background:var(--gray-100);color:var(--gray-600);" onclick="printSingleQuestionnaire('${id}')" title="הדפס שאלון">
-                    <i data-lucide="printer" class="icon-sm"></i>
+                    ${icon('printer', 'icon-sm')}
                 </button>
                 <button class="expand-toggle" id="toggle-m-${id}" onclick="toggleQuestionnaireCardDetail('${id}')" title="הצג/הסתר תשובות">
-                    <i data-lucide="chevron-left" class="icon-sm"></i>
+                    ${icon('chevron-left', 'icon-sm')}
                 </button>
             </div>
             <div class="qa-card-detail" id="card-detail-${id}">
@@ -10395,10 +10395,9 @@ function toggleQuestionnaireCardDetail(id) {
     detail.classList.toggle('open');
     const toggle = document.getElementById('toggle-m-' + id);
     if (toggle) {
-        const icon = toggle.querySelector('i');
-        if (icon) {
-            icon.setAttribute('data-lucide', detail.classList.contains('open') ? 'chevron-down' : 'chevron-left');
-            safeCreateIcons();
+        const iconEl = toggle.querySelector('i, svg');
+        if (iconEl) {
+            iconEl.outerHTML = icon(detail.classList.contains('open') ? 'chevron-down' : 'chevron-left'); // DL-314: sprite
         }
     }
 }
@@ -10460,7 +10459,7 @@ function buildQADetailHTML(item) {
     if (noCount > 0) {
         html += `<div style="margin-bottom:8px; text-align:start;">
             <button class="btn btn-sm btn-ghost qa-toggle-no-btn" onclick="event.stopPropagation(); toggleQaHideNoAnswers()">
-                <i data-lucide="${qaHideNoAnswers ? 'eye' : 'eye-off'}" class="icon-sm"></i>
+                ${icon(qaHideNoAnswers ? 'eye' : 'eye-off', 'icon-sm')}
                 ${qaHideNoAnswers ? `הצג תשובות לא (${noCount})` : 'הסתר תשובות לא'}
             </button>
         </div>`;
@@ -10493,7 +10492,7 @@ function buildQADetailHTML(item) {
         html += `
         <div class="qa-client-questions">
             <div class="qa-client-questions-title">
-                <i data-lucide="help-circle" class="icon-sm"></i> שאלות הלקוח (${clientQuestions.length})
+                ${icon('help-circle', 'icon-sm')} שאלות הלקוח (${clientQuestions.length})
             </div>`;
         clientQuestions.forEach((q, idx) => {
             const text = typeof q === 'string' ? q : (q.text || q.question || JSON.stringify(q));
