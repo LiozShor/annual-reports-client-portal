@@ -231,7 +231,7 @@ approveAndSend.get('/approve-and-send', async (c) => {
     await airtable.updateRecord(TABLES.REPORTS, reportId, stageFields);
 
     // DL-254: Invalidate documents cache after approve changes doc statuses
-    invalidateCache(c.env.CACHE_KV, 'cache:documents_non_waived');
+    invalidateCache(c.env.CACHE_KV, 'cache:documents_non_waived_v2');
 
     // Step 7: Respond
     if (offHours) {

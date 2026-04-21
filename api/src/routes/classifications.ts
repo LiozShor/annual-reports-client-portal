@@ -14,7 +14,7 @@ import type { ProcessingContext, AttachmentInfo, ClassificationResult } from '..
 import { getCachedOrFetch, invalidateCache } from '../lib/cache';
 import { logError } from '../lib/error-logger';
 import { checkAutoAdvanceToReview } from '../lib/auto-advance';
-import { isLastReference } from '../lib/file-refcount';
+import { isLastReference, buildSharedRefMap } from '../lib/file-refcount';
 import type { Env } from '../lib/types';
 
 const classifications = new Hono<{ Bindings: Env }>();
@@ -206,10 +206,12 @@ classifications.get('/get-pending-classifications', async (c) => {
     // ---- Step 4: Fetch documents + templates + categories (parallel, all cached) ----
     // DL-254: Cache documents query (5min TTL) to reduce Airtable calls under load
     const [docRecords, templateRecords, categoryRecords] = await Promise.all([
-      getCachedOrFetch(c.env.CACHE_KV, 'cache:documents_non_waived', 300, () =>
+      // DL-320: bumped cache key to v2 — `onedrive_item_id` now fetched so we can compute
+      // shared_ref_count / shared_with_titles / shared_record_ids per item.
+      getCachedOrFetch(c.env.CACHE_KV, 'cache:documents_non_waived_v2', 300, () =>
         airtable.listAllRecords(TABLES.DOCUMENTS, {
           filterByFormula: `{status} != 'Waived'`,
-          fields: ['report', 'type', 'issuer_name', 'status', 'category'],
+          fields: ['report', 'type', 'issuer_name', 'status', 'category', 'onedrive_item_id'],
         })
       ),
       getCachedOrFetch(c.env.CACHE_KV, 'cache:templates', 3600,
@@ -221,6 +223,17 @@ classifications.get('/get-pending-classifications', async (c) => {
     // ---- Step 5: Build lookups ----
     const templateMap = buildTemplateMap(templateRecords);
     const categoryMap = buildCategoryMap(categoryRecords);
+
+    // DL-320: Build shared-reference map for multi-match (DL-314) sibling visibility.
+    // Keyed by onedrive_item_id → { count, titles[], ids[] } across all Received docs.
+    const sharedRefMap = buildSharedRefMap(
+      docRecords.map(d => ({
+        id: d.id,
+        onedrive_item_id: (d.fields as any).onedrive_item_id,
+        issuer_name: (d.fields as any).issuer_name,
+        status: (d.fields as any).status,
+      }))
+    );
 
     // Group docs by report ID
     const docsByReport = new Map<string, { missing: any[]; all: any[] }>();
@@ -328,6 +341,14 @@ classifications.get('/get-pending-classifications', async (c) => {
         matched_doc_name: f.matched_doc_name,
         file_url: f.file_url,
         onedrive_item_id: f.onedrive_item_id,
+        // DL-320: sibling visibility for "הקובץ תואם למסמך נוסף" + cascade revert confirmation
+        ...(() => {
+          const itemId = typeof f.onedrive_item_id === 'string' ? f.onedrive_item_id : '';
+          const entry = itemId ? sharedRefMap.get(itemId) : undefined;
+          return entry
+            ? { shared_ref_count: entry.count, shared_with_titles: entry.titles, shared_record_ids: entry.ids }
+            : { shared_ref_count: 0, shared_with_titles: [], shared_record_ids: [] };
+        })(),
         sender_email: f.sender_email,
         sender_name: f.sender_name,
         received_at: f.received_at,
@@ -468,7 +489,7 @@ classifications.post('/review-classification', async (c) => {
       return c.json({ ok: false, error: 'Missing classification_id or action' }, 400);
     }
 
-    if (!['approve', 'reject', 'reassign', 'split', 'classify-segment', 'finalize-split', 'request-remaining-contract', 'update-contract-period', 're-classify', 'also_match'].includes(action)) {
+    if (!['approve', 'reject', 'reassign', 'split', 'classify-segment', 'finalize-split', 'request-remaining-contract', 'update-contract-period', 're-classify', 'also_match', 'revert_cascade'].includes(action)) {
       return c.json({ ok: false, error: `Invalid action: ${action}` }, 400);
     }
 
@@ -610,7 +631,7 @@ classifications.post('/review-classification', async (c) => {
       const created = await airtable.createRecords(TABLES.DOCUMENTS, [{ fields: stripEmpty(newDocFields) }]);
       const newDocId = created[0]?.id || '';
 
-      invalidateCache(c.env.CACHE_KV, 'cache:documents_non_waived');
+      invalidateCache(c.env.CACHE_KV, 'cache:documents_non_waived_v2');
 
       return c.json({
         ok: true,
@@ -939,6 +960,80 @@ classifications.post('/review-classification', async (c) => {
       return c.json({ ok: true, action: 'finalize-split' });
     }
 
+    // ---- DL-320: revert_cascade — clear primary + all sibling records sharing the file, archive it ----
+    if (action === 'revert_cascade') {
+      const sharedItemId = clsFields.onedrive_item_id as string;
+      if (!sharedItemId) {
+        return c.json({ ok: false, error: 'Classification has no onedrive_item_id to cascade' }, 400);
+      }
+
+      // Find all Received doc records sharing this file
+      const esc = sharedItemId.replace(/'/g, "\\'");
+      const sharedDocs = await airtable.listAllRecords(TABLES.DOCUMENTS, {
+        filterByFormula: `AND({onedrive_item_id} = '${esc}', {status} = 'Received')`,
+      });
+
+      // Defense-in-depth: verify all shared docs belong to the same client as the classification
+      const clsClientId = (Array.isArray(clsFields.client_id) ? clsFields.client_id[0] : clsFields.client_id) as string;
+      if (clsClientId) {
+        for (const sd of sharedDocs) {
+          const sdClientId = (() => {
+            const v = (sd.fields as any).client_id;
+            return (Array.isArray(v) ? v[0] : v) as string;
+          })();
+          if (sdClientId && sdClientId !== clsClientId) {
+            return c.json({ ok: false, error: 'Sibling record belongs to a different client — aborting cascade' }, 400);
+          }
+        }
+      }
+
+      // Clear each doc record: back to Required_Missing, strip file fields
+      const clearedDocIds: string[] = [];
+      for (const sd of sharedDocs) {
+        try {
+          await airtable.updateRecord(TABLES.DOCUMENTS, sd.id, {
+            status: 'Required_Missing',
+            file_url: null,
+            onedrive_item_id: null,
+            file_hash: null,
+            attachment_name: null,
+            source_attachment_name: null,
+            document_uid: null,
+          } as any);
+          clearedDocIds.push(sd.id);
+        } catch (err) {
+          console.error('[revert_cascade] Failed to clear doc', sd.id, (err as Error).message);
+        }
+      }
+
+      // Reset classification to pending
+      await airtable.updateRecord(TABLES.CLASSIFICATIONS, classification_id, {
+        review_status: 'pending',
+        notification_status: '',
+        document: [],
+      } as any);
+
+      // Archive the OneDrive file (no more references)
+      let archived = false;
+      try {
+        const msGraph = new MSGraphClient(c.env, c.executionCtx);
+        await moveFileToArchive(msGraph, sharedItemId);
+        archived = true;
+      } catch (err) {
+        console.error('[revert_cascade] archive failed:', (err as Error).message);
+      }
+
+      invalidateCache(c.env.CACHE_KV, 'cache:documents_non_waived_v2');
+
+      return c.json({
+        ok: true,
+        action: 'revert_cascade',
+        cleared_doc_ids: clearedDocIds,
+        archived,
+        shared_onedrive_item_id: sharedItemId,
+      });
+    }
+
     // ---- DL-314: also_match — fan out one classification file to N doc records ----
     if (action === 'also_match') {
       if (!Array.isArray(additional_targets) || additional_targets.length === 0) {
@@ -1075,7 +1170,7 @@ classifications.post('/review-classification', async (c) => {
       }
 
       // Step E: invalidate doc cache.
-      invalidateCache(c.env.CACHE_KV, 'cache:documents_non_waived');
+      invalidateCache(c.env.CACHE_KV, 'cache:documents_non_waived_v2');
 
       return c.json({
         ok: true,
@@ -1784,7 +1879,7 @@ classifications.post('/review-classification', async (c) => {
 
     // ---- Step 8: Return response ----
     // DL-254: Invalidate documents cache after approve/reject/reassign changes doc status
-    invalidateCache(c.env.CACHE_KV, 'cache:documents_non_waived');
+    invalidateCache(c.env.CACHE_KV, 'cache:documents_non_waived_v2');
 
     return c.json({
       ok: true,

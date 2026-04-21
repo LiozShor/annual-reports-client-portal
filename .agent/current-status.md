@@ -1,6 +1,31 @@
 # Annual Reports CRM - Current Status
 
-**Last Updated:** 2026-04-21 (DL-319 approve-creates-required-doc — IMPLEMENTED, NEED TESTING)
+**Last Updated:** 2026-04-21 (DL-320 "also matches" UX rework + robot icon removal — IMPLEMENTED, NEED TESTING)
+
+## DL-320 "Also Matches" UX Rework + Robot Icon Removal — IMPLEMENTED, NEED TESTING
+
+Branch: `DL-320-also-match-ux-rework`. Worker deploy required.
+
+DL-314 follow-up. Pre-approve "גם תואם ל.." button removed from all card states; new **"הקובץ תואם למסמך נוסף"** button appears on the reviewed-approved card next to "שנה החלטה", reusing the existing multi-match modal. Decorative "?" robot help icon (`.ai-evidence-trigger`) removed from all AI Review cards per NN/G tooltip guidelines. New backend action `action='revert_cascade'` on `/review-classification` — "שנה החלטה" on a card with sibling links now prompts a confirmation dialog ("שינוי ההחלטה יסיר גם N קישורים נוספים: titles. להמשיך?") and on confirm cascades: clears primary + all siblings sharing the OneDrive file, archives the file, resets classification to pending. `/get-pending-classifications` enriched with `shared_ref_count` / `shared_with_titles[]` / `shared_record_ids[]`; `onedrive_item_id` added to docRecords fetch; cache key bumped `cache:documents_non_waived` → `cache:documents_non_waived_v2` (4 invalidation sites updated). script.js cache `v=275` → `v=276`. Resolves DL-314 §8 open TODO (multi-match entry on reviewed card).
+
+**Test checklist (per §7 of the design log):**
+- [ ] Deploy: `cd api && npx wrangler deploy`
+- [ ] `wrangler tail` briefly — no errors on startup
+- [ ] Admin UI (after merge to main): AI Review page pre-approve cards (full/fuzzy/mismatch/unmatched) show NO "גם תואם ל..." button
+- [ ] All AI Review cards show NO "?" robot icon in any state
+- [ ] Approve a classification → card transitions to reviewed-approved → NEW "הקובץ תואם למסמך נוסף" button appears next to "שנה החלטה"
+- [ ] Click new button → DL-314 multi-match modal opens → select 2 templates → confirm → 2 sibling doc records created sharing `onedrive_item_id`
+- [ ] Reload AI Review → reviewed card now has `shared_ref_count = 3` (verify in DevTools or sibling chip)
+- [ ] Click "שנה החלטה" on the sibling-bearing card → confirmation dialog shows count + sibling titles → confirm → all 3 records cleared (status=Required_Missing), OneDrive file archived, classification resets to pending
+- [ ] Click "שנה החלטה" on a card WITHOUT siblings → NO confirmation dialog (original UI toggle flow)
+- [ ] Regression: existing Approve / Reassign / Reject flows unchanged
+- [ ] Regression: DL-314 multi-match modal still works (now invoked only from post-approve)
+- [ ] Regression: `friendlyAIReason` still renders inline in unmatched state
+- [ ] Hard-reload admin → no JS console errors, `script.js?v=276` served
+
+Design log: `.agent/design-logs/ai-review/320-also-match-ux-rework.md`
+
+---
 
 ## DL-319 Approve-as-Required Button — IMPLEMENTED, NEED TESTING
 

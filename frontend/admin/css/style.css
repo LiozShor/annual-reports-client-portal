@@ -2062,27 +2062,9 @@ tr:hover .client-view-link {
     color: var(--warning-700);
 }
 
-/* Evidence tooltip trigger (AI icon with ?) */
-.ai-evidence-trigger {
-    position: relative;
-    display: inline-flex;
-    align-items: center;
-    gap: 1px;
-    cursor: help;
-    color: var(--gray-400);
-    font-size: 11px;
-    font-weight: 600;
-    margin-inline-start: var(--sp-2);
-    padding: 1px var(--sp-1);
-    border-radius: var(--radius-sm);
-    background: var(--gray-100);
-    transition: color 0.15s, background 0.15s;
-}
-
-.ai-evidence-trigger:hover {
-    color: var(--primary-700);
-    background: var(--primary-100);
-}
+/* DL-320: .ai-evidence-trigger (AI robot "?" icon) removed — noise per NN/G tooltip guidelines.
+   .ai-evidence-tooltip kept: the delegated tooltip IIFE is harmless with zero triggers,
+   and the class name is still referenced in JS scope. */
 
 /* Floating tooltip (appended to body via JS) */
 .ai-evidence-tooltip {

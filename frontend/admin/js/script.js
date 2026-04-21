@@ -4267,10 +4267,7 @@ function renderAICard(item) {
         ${icon('eye', 'icon-sm')} תצוגה מקדימה
     </button>`;
 
-    const evidenceIcon = item.ai_reason
-        ? `<span class="ai-evidence-trigger" data-tooltip="${escapeAttr(friendlyAIReason(item.ai_reason))}">${icon('bot', 'icon-sm')}?</span>`
-        : '';
-
+    // DL-320: decorative "?" robot help icon removed per NN/G tooltip guidelines
     let classificationHtml = '';
     let actionsHtml = '';
 
@@ -4292,9 +4289,6 @@ function renderAICard(item) {
                     ? 'aria-disabled="true" title="לא ניתן לאשר מסמך שלא נדרש — יש לשייך מחדש או לדחות"'
                     : `onclick="approveAIClassification('${escapeAttr(item.id)}')"`}>
                 ${icon('check', 'icon-sm')} ${addToRequired ? 'נכון - הוסף מסמך זה לרשימת המסמכים הדרושים' : 'נכון'}
-            </button>
-            <button class="btn btn-link btn-sm" onclick="showAIAlsoMatchModal('${escapeAttr(item.id)}')" title="DL-314: שייך את אותו קובץ למספר מסמכים">
-                <i data-lucide="link-2" class="icon-sm"></i> גם תואם ל...
             </button>
             <button class="btn btn-link btn-sm" onclick="showAIReassignModal('${escapeAttr(item.id)}')">
                 ${icon('arrow-right-left', 'icon-sm')} לא נכון, שייך מחדש
@@ -4402,9 +4396,6 @@ function renderAICard(item) {
                     ? 'aria-disabled="true" title="לא ניתן לאשר מסמך שלא נדרש — יש לשייך מחדש או לדחות"'
                     : `onclick="approveAIClassification('${escapeAttr(item.id)}')"`}>
                 ${icon('check', 'icon-sm')} ${fuzzyAddToRequired ? 'נכון - הוסף מסמך זה לרשימת המסמכים הדרושים' : 'נכון'}
-            </button>
-            <button class="btn btn-link btn-sm" onclick="showAIAlsoMatchModal('${escapeAttr(item.id)}')" title="DL-314: שייך את אותו קובץ למספר מסמכים">
-                <i data-lucide="link-2" class="icon-sm"></i> גם תואם ל...
             </button>
             <button class="btn btn-link btn-sm" onclick="showAIReassignModal('${escapeAttr(item.id)}')">
                 ${icon('arrow-right-left', 'icon-sm')} לא נכון, שייך מחדש
@@ -4522,8 +4513,6 @@ function renderAICard(item) {
                     ${item.is_duplicate ? '<span class="ai-duplicate-badge" title="קובץ כפול — אותו קובץ כבר קיים במערכת">כפול</span>' : ''}
                     ${item.is_unrequested && !item.pre_questionnaire ? '<span class="ai-unrequested-badge" title="מסמך שלא נדרש מהלקוח">לא נדרש</span>' : ''}
                     ${item.pre_questionnaire ? '<span class="ai-pre-questionnaire-badge" title="הלקוח טרם מילא את השאלון — הסיווג בוצע מול הקטלוג המלא">טרם מולא שאלון</span>' : ''}
-
-                    ${evidenceIcon}
                 </div>
                 ${viewFileBtn}
             </div>
@@ -4626,10 +4615,20 @@ function renderReviewedCard(item, reviewStatus) {
         }
     }
 
+    // DL-320: post-approve "הקובץ תואם למסמך נוסף" button — multi-match entry point
+    // (moved from pre-approve cards; reuses DL-314 showAIAlsoMatchModal as-is)
+    const isApproved = reviewStatus === 'approved';
+    const alsoMatchBtn = isApproved
+        ? `<button class="btn btn-outline btn-sm ai-also-match-btn" onclick="showAIAlsoMatchModal('${escapeAttr(item.id)}')">
+               ${icon('link-2', 'icon-sm')} הקובץ תואם למסמך נוסף
+           </button>`
+        : '';
+
     // Change Decision button — all reviewed cards can be re-reviewed (reassign safe via onedrive_item_id)
     const canChangeDecision = true;
     const actionsHtml = canChangeDecision
-        ? `<button class="ai-change-decision-btn" onclick="startReReview('${escapeAttr(item.id)}')">
+        ? `${alsoMatchBtn}
+           <button class="ai-change-decision-btn" onclick="startReReview('${escapeAttr(item.id)}')">
                ${icon('rotate-ccw', 'icon-sm')} שנה החלטה
            </button>`
         : '';
@@ -4667,6 +4666,21 @@ function startReReview(recordId) {
 
     const card = document.querySelector(`.ai-review-card[data-id="${recordId}"]`);
     if (!card) return;
+
+    // DL-320: cascade revert when this file is linked to other doc records (DL-314 multi-match).
+    // Changing the primary decision should also clear all sibling records that were linked to this file.
+    const sharedCount = (item.shared_ref_count | 0);
+    if (sharedCount > 1) {
+        const ownDocId = item.matched_doc_record_id || '';
+        const titles = Array.isArray(item.shared_with_titles)
+            ? item.shared_with_titles.filter(t => t && t !== (item.issuer_name || item.matched_short_name || ''))
+            : [];
+        const extra = sharedCount - 1;
+        const titlesStr = titles.length ? `: ${titles.join(', ')}` : '';
+        const msg = `שינוי ההחלטה יסיר גם ${extra} קישורים נוספים${titlesStr}. להמשיך?`;
+        showConfirmDialog(msg, () => { cascadeRevertAIClassification(recordId); }, 'המשך ונקה', true);
+        return;
+    }
 
     // Restore original action buttons based on card state
     const state = getCardState(item);
@@ -4714,6 +4728,36 @@ function startReReview(recordId) {
     if (actionsDiv) actionsDiv.innerHTML = actionsHtml;
 
     safeCreateIcons();
+}
+
+// DL-320: Cascade revert — clear primary + all sibling records sharing the same OneDrive file,
+// archive the file, and reset the classification to pending so admin can re-decide fresh.
+async function cascadeRevertAIClassification(recordId) {
+    setCardLoading(recordId, 'מנקה קישורים ומאפס...');
+    try {
+        const response = await fetchWithTimeout(ENDPOINTS.REVIEW_CLASSIFICATION, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                token: authToken,
+                classification_id: recordId,
+                action: 'revert_cascade'
+            })
+        }, FETCH_TIMEOUTS.mutate);
+
+        const data = await parseAIResponse(response);
+        clearCardLoading(recordId);
+        if (!data.ok) throw new Error(formatAIResponseError(data));
+
+        const clearedCount = Array.isArray(data.cleared_doc_ids) ? data.cleared_doc_ids.length : 0;
+        showAIToast(`נוקו ${clearedCount} רשומות. ניתן להחליט מחדש.`, 'success');
+        // Force full reload — siblings across the page also changed
+        aiReviewLoadedAt = 0;
+        loadAIClassifications(true, false);
+    } catch (error) {
+        clearCardLoading(recordId);
+        showModal('error', 'שגיאה', error.message);
+    }
 }
 
 // DL-086: Cancel re-review — re-render the card in reviewed state
