@@ -4284,11 +4284,14 @@ function renderAICard(item) {
             </span>
         `;
         const approveDisabled = item.is_unrequested;
+        const addToRequired = item.is_unrequested && !!item.matched_template_id;
         actionsHtml = `
-            <button class="btn btn-success btn-sm" ${approveDisabled
-                ? 'aria-disabled="true" title="לא ניתן לאשר מסמך שלא נדרש — יש לשייך מחדש או לדחות"'
-                : `onclick="approveAIClassification('${escapeAttr(item.id)}')"`}>
-                ${icon('check', 'icon-sm')} נכון
+            <button class="btn btn-success btn-sm" ${addToRequired
+                ? `onclick="approveAIClassificationAddRequired('${escapeAttr(item.id)}', '${escapeAttr(item.matched_template_id)}')"`
+                : approveDisabled
+                    ? 'aria-disabled="true" title="לא ניתן לאשר מסמך שלא נדרש — יש לשייך מחדש או לדחות"'
+                    : `onclick="approveAIClassification('${escapeAttr(item.id)}')"`}>
+                ${icon('check', 'icon-sm')} ${addToRequired ? 'נכון - הוסף מסמך זה לרשימת המסמכים הדרושים' : 'נכון'}
             </button>
             <button class="btn btn-link btn-sm" onclick="showAIAlsoMatchModal('${escapeAttr(item.id)}')" title="DL-314: שייך את אותו קובץ למספר מסמכים">
                 <i data-lucide="link-2" class="icon-sm"></i> גם תואם ל...
@@ -4391,11 +4394,14 @@ function renderAICard(item) {
             </span>
         `;
         const fuzzyApproveDisabled = item.is_unrequested;
+        const fuzzyAddToRequired = item.is_unrequested && !!item.matched_template_id;
         actionsHtml = `
-            <button class="btn btn-success btn-sm" ${fuzzyApproveDisabled
-                ? 'aria-disabled="true" title="לא ניתן לאשר מסמך שלא נדרש — יש לשייך מחדש או לדחות"'
-                : `onclick="approveAIClassification('${escapeAttr(item.id)}')"`}>
-                ${icon('check', 'icon-sm')} נכון
+            <button class="btn btn-success btn-sm" ${fuzzyAddToRequired
+                ? `onclick="approveAIClassificationAddRequired('${escapeAttr(item.id)}', '${escapeAttr(item.matched_template_id)}')"`
+                : fuzzyApproveDisabled
+                    ? 'aria-disabled="true" title="לא ניתן לאשר מסמך שלא נדרש — יש לשייך מחדש או לדחות"'
+                    : `onclick="approveAIClassification('${escapeAttr(item.id)}')"`}>
+                ${icon('check', 'icon-sm')} ${fuzzyAddToRequired ? 'נכון - הוסף מסמך זה לרשימת המסמכים הדרושים' : 'נכון'}
             </button>
             <button class="btn btn-link btn-sm" onclick="showAIAlsoMatchModal('${escapeAttr(item.id)}')" title="DL-314: שייך את אותו קובץ למספר מסמכים">
                 <i data-lucide="link-2" class="icon-sm"></i> גם תואם ל...
@@ -4835,6 +4841,56 @@ async function approveAIClassification(recordId) {
             showModal('error', 'שגיאה', error.message);
         }
     }, { confirmText: 'נכון', btnClass: 'btn-success' });
+}
+
+// DL-319: Approve unrequested doc and atomically create the required-doc row
+async function approveAIClassificationAddRequired(recordId, templateId) {
+    showInlineConfirm(recordId, 'לאשר ולהוסיף לרשימת המסמכים הדרושים?', async () => {
+        setCardLoading(recordId, 'מאשר ומוסיף לרשימה...');
+
+        try {
+            const response = await fetchWithTimeout(ENDPOINTS.REVIEW_CLASSIFICATION, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    token: authToken,
+                    classification_id: recordId,
+                    action: 'approve',
+                    create_if_missing: true,
+                    template_id: templateId
+                })
+            }, FETCH_TIMEOUTS.mutate);
+
+            const data = await parseAIResponse(response);
+            clearCardLoading(recordId);
+
+            // Same conflict handling as approveAIClassification (DL-222)
+            if (data._conflict) {
+                const existingName = (data.conflict_existing_name || '').replace(/<[^>]+>/g, '');
+                const newName = (data.conflict_new_name || '').replace(/<[^>]+>/g, '');
+                const title = (data.conflict_doc_title || '').replace(/<[^>]+>/g, '');
+                showApproveConflictDialog(title, existingName, newName,
+                    () => resubmitApprove(recordId, 'merge', 'ממזג קבצים...'),
+                    () => resubmitApprove(recordId, 'keep_both', 'שומר שניהם...'),
+                    () => resubmitApprove(recordId, 'override', 'מחליף קובץ...')
+                );
+                return;
+            }
+
+            if (!data.ok) throw new Error(formatAIResponseError(data));
+
+            const approvedItem = aiClassificationsData.find(i => i.id === recordId);
+            const resolvedDocId = data.doc_id || approvedItem?.matched_doc_record_id;
+            if (resolvedDocId && approvedItem) {
+                updateClientDocState(approvedItem.client_name, resolvedDocId);
+            }
+            transitionCardToReviewed(recordId, 'approved', data);
+            showAIToast(formatAISuccessToast(data), 'success');
+        } catch (error) {
+            clearCardLoading(recordId);
+            showModal('error', 'שגיאה', error.message);
+        }
+    }, { confirmText: 'נכון - הוסף', btnClass: 'btn-success' });
 }
 
 // DL-270: Inline click-to-edit contract period dates
