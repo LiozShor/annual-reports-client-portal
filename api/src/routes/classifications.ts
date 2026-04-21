@@ -203,17 +203,41 @@ classifications.get('/get-pending-classifications', async (c) => {
       }
     }
 
-    // ---- Step 4: Fetch documents + templates + categories (parallel, all cached) ----
-    // DL-254: Cache documents query (5min TTL) to reduce Airtable calls under load
+    // ---- Step 4: Fetch documents + templates + categories (parallel) ----
+    // DL-321: Scope documents fetch to only reports referenced by pending classifications.
+    // Build union of reportIdSet (from classifications) + all reports in clientToReports map.
+    const allRelevantReportIds = new Set<string>(reportIdSet);
+    for (const reports of clientToReports.values()) {
+      for (const r of reports) allRelevantReportIds.add(r.reportId);
+    }
+
+    const relevantReportIdList = Array.from(allRelevantReportIds);
+
+    // DL-321: Chunked parallel fetch — same pattern as REPORTS chunk fetch above.
+    // Chunk size 50. If no relevant reports, skip the fetch entirely.
+    const docFetchPromise: Promise<any[]> = relevantReportIdList.length === 0
+      ? Promise.resolve([])
+      : Promise.all(
+          (() => {
+            const chunks: Promise<any[]>[] = [];
+            for (let i = 0; i < relevantReportIdList.length; i += 50) {
+              const chunk = relevantReportIdList.slice(i, i + 50);
+              const orClauses = chunk.map(id => `FIND('${id}', ARRAYJOIN({report}))`).join(',');
+              const formula = `AND({status} != 'Waived', OR(${orClauses}))`;
+              chunks.push(
+                airtable.listAllRecords(TABLES.DOCUMENTS, {
+                  filterByFormula: formula,
+                  // DL-320: include onedrive_item_id for shared-ref map (multi-match sibling visibility)
+                  fields: ['report', 'type', 'issuer_name', 'status', 'category', 'onedrive_item_id'],
+                })
+              );
+            }
+            return chunks;
+          })()
+        ).then(batches => batches.flat());
+
     const [docRecords, templateRecords, categoryRecords] = await Promise.all([
-      // DL-320: bumped cache key to v2 — `onedrive_item_id` now fetched so we can compute
-      // shared_ref_count / shared_with_titles / shared_record_ids per item.
-      getCachedOrFetch(c.env.CACHE_KV, 'cache:documents_non_waived_v2', 300, () =>
-        airtable.listAllRecords(TABLES.DOCUMENTS, {
-          filterByFormula: `{status} != 'Waived'`,
-          fields: ['report', 'type', 'issuer_name', 'status', 'category', 'onedrive_item_id'],
-        })
-      ),
+      docFetchPromise,
       getCachedOrFetch(c.env.CACHE_KV, 'cache:templates', 3600,
         () => airtable.listAllRecords(TABLES.TEMPLATES)),
       getCachedOrFetch(c.env.CACHE_KV, 'cache:categories', 3600,
@@ -235,6 +259,16 @@ classifications.get('/get-pending-classifications', async (c) => {
       }))
     );
 
+    // DL-321: Memoize buildShortName calls across Steps 5 and 6 (called per doc and per item).
+    const shortNameMemo = new Map<string, string | null>();
+    const memoShortName = (templateId: string, docName: string): string | null => {
+      const key = `${templateId}::${docName}`;
+      if (shortNameMemo.has(key)) return shortNameMemo.get(key)!;
+      const resolved = templateId ? buildShortName(templateId, docName, templateMap) : null;
+      shortNameMemo.set(key, resolved);
+      return resolved;
+    };
+
     // Group docs by report ID
     const docsByReport = new Map<string, { missing: any[]; all: any[] }>();
 
@@ -253,7 +287,7 @@ classifications.get('/get-pending-classifications', async (c) => {
       const catId = (f.category as string) || 'general';
       const catInfo = categoryMap.get(catId);
       const docName = (f.issuer_name as string) || tmpl?.name_he || (f.type as string) || '';
-      const resolvedShort = f.type ? buildShortName(f.type as string, docName, templateMap) : null;
+      const resolvedShort = f.type ? memoShortName(f.type as string, docName) : null;
       const shortName = resolvedShort || tmpl?.name_he || '';
       const docEntry = {
         doc_record_id: doc.id,
@@ -314,10 +348,9 @@ classifications.get('/get-pending-classifications', async (c) => {
 
       // Strategy 3: fall back to buildShortName with matched_doc_name or issuer_name
       if (!matchedShortName) {
-        matchedShortName = buildShortName(
+        matchedShortName = memoShortName(
           f.matched_template_id as string,
           (f.matched_doc_name as string) || (issuerName ? `<b>${issuerName}</b>` : ''),
-          templateMap,
         );
       }
 
