@@ -249,6 +249,7 @@ classifications.get('/get-pending-classifications', async (c) => {
         name_short: shortName,
         name_html: docName,
         status: f.status,
+        onedrive_item_id: f.onedrive_item_id,
         category: catId,
         category_name: catInfo?.name_he || catId,
         category_emoji: catInfo?.emoji || '',
