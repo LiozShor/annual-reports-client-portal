@@ -602,6 +602,9 @@ async function processAttachmentWithClassification(
     conversion_error: conversionError || undefined,
     page_count: pageCount,
     contract_period: classification?.contractPeriod ? JSON.stringify(classification.contractPeriod) : null,
+    // DL-315: flag when the classifier ran against the full filing-type catalog
+    // because the client has not submitted the questionnaire yet.
+    pre_questionnaire: classification?.preQuestionnaire ?? false,
   };
 
   await pCtx.airtable.createRecords(TABLES.PENDING_CLASSIFICATIONS, [
@@ -783,17 +786,23 @@ export async function processInboundEmail(
       const classificationResults: (ClassificationResult | null)[] = new Array(attachments.length).fill(null);
       for (let batch = 0; batch < attachments.length; batch += CLASSIFY_BATCH_SIZE) {
         const batchEnd = Math.min(batch + CLASSIFY_BATCH_SIZE, attachments.length);
-        const batchPromises = attachments.slice(batch, batchEnd).map(async (attachment, idx) => {
+        // DL-315: pre-questionnaire fallback — when client has no required_docs yet
+        // (stage Send_Questionnaire / Waiting_For_Answers), classify against the full
+        // filing-type catalog instead of skipping.
+        const preQuestionnaireStage =
+          primaryReport.stage === 'Send_Questionnaire' ||
+          primaryReport.stage === 'Waiting_For_Answers';
+        const fallbackMode = requiredDocs.length === 0 || preQuestionnaireStage;
+        const batchPromises = attachments.slice(batch, batchEnd).map(async (attachment) => {
           try {
-            if (requiredDocs.length > 0) {
-              return await classifyAttachment(pCtx, attachment, requiredDocs, primaryReport.clientName, {
-                subject: metadata.subject,
-                bodyPreview: metadata.bodyPreview,
-                senderName: metadata.senderName,
-                senderEmail: metadata.senderEmail,
-              });
-            }
-            return null;
+            return await classifyAttachment(pCtx, attachment, requiredDocs, primaryReport.clientName, {
+              subject: metadata.subject,
+              bodyPreview: metadata.bodyPreview,
+              senderName: metadata.senderName,
+              senderEmail: metadata.senderEmail,
+              fallbackMode,
+              filingType: primaryReport.filingType,
+            });
           } catch (err) {
             console.error(`[inbound] Classification failed for "${attachment.name}":`, (err as Error).message);
             return null;

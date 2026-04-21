@@ -140,6 +140,8 @@ export interface ClassificationResult {
   matchQuality: string | null;
   additionalMatches?: AdditionalMatch[];
   contractPeriod?: { startDate: string; endDate: string; coversFullYear: boolean } | null;
+  /** DL-315: set when classifier ran against full filing-type catalog because client has no required_docs yet */
+  preQuestionnaire?: boolean;
 }
 
 // ---------------------------------------------------------------------------

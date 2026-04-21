@@ -345,6 +345,8 @@ classifications.get('/get-pending-classifications', async (c) => {
         contract_period: (() => {
           try { return f.contract_period ? JSON.parse(f.contract_period as string) : null; } catch { return null; }
         })(),
+        // DL-315: classifier ran against full filing-type catalog (client had no required_docs yet)
+        pre_questionnaire: !!f.pre_questionnaire,
         client_notes: clientNotesMap.get(reportId) || '',
         filing_type: filingTypeMap.get(reportId) || 'annual_report', // DL-238
         // DL-239: Cross-filing-type reassign — include sibling report's docs
