@@ -28,14 +28,3 @@ export function invalidateCache(kv: KVNamespace, ...keys: string[]): void {
     kv.delete(k).catch(() => {});
   }
 }
-
-const PENDING_CLS_CACHE_KEYS = [
-  'cache:pending_classifications:all',
-  'cache:pending_classifications:annual_report',
-  'cache:pending_classifications:capital_statements',
-] as const;
-
-/** Invalidate all pending-classifications response cache keys (fire-and-forget). */
-export function invalidatePendingClassificationsCache(kv: KVNamespace): void {
-  invalidateCache(kv, ...PENDING_CLS_CACHE_KEYS);
-}

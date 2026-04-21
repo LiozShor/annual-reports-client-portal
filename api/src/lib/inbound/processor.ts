@@ -27,7 +27,6 @@ import { classifyAttachment, checkFileHashDuplicate, TEMPLATE_TITLES } from './d
 import { getPdfPageCount } from '../pdf-split';
 import { imageToPdf } from './image-to-pdf';
 import { expandArchiveAttachments } from './archive-expander';
-import { invalidatePendingClassificationsCache } from '../cache';
 
 // ---------------------------------------------------------------------------
 // Airtable field interfaces
@@ -611,8 +610,6 @@ async function processAttachmentWithClassification(
   await pCtx.airtable.createRecords(TABLES.PENDING_CLASSIFICATIONS, [
     { fields: classFields },
   ]);
-  // DL-318: Invalidate response-level KV cache so the new classification shows immediately
-  invalidatePendingClassificationsCache(pCtx.env.CACHE_KV);
 
   // Step 7: Update document record if matched (and not duplicate)
   if (classification?.matchedDocRecordId && !isDuplicate) {
