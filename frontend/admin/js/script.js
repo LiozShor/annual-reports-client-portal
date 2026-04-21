@@ -543,6 +543,7 @@ function _syncReviewsGroupBadge() {
 
 function syncAIBadge(topBadge, count) {
     const bottomBadge = document.getElementById('aiReviewBottomBadge');
+    topBadge.classList.remove('ai-badge-loading');
     if (count > 0) {
         topBadge.textContent = count;
         topBadge.style.display = 'inline-flex';
