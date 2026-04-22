@@ -5864,7 +5864,7 @@ function openBatchQuestionsModal(clientName) {
                 <button type="button" class="btn btn-ghost btn-sm batch-q-add" style="align-self:flex-start;margin-top:4px;">+ הוסף שאלה</button>
             </div>
             <div class="batch-q-footer" style="display:flex;align-items:center;gap:8px;padding:12px 16px;border-top:1px solid var(--border-color,#e5e7eb);flex-wrap:wrap;">
-                <button type="button" class="btn btn-primary btn-sm batch-q-send">${icon('send','icon-xs')} הוסף שאלה</button>
+                <button type="button" class="btn btn-primary btn-sm batch-q-save">${icon('save','icon-xs')} שמור</button>
                 <button type="button" class="btn btn-ghost btn-sm batch-q-cancel">ביטול</button>
             </div>
         </div>
@@ -5875,7 +5875,7 @@ function openBatchQuestionsModal(clientName) {
 
     const body = overlay.querySelector('.batch-q-body');
     const addBtn = overlay.querySelector('.batch-q-add');
-    const sendBtn = overlay.querySelector('.batch-q-send');
+    const saveBtn = overlay.querySelector('.batch-q-save');
     const cancelBtn = overlay.querySelector('.batch-q-cancel');
     const closeBtn = overlay.querySelector('.batch-q-close');
 
@@ -5940,42 +5940,67 @@ function openBatchQuestionsModal(clientName) {
     });
 
 
-    sendBtn.addEventListener('click', async () => {
+    saveBtn.addEventListener('click', async () => {
         const qs = collectQuestions();
-        if (!validateQuestions(qs)) { showAIToast('יש להזין לפחות שאלה אחת', 'danger'); return; }
-        sendBtn.disabled = true;
+        // Build target map: file_id → question text (drop cards without a valid file_id)
+        const target = new Map();
+        for (const q of qs) {
+            if (!q.file_id) continue;
+            target.set(q.file_id, q.question);
+        }
+        // Determine previously-persisted IDs so we can clear any that were removed
+        const previouslySet = new Set(
+            clientItems.filter(i => i.pending_question).map(i => i.id)
+        );
+
+        const ops = [];
+        for (const [fileId, text] of target.entries()) {
+            const trimmed = text.trim();
+            const item = clientItems.find(i => i.id === fileId);
+            if (!item) continue;
+            const prior = item.pending_question || '';
+            if (prior === trimmed) continue; // no-op
+            ops.push({ fileId, text: trimmed || null, item });
+        }
+        for (const id of previouslySet) {
+            if (!target.has(id)) {
+                const item = clientItems.find(i => i.id === id);
+                if (item) ops.push({ fileId: id, text: null, item });
+            }
+        }
+
+        saveBtn.disabled = true;
         try {
-            const resp = await fetchWithTimeout(ENDPOINTS.SEND_BATCH_QUESTIONS, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
-                body: JSON.stringify({ report_id: reportId, questions: qs }),
-            }, FETCH_TIMEOUTS.load);
-            const data = await resp.json();
-            if (!resp.ok || !data.ok) {
-                showAIToast(data.error || 'שגיאה בשליחה', 'danger');
-                sendBtn.disabled = false;
+            const results = await Promise.all(ops.map(op =>
+                fetchWithTimeout(ENDPOINTS.SAVE_CLASSIFICATION_QUESTION, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
+                    body: JSON.stringify({ classification_id: op.fileId, question: op.text }),
+                }, FETCH_TIMEOUTS.load).then(r => r.json()).then(d => ({ op, d }))
+            ));
+            const failed = results.find(r => !r.d || r.d.ok === false);
+            if (failed) {
+                showAIToast(failed.d?.error || 'שגיאה בשמירה', 'danger');
+                saveBtn.disabled = false;
                 return;
             }
-            // Clear pending_question in memory and re-render cards with questions
-            clientItems.forEach(item => {
-                if (item.pending_question) {
-                    item.pending_question = '';
-                    const card = document.querySelector(`.ai-review-card[data-id="${item.id}"]`);
-                    if (card) {
-                        const isReviewed = item.review_status && item.review_status !== 'pending';
-                        const tmpDiv = document.createElement('div');
-                        tmpDiv.innerHTML = isReviewed ? renderReviewedCard(item, item.review_status) : renderAICard(item);
-                        card.replaceWith(tmpDiv.firstElementChild);
-                    }
+            // Apply locally + re-render affected cards
+            for (const { op } of results) {
+                op.item.pending_question = op.text || '';
+                const card = document.querySelector(`.ai-review-card[data-id="${op.item.id}"]`);
+                if (card) {
+                    const isReviewed = op.item.review_status && op.item.review_status !== 'pending';
+                    const tmpDiv = document.createElement('div');
+                    tmpDiv.innerHTML = isReviewed ? renderReviewedCard(op.item, op.item.review_status) : renderAICard(op.item);
+                    card.replaceWith(tmpDiv.firstElementChild);
                 }
-            });
-            _batchQuestionsSentClients.add(clientName);
+            }
             close();
-            showAIToast('השאלות נשלחו ללקוח');
+            showAIToast('השאלות נשמרו');
             showClientReviewDonePrompt(clientName);
         } catch (_err) {
             showAIToast('שגיאה בתקשורת עם השרת', 'danger');
-            sendBtn.disabled = false;
+            saveBtn.disabled = false;
         }
     });
 
