@@ -84,6 +84,28 @@ Five-part bundle to reduce AI Review endpoint latency from 14–17 s cold to ~2�
 Design log: `.agent/design-logs/admin-ui/321-ai-review-perf-bundle.md`
 
 ---
+**Last Updated:** 2026-04-22 (DL-322 note-save silent-failure instrumentation — IMPLEMENTED, NEED TESTING + DEPLOY)
+
+## DL-322 Note-Save Silent Failures — IMPLEMENTED, NEED TESTING + DEPLOY
+
+Branch: `DL-322-note-save-silent-failures`. **Worker deploy required** (blocked on user approval — `cd api && npx wrangler deploy`).
+
+Trigger: inbound email from `coralhouse2@gmail.com` (Graph msg `CAC7HTUAHtBT...`) on 2026-04-21 15:05 UTC was email-matched to report `reccKrGdxPBaAC8Xc` but never produced a client note — `client_notes` is empty. `summarizeAndSaveNote` had 4 silent exits (dedup / body_too_short / llm_skip / exception), none observable. Added `logSecurity` (INFO) at the 3 skip paths and `logError` (INTERNAL) at the catch path. New `event_type: INBOUND_NOTE_SKIPPED` with JSON details `{reason, message_id, report_id, client_id}`. No PII captured (no subject/body in details). Signature gained one param: `clientId: string`. Zero behavior change — pure instrumentation.
+
+**Test checklist (per Section 7):**
+- [x] `./node_modules/.bin/tsc --noEmit` — no new errors
+- [ ] `cd api && npx wrangler deploy` — user approval required
+- [ ] Skip path (LLM): forward attachment-only email from known client → `security_logs` gets INFO row with `reason: llm_skip`, no alert email, `client_notes` stays empty
+- [ ] Skip path (body_too_short): send empty-body email with short subject → `reason: body_too_short` row
+- [ ] Dedup path: re-deliver same `internetMessageId` → `reason: dedup` row
+- [ ] Exception path (dev-only, optional): temporarily `throw` inside try → ERROR row + alert email fires, then revert
+- [ ] Regression: normal email with body → note saved AS BEFORE, no SKIPPED row
+- [ ] Retro-check coralhouse2: next inbound from this sender → confirm which path fired (expected: `llm_skip`)
+
+Design log: `.agent/design-logs/infrastructure/322-note-save-silent-failures.md`
+
+---
+
 
 ## DL-319 Approve-as-Required Button — IMPLEMENTED, NEED TESTING
 

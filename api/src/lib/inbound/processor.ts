@@ -9,6 +9,7 @@ import type { Env } from '../types';
 import { MSGraphClient } from '../ms-graph';
 import { AirtableClient, type AirtableRecord } from '../airtable';
 import { logError } from '../error-logger';
+import { logSecurity } from '../security-log';
 import {
   type ProcessingContext,
   type EmailMetadata,
@@ -295,7 +296,22 @@ async function summarizeAndSaveNote(
   report: ActiveReport,
   existingClientNotes: string,
   clientEmail: string,
+  clientId: string,
 ): Promise<void> {
+  const msgId = metadata.internetMessageId || '';
+  const logSkip = (reason: 'dedup' | 'body_too_short' | 'llm_skip') => {
+    logSecurity(pCtx.ctx, pCtx.airtable, {
+      timestamp: new Date().toISOString(),
+      event_type: 'INBOUND_NOTE_SKIPPED',
+      severity: 'INFO',
+      actor: 'worker',
+      actor_ip: 'internal',
+      endpoint: '/inbound/note-save',
+      http_status: 200,
+      details: JSON.stringify({ reason, message_id: msgId, report_id: report.reportRecordId, client_id: clientId }),
+    });
+  };
+
   try {
     const subject = (metadata.subject || '').trim();
 
@@ -307,8 +323,8 @@ async function summarizeAndSaveNote(
     } catch { notes = []; }
 
     // Dedup by internet_message_id
-    const msgId = metadata.internetMessageId || '';
     if (msgId && notes.some((n: any) => n.message_id === msgId)) {
+      logSkip('dedup');
       return;
     }
 
@@ -316,6 +332,7 @@ async function summarizeAndSaveNote(
     const rawBody = metadata.bodyText || metadata.bodyPreview || '';
     const cleanBody = stripQuotedContent(rawBody);
     if (cleanBody.length < 10 && subject.length < 5) {
+      logSkip('body_too_short');
       return;
     }
 
@@ -372,7 +389,10 @@ Rules:
       };
       const toolBlock = data.content?.find((b) => b.type === 'tool_use');
       if (toolBlock?.input) {
-        if (toolBlock.input.skip) return; // LLM determined no meaningful content
+        if (toolBlock.input.skip) {
+          logSkip('llm_skip');
+          return;
+        }
         summary = String(toolBlock.input.summary || '');
         cleanText = String(toolBlock.input.clean_text || '');
       }
@@ -400,6 +420,12 @@ Rules:
     });
   } catch (err) {
     console.error('[inbound] summarizeAndSaveNote failed:', (err as Error).message);
+    logError(pCtx.ctx, pCtx.env, {
+      endpoint: '/inbound/note-save',
+      error: err,
+      category: 'INTERNAL',
+      details: JSON.stringify({ message_id: msgId, report_id: report.reportRecordId, client_id: clientId }),
+    });
   }
 }
 
@@ -752,7 +778,7 @@ export async function processInboundEmail(
     // 12. LLM summarize email → save client note (always, any stage)
     // DL-282: match-method-aware sender resolution — never surface the forwarder
     const noteSenderEmail = await resolveNoteSenderEmail(airtable, reportClientEmail, clientMatch);
-    const notePromise = summarizeAndSaveNote(pCtx, metadata, primaryReport, existingClientNotes, noteSenderEmail).catch((err) => {
+    const notePromise = summarizeAndSaveNote(pCtx, metadata, primaryReport, existingClientNotes, noteSenderEmail, clientMatch.clientId).catch((err) => {
       console.error('[inbound] Note save failed:', (err as Error).message);
     });
 
