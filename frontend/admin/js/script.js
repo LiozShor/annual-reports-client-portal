@@ -10009,7 +10009,15 @@ function toggleArchiveMode() {
 // ==================== ROW MENU / CONTEXT MENU ====================
 
 function closeAllRowMenus() {
-    document.querySelectorAll('.row-menu.open').forEach(m => m.classList.remove('open'));
+    document.querySelectorAll('.row-menu.open').forEach(m => {
+        m.classList.remove('open');
+        // Return portaled menu to its original DOM position (escape from body)
+        if (m._portalParent) {
+            m._portalParent.insertBefore(m, m._portalSibling || null);
+            delete m._portalParent;
+            delete m._portalSibling;
+        }
+    });
     const ctx = document.getElementById('clientContextMenu');
     if (ctx) { ctx.style.display = 'none'; ctx.classList.remove('open'); }
     // Close all tab dropdowns
@@ -10022,10 +10030,17 @@ function closeAllRowMenus() {
 
 function toggleRowMenu(btn, e) {
     e.stopPropagation();
-    const menu = btn.nextElementSibling;
+    // Support portaled menus (moved to body) by storing reference on button
+    const menu = btn._rowMenu || btn.nextElementSibling;
+    if (!menu) return;
+    btn._rowMenu = menu;
     const wasOpen = menu.classList.contains('open');
     closeAllRowMenus();
     if (!wasOpen) {
+        // Portal: append to body so overflow:hidden on card ancestors never clips it
+        menu._portalParent = menu.parentNode;
+        menu._portalSibling = menu.nextSibling;
+        document.body.appendChild(menu);
         positionFloating(btn, menu);
         menu.classList.add('open');
     }
