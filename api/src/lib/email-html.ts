@@ -802,6 +802,7 @@ export function buildBatchQuestionsHtml(
     `<tr><td style="font-size:15px; color:${C.body}; line-height:1.6; padding-bottom:24px; font-family:${FONT}; direction:${dir}; text-align:${align};">${intro}</td></tr>` +
     `<tr><td style="padding-bottom:16px;">${cardsHtml}</td></tr>` +
     `<tr><td style="font-size:15px; color:${C.body}; line-height:1.6; padding-bottom:16px; font-family:${FONT}; direction:${dir}; text-align:${align};">${replyText}</td></tr>` +
+    (isEnglish ? '' : `<tr><td>${contactBlock()}</td></tr>`) +
     `</table>` +
     dividerRow() +
     `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">` +
