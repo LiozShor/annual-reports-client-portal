@@ -634,7 +634,13 @@ function loadMobileDocPreview(recordId) {
     }).catch(err => {
         loading.style.display = 'none';
         error.style.display = '';
-        errorMsg.textContent = err.message || 'שגיאה בטעינת תצוגה מקדימה';
+        errorMsg.textContent = humanizeError(err);
+        const retryBtn = document.getElementById('mobilePreviewRetryBtn');
+        if (retryBtn) {
+            const isTimeout = err?.name === 'TimeoutError' || /signal timed out/i.test(err?.message || '');
+            retryBtn.style.display = isTimeout ? '' : 'none';
+            retryBtn.onclick = () => loadMobileDocPreview(item.id);
+        }
     });
 }
 
@@ -3592,10 +3598,17 @@ const REJECTION_REASONS = {
 
 // ---- Document Preview ----
 
+function humanizeError(err) {
+    if (err?.name === 'TimeoutError' || /signal timed out/i.test(err?.message || '')) {
+        return 'הפעולה ארכה יותר מדי — נסה שוב';
+    }
+    return err?.message || 'שגיאה לא ידועה';
+}
+
 async function getDocPreviewUrl(itemId) {
     const response = await fetchWithTimeout(
         `${ENDPOINTS.GET_PREVIEW_URL}?itemId=${encodeURIComponent(itemId)}`,
-        { headers: { 'Authorization': `Bearer ${authToken}` } }, FETCH_TIMEOUTS.load
+        { headers: { 'Authorization': `Bearer ${authToken}` } }, FETCH_TIMEOUTS.slow
     );
     const data = await response.json();
     if (!data.ok) throw new Error(data.error || 'Failed to get preview URL');
@@ -3697,7 +3710,13 @@ async function loadDocPreview(recordId) {
         loading.style.display = 'none';
         iframe.style.display = 'none';
         error.style.display = '';
-        errorMsg.textContent = err.message || 'שגיאה בטעינת תצוגה מקדימה';
+        errorMsg.textContent = humanizeError(err);
+        const retryBtn = document.getElementById('previewRetryBtn');
+        if (retryBtn) {
+            const isTimeout = err?.name === 'TimeoutError' || /signal timed out/i.test(err?.message || '');
+            retryBtn.style.display = isTimeout ? '' : 'none';
+            retryBtn.onclick = () => loadDocPreview(recordId);
+        }
     }
 }
 
@@ -4767,7 +4786,7 @@ async function cascadeRevertAIClassification(recordId) {
         loadAIClassifications(true, false);
     } catch (error) {
         clearCardLoading(recordId);
-        showModal('error', 'שגיאה', error.message);
+        showModal('error', 'שגיאה', humanizeError(error));
     }
 }
 
@@ -4910,7 +4929,7 @@ async function approveAIClassification(recordId) {
             showAIToast(formatAISuccessToast(data), 'success');
         } catch (error) {
             clearCardLoading(recordId);
-            showModal('error', 'שגיאה', error.message);
+            showModal('error', 'שגיאה', humanizeError(error));
         }
     }, { confirmText: 'נכון', btnClass: 'btn-success' });
 }
@@ -4960,7 +4979,7 @@ async function approveAIClassificationAddRequired(recordId, templateId) {
             showAIToast(formatAISuccessToast(data), 'success');
         } catch (error) {
             clearCardLoading(recordId);
-            showModal('error', 'שגיאה', error.message);
+            showModal('error', 'שגיאה', humanizeError(error));
         }
     }, { confirmText: 'נכון - הוסף', btnClass: 'btn-success' });
 }
@@ -5112,7 +5131,7 @@ async function requestMissingPeriod(recordId, startMonth, endMonth, btn) {
         showAIToast(`נוסף מסמך חסר: חוזה שכירות ${data.period_label}`, 'success');
     } catch (error) {
         if (btn) { btn.disabled = false; btn.innerHTML = `${icon('plus', 'icon-sm')} בקש חוזה`; safeCreateIcons(); }
-        showModal('error', 'שגיאה', error.message);
+        showModal('error', 'שגיאה', humanizeError(error));
     }
 }
 // Backwards compat
@@ -5150,7 +5169,7 @@ async function resubmitApprove(recordId, mode, loadingText) {
         showAIToast(`${modeLabel} — ${formatAISuccessToast(data)}`, 'success');
     } catch (error) {
         clearCardLoading(recordId);
-        showModal('error', 'שגיאה', error.message);
+        showModal('error', 'שגיאה', humanizeError(error));
     }
 }
 
@@ -5196,7 +5215,7 @@ async function resubmitReassign(recordId, templateId, docRecordId, newDocName, m
         showAIToast(`${modeLabel} — ${formatAISuccessToast(data)}`, 'success');
     } catch (error) {
         clearCardLoading(recordId);
-        showModal('error', 'שגיאה', error.message);
+        showModal('error', 'שגיאה', humanizeError(error));
     }
 }
 
@@ -5276,7 +5295,7 @@ async function executeReject(recordId, rejectionReason, notes) {
         showAIToast(formatAISuccessToast(data), 'danger');
     } catch (error) {
         clearCardLoading(recordId);
-        showModal('error', 'שגיאה', error.message);
+        showModal('error', 'שגיאה', humanizeError(error));
     }
 }
 
@@ -5411,7 +5430,7 @@ async function submitAIReassign(recordId, templateId, docRecordId, loadingText, 
         showAIToast(formatAISuccessToast(data), 'success');
     } catch (error) {
         clearCardLoading(recordId);
-        showModal('error', 'שגיאה', error.message);
+        showModal('error', 'שגיאה', humanizeError(error));
     }
 }
 
@@ -5557,7 +5576,7 @@ async function confirmAIAlsoMatch(recordId) {
         transitionCardToReviewed(recordId, 'approved', data);
     } catch (error) {
         clearCardLoading(recordId);
-        showModal('error', 'שגיאה', error.message || 'שגיאה לא ידועה');
+        showModal('error', 'שגיאה', humanizeError(error));
     }
 }
 
@@ -9377,7 +9396,7 @@ async function executeReminderAction(action, reportIds, value, forceOverride) {
     } catch (error) {
         if (isBulk) hideLoading();
         else clearRowLoading(reportIds[0]);
-        showModal('error', 'שגיאה', error.message);
+        showModal('error', 'שגיאה', humanizeError(error));
     }
 }
 
@@ -9608,7 +9627,7 @@ async function doSaveReminderSettings(maxVal) {
         filterReminders();
     } catch (error) {
         hideLoading();
-        showModal('error', 'שגיאה', error.message);
+        showModal('error', 'שגיאה', humanizeError(error));
     }
 }
 
@@ -11848,7 +11867,7 @@ async function confirmSplit() {
         // Phase 1 failed — original reverted to pending by backend
         updateStep(0, 'failed', err.message);
         document.getElementById('splitCancelBtn').disabled = false;
-        showModal('error', 'שגיאה בפיצול', err.message);
+        showModal('error', 'שגיאה בפיצול', humanizeError(err));
     }
 }
 
