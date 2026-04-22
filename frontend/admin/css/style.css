@@ -3309,13 +3309,30 @@ tr:hover .client-view-link {
 
 .ai-review-split {
     display: grid;
-    grid-template-columns: 260px minmax(480px, 640px) 1fr;
+    grid-template-columns: 300px minmax(420px, 520px) 1fr;
+    grid-template-rows: 1fr auto;
     gap: var(--sp-3);
     align-items: start;
     height: calc(100vh - 180px);
     overflow: hidden;
     overscroll-behavior: none;
 }
+
+.ai-review-clients,
+.ai-review-docs,
+.ai-review-detail {
+    grid-row: 1;
+}
+
+.ai-review-pagination {
+    grid-row: 2;
+    grid-column: 1;
+    padding: var(--sp-2) var(--sp-1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.ai-review-pagination:empty { display: none; }
 
 .ai-review-clients,
 .ai-review-docs {
@@ -3431,15 +3448,15 @@ tr:hover .client-view-link {
 }
 
 @media (max-width: 1600px) {
-    .ai-review-split { grid-template-columns: 240px minmax(440px, 560px) 1fr; gap: var(--sp-2); }
+    .ai-review-split { grid-template-columns: 280px minmax(400px, 480px) 1fr; gap: var(--sp-2); }
 }
 
 @media (max-width: 1300px) {
-    .ai-review-split { grid-template-columns: 220px minmax(400px, 480px) 1fr; gap: var(--sp-2); }
+    .ai-review-split { grid-template-columns: 250px minmax(380px, 440px) 1fr; gap: var(--sp-2); }
 }
 
 @media (max-width: 1100px) {
-    .ai-review-split { grid-template-columns: 200px 380px 1fr; gap: var(--sp-2); }
+    .ai-review-split { grid-template-columns: 220px 360px 1fr; gap: var(--sp-2); }
 }
 
 /* Mobile breakpoint for 3-pane is handled by the existing mobile block below (line ~4617) — unchanged behavior per DL-330 scope */
