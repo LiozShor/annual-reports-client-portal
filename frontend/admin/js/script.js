@@ -5815,8 +5815,7 @@ function openBatchQuestionsModal(clientName) {
                 <button type="button" class="btn btn-ghost btn-sm batch-q-add" style="align-self:flex-start;margin-top:4px;">+ הוסף שאלה</button>
             </div>
             <div class="batch-q-footer" style="display:flex;align-items:center;gap:8px;padding:12px 16px;border-top:1px solid var(--border-color,#e5e7eb);flex-wrap:wrap;">
-                <button type="button" class="btn btn-secondary btn-sm batch-q-preview">${icon('eye','icon-xs')} תצוגה מקדימה</button>
-                <button type="button" class="btn btn-primary btn-sm batch-q-send">${icon('send','icon-xs')} שלח שאלות</button>
+                <button type="button" class="btn btn-primary btn-sm batch-q-send">${icon('send','icon-xs')} הוסף שאלה</button>
                 <button type="button" class="btn btn-ghost btn-sm batch-q-cancel">ביטול</button>
             </div>
         </div>
@@ -5828,7 +5827,6 @@ function openBatchQuestionsModal(clientName) {
     const body = overlay.querySelector('.batch-q-body');
     const addBtn = overlay.querySelector('.batch-q-add');
     const sendBtn = overlay.querySelector('.batch-q-send');
-    const previewBtn = overlay.querySelector('.batch-q-preview');
     const cancelBtn = overlay.querySelector('.batch-q-cancel');
     const closeBtn = overlay.querySelector('.batch-q-close');
 
@@ -5892,17 +5890,6 @@ function openBatchQuestionsModal(clientName) {
         renumberCards();
     });
 
-    previewBtn.addEventListener('click', () => {
-        const qs = collectQuestions();
-        if (!validateQuestions(qs)) { showAIToast('יש להזין לפחות שאלה אחת', 'danger'); return; }
-        window.showEmailPreviewModal({
-            reportId,
-            clientName,
-            getToken: () => authToken,
-            endpoint: ENDPOINTS.SEND_BATCH_QUESTIONS,
-            extraPayload: { questions: qs },
-        });
-    });
 
     sendBtn.addEventListener('click', async () => {
         const qs = collectQuestions();
