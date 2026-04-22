@@ -10,7 +10,7 @@
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📋</text></svg>">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" integrity="sha384-vtjasyidUo0kW94K5MXDXntzOJpQgBKXmE7e2Ga4LG0skTTLeBi97eFAXsqewJjw" crossorigin="anonymous"></script>
     <link rel="stylesheet" href="../assets/css/design-system.css">
-    <link rel="stylesheet" href="css/style.css?v=288">
+    <link rel="stylesheet" href="css/style.css?v=289">
 
 </head>
 
@@ -338,6 +338,14 @@
                 <a href="./" class="nav-brand">
                     <img src="../assets/images/logo.png" alt="משרד רו״ח Client Name" class="site-logo site-logo-sm" width="1010" height="306">
                 </a>
+                <div class="entity-tabs">
+                    <button class="entity-tab active" data-type="annual_report" onclick="switchEntityTab('annual_report')">
+                        <svg class="icon icon-sm" aria-hidden="true" focusable="false" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"><use href="#icon-file-text"/></svg> דוחות שנתיים
+                    </button>
+                    <button class="entity-tab" data-type="capital_statement" onclick="switchEntityTab('capital_statement')">
+                        <svg class="icon icon-sm" aria-hidden="true" focusable="false" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"><use href="#icon-landmark"/></svg> הצהרות הון
+                    </button>
+                </div>
                 <div class="entity-toggle-navbar" id="entityToggleNavbar">
                     <button class="entity-nav-btn active" data-type="annual_report" onclick="switchEntityTab('annual_report')">שנתיים</button>
                     <button class="entity-nav-btn" data-type="capital_statement" onclick="switchEntityTab('capital_statement')">הון</button>
@@ -352,15 +360,6 @@
                 </div>
             </nav>
         </header>
-
-        <div class="entity-tabs">
-            <button class="entity-tab active" data-type="annual_report" onclick="switchEntityTab('annual_report')">
-                <svg class="icon icon-sm" aria-hidden="true" focusable="false" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"><use href="#icon-file-text"/></svg> דוחות שנתיים
-            </button>
-            <button class="entity-tab" data-type="capital_statement" onclick="switchEntityTab('capital_statement')">
-                <svg class="icon icon-sm" aria-hidden="true" focusable="false" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"><use href="#icon-landmark"/></svg> הצהרות הון
-            </button>
-        </div>
 
         <div class="tabs-nav">
             <button class="tab-item active" onclick="switchTab('dashboard', event)"><svg class="icon icon-sm" aria-hidden="true" focusable="false" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"><use href="#icon-bar-chart-3"/></svg> לוח בקרה</button>
