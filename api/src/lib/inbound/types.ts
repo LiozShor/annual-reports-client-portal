@@ -142,6 +142,10 @@ export interface ClassificationResult {
   contractPeriod?: { startDate: string; endDate: string; coversFullYear: boolean } | null;
   /** DL-315: set when classifier ran against full filing-type catalog because client has no required_docs yet */
   preQuestionnaire?: boolean;
+  /** DL-321: false when attachment is decorative, signature, or blank page — processor may short-circuit */
+  isDocument?: boolean;
+  /** DL-321: category when isDocument=false; 'not_applicable' when isDocument=true */
+  nonDocumentReason?: 'decorative' | 'signature' | 'blank_page' | 'not_applicable';
 }
 
 // ---------------------------------------------------------------------------

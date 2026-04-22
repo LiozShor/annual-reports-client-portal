@@ -4609,7 +4609,7 @@ function renderReviewedCard(item, reviewStatus) {
     const isApproved = reviewStatus === 'approved';
     const alsoMatchBtn = isApproved
         ? `<button class="btn btn-outline btn-sm ai-also-match-btn" onclick="showAIAlsoMatchModal('${escapeAttr(item.id)}')">
-               ${icon('link-2', 'icon-sm')} הקובץ תואם למסמך נוסף
+               ${icon('copy-plus', 'icon-sm')} הקובץ תואם למסמך נוסף
            </button>`
         : '';
 
