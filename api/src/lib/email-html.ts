@@ -780,12 +780,15 @@ export function buildBatchQuestionsHtml(
     const docName = q.short_name
       ? `${q.short_name} (${q.attachment_name})`
       : q.attachment_name;
+    const docRow = docName
+      ? `<tr><td style="font-size:13px;color:#6b7280;padding-bottom:4px;direction:${dir};text-align:${align};">${docLabel}: <strong style="color:#374151;">${docName}</strong></td></tr>`
+      : '';
     cardsHtml +=
       `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:12px;">` +
       `<tr><td style="background-color:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:16px;font-family:${FONT};">` +
       `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">` +
       `<tr><td style="font-size:12px;font-weight:bold;color:#6b7280;padding-bottom:6px;direction:${dir};text-align:${align};">${i + 1}.</td></tr>` +
-      `<tr><td style="font-size:13px;color:#6b7280;padding-bottom:4px;direction:${dir};text-align:${align};">${docLabel}: <strong style="color:#374151;">${docName}</strong></td></tr>` +
+      docRow +
       `<tr><td style="font-size:15px;color:#111827;line-height:1.6;direction:${dir};text-align:${align};">${questionLabel}: ${q.question}</td></tr>` +
       `</table>` +
       `</td></tr></table>`;
