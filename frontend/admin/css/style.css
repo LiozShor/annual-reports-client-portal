@@ -3293,6 +3293,32 @@ tr:hover .client-view-link {
 
 /* ==================== AI REVIEW 3-PANE (DL-330) ==================== */
 
+/* DL-330: search + summary bars were stretching full-viewport after the breakout.
+   Cap them to the clients-column width and right-align (RTL hugs right edge). */
+#tab-ai-review > .ai-filter-bar,
+#tab-ai-review > #aiSummaryBar {
+    max-width: 300px;
+    margin-inline-start: auto;
+    margin-inline-end: 0;
+    margin-bottom: var(--sp-2);
+    box-sizing: border-box;
+}
+#tab-ai-review > .ai-filter-bar { padding: var(--sp-2) var(--sp-3); }
+
+
+/* DL-330: constrain the search bar + summary bar to the clients-column width (RTL: hugs the right edge).
+   Without this, the viewport-breakout on #tab-ai-review stretches them across the full screen. */
+#tab-ai-review > .ai-filter-bar,
+#tab-ai-review > #aiSummaryBar {
+    max-width: 300px;
+    margin-inline-start: auto;
+    margin-inline-end: 0;
+    margin-bottom: var(--sp-2);
+    box-sizing: border-box;
+}
+#tab-ai-review > .ai-filter-bar { padding: var(--sp-2) var(--sp-3); }
+
+
 /* Break out of the .content max-width:1400px cap so all 3 panes can stretch full-viewport (Outlook-style full-screen usage).
    RTL-safe: viewport-breakout with negative left/right. Restore horizontal padding to match the rest of the layout. */
 #tab-ai-review.active {
@@ -3309,7 +3335,8 @@ tr:hover .client-view-link {
 
 .ai-review-split {
     display: grid;
-    grid-template-columns: 300px minmax(420px, 520px) 1fr;
+    /* Preview capped near PDF native render width (~600px) — extra horizontal space goes to the middle docs pane instead of wasted whitespace around the PDF. */
+    grid-template-columns: 300px 1fr minmax(520px, 620px);
     grid-template-rows: 1fr auto;
     gap: var(--sp-3);
     align-items: start;
@@ -3448,15 +3475,15 @@ tr:hover .client-view-link {
 }
 
 @media (max-width: 1600px) {
-    .ai-review-split { grid-template-columns: 280px minmax(400px, 480px) 1fr; gap: var(--sp-2); }
+    .ai-review-split { grid-template-columns: 280px 1fr minmax(500px, 580px); gap: var(--sp-2); }
 }
 
 @media (max-width: 1300px) {
-    .ai-review-split { grid-template-columns: 250px minmax(380px, 440px) 1fr; gap: var(--sp-2); }
+    .ai-review-split { grid-template-columns: 250px 1fr minmax(460px, 540px); gap: var(--sp-2); }
 }
 
 @media (max-width: 1100px) {
-    .ai-review-split { grid-template-columns: 220px 360px 1fr; gap: var(--sp-2); }
+    .ai-review-split { grid-template-columns: 220px 1fr 460px; gap: var(--sp-2); }
 }
 
 /* Mobile breakpoint for 3-pane is handled by the existing mobile block below (line ~4617) — unchanged behavior per DL-330 scope */
