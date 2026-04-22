@@ -2542,16 +2542,7 @@ tr:hover .client-view-link {
     box-shadow: none;
 }
 
-/* DL-328: per-question row below pending card actions */
-.ai-card-question-row {
-    display: flex;
-    align-items: center;
-    gap: var(--sp-2);
-    padding: 2px var(--sp-5) var(--sp-2);
-    background: var(--gray-50);
-    flex-wrap: wrap;
-}
-
+/* DL-328: saved-question badge shown above action row on pending/reviewed cards */
 .batch-q-inline-badge {
     display: inline-flex;
     align-items: center;
@@ -2561,16 +2552,10 @@ tr:hover .client-view-link {
     background: var(--primary-50, #eef2ff);
     border-radius: 4px;
     padding: 2px 8px;
-    max-width: 320px;
+    max-width: 360px;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-}
-
-.ai-add-question-btn {
-    font-size: 12px;
-    padding: 2px 8px;
-    color: var(--text-secondary, #6b7280);
 }
 
 .ai-assign-section {
