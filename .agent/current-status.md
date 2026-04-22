@@ -1,6 +1,72 @@
 # Annual Reports CRM - Current Status
 
-**Last Updated:** 2026-04-23 (DL-332 AI Review pane 1 density redesign — IMPLEMENTED, needs testing)
+**Last Updated:** 2026-04-23 (DL-334 AI Review cockpit — pane 2 thin rows + right-side actions panel — IMPLEMENTED, needs testing)
+
+## DL-334 AI Review Cockpit: Middle Column Thin Rows + Actions Panel — IMPLEMENTED — NEED TESTING
+
+Branch `DL-334-ai-review-cockpit-middle-actions`. Follows DL-330 (3-pane rework) and DL-332 (pane 1 density). Refactors pane 2 from fat cards to scannable thin rows (~30px) and splits pane 3 into preview (top ~58%) + state-aware `#aiActionsPanel` (bottom). All AI reasoning and per-doc actions relocate to the panel — zero info loss. Mobile untouched (accordion + fat cards preserved via `isAIReviewMobileLayout()` guards).
+
+- **New functions in `frontend/admin/js/script.js`:** `renderDocRow`, `renderActionsPanel` + 4 state variants (`_renderPanelFullOrFuzzy` / `_renderPanelIssuerMismatch` / `_renderPanelUnmatched` / `_renderPanelReviewed`) + `_renderPanelAdditive`, `selectDocument`, `buildDesktopClientDocsHtml`, `buildClientThinStrip`, `truncateMiddle`, `getRowStripeClass`, `findItemActionsEl`, `refreshItemDom`, `_updateDocsStripProgress`. Transient `_aiReReviewing` Set for "שנה החלטה" flow.
+- **14 DOM callers audited** (approve/reject/assign/handleComparisonRadio/quickAssignSelected/startReReview/cancelReReview/setCardLoading/clearCardLoading/showRejectNotesPanel/showInlineConfirm/cancelInlineConfirm/transitionCardToReviewed/animateAndRemoveAI) — now branch mobile vs desktop via helpers.
+- **Silent-refresh (DL-053 fix bundled):** `aiClassificationsData` now merged by id (Object.assign) instead of wholesale replace → in-memory refs stable → `activePreviewItemId` preserved across polls. `selectClient` + `renderAICards` desktop path re-apply `.active` row + re-render panel when the active item survives the refresh.
+- **Pane 3 DOM (`frontend/admin/index.html`):** `.ai-review-detail` now contains `.ai-preview-frame` (flex 0 0 58%, min-height 280px) + `.ai-actions-panel#aiActionsPanel` (flex 1 1 42%, min-height 280px, overflow-y auto).
+- **CSS (`frontend/admin/css/style.css`):** new `.ai-doc-row` block (grid stripe/name/category/dots, active state = `--brand-50` fill), panel state styles (`.ai-ap-*`), stripe modifier classes map to existing tokens (`--success-500` / `--warning-500` / `--danger-500` / `--info-500`). Mobile media block forces `.ai-actions-panel`/`.ai-preview-frame` hidden.
+- **Cache-bust:** `style.css?v=294→295`, `script.js?v=298→299`.
+- **Preserved:** DL-330 pane-1 selection, DL-306 `?client=X` deep-link (now auto-opens first pending doc), DL-278 scroll target, DL-314 multi-match modal launches from panel, client-notes timeline + missing-docs checklist (verbatim markup reuse).
+
+**Impl method:** 4 sequential waves (C → A → B → D). Serialized because all four touch `frontend/admin/js/script.js` (write-write conflict); per `/subagent-driven-development` "Serialize on shared tooling state" rule, no parallelism gain. Single implementer (this session); final holistic review after all waves.
+
+**Files:** `frontend/admin/js/script.js`, `frontend/admin/css/style.css`, `frontend/admin/index.html`, `.agent/design-logs/ai-review/334-cockpit-middle-and-actions.md`, `.agent/design-logs/INDEX.md`, `.agent/current-status.md`.
+
+### Active TODOs — Test DL-334: Cockpit Middle + Actions
+
+**Pane 2 thin rows:**
+- [ ] Row height 28-32px, single line, no wrap.
+- [ ] Filename middle-truncated; `.pdf` / `.jpeg` / `.png` extension always visible.
+- [ ] Category text muted (`--gray-500`), end-aligned (RTL).
+- [ ] Stripe color: pending+full → teal (`--success-500`), pending+fuzzy → teal, pending+issuer-mismatch → amber (`--warning-500`), pending+unmatched → amber, approved → teal, rejected → red (`--danger-500`), reassigned → blue (`--info-500`).
+- [ ] `?` glyph renders next to filename when `item.pending_question` is set.
+- [ ] Duplicate / unrequested / pre-questionnaire flags merge into ONE trailing dot with `title=` tooltip listing all applicable.
+- [ ] Selected row = subtle `--brand-50` fill (no border change).
+- [ ] Click → panel re-renders; list is NOT re-rendered whole.
+
+**Pane 3 actions panel — per state variant:**
+- [ ] Empty state: placeholder label shown when no doc selected.
+- [ ] State A (full match): filename + filing-type chip + AI classification line + confidence % pill (conf-high/mid/low colors) + [approve] / [reassign] / [reject] buttons.
+- [ ] State C (fuzzy): same as A + low-confidence amber border.
+- [ ] State B (issuer-mismatch): aiIssuer shown; compare radios when sameTypeDocs exist; fallback combobox when not; [approve] / [reject].
+- [ ] State D (unmatched): no-match label + full `friendlyAIReason` text + combobox + `.ai-inline-ft-toggle` preserved + [assign] (disabled until template selected) + [reject].
+- [ ] Approved reviewed: approved lozenge + matched name + [change-decision] + [also-match].
+- [ ] Rejected reviewed: rejected lozenge + reason + notes + [change-decision].
+- [ ] Reassigned reviewed: reassigned lozenge + resolved target name + [change-decision].
+- [ ] Split PDF button appears iff `page_count >= 2`; opens `openSplitModal`.
+- [ ] T901/T902 full-year → full-year badge; partial → editable dates + request-missing-period buttons.
+- [ ] Pending-question: full text + [edit-question] button; overflow row shows [add-question] or [edit-question].
+
+**Transitions:**
+- [ ] Approve → stripe flips to teal, panel switches to reviewed-approved, row NOT list-re-rendered.
+- [ ] Reject → stripe → red, panel → reviewed-rejected.
+- [ ] Reassign → stripe → blue, panel → reviewed-reassigned.
+- [ ] Split PDF flow (DL-252 frontend-orchestrated) still works end-to-end.
+- [ ] [change-decision] from reviewed → panel flips back to pending variant with [cancel] button; stripe stays on old color until decision changes.
+- [ ] [cancel] on re-review → restores reviewed variant.
+
+**Preservations:**
+- [ ] DL-306: `?client=CPA-XXX` auto-selects client AND auto-opens first pending doc in panel.
+- [ ] DL-053 silent-refresh: in console run `loadAIClassifications(true)` mid-review — preview stays, selected row stays `.active`, panel stays rendered.
+- [ ] DL-278 scroll-into-view: selected row stays visible when silent-refresh or selectClient fires.
+- [ ] DL-314 multi-match modal: launches from the panel (approved variant), not from row.
+- [ ] Mobile <768px: resize / open on phone — accordion fat cards return; `.ai-actions-panel` + `.ai-preview-frame` hidden; no JS errors.
+- [ ] Scroll position preserved when approving a doc mid-list (pane 2 scrollTop).
+
+**Housekeeping:**
+- [ ] Hard-reload loads `css/style.css?v=295` + `js/script.js?v=299` (check Network tab).
+- [ ] No console errors on tab open / client switch / row click / poll tick.
+- [ ] No regression on DL-075 / DL-109 / DL-237 / DL-252 / DL-269-271 (contract period) / DL-306 / DL-314 / DL-320 / DL-330 / DL-332.
+
+Design log: `.agent/design-logs/ai-review/334-cockpit-middle-and-actions.md`
+
+---
 
 ## DL-332 AI Review Pane 1 Density Redesign — IMPLEMENTED — NEED TESTING
 

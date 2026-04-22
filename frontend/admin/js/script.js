@@ -3626,7 +3626,15 @@ async function getDocPreviewUrl(itemId) {
 
 function resetPreviewPanel() {
     activePreviewItemId = null;
+    // DL-334: clear active states on both mobile (.ai-review-card) and desktop (.ai-doc-row)
     document.querySelectorAll('.ai-review-card.preview-active').forEach(c => c.classList.remove('preview-active'));
+    document.querySelectorAll('.ai-doc-row.active').forEach(r => r.classList.remove('active'));
+    // Reset actions panel to empty state
+    const panel = document.getElementById('aiActionsPanel');
+    if (panel) {
+        panel.removeAttribute('data-item-id');
+        panel.innerHTML = '<div class="ai-actions-empty">בחר מסמך לבדיקה</div>';
+    }
     const placeholder = document.getElementById('previewPlaceholder');
     const loading = document.getElementById('previewLoading');
     const error = document.getElementById('previewError');
@@ -3667,10 +3675,13 @@ async function loadDocPreview(recordId) {
     const openTab = document.getElementById('previewOpenTab');
     const downloadBtn = document.getElementById('previewDownload');
 
-    // Mark active card
+    // Mark active card (mobile) or active row (desktop) — DL-334
     document.querySelectorAll('.ai-review-card.preview-active').forEach(c => c.classList.remove('preview-active'));
+    document.querySelectorAll('.ai-doc-row.active').forEach(r => r.classList.remove('active'));
     const card = document.querySelector(`.ai-review-card[data-id="${recordId}"]`);
     if (card) card.classList.add('preview-active');
+    const row = document.querySelector(`.ai-doc-row[data-id="${recordId}"]`);
+    if (row) row.classList.add('active');
     activePreviewItemId = recordId;
 
     // No onedrive_item_id — show error
@@ -3791,7 +3802,19 @@ async function loadAIClassifications(silent = false, prefetchOnly = false) {
             }
         }
 
-        aiClassificationsData = newItems;
+        // DL-334 (bundles DL-053): merge-by-id so in-memory item references stay stable
+        // across silent refreshes — activePreviewItemId remains valid mid-review even when
+        // the server returns fresh payloads. Preserves server order.
+        if (aiClassificationsData.length > 0) {
+            const oldById = new Map(aiClassificationsData.map(i => [i.id, i]));
+            aiClassificationsData = newItems.map(n => {
+                const existing = oldById.get(n.id);
+                if (existing) { Object.assign(existing, n); return existing; }
+                return n;
+            });
+        } else {
+            aiClassificationsData = newItems;
+        }
         aiReviewLoaded = true;
         aiReviewLoadedAt = Date.now();
 
@@ -3804,10 +3827,15 @@ async function loadAIClassifications(silent = false, prefetchOnly = false) {
 
         perfEnd('dl317:aiClassifications:fetch', _tF);
 
-        // Heavy render deferred until user clicks the tab
+        // Heavy render deferred until user clicks the tab.
+        // DL-334: if this is a silent refresh and activePreviewItemId is still valid,
+        // renderAICards preserves the selection + re-renders the actions panel with fresh data.
+        // Only reset preview if there is no active item or the item is gone.
         if (!prefetchOnly) {
             const _tR = perfStart();
-            resetPreviewPanel();
+            const preservedId = (silent && activePreviewItemId && aiClassificationsData.find(i => i.id === activePreviewItemId))
+                ? activePreviewItemId : null;
+            if (!preservedId) resetPreviewPanel();
             applyAIFilters();
             aiClassificationsEverRendered = true;
             perfEnd('dl317:aiClassifications:render', _tR);
@@ -3935,13 +3963,601 @@ function getCardState(item) {
     return 'full';
 }
 
+// ==================== DL-334: COCKPIT HELPERS ==================== //
+
+// Transient set: item IDs currently in the re-review UI flow (reviewed → pending actions temporarily)
+const _aiReReviewing = new Set();
+
+// Find the DOM element that owns per-item controls. Desktop active item → the panel.
+// Mobile (or if item isn't the active one on desktop) → the fat card.
+function findItemActionsEl(recordId) {
+    if (!isAIReviewMobileLayout() && activePreviewItemId === recordId) {
+        const panel = document.getElementById('aiActionsPanel');
+        if (panel) return panel;
+    }
+    return document.querySelector(`.ai-review-card[data-id="${recordId}"]`);
+}
+
+// Swap the item's thin row (desktop) or card (mobile) + re-render panel if active.
+// Used by all post-mutation handlers (approve/reject/assign/question-flush).
+function refreshItemDom(item) {
+    if (!item) return;
+    if (isAIReviewMobileLayout()) {
+        const card = document.querySelector(`.ai-review-card[data-id="${item.id}"]`);
+        if (card) {
+            const isReviewed = item.review_status && item.review_status !== 'pending';
+            const tmp = document.createElement('div');
+            tmp.innerHTML = isReviewed ? renderReviewedCard(item, item.review_status) : renderAICard(item);
+            const fresh = tmp.firstElementChild;
+            card.replaceWith(fresh);
+            initAIReviewComboboxes(fresh);
+            safeCreateIcons();
+        }
+        return;
+    }
+    // Desktop: swap thin row
+    const row = document.querySelector(`.ai-doc-row[data-id="${item.id}"]`);
+    if (row) {
+        const wasActive = row.classList.contains('active');
+        const tmp = document.createElement('div');
+        tmp.innerHTML = renderDocRow(item, wasActive);
+        row.replaceWith(tmp.firstElementChild);
+    }
+    // Refresh actions panel if this is the currently selected item
+    if (activePreviewItemId === item.id) {
+        const panel = document.getElementById('aiActionsPanel');
+        if (panel) {
+            panel.dataset.itemId = item.id;
+            panel.innerHTML = renderActionsPanel(item);
+            initAIReviewComboboxes(panel);
+            safeCreateIcons(panel);
+        }
+    }
+    // Refresh the client thin-strip progress "X/Y נבדקו"
+    _updateDocsStripProgress(item.client_name);
+}
+
+function _updateDocsStripProgress(clientName) {
+    if (!clientName) return;
+    const strip = document.querySelector(`.ai-docs-strip[data-client="${CSS.escape(clientName)}"] .ai-docs-strip-progress`);
+    if (!strip) return;
+    const clientItems = aiClassificationsData.filter(i => (i.client_name || 'לא ידוע') === clientName);
+    const reviewed = clientItems.filter(i => i.review_status && i.review_status !== 'pending').length;
+    const total = clientItems.length;
+    strip.textContent = `${reviewed}/${total} נבדקו`;
+}
+
+// Middle-truncate a filename, preserving the extension.
+function truncateMiddle(name, maxChars = 42) {
+    if (!name || name.length <= maxChars) return name || '';
+    const dot = name.lastIndexOf('.');
+    const ext = (dot > 0 && name.length - dot <= 8) ? name.slice(dot) : '';
+    const base = ext ? name.slice(0, name.length - ext.length) : name;
+    const keep = maxChars - ext.length - 1; // 1 for the ellipsis
+    if (keep < 6) return base.slice(0, maxChars - 1) + '…' + ext;
+    const headLen = Math.ceil(keep / 2);
+    const tailLen = Math.floor(keep / 2);
+    return base.slice(0, headLen) + '…' + base.slice(-tailLen) + ext;
+}
+
+// Map review state → stripe color class for .ai-doc-row
+function getRowStripeClass(item) {
+    const rs = item.review_status || 'pending';
+    if (rs === 'approved')   return 'stripe-teal';
+    if (rs === 'rejected')   return 'stripe-red';
+    if (rs === 'reassigned') return 'stripe-blue';
+    // pending — depends on classifier state
+    const s = getCardState(item);
+    if (s === 'full' || s === 'fuzzy') return 'stripe-teal';
+    return 'stripe-amber'; // issuer-mismatch or unmatched
+}
+
+// DL-334: Render one thin row for pane 2 (desktop only). outerHTML-replaceable by id.
+function renderDocRow(item, isActive) {
+    const stripeClass = getRowStripeClass(item);
+    const shortName = truncateMiddle(item.attachment_name || 'ללא שם', 42);
+
+    // Category text: prefer matched template's short name, else the missing-doc category, else '—'
+    let categoryText = '';
+    const rs = item.review_status || 'pending';
+    if (rs === 'approved' || rs === 'reassigned') {
+        categoryText = item.matched_short_name || item.matched_template_name || '';
+    } else if (rs === 'rejected') {
+        categoryText = 'נדחה';
+    } else {
+        const s = getCardState(item);
+        if (s === 'unmatched') categoryText = 'לא זוהה';
+        else categoryText = item.matched_short_name || item.matched_template_name || '';
+    }
+
+    // Flag dots — merge is_duplicate / is_unrequested / pre_questionnaire into trailing dots
+    const flagTooltips = [];
+    if (item.is_duplicate) flagTooltips.push('קובץ כפול');
+    if (item.is_unrequested && !item.pre_questionnaire) flagTooltips.push('לא נדרש');
+    if (item.pre_questionnaire) flagTooltips.push('טרם מולא שאלון');
+    const flagDot = flagTooltips.length > 0
+        ? `<span class="ai-doc-row-dot dot-warning" title="${escapeAttr(flagTooltips.join(' · '))}"></span>`
+        : '';
+
+    // Pending-question indicator
+    const qGlyph = item.pending_question
+        ? `<span class="ai-doc-row-q" title="${escapeAttr(item.pending_question.slice(0, 120))}">?</span>`
+        : '';
+
+    return `
+        <div class="ai-doc-row ${stripeClass}${isActive ? ' active' : ''}"
+             data-id="${escapeAttr(item.id)}"
+             onclick="selectDocument('${escapeAttr(item.id)}')">
+            <span class="ai-doc-row-stripe"></span>
+            <span class="ai-doc-row-name" title="${escapeAttr(item.attachment_name || '')}">${qGlyph}${escapeHtml(shortName)}</span>
+            <span class="ai-doc-row-category">${escapeHtml(categoryText)}</span>
+            <span class="ai-doc-row-dots">${flagDot}</span>
+        </div>
+    `;
+}
+
+// DL-334: Thin strip — replaces the old per-client accordion header in pane 2
+function buildClientThinStrip(clientName, clientItems) {
+    const reviewed = clientItems.filter(i => i.review_status && i.review_status !== 'pending').length;
+    const total = clientItems.length;
+    const clientId = clientItems[0].client_id;
+    const docManagerBtn = clientId
+        ? `<a href="../document-manager.html?client_id=${encodeURIComponent(clientId)}"
+             target="_blank" class="ai-doc-manager-link" title="לניהול המסמכים">
+             ${icon('folder-open', 'icon-xs')}
+           </a>`
+        : '';
+    return `
+        <div class="ai-docs-strip" data-client="${escapeAttr(clientName)}">
+            <span class="ai-docs-strip-progress">${reviewed}/${total} נבדקו</span>
+            ${docManagerBtn}
+        </div>
+    `;
+}
+
+// DL-334: Full desktop pane 2 content — thin strip + client-notes + missing-docs + thin-row list
+function buildDesktopClientDocsHtml(clientName, clientItems) {
+    // Client notes timeline — reuse markup from buildClientAccordionHtml
+    const clientNotesRaw = clientItems.find(i => i.client_notes)?.client_notes;
+    let clientNotesHtml = '';
+    if (clientNotesRaw) {
+        let cnArr = [];
+        try { cnArr = JSON.parse(clientNotesRaw.replace(/[\n\r\t]/g, m => m === '\n' ? '\\n' : m === '\r' ? '\\r' : '\\t')); if (!Array.isArray(cnArr)) cnArr = []; } catch(e) {}
+        cnArr = cnArr.filter(n => n.type !== 'office_reply');
+        if (cnArr.length > 0) {
+            const sorted = [...cnArr].sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+            const renderEntry = n => {
+                const isEmail = n.source === 'email';
+                const iconName = isEmail ? 'mail' : 'pencil';
+                const rawDate = n.date || '';
+                const dateStr = rawDate.match(/^(\d{4})-(\d{2})-(\d{2})/) ? rawDate.slice(0, 10).replace(/^(\d{4})-(\d{2})-(\d{2})/, '$3-$2-$1') : rawDate;
+                return `<div class="ai-cn-entry">
+                    ${icon(iconName, 'icon-sm')}
+                    <span class="ai-cn-date">${escapeHtml(dateStr)}</span>
+                    <span class="ai-cn-summary">${escapeHtml(n.summary)}</span>
+                </div>`;
+            };
+            const previewHtml = sorted.slice(0, 5).map(renderEntry).join('');
+            const hasMore = sorted.length > 5;
+            const expandedHtml = hasMore
+                ? `<div class="ai-cn-expanded">${sorted.slice(5).map(renderEntry).join('')}</div>`
+                : '';
+            clientNotesHtml = `<div class="ai-cn-section">
+                <div class="ai-cn-header">📋 הודעות הלקוח (${cnArr.length})</div>
+                <div class="ai-cn-entries">${previewHtml}${expandedHtml}</div>
+                ${hasMore ? `<span class="ai-cn-toggle" onclick="toggleClientNotes(this)">הצג הכל ▼</span>` : ''}
+            </div>`;
+        }
+    }
+
+    // Missing docs checklist — reuse markup from buildClientAccordionHtml
+    const allDocs = (clientItems[0].all_docs || []);
+    const groupMissingDocs = (clientItems[0].missing_docs || []);
+    const displayDocs = allDocs.length > 0 ? allDocs : groupMissingDocs;
+    const docsReceivedCount = clientItems[0].docs_received_count || 0;
+    const docsTotalCount = clientItems[0].docs_total_count || displayDocs.length;
+    const hasStatusVariation = allDocs.length > 0 && docsReceivedCount > 0;
+    let missingDocsHtml = '';
+    if (displayDocs.length > 0) {
+        const catGroups = [];
+        let currentCat = null;
+        for (const d of displayDocs) {
+            const cat = d.category || 'other';
+            if (cat !== currentCat) {
+                currentCat = cat;
+                catGroups.push({ category: cat, name: d.category_name || cat, emoji: d.category_emoji || '', docs: [] });
+            }
+            catGroups[catGroups.length - 1].docs.push(d);
+        }
+        let categoriesHtml = '<div class="ai-missing-category-tags">';
+        for (const group of catGroups) categoriesHtml += group.docs.map(d => renderDocTag(d)).join('');
+        categoriesHtml += '</div>';
+        const toggleLabel = hasStatusVariation
+            ? `מסמכים נדרשים (${docsReceivedCount}/${docsTotalCount} התקבלו)`
+            : `מסמכים חסרים (${groupMissingDocs.length})`;
+        missingDocsHtml = `
+            <div class="ai-missing-docs-group open">
+                <div class="ai-missing-docs-toggle" onclick="toggleMissingDocs(this)">
+                    <span class="toggle-arrow">▸</span>
+                    ${toggleLabel}
+                </div>
+                <div class="ai-missing-docs-body">
+                    ${categoriesHtml}
+                </div>
+            </div>
+        `;
+    }
+
+    // Thin row list
+    const rowsHtml = clientItems.map(i => renderDocRow(i, false)).join('');
+
+    return `
+        ${buildClientThinStrip(clientName, clientItems)}
+        ${clientNotesHtml}
+        ${missingDocsHtml}
+        <div class="ai-doc-rows">${rowsHtml}</div>
+    `;
+}
+
+// DL-334: Single entry point for per-item actions panel. Branches on review_status + getCardState.
+function renderActionsPanel(item) {
+    if (!item) return '<div class="ai-actions-empty">בחר מסמך לבדיקה</div>';
+
+    const reviewStatus = item.review_status || 'pending';
+    const isReviewed = reviewStatus !== 'pending';
+    const isReReviewing = _aiReReviewing.has(item.id);
+    const showReviewedVariant = isReviewed && !isReReviewing;
+
+    const filingChip = item.filing_type
+        ? `<span class="ai-filing-type-badge ai-ft-${escapeAttr(item.filing_type)}">${escapeHtml(FILING_TYPE_LABELS[item.filing_type] || item.filing_type)}</span>`
+        : '';
+    const filename = `<span class="ai-ap-filename" title="${escapeAttr(item.attachment_name || '')}">${escapeHtml(item.attachment_name || 'ללא שם')}</span>`;
+    const headerHtml = `<div class="ai-ap-header">${filename}${filingChip}</div>`;
+
+    // Additive sections (split PDF, contract period, pending question) — built once, appended at end
+    const additiveHtml = _renderPanelAdditive(item);
+
+    if (showReviewedVariant) {
+        return headerHtml + _renderPanelReviewed(item, reviewStatus) + additiveHtml;
+    }
+
+    // Pending variants (or re-reviewing from reviewed)
+    const state = getCardState(item);
+    if (state === 'full' || state === 'fuzzy') {
+        return headerHtml + _renderPanelFullOrFuzzy(item, state) + additiveHtml;
+    }
+    if (state === 'issuer-mismatch') {
+        return headerHtml + _renderPanelIssuerMismatch(item) + additiveHtml;
+    }
+    // unmatched
+    return headerHtml + _renderPanelUnmatched(item) + additiveHtml;
+}
+
+function _renderPanelFullOrFuzzy(item, state) {
+    const rawConfidence = item.ai_confidence || 0;
+    const confidencePercent = Math.round(rawConfidence * 100);
+    const confClass = rawConfidence >= 0.85 ? 'conf-high' : rawConfidence >= 0.50 ? 'conf-mid' : 'conf-low';
+    const classificationClass = state === 'fuzzy' ? ' confidence-low' : '';
+    const docDisplayName = appendContractPeriod(item.matched_short_name || item.matched_template_name || 'לא ידוע', item);
+    const approveDisabled = item.is_unrequested;
+    const addToRequired = item.is_unrequested && !!item.matched_template_id;
+    const rid = escapeAttr(item.id);
+    return `
+        <div class="ai-ap-classification${classificationClass}">
+            <span class="ai-confidence-prefix">🤖 AI חושב שזה:</span>
+            <span class="ai-template-match">${renderDocLabel(docDisplayName)}</span>
+            <span class="ai-ap-confidence ${confClass}" title="רמת ביטחון המסווג">${confidencePercent}%</span>
+        </div>
+        <div class="ai-ap-primary-actions ai-card-actions">
+            <button class="btn btn-success btn-sm" ${addToRequired
+                ? `onclick="approveAIClassificationAddRequired('${rid}', '${escapeAttr(item.matched_template_id)}')"`
+                : approveDisabled
+                    ? 'aria-disabled="true" title="לא ניתן לאשר מסמך שלא נדרש — יש לשייך מחדש או לדחות"'
+                    : `onclick="approveAIClassification('${rid}')"`}>
+                ${icon('check', 'icon-sm')} ${addToRequired ? 'נכון - הוסף לרשימת הדרושים' : 'נכון'}
+            </button>
+            <button class="btn btn-link btn-sm" onclick="showAIReassignModal('${rid}')">
+                ${icon('arrow-right-left', 'icon-sm')} לא נכון, שייך מחדש
+            </button>
+            <button class="btn btn-outline-danger btn-sm" onclick="rejectAIClassification('${rid}')">
+                ${icon('x', 'icon-sm')} מסמך לא רלוונטי
+            </button>
+            ${_aiReReviewing.has(item.id) ? `<button class="btn btn-ghost btn-sm" onclick="cancelReReview('${rid}')">ביטול</button>` : ''}
+        </div>
+    `;
+}
+
+function _renderPanelIssuerMismatch(item) {
+    const templateName = appendContractPeriod(item.matched_short_name || item.matched_template_name || item.matched_template_id || '', item);
+    const aiIssuer = item.issuer_name || 'לא ידוע';
+    const missingDocs = item.missing_docs || [];
+    const relatedIds = RELATED_TEMPLATES[item.matched_template_id] || [item.matched_template_id];
+    const sameTypeDocs = missingDocs.filter(d => relatedIds.includes(d.template_id));
+    const rid = escapeAttr(item.id);
+
+    let comparisonHtml, actionsHtml;
+    if (sameTypeDocs.length > 0) {
+        const radiosHtml = sameTypeDocs.map(d => {
+            const docName = d.name_short || d.name || d.template_id;
+            const docLabel = d.name_short || d.name_html || d.name || d.template_id;
+            return `
+                <label class="ai-comparison-radio">
+                    <input type="radio" name="compare_${rid}"
+                        data-template-id="${escapeAttr(d.template_id)}"
+                        data-doc-record-id="${escapeAttr(d.doc_record_id || '')}"
+                        data-doc-name="${escapeAttr(docName.replace(/<\/?b>/g, ''))}"
+                        onchange="handleComparisonRadio('${rid}', this)">
+                    <span>${renderDocLabel(docLabel)}</span>
+                </label>
+            `;
+        }).join('');
+        comparisonHtml = `
+            <div class="ai-validation-area">
+                <div class="ai-validation-title">האם זה אחד מהבאים?</div>
+                <div class="ai-validation-options">${radiosHtml}</div>
+            </div>
+        `;
+        actionsHtml = `
+            <button class="btn btn-success btn-sm btn-ai-comparison-assign" disabled
+                onclick="quickAssignSelected('${rid}')">
+                ${icon('check', 'icon-sm')} אישור ושיוך
+            </button>
+            <button class="btn btn-link btn-sm" onclick="showAIReassignModal('${rid}')">
+                ${icon('arrow-right-left', 'icon-sm')} לא מצאתי ברשימה
+            </button>
+            <button class="btn btn-outline-danger btn-sm" onclick="rejectAIClassification('${rid}')">
+                ${icon('x', 'icon-sm')} מסמך לא רלוונטי
+            </button>
+        `;
+    } else {
+        comparisonHtml = `
+            <div class="ai-validation-area">
+                <div class="ai-validation-title">⚠️ כל מסמכי ${renderDocLabel(templateName)} כבר התקבלו</div>
+            </div>
+        `;
+        actionsHtml = `
+            <div class="ai-assign-section">
+                <span class="ai-assign-label">שייך ל:</span>
+                <div class="doc-combobox-container" data-record-id="${rid}"></div>
+                <button class="btn btn-success btn-sm btn-ai-assign-confirm" disabled
+                    onclick="assignAIUnmatched('${rid}', this)">
+                    ${icon('check', 'icon-sm')} שייך
+                </button>
+            </div>
+            <button class="btn btn-outline-danger btn-sm" onclick="rejectAIClassification('${rid}')">
+                ${icon('x', 'icon-sm')} מסמך לא רלוונטי
+            </button>
+        `;
+    }
+    return `
+        <div class="ai-ap-classification confidence-low">
+            <span class="ai-confidence-prefix">🤖 AI חושב שזה:</span>
+            <span class="ai-template-match">${renderDocLabel(templateName)}</span>
+            <div class="ai-issuer-received">🤖 AI חושב שזה התקבל מ: <span class="ai-issuer-value">${escapeHtml(aiIssuer)}</span></div>
+            ${comparisonHtml}
+        </div>
+        <div class="ai-ap-primary-actions ai-card-actions">
+            ${actionsHtml}
+            ${_aiReReviewing.has(item.id) ? `<button class="btn btn-ghost btn-sm" onclick="cancelReReview('${rid}')">ביטול</button>` : ''}
+        </div>
+    `;
+}
+
+function _renderPanelUnmatched(item) {
+    const reasonHtml = item.ai_reason
+        ? `<div class="ai-ap-reasoning">${escapeHtml(friendlyAIReason(item.ai_reason))}</div>`
+        : '';
+    const rid = escapeAttr(item.id);
+    return `
+        <div class="ai-ap-classification confidence-low">
+            <span class="ai-template-unmatched">🤖 לא זוהה</span>
+            ${reasonHtml}
+        </div>
+        <div class="ai-ap-primary-actions ai-card-actions">
+            <div class="ai-assign-section">
+                <span class="ai-assign-label">שייך ל:</span>
+                <div class="ai-inline-ft-toggle" data-record-id="${rid}" style="display:none"></div>
+                <div class="doc-combobox-container" data-record-id="${rid}"></div>
+                <button class="btn btn-success btn-sm btn-ai-assign-confirm" disabled
+                    onclick="assignAIUnmatched('${rid}', this)">
+                    ${icon('check', 'icon-sm')} שייך
+                </button>
+            </div>
+            <button class="btn btn-outline-danger btn-sm" onclick="rejectAIClassification('${rid}')">
+                ${icon('x', 'icon-sm')} מסמך לא רלוונטי
+            </button>
+            ${_aiReReviewing.has(item.id) ? `<button class="btn btn-ghost btn-sm" onclick="cancelReReview('${rid}')">ביטול</button>` : ''}
+        </div>
+    `;
+}
+
+function _renderPanelReviewed(item, reviewStatus) {
+    const rid = escapeAttr(item.id);
+    let lozengeClass, lozengeText;
+    if (reviewStatus === 'approved') {
+        lozengeClass = 'lz-approved'; lozengeText = '✓ אושר';
+    } else if (reviewStatus === 'rejected') {
+        lozengeClass = 'lz-rejected'; lozengeText = '⚠ דורש תיקון';
+    } else {
+        lozengeClass = 'lz-reassigned'; lozengeText = '✓ שויך מחדש';
+    }
+
+    let rejectionHtml = '';
+    if (reviewStatus === 'rejected' && item.notes) {
+        try {
+            const notesData = typeof item.notes === 'string' ? JSON.parse(item.notes) : item.notes;
+            const reasonLabel = REJECTION_REASONS[notesData.reason] || notesData.reason || '';
+            const notesText = notesData.text || '';
+            let body = '';
+            if (reasonLabel) body += `<strong>${escapeHtml(reasonLabel)}</strong>`;
+            if (notesText) body += `${reasonLabel ? ' — ' : ''}${escapeHtml(notesText)}`;
+            rejectionHtml = `<div class="ai-reviewed-rejection-info">${body}</div>`;
+        } catch { /* ignore */ }
+    }
+
+    let displayName;
+    if (reviewStatus === 'rejected') {
+        displayName = item.attachment_name || item.matched_short_name || item.matched_template_name || 'לא ידוע';
+    } else if (reviewStatus === 'reassigned') {
+        const siblings = [...(item.all_docs || []), ...(item.other_report_docs || [])];
+        const target = item.onedrive_item_id
+            ? siblings.find(d => d.onedrive_item_id === item.onedrive_item_id && d.status === 'Received')
+            : null;
+        const targetName = target?.name_short || target?.name;
+        displayName = appendContractPeriod(
+            targetName || item.matched_short_name || item.matched_template_name || item.attachment_name || 'לא ידוע',
+            item
+        );
+    } else {
+        displayName = appendContractPeriod(item.matched_short_name || item.matched_template_name || 'לא ידוע', item);
+    }
+
+    const isApproved = reviewStatus === 'approved';
+    const alsoMatchBtn = isApproved
+        ? `<button class="btn btn-outline btn-sm" onclick="showAIAlsoMatchModal('${rid}')">
+               ${icon('copy-plus', 'icon-sm')} הקובץ תואם למסמך נוסף
+           </button>`
+        : '';
+
+    return `
+        <div class="ai-ap-classification">
+            <span class="ai-ap-lozenge ${lozengeClass}">${lozengeText}</span>
+            <div style="margin-top:var(--sp-2)"><span class="ai-template-match">${renderDocLabel(displayName)}</span></div>
+            ${rejectionHtml}
+        </div>
+        <div class="ai-ap-primary-actions ai-card-actions">
+            ${alsoMatchBtn}
+            <button class="btn btn-outline btn-sm" onclick="startReReview('${rid}')">
+                ${icon('rotate-ccw', 'icon-sm')} שנה החלטה
+            </button>
+        </div>
+    `;
+}
+
+function _renderPanelAdditive(item) {
+    const rid = escapeAttr(item.id);
+    let html = '';
+
+    // Split PDF
+    if (item.page_count && item.page_count >= 2) {
+        html += `<div class="ai-ap-secondary-actions">
+            <button class="btn btn-outline btn-sm" onclick="openSplitModal('${rid}')" title="פיצול PDF — ${item.page_count} עמודים">
+                ${icon('scissors', 'icon-sm')} פיצול PDF
+            </button>
+        </div>`;
+    }
+
+    // Contract period (T901 / T902)
+    if (['T901', 'T902'].includes(item.matched_template_id)) {
+        const cp = item.contract_period;
+        const year = item.year || new Date().getFullYear();
+        if (cp && cp.coversFullYear) {
+            html += `<div class="ai-contract-period-banner" style="margin-top:var(--sp-3);background:#f0fdf4;border-color:#22c55e33;color:#166534;">
+                <span class="period-label">📅 חוזה שנתי מלא ✓</span>
+            </div>`;
+        } else {
+            const hasStart = cp && cp.startDate;
+            const hasEnd = cp && cp.endDate;
+            const startMonth = hasStart ? new Date(cp.startDate).getMonth() + 1 : null;
+            const endMonth = hasEnd ? new Date(cp.endDate).getMonth() + 1 : null;
+            const startVal = hasStart ? cp.startDate.substring(0, 7) : '';
+            const endVal = hasEnd ? cp.endDate.substring(0, 7) : '';
+            const startLabel = startMonth ? `${String(startMonth).padStart(2,'0')}.${year}` : '__.__';
+            const endLabel = endMonth ? `${String(endMonth).padStart(2,'0')}.${year}` : '__.__';
+            const statusText = cp ? 'חוזה חלקי' : 'לא זוהו תאריכים';
+            let requestBtnsHtml = '';
+            if (startMonth && startMonth > 1) {
+                const beforeLabel = formatPeriodLabel(1, startMonth - 1, year);
+                requestBtnsHtml += `<button class="btn btn-outline btn-sm btn-request-period" data-record-id="${rid}" data-gap="before"
+                    onclick="requestMissingPeriod('${rid}', 1, ${startMonth - 1}, this)" title="בקש חוזה לתקופה שלפני">
+                    ${icon('plus', 'icon-sm')} בקש חוזה ${beforeLabel}
+                </button>`;
+            }
+            if (endMonth && endMonth < 12) {
+                const afterLabel = formatPeriodLabel(endMonth + 1, 12, year);
+                requestBtnsHtml += `<button class="btn btn-outline btn-sm btn-request-period" data-record-id="${rid}" data-gap="after"
+                    onclick="requestMissingPeriod('${rid}', ${endMonth + 1}, 12, this)" title="בקש חוזה לתקופה שאחרי">
+                    ${icon('plus', 'icon-sm')} בקש חוזה ${afterLabel}
+                </button>`;
+            }
+            html += `<div class="ai-contract-period-banner" data-record-id="${rid}" style="margin-top:var(--sp-3)">
+                <span class="period-label">📅 ${statusText}:
+                    מ
+                    <span class="contract-date-editable" data-field="start" data-value="${escapeAttr(startVal)}"
+                        onclick="editContractDate('${rid}', 'start', this)" title="לחץ לעריכה">${startLabel}</span>
+                    עד
+                    <span class="contract-date-editable" data-field="end" data-value="${escapeAttr(endVal)}"
+                        onclick="editContractDate('${rid}', 'end', this)" title="לחץ לעריכה">${endLabel}</span>
+                </span>
+                ${requestBtnsHtml}
+            </div>`;
+        }
+    }
+
+    // Pending question
+    if (item.pending_question) {
+        html += `<div class="ai-ap-secondary-actions">
+            <div class="batch-q-inline-badge" style="flex:1">
+                ${icon('message-circle', 'icon-xs')} ${escapeHtml(item.pending_question)}
+            </div>
+            <button class="btn btn-ghost btn-sm" onclick="openAddQuestionDialog('${rid}')">
+                ${icon('pencil', 'icon-sm')} ערוך שאלה
+            </button>
+        </div>`;
+    } else {
+        html += `<div class="ai-ap-secondary-actions">
+            <button class="btn btn-ghost btn-sm" onclick="openAddQuestionDialog('${rid}')">
+                ${icon('message-circle', 'icon-sm')} הוסף שאלה
+            </button>
+        </div>`;
+    }
+
+    return html;
+}
+
+// DL-334: Selection handler for pane 2 rows. Mobile falls through to loadDocPreview.
+function selectDocument(recordId) {
+    if (!recordId) return;
+    if (isAIReviewMobileLayout()) {
+        // Mobile: no panel, legacy path
+        loadDocPreview(recordId);
+        return;
+    }
+    if (activePreviewItemId === recordId) return; // already selected — no-op
+
+    // Update row active state without re-rendering the list
+    document.querySelectorAll('.ai-doc-row.active').forEach(r => r.classList.remove('active'));
+    const row = document.querySelector(`.ai-doc-row[data-id="${recordId}"]`);
+    if (row) row.classList.add('active');
+
+    // Load preview (sets activePreviewItemId internally)
+    loadDocPreview(recordId);
+
+    // Render actions panel
+    const item = aiClassificationsData.find(i => i.id === recordId);
+    const panel = document.getElementById('aiActionsPanel');
+    if (panel) {
+        if (item) {
+            panel.dataset.itemId = item.id;
+            panel.innerHTML = renderActionsPanel(item);
+            initAIReviewComboboxes(panel);
+            safeCreateIcons(panel);
+        } else {
+            panel.removeAttribute('data-item-id');
+            panel.innerHTML = '<div class="ai-actions-empty">בחר מסמך לבדיקה</div>';
+        }
+    }
+}
+
+// ================== /DL-334 COCKPIT HELPERS ================== //
+
 function toggleMissingDocs(el) {
     el.closest('.ai-missing-docs-group').classList.toggle('open');
 }
 
 
 function handleComparisonRadio(recordId, radioEl) {
-    const card = document.querySelector(`.ai-review-card[data-id="${recordId}"]`);
+    const card = findItemActionsEl(recordId);
     if (!card) return;
     // Deselect all radios in this card
     card.querySelectorAll('.ai-comparison-radio').forEach(r => r.classList.remove('selected'));
@@ -3952,7 +4568,7 @@ function handleComparisonRadio(recordId, radioEl) {
 }
 
 function quickAssignSelected(recordId) {
-    const card = document.querySelector(`.ai-review-card[data-id="${recordId}"]`);
+    const card = findItemActionsEl(recordId);
     if (!card) return;
     const selectedRadio = card.querySelector('.ai-validation-options input[type="radio"]:checked');
     if (!selectedRadio) return;
@@ -4159,7 +4775,7 @@ function initAIReviewComboboxes(container) {
     });
 }
 
-// DL-330: 3-pane desktop selector. Called from client-row onclick.
+// DL-330/334: 3-pane desktop selector. Called from client-row onclick.
 function selectClient(clientName) {
     if (!clientName) return;
     if (isAIReviewMobileLayout()) return;  // mobile uses accordion toggle
@@ -4173,20 +4789,42 @@ function selectClient(clientName) {
         });
     }
 
-    // Re-render pane 2
+    // Re-render pane 2 (DL-334: thin rows, not fat cards)
     const docsPane = document.getElementById('aiDocsPane');
     if (!docsPane) return;
     const clientItems = aiClassificationsData.filter(i => (i.client_name || 'לא ידוע') === clientName);
     if (clientItems.length > 0) {
-        docsPane.innerHTML = buildClientAccordionHtml(clientName, clientItems, true);
-        initAIReviewComboboxes(docsPane);
+        docsPane.innerHTML = buildDesktopClientDocsHtml(clientName, clientItems);
         safeCreateIcons(docsPane);
     } else {
         docsPane.innerHTML = '';
     }
 
-    // Fresh client → clear stale preview
-    resetPreviewPanel();
+    // DL-334: preserve selection if the active item still belongs to this client
+    // (silent refresh re-render, or re-selecting current client). Otherwise reset and
+    // auto-select first pending.
+    const activeStillValid = activePreviewItemId &&
+        clientItems.some(i => i.id === activePreviewItemId);
+
+    if (activeStillValid) {
+        // Re-apply .active on the row (list was just rebuilt)
+        const row = docsPane.querySelector(`.ai-doc-row[data-id="${activePreviewItemId}"]`);
+        if (row) row.classList.add('active');
+        // Re-render the actions panel from fresh item data
+        const freshItem = aiClassificationsData.find(i => i.id === activePreviewItemId);
+        const panel = document.getElementById('aiActionsPanel');
+        if (panel && freshItem) {
+            panel.dataset.itemId = freshItem.id;
+            panel.innerHTML = renderActionsPanel(freshItem);
+            initAIReviewComboboxes(panel);
+            safeCreateIcons(panel);
+        }
+    } else {
+        // Fresh client → clear stale preview + actions panel, auto-select first pending
+        resetPreviewPanel();
+        const firstPending = clientItems.find(i => (i.review_status || 'pending') === 'pending') || clientItems[0];
+        if (firstPending) selectDocument(firstPending.id);
+    }
 }
 
 function renderAICards(items, allFilteredItems) {
@@ -4323,12 +4961,24 @@ function renderAICards(items, allFilteredItems) {
             safeCreateIcons(renderTarget);
         }
 
-        // Pane 2: selected client's accordion (always open)
+        // Pane 2: selected client's thin-row list (DL-334)
         if (docsPane) {
             if (selectedClientName && groups[selectedClientName]) {
-                docsPane.innerHTML = buildClientAccordionHtml(selectedClientName, groups[selectedClientName], true);
-                initAIReviewComboboxes(docsPane);
+                docsPane.innerHTML = buildDesktopClientDocsHtml(selectedClientName, groups[selectedClientName]);
                 safeCreateIcons(docsPane);
+                // Preserve active row + re-render panel if selection is still valid for this client
+                if (activePreviewItemId && groups[selectedClientName].some(i => i.id === activePreviewItemId)) {
+                    const row = docsPane.querySelector(`.ai-doc-row[data-id="${activePreviewItemId}"]`);
+                    if (row) row.classList.add('active');
+                    const freshItem = aiClassificationsData.find(i => i.id === activePreviewItemId);
+                    const panel = document.getElementById('aiActionsPanel');
+                    if (panel && freshItem) {
+                        panel.dataset.itemId = freshItem.id;
+                        panel.innerHTML = renderActionsPanel(freshItem);
+                        initAIReviewComboboxes(panel);
+                        safeCreateIcons(panel);
+                    }
+                }
             } else {
                 docsPane.innerHTML = `<div class="ai-docs-placeholder">${icon('users', 'icon-2xl')}<p>בחר לקוח כדי להציג את המסמכים</p></div>`;
                 safeCreateIcons(docsPane);
@@ -4829,19 +5479,15 @@ function renderReviewedCard(item, reviewStatus) {
     `;
 }
 
-// DL-086: Re-review — restore action buttons on a reviewed card
+// DL-086 / DL-334: Re-review — restore pending-action buttons for a previously reviewed item.
+// Desktop: flip transient flag, re-render actions panel. Mobile: keep legacy card-inline replace.
 function startReReview(recordId) {
     const item = aiClassificationsData.find(i => i.id === recordId);
     if (!item) return;
 
-    const card = document.querySelector(`.ai-review-card[data-id="${recordId}"]`);
-    if (!card) return;
-
     // DL-320: cascade revert when this file is linked to other doc records (DL-314 multi-match).
-    // Changing the primary decision should also clear all sibling records that were linked to this file.
     const sharedCount = (item.shared_ref_count | 0);
     if (sharedCount > 1) {
-        const ownDocId = item.matched_doc_record_id || '';
         const titles = Array.isArray(item.shared_with_titles)
             ? item.shared_with_titles.filter(t => t && t !== (item.issuer_name || item.matched_short_name || ''))
             : [];
@@ -4852,52 +5498,43 @@ function startReReview(recordId) {
         return;
     }
 
-    // Restore original action buttons based on card state
-    const state = getCardState(item);
-    let actionsHtml = '';
+    _aiReReviewing.add(recordId);
 
-    if (state === 'full' || state === 'fuzzy') {
-        const approveDisabled = item.is_unrequested;
-        actionsHtml = `
-            <button class="btn btn-success btn-sm" ${approveDisabled
-                ? 'aria-disabled="true" title="לא ניתן לאשר מסמך שלא נדרש — יש לשייך מחדש או לדחות"'
-                : `onclick="approveAIClassification('${escapeAttr(recordId)}')"`}>
-                ${icon('check', 'icon-sm')} נכון
-            </button>
-            <button class="btn btn-link btn-sm" onclick="showAIReassignModal('${escapeAttr(recordId)}')">
-                ${icon('arrow-right-left', 'icon-sm')} לא נכון, שייך מחדש
-            </button>
-            <button class="btn btn-outline-danger btn-sm" onclick="rejectAIClassification('${escapeAttr(recordId)}')">
-                ${icon('x', 'icon-sm')} מסמך לא רלוונטי
-            </button>
-            <button class="btn btn-ghost btn-sm" onclick="cancelReReview('${escapeAttr(recordId)}')">
-                ביטול
-            </button>
-        `;
-    } else {
-        // unmatched or issuer-mismatch — show reject + reassign
-        actionsHtml = `
-            <button class="btn btn-link btn-sm" onclick="showAIReassignModal('${escapeAttr(recordId)}')">
-                ${icon('arrow-right-left', 'icon-sm')} לא נכון, שייך מחדש
-            </button>
-            <button class="btn btn-outline-danger btn-sm" onclick="rejectAIClassification('${escapeAttr(recordId)}')">
-                ${icon('x', 'icon-sm')} מסמך לא רלוונטי
-            </button>
-            <button class="btn btn-ghost btn-sm" onclick="cancelReReview('${escapeAttr(recordId)}')">
-                ביטול
-            </button>
-        `;
+    if (isAIReviewMobileLayout()) {
+        // Legacy mobile path: replace .ai-card-actions innerHTML on the fat card in-place
+        const card = document.querySelector(`.ai-review-card[data-id="${recordId}"]`);
+        if (!card) return;
+        const state = getCardState(item);
+        let actionsHtml = '';
+        if (state === 'full' || state === 'fuzzy') {
+            const approveDisabled = item.is_unrequested;
+            actionsHtml = `
+                <button class="btn btn-success btn-sm" ${approveDisabled
+                    ? 'aria-disabled="true" title="לא ניתן לאשר מסמך שלא נדרש — יש לשייך מחדש או לדחות"'
+                    : `onclick="approveAIClassification('${escapeAttr(recordId)}')"`}>
+                    ${icon('check', 'icon-sm')} נכון
+                </button>
+                <button class="btn btn-link btn-sm" onclick="showAIReassignModal('${escapeAttr(recordId)}')">${icon('arrow-right-left', 'icon-sm')} לא נכון, שייך מחדש</button>
+                <button class="btn btn-outline-danger btn-sm" onclick="rejectAIClassification('${escapeAttr(recordId)}')">${icon('x', 'icon-sm')} מסמך לא רלוונטי</button>
+                <button class="btn btn-ghost btn-sm" onclick="cancelReReview('${escapeAttr(recordId)}')">ביטול</button>
+            `;
+        } else {
+            actionsHtml = `
+                <button class="btn btn-link btn-sm" onclick="showAIReassignModal('${escapeAttr(recordId)}')">${icon('arrow-right-left', 'icon-sm')} לא נכון, שייך מחדש</button>
+                <button class="btn btn-outline-danger btn-sm" onclick="rejectAIClassification('${escapeAttr(recordId)}')">${icon('x', 'icon-sm')} מסמך לא רלוונטי</button>
+                <button class="btn btn-ghost btn-sm" onclick="cancelReReview('${escapeAttr(recordId)}')">ביטול</button>
+            `;
+        }
+        card.classList.remove('reviewed-approved', 'reviewed-rejected', 'reviewed-reassigned');
+        card.style.opacity = '';
+        const actionsDiv = card.querySelector('.ai-card-actions');
+        if (actionsDiv) actionsDiv.innerHTML = actionsHtml;
+        safeCreateIcons();
+        return;
     }
 
-    // Remove reviewed styling
-    card.classList.remove('reviewed-approved', 'reviewed-rejected', 'reviewed-reassigned');
-    card.style.opacity = '';
-
-    // Replace actions
-    const actionsDiv = card.querySelector('.ai-card-actions');
-    if (actionsDiv) actionsDiv.innerHTML = actionsHtml;
-
-    safeCreateIcons();
+    // Desktop: re-render panel (renderActionsPanel checks _aiReReviewing and shows pending variant)
+    refreshItemDom(item);
 }
 
 // DL-320: Cascade revert — clear primary + all sibling records sharing the same OneDrive file,
@@ -4930,20 +5567,27 @@ async function cascadeRevertAIClassification(recordId) {
     }
 }
 
-// DL-086: Cancel re-review — re-render the card in reviewed state
+// DL-086 / DL-334: Cancel re-review — re-render back to reviewed variant
 function cancelReReview(recordId) {
     const item = aiClassificationsData.find(i => i.id === recordId);
     if (!item) return;
 
-    const card = document.querySelector(`.ai-review-card[data-id="${recordId}"]`);
-    if (!card) return;
+    _aiReReviewing.delete(recordId);
 
-    // Replace the card entirely with the reviewed version
-    const tmpDiv = document.createElement('div');
-    tmpDiv.innerHTML = renderReviewedCard(item, item.review_status || 'pending');
-    const newCard = tmpDiv.firstElementChild;
-    card.replaceWith(newCard);
-    safeCreateIcons();
+    if (isAIReviewMobileLayout()) {
+        // Legacy mobile path
+        const card = document.querySelector(`.ai-review-card[data-id="${recordId}"]`);
+        if (!card) return;
+        const tmpDiv = document.createElement('div');
+        tmpDiv.innerHTML = renderReviewedCard(item, item.review_status || 'pending');
+        const newCard = tmpDiv.firstElementChild;
+        card.replaceWith(newCard);
+        safeCreateIcons();
+        return;
+    }
+
+    // Desktop: re-render panel
+    refreshItemDom(item);
 }
 
 function toggleAIAccordion(header) {
@@ -5007,7 +5651,7 @@ function formatAISuccessToast(data) {
 }
 
 function setCardLoading(recordId, text) {
-    const card = document.querySelector(`.ai-review-card[data-id="${recordId}"]`);
+    const card = findItemActionsEl(recordId);
     if (!card) return;
     card.classList.add('ai-loading');
     const overlay = document.createElement('div');
@@ -5017,7 +5661,7 @@ function setCardLoading(recordId, text) {
 }
 
 function clearCardLoading(recordId) {
-    const card = document.querySelector(`.ai-review-card[data-id="${recordId}"]`);
+    const card = findItemActionsEl(recordId);
     if (!card) return;
     card.classList.remove('ai-loading');
     const overlay = card.querySelector('.ai-card-loading-overlay');
@@ -5363,7 +6007,7 @@ async function rejectAIClassification(recordId) {
 }
 
 function showRejectNotesPanel(recordId) {
-    const card = document.querySelector(`.ai-review-card[data-id="${recordId}"]`);
+    const card = findItemActionsEl(recordId);
     if (!card) return;
     const actionsDiv = card.querySelector('.ai-card-actions');
     if (!actionsDiv) return;
@@ -5746,7 +6390,7 @@ async function assignAIUnmatched(recordId, btnEl) {
     }
 }
 
-// DL-086: Transition card to reviewed state instead of removing
+// DL-086 / DL-334: Transition card/row to reviewed state
 function transitionCardToReviewed(recordId, newReviewStatus, responseData) {
     // Update the item in aiClassificationsData
     const item = aiClassificationsData.find(i => i.id === recordId);
@@ -5755,14 +6399,11 @@ function transitionCardToReviewed(recordId, newReviewStatus, responseData) {
         item.reviewed_at = new Date().toISOString();
     }
 
-    // Re-render the card in-place
-    const card = document.querySelector(`.ai-review-card[data-id="${recordId}"]`);
-    if (card) {
-        const tmpDiv = document.createElement('div');
-        tmpDiv.innerHTML = renderReviewedCard(item || { id: recordId, review_status: newReviewStatus }, newReviewStatus);
-        const newCard = tmpDiv.firstElementChild;
-        card.replaceWith(newCard);
-    }
+    // Clear any lingering re-review transient state
+    _aiReReviewing.delete(recordId);
+
+    // DL-334: refreshItemDom branches mobile (card swap) vs desktop (row swap + panel re-render)
+    refreshItemDom(item || { id: recordId, review_status: newReviewStatus });
 
     recalcAIStats();
     safeCreateIcons();
@@ -5920,14 +6561,8 @@ function openAddQuestionDialog(itemId) {
                 item.notes = JSON.stringify({ reason: 'has_question', text: '' });
                 await executeReject(itemId, 'has_question', '');
             } else {
-                // Already reviewed — just re-render the card with updated badge
-                const card = document.querySelector(`.ai-review-card[data-id="${itemId}"]`);
-                if (card) {
-                    const isReviewed = item.review_status && item.review_status !== 'pending';
-                    const tmpDiv = document.createElement('div');
-                    tmpDiv.innerHTML = isReviewed ? renderReviewedCard(item, item.review_status) : renderAICard(item);
-                    card.replaceWith(tmpDiv.firstElementChild);
-                }
+                // Already reviewed — re-render card/row+panel with updated pending_question
+                refreshItemDom(item);
                 showAIToast(text ? 'השאלה נשמרה' : 'השאלה נמחקה');
                 close();
             }
@@ -6123,16 +6758,10 @@ function openBatchQuestionsModal(clientName) {
                 saveBtn.disabled = false;
                 return;
             }
-            // Apply locally + re-render affected cards
+            // Apply locally + re-render affected cards/rows (DL-334)
             for (const { op } of results) {
                 op.item.pending_question = op.text || '';
-                const card = document.querySelector(`.ai-review-card[data-id="${op.item.id}"]`);
-                if (card) {
-                    const isReviewed = op.item.review_status && op.item.review_status !== 'pending';
-                    const tmpDiv = document.createElement('div');
-                    tmpDiv.innerHTML = isReviewed ? renderReviewedCard(op.item, op.item.review_status) : renderAICard(op.item);
-                    card.replaceWith(tmpDiv.firstElementChild);
-                }
+                refreshItemDom(op.item);
             }
             close();
             showAIToast('השאלות נשמרו');
@@ -6270,23 +6899,24 @@ async function dismissClientReview(clientName) {
 function animateAndRemoveAI(recordId) {
     aiClassificationsData = aiClassificationsData.filter(item => item.id !== recordId);
 
-    const card = document.querySelector(`.ai-review-card[data-id="${recordId}"]`);
-    if (card) {
-        // Lock current height so CSS can transition max-height to 0
-        card.style.maxHeight = card.offsetHeight + 'px';
-        // Force layout reflow before adding the class
-        card.offsetHeight; // eslint-disable-line no-unused-expressions
-        card.classList.add('removing');
+    // DL-334: target .ai-doc-row (desktop) or .ai-review-card (mobile)
+    const target = document.querySelector(`.ai-doc-row[data-id="${recordId}"]`)
+                || document.querySelector(`.ai-review-card[data-id="${recordId}"]`);
+    if (target) {
+        target.style.maxHeight = target.offsetHeight + 'px';
+        target.offsetHeight; // eslint-disable-line no-unused-expressions
+        target.classList.add('removing');
         setTimeout(() => {
-            card.remove();
+            target.remove();
 
-            // Check if parent accordion group is now empty
+            // Clean up empty mobile accordion groups (no-op on desktop where there are none)
             document.querySelectorAll('.ai-accordion').forEach(accordion => {
                 const cards = accordion.querySelectorAll('.ai-review-card');
-                if (cards.length === 0) {
-                    accordion.remove();
-                }
+                if (cards.length === 0) accordion.remove();
             });
+
+            // If we removed the active item, clear preview + panel
+            if (activePreviewItemId === recordId) resetPreviewPanel();
 
             // Check if everything is empty
             if (aiClassificationsData.length === 0) {
@@ -10674,7 +11304,7 @@ function isValidEmail(email) {
 // ==================== INLINE CONFIRM (AI Review cards) ====================
 
 function showInlineConfirm(recordId, message, onConfirm, opts = {}) {
-    const card = document.querySelector(`.ai-review-card[data-id="${recordId}"]`);
+    const card = findItemActionsEl(recordId);
     if (!card) return;
     const actionsDiv = card.querySelector('.ai-card-actions');
     if (!actionsDiv) return;
@@ -10718,7 +11348,7 @@ function showInlineConfirm(recordId, message, onConfirm, opts = {}) {
 }
 
 function cancelInlineConfirm(recordId) {
-    const card = document.querySelector(`.ai-review-card[data-id="${recordId}"]`);
+    const card = findItemActionsEl(recordId);
     if (!card) return;
     const actionsDiv = card.querySelector('.ai-card-actions');
     if (!actionsDiv || !actionsDiv.dataset.originalHtml) return;
