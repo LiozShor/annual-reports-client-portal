@@ -5646,6 +5646,10 @@ function showClientReviewDonePrompt(clientName, userInitiated = false) {
     if (reassigned) statParts.push(`${reassigned} שויכו`);
     if (rejected) statParts.push(`${rejected} נדחו`);
 
+    // Check if any items have a saved pending question
+    const hasPendingQuestions = !_batchQuestionsSentClients.has(clientName) &&
+        clientItems.some(i => i.pending_question);
+
     const prompt = document.createElement('div');
     prompt.className = 'ai-review-done-prompt';
     prompt.innerHTML = `
@@ -5655,15 +5659,25 @@ function showClientReviewDonePrompt(clientName, userInitiated = false) {
                 <strong>כל המסמכים נבדקו!</strong>
                 <span class="ai-review-done-stats">${statParts.join(' · ')}</span>
             </div>
+            ${hasPendingQuestions ? `
+            <button class="btn btn-success btn-sm ai-review-done-btn" onclick="dismissAndSendQuestions('${escapeOnclick(clientName)}')">
+                ${icon('send', 'icon-xs')}
+                סיום בדיקה ושליחת שאלות
+            </button>
+            <button class="btn btn-secondary btn-sm" onclick="previewBatchQuestions('${escapeOnclick(clientName)}')">
+                ${icon('eye', 'icon-xs')}
+                תצוגה מקדימה
+            </button>
+            <button class="btn btn-ghost btn-sm" onclick="openBatchQuestionsModal('${escapeOnclick(clientName)}')">
+                ${icon('pencil', 'icon-xs')}
+                ערוך שאלות
+            </button>
+            ` : `
             <button class="btn btn-success btn-sm ai-review-done-btn" onclick="dismissClientReview('${escapeOnclick(clientName)}')">
                 ${icon('check', 'icon-xs')}
                 סיום בדיקה
             </button>
-            ${!_batchQuestionsSentClients.has(clientName) ? `
-            <button class="btn btn-secondary btn-sm" onclick="openBatchQuestionsModal('${escapeOnclick(clientName)}')">
-                ${icon('mail', 'icon-xs')}
-                שאל את הלקוח
-            </button>` : ''}
+            `}
         </div>
     `;
 
@@ -5944,6 +5958,79 @@ function openBatchQuestionsModal(clientName) {
     cancelBtn.addEventListener('click', close);
     closeBtn.addEventListener('click', close);
     overlay.addEventListener('click', e => { if (e.target === overlay) close(); });
+}
+
+// DL-328: Collect saved questions for a client and send, then dismiss the review.
+async function dismissAndSendQuestions(clientName) {
+    const clientItems = aiClassificationsData.filter(i => i.client_name === clientName);
+    const reportId = clientItems[0]?.report_record_id;
+    if (!reportId) { showAIToast('לא נמצא מזהה תיק', 'danger'); return; }
+
+    const questions = clientItems
+        .filter(i => i.pending_question)
+        .map(item => ({
+            file_id: item.id,
+            attachment_name: item.attachment_name || '',
+            short_name: item.matched_short_name || '',
+            question: item.pending_question,
+        }));
+
+    if (questions.length === 0) {
+        showAIToast('אין שאלות שמורות לשליחה', 'danger');
+        return;
+    }
+
+    const btn = document.querySelector(`.ai-accordion[data-client="${CSS.escape(clientName)}"] .ai-review-done-btn`);
+    if (btn) btn.disabled = true;
+
+    try {
+        const resp = await fetchWithTimeout(ENDPOINTS.SEND_BATCH_QUESTIONS, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
+            body: JSON.stringify({ report_id: reportId, questions }),
+        }, FETCH_TIMEOUTS.load);
+        const data = await resp.json();
+        if (!resp.ok || !data.ok) {
+            showAIToast(data.error || 'שגיאה בשליחה', 'danger');
+            if (btn) btn.disabled = false;
+            return;
+        }
+        _batchQuestionsSentClients.add(clientName);
+        showAIToast('השאלות נשלחו ללקוח');
+        dismissClientReview(clientName);
+    } catch (_err) {
+        showAIToast('שגיאה בתקשורת עם השרת', 'danger');
+        if (btn) btn.disabled = false;
+    }
+}
+
+// DL-328: Preview the batch questions email without sending.
+function previewBatchQuestions(clientName) {
+    const clientItems = aiClassificationsData.filter(i => i.client_name === clientName);
+    const reportId = clientItems[0]?.report_record_id;
+    if (!reportId) { showAIToast('לא נמצא מזהה תיק', 'danger'); return; }
+
+    const questions = clientItems
+        .filter(i => i.pending_question)
+        .map(item => ({
+            file_id: item.id,
+            attachment_name: item.attachment_name || '',
+            short_name: item.matched_short_name || '',
+            question: item.pending_question,
+        }));
+
+    if (questions.length === 0) {
+        showAIToast('אין שאלות שמורות לתצוגה מקדימה', 'danger');
+        return;
+    }
+
+    window.showEmailPreviewModal({
+        reportId,
+        clientName,
+        getToken: () => authToken,
+        endpoint: ENDPOINTS.SEND_BATCH_QUESTIONS,
+        extraPayload: { questions },
+    });
 }
 
 // DL-210: Remove all reviewed cards for this client from the UI + delete from Airtable
