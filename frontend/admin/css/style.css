@@ -3293,19 +3293,64 @@ tr:hover .client-view-link {
 
 /* ==================== AI REVIEW 3-PANE (DL-330) ==================== */
 
-/* DL-330: search + summary bars were stretching full-viewport after the breakout.
-   Cap them to the clients-column width and right-align (RTL hugs right edge). !important used
-   to beat any inline width from legacy .ai-filter-bar rule + surrounding tab breakout. */
-#tab-ai-review > .ai-filter-bar,
-#tab-ai-review > #aiSummaryBar {
-    max-width: 300px !important;
-    width: 300px !important;
-    margin-inline-start: auto !important;
-    margin-inline-end: 0 !important;
-    margin-bottom: var(--sp-2);
-    box-sizing: border-box;
+/* DL-330 redesign: toolbar is an inline flush row (no card chrome), search sits at the start.
+   Summary moves into the clients-pane sticky header (see .ai-clients-header below), so the
+   separate #aiSummaryBar in the tab is hidden. */
+#tab-ai-review > .ai-filter-bar {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    margin-bottom: var(--sp-2) !important;
+    width: auto !important;
+    max-width: none !important;
+    gap: var(--sp-3);
 }
-#tab-ai-review > .ai-filter-bar { padding: var(--sp-2) var(--sp-3); }
+#tab-ai-review > .ai-filter-bar .filter-group {
+    max-width: 360px !important;
+    width: 360px !important;
+    background: white;
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius-md);
+    padding: 6px 10px;
+    box-shadow: var(--shadow-xs);
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+#tab-ai-review > .ai-filter-bar .filter-group:focus-within {
+    border-color: var(--brand-400);
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.12);
+}
+#tab-ai-review > .ai-filter-bar .filter-group input[type="text"] {
+    border: none !important;
+    outline: none;
+    background: transparent;
+    padding: 0 !important;
+    width: 100%;
+    min-width: 0 !important;
+    font-size: var(--text-sm);
+}
+#tab-ai-review > .ai-filter-bar .filter-group label {
+    color: var(--gray-400);
+    flex-shrink: 0;
+}
+
+/* Hide the legacy standalone summary bar — summary moves into pane 1 header */
+#tab-ai-review > #aiSummaryBar { display: none !important; }
+
+/* Sticky header inside the clients pane — holds the summary text, anchors the search to the list */
+.ai-clients-header {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    padding: var(--sp-3) var(--sp-3) var(--sp-2);
+    background: white;
+    border-bottom: 1px solid var(--gray-100);
+    font-size: var(--text-xs);
+    color: var(--gray-600);
+    line-height: 1.4;
+    font-weight: 500;
+}
+.ai-clients-header:empty { display: none; }
 
 
 /* Break out of the .content max-width:1400px cap so all 3 panes can stretch full-viewport (Outlook-style full-screen usage).
@@ -3351,6 +3396,15 @@ tr:hover .client-view-link {
 .ai-review-pagination:empty { display: none; }
 
 .ai-review-clients,
+.ai-review-docs,
+.ai-review-detail {
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-xs);
+    background: white;
+}
+
+.ai-review-clients,
 .ai-review-docs {
     min-height: 0;
     min-width: 0;
@@ -3359,10 +3413,6 @@ tr:hover .client-view-link {
     overscroll-behavior: contain;
     scrollbar-width: thin;
     scrollbar-color: var(--gray-300) transparent;
-    background: white;
-    border: 1px solid var(--gray-200);
-    border-radius: var(--radius-lg);
-    box-shadow: var(--shadow-sm);
 }
 
 .ai-review-clients::-webkit-scrollbar,
@@ -3404,12 +3454,32 @@ tr:hover .client-view-link {
     overflow: visible;
     padding: var(--sp-3) var(--sp-2);
 }
-.ai-review-docs .ai-accordion-header {
-    border-radius: var(--radius-md);
-}
+/* DL-330 redesign: slim the docs-pane client header (was loud purple banner).
+   Mobile uses the same .ai-accordion but inside #aiClientsPane — not overridden here. */
+.ai-review-docs .ai-accordion-header,
 .ai-review-docs .ai-accordion.open .ai-accordion-header {
-    border-radius: var(--radius-md) var(--radius-md) 0 0;
+    background: white !important;
+    color: var(--gray-900) !important;
+    border-radius: 0 !important;
+    border-bottom: 1px solid var(--gray-200);
+    padding: var(--sp-2) var(--sp-3);
+    cursor: default;
 }
+.ai-review-docs .ai-accordion-header .ai-accordion-title {
+    font-weight: 600;
+    color: var(--gray-900);
+}
+.ai-review-docs .ai-accordion.open .ai-accordion-stats {
+    opacity: 1;
+}
+.ai-review-docs .ai-accordion.open .ai-doc-manager-link {
+    color: var(--brand-600);
+}
+.ai-review-docs .ai-accordion.open .ai-doc-manager-link:hover {
+    background: var(--brand-50);
+}
+/* Hide the expand/collapse chevron in docs pane — the accordion is always open there */
+.ai-review-docs .ai-accordion-icon { display: none; }
 
 /* Client row — reuses .ai-accordion-header styling, adds .active highlight */
 .ai-client-row {
@@ -3481,8 +3551,8 @@ tr:hover .client-view-link {
     height: 100%;
     background: white;
     border: 1px solid var(--gray-200);
-    border-radius: var(--radius-lg);
-    box-shadow: var(--shadow-sm);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-xs);
     display: flex;
     flex-direction: column;
     overflow: hidden;
