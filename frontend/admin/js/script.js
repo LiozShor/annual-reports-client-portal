@@ -62,7 +62,7 @@ let _reminderPageA = 1;
 let _reminderPageB = 1;
 let _aiPage = 1;
 const PAGE_SIZE = 50;
-const AI_PAGE_SIZE = 25; // DL-268: AI review paginates by client groups, not documents
+const AI_PAGE_SIZE = 10; // DL-268: AI review paginates by client groups, not documents (DL-330: lowered 25→10 to fit the narrower clients pane without internal scroll fatigue)
 
 // DL-256: Shared pagination renderer
 function renderPagination(containerId, totalItems, currentPage, pageSize, onPageChange) {
@@ -4228,7 +4228,8 @@ function renderAICards(items, allFilteredItems) {
         return;
     }
 
-    if (clientsPane) clientsPane.style.display = 'block';
+    // DL-330: clear any inline display (was 'block' — overrode the CSS 'display: flex' that makes the toolbar-top + scroll-list layout work)
+    if (clientsPane) clientsPane.style.display = '';
     if (emptyState) emptyState.style.display = 'none';
 
     // Group by client_name
