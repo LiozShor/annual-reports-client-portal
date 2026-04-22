@@ -5684,14 +5684,16 @@ function showClientReviewDonePrompt(clientName, userInitiated = false) {
                 <span class="ai-review-done-stats">${statParts.join(' · ')}</span>
             </div>
             ${hasPendingQuestions ? `
-            <button class="btn btn-success btn-sm ai-review-done-btn" onclick="dismissAndSendQuestions('${escapeOnclick(clientName)}')">
-                ${icon('send', 'icon-xs')}
-                סיום בדיקה ושליחת שאלות
-            </button>
-            <button class="btn btn-secondary btn-sm" onclick="previewBatchQuestions('${escapeOnclick(clientName)}')">
-                ${icon('eye', 'icon-xs')}
-                תצוגה מקדימה
-            </button>
+            <div class="ai-review-send-stack" style="display:flex;flex-direction:column;gap:6px;align-items:stretch;">
+                <button class="btn btn-success btn-sm ai-review-done-btn" onclick="dismissAndSendQuestions('${escapeOnclick(clientName)}')">
+                    ${icon('send', 'icon-xs')}
+                    סיום בדיקה ושליחת שאלות
+                </button>
+                <button class="btn btn-link btn-sm" style="font-size:12px;padding:2px 4px;" onclick="previewBatchQuestions('${escapeOnclick(clientName)}')">
+                    ${icon('eye', 'icon-xs')}
+                    תצוגה מקדימה של השליחה
+                </button>
+            </div>
             <button class="btn btn-ghost btn-sm" onclick="openBatchQuestionsModal('${escapeOnclick(clientName)}')">
                 ${icon('pencil', 'icon-xs')}
                 ערוך שאלות
