@@ -10,7 +10,7 @@
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📋</text></svg>">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" integrity="sha384-vtjasyidUo0kW94K5MXDXntzOJpQgBKXmE7e2Ga4LG0skTTLeBi97eFAXsqewJjw" crossorigin="anonymous"></script>
     <link rel="stylesheet" href="../assets/css/design-system.css">
-    <link rel="stylesheet" href="css/style.css?v=291">
+    <link rel="stylesheet" href="css/style.css?v=292">
 
 </head>
 
@@ -990,13 +990,13 @@
                                 <input type="text" id="aiSearchInput" placeholder="חיפוש לפי שם לקוח..." oninput="debouncedApplyAIFilters()">
                             </div>
                         </div>
-                        <div class="ai-clients-list" id="aiClientsList"></div>
-                        <!-- DL-247: Skeleton shown until prefetch completes -->
-                        <div class="skeleton-loader">
-                            <div class="skeleton-card"><div class="skeleton skeleton-text-lg" style="width:60%;margin-bottom:var(--sp-3)"></div><div class="skeleton skeleton-text" style="width:40%"></div></div>
-                            <div class="skeleton-card"><div class="skeleton skeleton-text-lg" style="width:50%;margin-bottom:var(--sp-3)"></div><div class="skeleton skeleton-text" style="width:45%"></div></div>
-                            <div class="skeleton-card"><div class="skeleton skeleton-text-lg" style="width:55%;margin-bottom:var(--sp-3)"></div><div class="skeleton skeleton-text" style="width:35%"></div></div>
-                        </div>
+                        <div class="ai-clients-list" id="aiClientsList">
+                            <!-- DL-247: Skeleton shown until prefetch completes -->
+                            <div class="skeleton-loader">
+                                <div class="skeleton-card"><div class="skeleton skeleton-text-lg" style="width:60%;margin-bottom:var(--sp-3)"></div><div class="skeleton skeleton-text" style="width:40%"></div></div>
+                                <div class="skeleton-card"><div class="skeleton skeleton-text-lg" style="width:50%;margin-bottom:var(--sp-3)"></div><div class="skeleton skeleton-text" style="width:45%"></div></div>
+                                <div class="skeleton-card"><div class="skeleton skeleton-text-lg" style="width:55%;margin-bottom:var(--sp-3)"></div><div class="skeleton skeleton-text" style="width:35%"></div></div>
+                            </div>
                         </div><!-- /.ai-clients-list -->
                     </div><!-- /.ai-review-clients -->
 
