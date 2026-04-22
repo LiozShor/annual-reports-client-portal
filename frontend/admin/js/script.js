@@ -4257,6 +4257,8 @@ function renderAICard(item) {
         ${icon('eye', 'icon-sm')} תצוגה מקדימה
     </button>`;
 
+    const moreBtn = `<button class="btn btn-ghost btn-sm ai-card-more-btn" style="padding:4px 6px;" onclick="event.stopPropagation(); toggleCardMenu(this, '${escapeAttr(item.id)}', '${escapeOnclick(item.client_name)}')" title="עוד פעולות">${icon('more-horizontal', 'icon-sm')}</button>`;
+
     // DL-320: decorative "?" robot help icon removed per NN/G tooltip guidelines
     let classificationHtml = '';
     let actionsHtml = '';
@@ -4504,7 +4506,7 @@ function renderAICard(item) {
                     ${item.is_unrequested && !item.pre_questionnaire ? '<span class="ai-unrequested-badge" title="מסמך שלא נדרש מהלקוח">לא נדרש</span>' : ''}
                     ${item.pre_questionnaire ? '<span class="ai-pre-questionnaire-badge" title="הלקוח טרם מילא את השאלון — הסיווג בוצע מול הקטלוג המלא">טרם מולא שאלון</span>' : ''}
                 </div>
-                ${viewFileBtn}
+                ${viewFileBtn}${moreBtn}
             </div>
             <div class="ai-card-body">
                 <div class="ai-classification-result">
@@ -4517,6 +4519,12 @@ function renderAICard(item) {
             ${contractPeriodBannerHtml}
             <div class="ai-card-actions">
                 ${actionsHtml}
+                <div class="row-overflow-dropdown">
+                    <button class="action-btn overflow" onclick="toggleRowMenu(this, event)" title="פעולות נוספות">⋮</button>
+                    <div class="row-menu">
+                        <button onclick="closeAllRowMenus(); openBatchQuestionsModal('${escapeOnclick(item.client_name)}', '${escapeAttr(item.id)}')">${icon('message-circle', 'icon-sm')} שאל שאלה על מסמך זה</button>
+                    </div>
+                </div>
             </div>
         </div>
     `;
@@ -4608,6 +4616,9 @@ function renderReviewedCard(item, reviewStatus) {
     // DL-320: post-approve "הקובץ תואם למסמך נוסף" button — multi-match entry point
     // (moved from pre-approve cards; reuses DL-314 showAIAlsoMatchModal as-is)
     const isApproved = reviewStatus === 'approved';
+
+    const moreBtn = `<button class="btn btn-ghost btn-sm ai-card-more-btn" style="padding:4px 6px;" onclick="event.stopPropagation(); toggleCardMenu(this, '${escapeAttr(item.id)}', '${escapeOnclick(item.client_name)}', ${JSON.stringify({ alsoMatch: isApproved, canChangeDecision: true })})" title="עוד פעולות">${icon('more-horizontal', 'icon-sm')}</button>`;
+
     const alsoMatchBtn = isApproved
         ? `<button class="btn btn-outline btn-sm ai-also-match-btn" onclick="showAIAlsoMatchModal('${escapeAttr(item.id)}')">
                ${icon('copy-plus', 'icon-sm')} הקובץ תואם למסמך נוסף
@@ -4643,7 +4654,14 @@ function renderReviewedCard(item, reviewStatus) {
             </div>
             ${reviewedPeriodBtns}
             <div class="ai-card-actions">
-                ${actionsHtml}
+                <div class="row-overflow-dropdown">
+                    <button class="action-btn overflow" onclick="toggleRowMenu(this, event)" title="פעולות נוספות">⋮</button>
+                    <div class="row-menu">
+                        ${canChangeDecision ? `<button onclick="closeAllRowMenus(); startReReview('${escapeAttr(item.id)}')">${icon('rotate-ccw', 'icon-sm')} שנה החלטה</button>` : ''}
+                        ${isApproved ? `<button onclick="closeAllRowMenus(); showAIAlsoMatchModal('${escapeAttr(item.id)}')">${icon('copy-plus', 'icon-sm')} הקובץ תואם למסמך נוסף</button>` : ''}
+                        <button onclick="closeAllRowMenus(); openBatchQuestionsModal('${escapeOnclick(item.client_name)}', '${escapeAttr(item.id)}')">${icon('message-circle', 'icon-sm')} שאל שאלה על מסמך זה</button>
+                    </div>
+                </div>
             </div>
         </div>
     `;
@@ -5663,7 +5681,7 @@ function showClientReviewDonePrompt(clientName, userInitiated = false) {
 }
 
 // DL-328: Compose batch clarification questions for a client's AI Review batch
-function openBatchQuestionsModal(clientName) {
+function openBatchQuestionsModal(clientName, preselectedItemId) {
     const clientItems = aiClassificationsData.filter(i => i.client_name === clientName);
     const reportId = clientItems[0]?.report_record_id;
     if (!reportId) { showAIToast('לא נמצא מזהה תיק', 'danger'); return; }
@@ -5763,6 +5781,14 @@ function openBatchQuestionsModal(clientName) {
     }
 
     wireRemoveBtn(body.querySelector('.batch-q-card'));
+
+    if (preselectedItemId) {
+        const preIdx = clientItems.findIndex(i => i.id === preselectedItemId);
+        if (preIdx >= 0) {
+            const firstSelect = body.querySelector('.batch-q-file');
+            if (firstSelect) firstSelect.value = String(preIdx);
+        }
+    }
 
     addBtn.addEventListener('click', () => {
         const cardCount = body.querySelectorAll('.batch-q-card').length;
