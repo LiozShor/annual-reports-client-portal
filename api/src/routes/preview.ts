@@ -37,6 +37,9 @@ const previewHandler = async (c: any) => {
   const t0 = Date.now();
   let stage: 'preview' | 'downloadUrl' = 'preview';
 
+  // Diagnostic: always log entry so we see every invocation even if client cancels
+  console.log('[get-preview-url] START', { itemId });
+
   try {
     // Call 1: get embed/preview URL
     const previewResponse = await msGraph.post(`/me/drive/items/${itemId}/preview`, {});
@@ -50,9 +53,8 @@ const previewHandler = async (c: any) => {
     );
     const downloadUrl: string = itemResponse?.['@microsoft.graph.downloadUrl'] ?? '';
     const totalMs = Date.now() - t0;
-    if (totalMs > 3000) {
-      console.warn('[get-preview-url] SLOW', { itemId, preview_ms: tPreview, total_ms: totalMs });
-    }
+    const logFn = totalMs > 2000 ? console.warn : console.log;
+    logFn('[get-preview-url] DONE', { itemId, preview_ms: tPreview, total_ms: totalMs });
 
     return c.json({ ok: true, previewUrl, downloadUrl });
   } catch (err: any) {
