@@ -68,5 +68,6 @@ const ENDPOINTS = {
     ADMIN_PENDING_APPROVAL:    `${CF_BASE}/admin-pending-approval`,
 
     // --- Batch questions (DL-328) ---
-    SEND_BATCH_QUESTIONS:      `${CF_BASE}/send-batch-questions`,
+    SEND_BATCH_QUESTIONS:           `${CF_BASE}/send-batch-questions`,
+    SAVE_CLASSIFICATION_QUESTION:   `${CF_BASE}/save-classification-question`,
 };
