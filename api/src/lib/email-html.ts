@@ -732,16 +732,25 @@ export interface BatchQuestionItem {
   question: string;
 }
 
-export function buildBatchQuestionsSubject(clientName: string, language: string): string {
+export function buildBatchQuestionsSubject(
+  filingType: string,
+  year: string | number,
+  language: string,
+): string {
+  const isCapital = filingType === 'capital_statement';
+  const labelHe = isCapital ? 'הצהרת הון' : 'דו״ח שנתי';
+  const labelEn = isCapital ? 'Capital Statement' : 'Annual Report';
   return language === 'en'
-    ? `Questions about the documents you sent — ${clientName}`
-    : `שאלות לגבי המסמכים שהעברת — ${clientName}`;
+    ? `Questions about the documents you sent - ${labelEn} ${year}`
+    : `שאלות לגבי המסמכים שהעברת - ${labelHe} ${year}`;
 }
 
 export function buildBatchQuestionsHtml(
   clientName: string,
   language: string,
   questions: BatchQuestionItem[],
+  filingType: string,
+  year: string | number,
 ): string {
   const isEnglish = language === 'en';
   const dir = isEnglish ? 'ltr' : 'rtl';
@@ -782,7 +791,7 @@ export function buildBatchQuestionsHtml(
       `</td></tr></table>`;
   });
 
-  const headerSubject = buildBatchQuestionsSubject(clientName, language);
+  const headerSubject = buildBatchQuestionsSubject(filingType, year, language);
 
   const contentRows =
     `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">` +

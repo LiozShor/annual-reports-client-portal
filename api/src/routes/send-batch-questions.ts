@@ -55,10 +55,12 @@ sendBatchQuestions.post('/send-batch-questions', async (c) => {
     const clientName = first(report.fields.client_name);
     const clientEmail = first(report.fields.client_email);
     const language = first(report.fields.source_language) || 'he';
+    const filingType = first(report.fields.filing_type) || 'annual_report';
+    const year = first(report.fields.year) || new Date().getFullYear();
 
     // Build email
-    const subject = buildBatchQuestionsSubject(clientName, language);
-    const html = buildBatchQuestionsHtml(clientName, language, validQuestions);
+    const subject = buildBatchQuestionsSubject(filingType, year, language);
+    const html = buildBatchQuestionsHtml(clientName, language, validQuestions, filingType, year);
 
     // Preview mode — return rendered email, skip send
     if (preview === true) {
