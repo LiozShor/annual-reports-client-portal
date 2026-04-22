@@ -4543,6 +4543,12 @@ function renderAICard(item) {
             <div class="ai-card-actions">
                 ${actionsHtml}
             </div>
+            <div class="ai-card-question-row">
+                <button class="btn btn-ghost btn-sm ai-add-question-btn" onclick="openAddQuestionDialog('${escapeAttr(item.id)}')">
+                    ${icon('message-circle','icon-xs')} ${item.pending_question ? 'ערוך שאלה' : 'הוסף שאלה'}
+                </button>
+                ${item.pending_question ? `<span class="batch-q-inline-badge">${icon('message-circle','icon-xs')} ${escapeHtml(item.pending_question.substring(0,80))}${item.pending_question.length>80?'…':''}</span>` : ''}
+            </div>
         </div>
     `;
 }
