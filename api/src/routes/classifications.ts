@@ -141,13 +141,15 @@ classifications.get('/get-pending-classifications', async (c) => {
     const filingTypeMap = new Map<string, string>();
 
     // DL-254: Parallel batch fetch reports in chunks of 50
+    // DL-322: also collect linked `documents` IDs to scope the docs fetch below
+    const docIdsToFetch = new Set<string>();
     const reportChunkPromises = [];
     for (let i = 0; i < reportIds.length; i += 50) {
       const chunk = reportIds.slice(i, i + 50);
       const formula = `OR(${chunk.map(id => `RECORD_ID()='${id}'`).join(',')})`;
       reportChunkPromises.push(airtable.listAllRecords(TABLES.REPORTS, {
         filterByFormula: formula,
-        fields: ['client_is_active', 'client_notes', 'filing_type'],
+        fields: ['client_is_active', 'client_notes', 'filing_type', 'documents'],
       }));
     }
     const reportBatches = await Promise.all(reportChunkPromises);
@@ -158,6 +160,8 @@ classifications.get('/get-pending-classifications', async (c) => {
         if (rep.fields.client_notes) {
           clientNotesMap.set(rep.id, rep.fields.client_notes as string);
         }
+        const docs = rep.fields.documents;
+        if (Array.isArray(docs)) for (const d of docs) docIdsToFetch.add(d as string);
       }
     }
 
@@ -186,7 +190,8 @@ classifications.get('/get-pending-classifications', async (c) => {
       const formula = `AND(OR(${chunk.map(id => `{client_id} = '${id}'`).join(',')}), OR({stage} = 'Collecting_Docs', {stage} = 'Review', {stage} = 'Pending_Approval'))`;
       clientChunkPromises.push(airtable.listAllRecords(TABLES.REPORTS, {
         filterByFormula: formula,
-        fields: ['client_id', 'filing_type'],
+        // DL-322: include documents so cross-filing-type reports also contribute doc IDs
+        fields: ['client_id', 'filing_type', 'documents'],
       }));
     }
     const clientBatches = await Promise.all(clientChunkPromises);
@@ -200,20 +205,37 @@ classifications.get('/get-pending-classifications', async (c) => {
         const arr = clientToReports.get(cid)!;
         if (!arr.some(r => r.reportId === rep.id)) arr.push({ reportId: rep.id, filingType: ft });
         if (!filingTypeMap.has(rep.id)) filingTypeMap.set(rep.id, ft);
+        const docs = rep.fields.documents;
+        if (Array.isArray(docs)) for (const d of docs) docIdsToFetch.add(d as string);
       }
     }
 
     // ---- Step 4: Fetch documents + templates + categories (parallel) ----
-    // DL-321 HOTFIX: revert scoped FIND/ARRAYJOIN docs fetch — caused 20s+ timeouts under
-    // concurrent load (FIND on linked field has no index, evaluated per-row × 50 clauses).
-    // Restore DL-320 cached unscoped fetch with onedrive_item_id field for sharedRefMap.
+    // DL-322: scope DOCUMENTS fetch by RECORD_ID() of the linked `documents` field on REPORTS
+    // (collected above). RECORD_ID() lookup is indexed in Airtable — same fast pattern used
+    // for the REPORTS chunk fetch. Avoids the DL-321 FIND/ARRAYJOIN timeout regression.
+    const docIdList = Array.from(docIdsToFetch);
+    const docFetchPromise: Promise<any[]> = docIdList.length === 0
+      ? Promise.resolve([])
+      : Promise.all(
+          (() => {
+            const chunks: Promise<any[]>[] = [];
+            for (let i = 0; i < docIdList.length; i += 50) {
+              const chunk = docIdList.slice(i, i + 50);
+              const formula = `AND({status} != 'Waived', OR(${chunk.map(id => `RECORD_ID()='${id}'`).join(',')}))`;
+              chunks.push(
+                airtable.listAllRecords(TABLES.DOCUMENTS, {
+                  filterByFormula: formula,
+                  fields: ['report', 'type', 'issuer_name', 'status', 'category', 'onedrive_item_id'],
+                })
+              );
+            }
+            return chunks;
+          })()
+        ).then(batches => batches.flat());
+
     const [docRecords, templateRecords, categoryRecords] = await Promise.all([
-      getCachedOrFetch(c.env.CACHE_KV, 'cache:documents_non_waived_v2', 300, () =>
-        airtable.listAllRecords(TABLES.DOCUMENTS, {
-          filterByFormula: `{status} != 'Waived'`,
-          fields: ['report', 'type', 'issuer_name', 'status', 'category', 'onedrive_item_id'],
-        })
-      ),
+      docFetchPromise,
       getCachedOrFetch(c.env.CACHE_KV, 'cache:templates', 3600,
         () => airtable.listAllRecords(TABLES.TEMPLATES)),
       getCachedOrFetch(c.env.CACHE_KV, 'cache:categories', 3600,
