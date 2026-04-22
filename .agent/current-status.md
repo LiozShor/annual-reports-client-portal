@@ -1,5 +1,23 @@
 # Annual Reports CRM - Current Status
 
+**Last Updated:** 2026-04-22 (DL-329 preview timeout + error UX fix — LIVE, tests passed)
+
+## DL-329 Preview Timeout + "signal timed out" Error UX — COMPLETED ✓
+
+Branch `DL-329-preview-timeout` merged to main. Live on Cloudflare Pages (`script.js?v=283`).
+
+- `getDocPreviewUrl` timeout: 10s → 20s (`FETCH_TIMEOUTS.slow`)
+- `humanizeError()` utility: maps `TimeoutError` → "הפעולה ארכה יותר מדי — נסה שוב" across all 12 `showModal` call sites
+- Inline preview panel (desktop + mobile): Hebrew error message + "נסה שוב" retry button on timeout
+
+**Live verification (wrangler tail 2026-04-22 15:03):**
+- Previously-failing item `01QU4BFLDO5EFXE5O7IBHZQKHZVFN2B7XJ` → now `Ok` (was `Canceled`)
+- 4 consecutive preview loads all `Ok`, no timeouts
+
+Design log: `.agent/design-logs/admin-ui/329-preview-timeout-error-ux.md`
+
+---
+
 **Last Updated:** 2026-04-22 (DL-321/322/323 AI Review perf + UX bundle — LIVE, tests passed)
 
 ## DL-321/322/323 AI Review Endpoint Perf + Polish — LIVE (tests passed)

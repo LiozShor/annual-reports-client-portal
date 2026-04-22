@@ -1,5 +1,5 @@
 # Design Log 329: Preview Timeout & "signal timed out" Error UX Fix
-**Status:** [IMPLEMENTED — NEED TESTING]
+**Status:** [COMPLETED]
 **Date:** 2026-04-22
 **Related Logs:** DL-075 (inline preview), DL-146 (download button), DL-321 (AI review perf)
 
