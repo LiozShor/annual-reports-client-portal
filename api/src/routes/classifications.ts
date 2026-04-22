@@ -453,7 +453,16 @@ classifications.get('/get-pending-classifications', async (c) => {
     if (itemIdSet.size > 0) {
       try {
         const msGraph = new MSGraphClient(c.env, c.executionCtx);
-        const urlMap = await msGraph.batchResolveUrls(Array.from(itemIdSet));
+        // DL-323: 2s hard timeout — MS Graph $batch can stall 10-40s when items 404
+        // (e.g., stale DL-320 fake IDs in DOCUMENTS). On timeout, cards render without
+        // file_url, same as the existing error fallback. Better than blocking the response.
+        const MS_GRAPH_TIMEOUT_MS = 2000;
+        const urlMap = await Promise.race([
+          msGraph.batchResolveUrls(Array.from(itemIdSet)),
+          new Promise<never>((_, reject) =>
+            setTimeout(() => reject(new Error(`MS Graph timeout after ${MS_GRAPH_TIMEOUT_MS}ms`)), MS_GRAPH_TIMEOUT_MS)
+          ),
+        ]);
         for (const item of items) {
           const itemId = item.onedrive_item_id as string | undefined;
           if (itemId && urlMap.has(itemId)) {
@@ -466,6 +475,7 @@ classifications.get('/get-pending-classifications', async (c) => {
         // Non-fatal — items just won't have resolved URLs
       }
     }
+    mark('step8.msGraph', { nItems: itemIdSet.size });
 
     // ---- Step 9: Return ----
     mark('step9.return', { nItems: items.length, filing_type: filingType });
