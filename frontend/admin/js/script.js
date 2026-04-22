@@ -407,6 +407,8 @@ function closeTabDropdown(wrapper) {
 
 function toggleTabDropdown(event) {
     event.stopPropagation();
+    // Hover-capable devices: hover listeners own open/close — ignore clicks
+    if (window.matchMedia('(hover: hover) and (pointer: fine)').matches) return;
     const wrapper = event.currentTarget.parentElement;
     const menu = wrapper.querySelector(':scope > .tab-dropdown-menu');
     if (!menu) return;
