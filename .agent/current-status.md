@@ -1,6 +1,32 @@
 # Annual Reports CRM - Current Status
 
-**Last Updated:** 2026-04-22 (DL-330 AI Review 3-pane rework — IMPLEMENTED, needs testing)
+**Last Updated:** 2026-04-23 (DL-333 batch-questions off-hours queue — IMPLEMENTED, needs testing)
+
+## DL-333 Batch-Questions Off-Hours Queue — IMPLEMENTED — NEED TESTING
+
+Branch `DL-333-followup-questions-office-hours-queue`. The DL-328 "שאל את הלקוח" email previously called `graph.sendMail()` synchronously regardless of time. Now mirrors DL-264/273/281: between 20:00–08:00 Israel, swaps to `sendMailDeferred()` with `getNext0800Israel()`, persists the returned `messageId` on the new `client_notes` `batch_questions_sent` entry, returns `{ok:true, queued:true, scheduled_for:'08:00'}`.
+
+- **Backend:** `api/src/routes/send-batch-questions.ts` (off-hours branch + note stamp), `api/src/routes/dashboard.ts` (`QueuedRow.type` widened, queue-modal projection accepts `batch_questions_sent` notes → emits `type:'batch_questions'`).
+- **Frontend:** `frontend/admin/js/script.js` (`renderQueuedEmailsModal` typeLabel includes `שאלות לאחר סקירה`; `submitBatchQuestions` toast branches on `data.queued`); `frontend/admin/index.html` cache-bust `script.js?v=297→v=298`.
+- **Type-check:** clean (only 2 pre-existing errors per DL-281).
+- **Schema:** zero change — `graph_message_id` lives inside the existing `client_notes` JSON shape.
+
+### Active TODOs — Test DL-333: batch-questions off-hours queue
+- [ ] Daytime (08:00–20:00 Israel): "שאל את הלקוח" sends immediately, toast "השאלות נשלחו ללקוח", no `graph_message_id` on note, no row in queue modal.
+- [ ] Off-hours (20:00–08:00 Israel): same click returns `{ok:true, queued:true}`, toast "השאלות נשלחו לבוקר — יישלחו ב־08:00" (info tone), button hides via `_batchQuestionsSentClients`.
+- [ ] Email actually arrives at client mailbox at 08:00 next morning (Outlook PidTagDeferredSendTime).
+- [ ] `client_notes` entry contains `graph_message_id` + `queued:true` after off-hours queue.
+- [ ] Dashboard `(N בתור לשליחה)` count increments; modal lists row labelled `שאלות לאחר סקירה`.
+- [ ] After Exchange delivers at 08:00, next dashboard load drops the row from the modal automatically.
+- [ ] Preview (`preview=true`) at 22:00 still returns `{subject, html}` synchronously — no Outbox draft created.
+- [ ] `pending_question` cleared on classifications immediately for both daytime and queued sends.
+- [ ] Empty `clientEmail` still 400s (no Outbox draft created).
+- [ ] No regression on DL-281 doc-request and reply rows in queue modal.
+- [ ] `wrangler deploy` clean; no startup errors in `wrangler tail`.
+
+Design log: `.agent/design-logs/email/333-batch-questions-off-hours-queue.md`
+
+---
 
 ## DL-330 AI Review 3-Pane Rework — IMPLEMENTED — NEED TESTING
 

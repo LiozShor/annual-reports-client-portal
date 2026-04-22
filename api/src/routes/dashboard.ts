@@ -502,7 +502,7 @@ dashboard.get('/admin-queued-emails', async (c) => {
     report_id: string;
     client_name: string;
     filing_type: string;
-    type: 'doc_request' | 'reply';
+    type: 'doc_request' | 'reply' | 'batch_questions';
     queued_at: string;
     scheduled_for: string;
     graph_message_id: string | null;
@@ -540,7 +540,8 @@ dashboard.get('/admin-queued-emails', async (c) => {
       });
     }
 
-    // Reply path: graph_message_id stored inside client_notes JSON entries.
+    // Reply + batch-questions path: graph_message_id stored inside client_notes JSON entries.
+    // DL-281: office_reply notes. DL-333: batch_questions_sent notes (off-hours).
     const notesRaw = f.client_notes as string | undefined;
     if (notesRaw) {
       let notes: Array<Record<string, unknown>> = [];
@@ -550,11 +551,12 @@ dashboard.get('/admin-queued-emails', async (c) => {
         const gid = n.graph_message_id;
         if (typeof gid !== 'string' || !gid) continue;
         if (!outboxIds.has(gid)) continue;
+        const noteType = n.type === 'batch_questions_sent' ? 'batch_questions' : 'reply';
         queued.push({
           report_id: r.id,
           client_name: clientName,
           filing_type: rowFilingType,
-          type: 'reply',
+          type: noteType,
           queued_at: String(n.date || new Date().toISOString()),
           scheduled_for: outboxById.get(gid)!.deferredUtc,
           graph_message_id: gid,
