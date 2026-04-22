@@ -4,6 +4,7 @@ import { AirtableClient } from '../lib/airtable';
 import { MSGraphClient } from '../lib/ms-graph';
 import { logError } from '../lib/error-logger';
 import { buildBatchQuestionsSubject, buildBatchQuestionsHtml } from '../lib/email-html';
+import { isOffHours, getNext0800Israel } from '../lib/israel-time';
 import type { Env } from '../lib/types';
 import type { BatchQuestionItem } from '../lib/email-html';
 
@@ -71,11 +72,20 @@ sendBatchQuestions.post('/send-batch-questions', async (c) => {
       return c.json({ ok: false, error: 'No client email on report' }, 400);
     }
 
-    // Send email
+    // Send email — off-hours (20:00-08:00 Israel) defers to next 08:00 via PidTagDeferredSendTime (DL-264/273)
     const graph = new MSGraphClient(c.env, c.executionCtx);
-    await graph.sendMail(subject, html, clientEmail, SENDER);
+    const offHours = isOffHours();
+    let deferredMessageId: string | null = null;
+    if (offHours) {
+      const deferredUtc = getNext0800Israel();
+      const r = await graph.sendMailDeferred(subject, html, clientEmail, SENDER, deferredUtc);
+      deferredMessageId = r.messageId;
+    } else {
+      await graph.sendMail(subject, html, clientEmail, SENDER);
+    }
 
-    // Append to client_notes + clear pending_question on classification records
+    // Append to client_notes + clear pending_question on classification records.
+    // When queued, stamp graph_message_id so DL-281 queue modal (Outlook = source of truth) can surface it.
     const existingNotes = first(report.fields.client_notes);
     let notes: unknown[] = [];
     try { notes = JSON.parse(existingNotes || '[]'); } catch { notes = []; }
@@ -85,6 +95,7 @@ sendBatchQuestions.post('/send-batch-questions', async (c) => {
       date: new Date().toISOString(),
       items: validQuestions,
       language,
+      ...(deferredMessageId ? { graph_message_id: deferredMessageId, queued: true } : {}),
     });
 
     const fileIds = validQuestions.map(q => q.file_id).filter(Boolean);
@@ -93,7 +104,7 @@ sendBatchQuestions.post('/send-batch-questions', async (c) => {
       ...fileIds.map(id => airtable.updateRecord(TABLES.CLASSIFICATIONS, id, { pending_question: null })),
     ]);
 
-    return c.json({ ok: true });
+    return c.json({ ok: true, queued: offHours, ...(offHours ? { scheduled_for: '08:00' } : {}) });
 
   } catch (err) {
     console.error('[send-batch-questions] CAUGHT ERROR:', (err as Error).message, (err as Error).stack);

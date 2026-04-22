@@ -2063,7 +2063,11 @@ function renderQueuedEmailsModal() {
         } catch { return ''; }
     };
     const filingLabel = (ft) => ft === 'capital_statement' ? 'דוח הון' : 'דוח שנתי';
-    const typeLabel = (t) => t === 'reply' ? 'תגובה' : 'דרישת מסמכים';
+    const typeLabel = (t) => {
+        if (t === 'reply') return 'תגובה';
+        if (t === 'batch_questions') return 'שאלות לאחר סקירה';
+        return 'דרישת מסמכים';
+    };
 
     const listHtml = rows.length === 0
         ? `<div style="text-align:center;padding:var(--sp-8) 0;color:var(--gray-500)">אין מיילים בתור</div>`
@@ -6180,7 +6184,11 @@ async function dismissAndSendQuestions(clientName) {
             return;
         }
         _batchQuestionsSentClients.add(clientName);
-        showAIToast('השאלות נשלחו ללקוח');
+        if (data.queued) {
+            showAIToast('השאלות נשלחו לבוקר — יישלחו ב־08:00', 'info');
+        } else {
+            showAIToast('השאלות נשלחו ללקוח');
+        }
         dismissClientReview(clientName);
     } catch (_err) {
         showAIToast('שגיאה בתקשורת עם השרת', 'danger');
