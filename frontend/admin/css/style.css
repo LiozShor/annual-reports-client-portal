@@ -2306,6 +2306,7 @@ tr:hover .client-view-link {
     align-items: center;
     gap: var(--sp-3);
     direction: rtl;
+    flex-wrap: wrap;
 }
 
 .ai-review-done-icon {
@@ -2315,6 +2316,7 @@ tr:hover .client-view-link {
 
 .ai-review-done-text {
     flex: 1;
+    min-width: 160px;
     display: flex;
     flex-direction: column;
     gap: 2px;
@@ -2528,6 +2530,10 @@ tr:hover .client-view-link {
 
 .ai-card-actions .btn {
     flex-shrink: 0;
+}
+
+.ai-card-actions .ai-assign-section {
+    flex-basis: 100%;
 }
 
 .ai-card-actions .btn[aria-disabled="true"] {
