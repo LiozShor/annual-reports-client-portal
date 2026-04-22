@@ -6886,9 +6886,6 @@ tr:hover .client-edit-link {
 .entity-tabs {
     display: flex;
     gap: var(--sp-2);
-    padding: var(--sp-3) var(--sp-5);
-    background: white;
-    border-bottom: 1px solid var(--gray-200);
 }
 
 .entity-tab {
