@@ -52,6 +52,7 @@ let aiClassificationsEverRendered = false;
 let pendingApprovalEverRendered = false;
 let remindersEverRendered = false;
 let questionnairesEverRendered = false;
+const _batchQuestionsSentClients = new Set(); // DL-328: track sent clients this session
 const STALE_AFTER_MS = 300000; // DL-311 B2: 5min — was 30s; visibilitychange + 5min auto-refresh handle real-time freshness, so 30s triggered too many full renders during natural workflows
 
 // DL-256: Pagination state
@@ -5640,6 +5641,11 @@ function showClientReviewDonePrompt(clientName, userInitiated = false) {
                 ${icon('check', 'icon-xs')}
                 סיום בדיקה
             </button>
+            ${!_batchQuestionsSentClients.has(clientName) ? `
+            <button class="btn btn-secondary btn-sm" onclick="openBatchQuestionsModal('${escapeOnclick(clientName)}')">
+                ${icon('mail', 'icon-xs')}
+                שאל את הלקוח
+            </button>` : ''}
         </div>
     `;
 
@@ -5654,6 +5660,161 @@ function showClientReviewDonePrompt(clientName, userInitiated = false) {
     }
 
     safeCreateIcons();
+}
+
+// DL-328: Compose batch clarification questions for a client's AI Review batch
+function openBatchQuestionsModal(clientName) {
+    const clientItems = aiClassificationsData.filter(i => i.client_name === clientName);
+    const reportId = clientItems[0]?.report_record_id;
+    if (!reportId) { showAIToast('לא נמצא מזהה תיק', 'danger'); return; }
+
+    // Remove any existing instance
+    document.querySelectorAll('.ai-modal-overlay.batch-questions-overlay').forEach(el => el.remove());
+
+    // Build file dropdown options from reviewed items
+    const optionsHtml = clientItems.map((item, idx) => {
+        const label = item.attachment_name || 'מסמך ללא שם';
+        const suffix = item.matched_short_name ? ' — ' + item.matched_short_name : '';
+        return `<option value="${idx}">${escapeHtml(label + suffix)}</option>`;
+    }).join('');
+
+    function buildCardHtml(num, isFirst) {
+        return `<div class="batch-q-card" style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:12px;display:flex;flex-direction:column;gap:8px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;">
+                <span style="font-size:13px;font-weight:600;color:#6b7280">שאלה ${num}</span>
+                <button type="button" class="btn btn-ghost btn-sm batch-q-remove" style="padding:2px 8px;font-size:12px;${isFirst ? 'display:none' : ''}">הסר</button>
+            </div>
+            <select class="batch-q-file" style="width:100%;padding:6px 8px;border:1px solid #d1d5db;border-radius:6px;font-size:14px;font-family:inherit;" dir="rtl">
+                <option value="">בחר מסמך…</option>
+                ${optionsHtml}
+            </select>
+            <textarea class="batch-q-text" style="width:100%;min-height:72px;padding:8px;border:1px solid #d1d5db;border-radius:6px;resize:vertical;font-family:inherit;font-size:14px;" dir="rtl" placeholder="הקלד שאלה…"></textarea>
+        </div>`;
+    }
+
+    const overlay = document.createElement('div');
+    overlay.className = 'ai-modal-overlay batch-questions-overlay';
+    overlay.innerHTML = `
+        <div class="ai-modal-panel" dir="rtl" style="max-width:640px;width:90vw;max-height:85vh;display:flex;flex-direction:column;">
+            <div class="msg-compose-header" style="display:flex;align-items:center;justify-content:space-between;padding:16px;">
+                <div style="font-weight:600;font-size:16px;">שאלות ללקוח — ${escapeHtml(clientName)}</div>
+                <button type="button" class="batch-q-close" style="background:transparent;border:none;font-size:20px;cursor:pointer;color:#6b7280;padding:4px 8px;">✕</button>
+            </div>
+            <div class="batch-q-body" style="flex:1 1 auto;overflow-y:auto;padding:0 16px 16px;display:flex;flex-direction:column;gap:8px;">
+                ${buildCardHtml(1, true)}
+                <button type="button" class="btn btn-ghost btn-sm batch-q-add" style="align-self:flex-start;margin-top:4px;">+ הוסף שאלה</button>
+            </div>
+            <div class="batch-q-footer" style="display:flex;align-items:center;gap:8px;padding:12px 16px;border-top:1px solid var(--border-color,#e5e7eb);flex-wrap:wrap;">
+                <button type="button" class="btn btn-secondary btn-sm batch-q-preview">${icon('eye','icon-xs')} תצוגה מקדימה</button>
+                <button type="button" class="btn btn-primary btn-sm batch-q-send">${icon('send','icon-xs')} שלח שאלות</button>
+                <button type="button" class="btn btn-ghost btn-sm batch-q-cancel">ביטול</button>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(overlay);
+    requestAnimationFrame(() => overlay.classList.add('show'));
+
+    const body = overlay.querySelector('.batch-q-body');
+    const addBtn = overlay.querySelector('.batch-q-add');
+    const sendBtn = overlay.querySelector('.batch-q-send');
+    const previewBtn = overlay.querySelector('.batch-q-preview');
+    const cancelBtn = overlay.querySelector('.batch-q-cancel');
+    const closeBtn = overlay.querySelector('.batch-q-close');
+
+    function renumberCards() {
+        const cards = body.querySelectorAll('.batch-q-card');
+        cards.forEach((card, idx) => {
+            card.querySelector('span').textContent = `שאלה ${idx + 1}`;
+            const removeBtn = card.querySelector('.batch-q-remove');
+            removeBtn.style.display = cards.length > 1 ? '' : 'none';
+        });
+    }
+
+    function collectQuestions() {
+        return Array.from(body.querySelectorAll('.batch-q-card')).map(card => {
+            const select = card.querySelector('.batch-q-file');
+            const textarea = card.querySelector('.batch-q-text');
+            const idx = parseInt(select.value, 10);
+            const item = !isNaN(idx) && idx >= 0 ? clientItems[idx] : null;
+            return {
+                file_id: item?.id || '',
+                attachment_name: item?.attachment_name || '',
+                short_name: item?.matched_short_name || '',
+                question: textarea.value.trim(),
+            };
+        });
+    }
+
+    function validateQuestions(qs) {
+        return qs.length >= 1 && qs.some(q => q.question.length > 0);
+    }
+
+    function close() {
+        overlay.classList.remove('show');
+        setTimeout(() => { if (overlay.parentNode) overlay.parentNode.removeChild(overlay); }, 200);
+    }
+
+    function wireRemoveBtn(card) {
+        card.querySelector('.batch-q-remove').addEventListener('click', () => {
+            card.remove();
+            renumberCards();
+        });
+    }
+
+    wireRemoveBtn(body.querySelector('.batch-q-card'));
+
+    addBtn.addEventListener('click', () => {
+        const cardCount = body.querySelectorAll('.batch-q-card').length;
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = buildCardHtml(cardCount + 1, false);
+        const newCard = tempDiv.firstElementChild;
+        body.insertBefore(newCard, addBtn);
+        wireRemoveBtn(newCard);
+        renumberCards();
+    });
+
+    previewBtn.addEventListener('click', () => {
+        const qs = collectQuestions();
+        if (!validateQuestions(qs)) { showAIToast('יש להזין לפחות שאלה אחת', 'danger'); return; }
+        window.showEmailPreviewModal({
+            reportId,
+            clientName,
+            getToken: () => authToken,
+            endpoint: ENDPOINTS.SEND_BATCH_QUESTIONS,
+            extraPayload: { questions: qs },
+        });
+    });
+
+    sendBtn.addEventListener('click', async () => {
+        const qs = collectQuestions();
+        if (!validateQuestions(qs)) { showAIToast('יש להזין לפחות שאלה אחת', 'danger'); return; }
+        sendBtn.disabled = true;
+        try {
+            const resp = await fetchWithTimeout(ENDPOINTS.SEND_BATCH_QUESTIONS, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
+                body: JSON.stringify({ report_id: reportId, questions: qs }),
+            }, FETCH_TIMEOUTS.load);
+            const data = await resp.json();
+            if (!resp.ok || !data.ok) {
+                showAIToast(data.error || 'שגיאה בשליחה', 'danger');
+                sendBtn.disabled = false;
+                return;
+            }
+            _batchQuestionsSentClients.add(clientName);
+            close();
+            showAIToast('השאלות נשלחו ללקוח');
+            showClientReviewDonePrompt(clientName);
+        } catch (_err) {
+            showAIToast('שגיאה בתקשורת עם השרת', 'danger');
+            sendBtn.disabled = false;
+        }
+    });
+
+    cancelBtn.addEventListener('click', close);
+    closeBtn.addEventListener('click', close);
+    overlay.addEventListener('click', e => { if (e.target === overlay) close(); });
 }
 
 // DL-210: Remove all reviewed cards for this client from the UI + delete from Airtable

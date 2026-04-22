@@ -2334,5 +2334,20 @@ Branch: `DL-306-react-vite-first-slice` — NOT merged to main. Requires browser
 
 Design log: `.agent/design-logs/admin-ui/306-react-vite-ts-first-slice.md`
 
+### Test DL-328: AI Review — Ask Client Questions
+
+Branch: `DL-328-ai-review-ask-client-questions` — IMPLEMENTED, needs browser testing before merge.
+
+- [ ] Run `cd api && npx wrangler deploy --dry-run` — TypeScript compiles cleanly
+- [ ] After deploy: pick a client with all-reviewed AI Review items → "שאל את הלקוח" button visible
+- [ ] Compose 2 questions tied to 2 different files → Preview → confirm HTML shows correct cards
+- [ ] Send → verify Sent folder via `gws` CLI → confirm recipient + correct body
+- [ ] Open client record → `client_notes` shows `batch_questions_sent` entry
+- [ ] Button hides after send (session-scoped); reappears on page refresh
+- [ ] Regression: Approve & Send (DL-308 preview) still works
+- [ ] English client: LTR email with English subject/cards
+
+Design log: `.agent/design-logs/admin-ui/328-ai-review-ask-client-questions.md`
+
 ### Worktree cleanup (FS-side, manual)
 - This session's worktree at `C:/Users/liozm/Desktop/moshe/worktrees/claude-session-20260416-072032/` had its git metadata corrupted mid-session (HEAD vanished — likely parallel session pruned it). All work was recovered via copy-to-main-and-commit. Inner files cleared, orphaned `.git/worktrees/claude-session-20260416-072032/` gitdir removed, but the now-empty parent dir is locked by this terminal — `rmdir` after closing this Claude session.

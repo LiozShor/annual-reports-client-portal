@@ -722,3 +722,79 @@ export function buildCommentEmailHtml(params: CommentEmailParams): string {
 export function buildCommentEmailSubject(year: string): string {
   return 'הודעה ממשרד רו"ח Client Name \u2014 דוחות ' + year;
 }
+
+// ── Batch Questions Email (DL-328) ─────────────────────────────────
+
+export interface BatchQuestionItem {
+  file_id: string;
+  attachment_name: string;
+  short_name: string;
+  question: string;
+}
+
+export function buildBatchQuestionsSubject(clientName: string, language: string): string {
+  return language === 'en'
+    ? `Questions about the documents you sent — ${clientName}`
+    : `שאלות לגבי המסמכים שהעברת — ${clientName}`;
+}
+
+export function buildBatchQuestionsHtml(
+  clientName: string,
+  language: string,
+  questions: BatchQuestionItem[],
+): string {
+  const isEnglish = language === 'en';
+  const dir = isEnglish ? 'ltr' : 'rtl';
+  const align = isEnglish ? 'left' : 'right';
+
+  const greeting = isEnglish
+    ? `Dear ${clientName},`
+    : `שלום ${clientName},`;
+
+  const intro = isEnglish
+    ? `After reviewing the documents you sent, we have a few questions:`
+    : `לאחר עיון במסמכים שהעברת, יש לנו מספר שאלות:`;
+
+  const replyText = isEnglish
+    ? `Please reply to this email with your answers.`
+    : `נודה לתשובתך במענה לאימייל זה.`;
+
+  const docLabel = isEnglish ? 'Document' : 'שם המסמך';
+  const questionLabel = isEnglish ? 'Question' : 'שאלה';
+  const footerText = isEnglish
+    ? `Moshe Atsits CPA Firm | ${OFFICE_EMAIL}`
+    : `משרד רו"ח Client Name | ${OFFICE_EMAIL}`;
+
+  // Build question cards
+  let cardsHtml = '';
+  questions.forEach((q, i) => {
+    const docName = q.short_name
+      ? `${q.short_name} (${q.attachment_name})`
+      : q.attachment_name;
+    cardsHtml +=
+      `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:12px;">` +
+      `<tr><td style="background-color:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:16px;font-family:${FONT};">` +
+      `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">` +
+      `<tr><td style="font-size:12px;font-weight:bold;color:#6b7280;padding-bottom:6px;direction:${dir};text-align:${align};">${i + 1}.</td></tr>` +
+      `<tr><td style="font-size:13px;color:#6b7280;padding-bottom:4px;direction:${dir};text-align:${align};">${docLabel}: <strong style="color:#374151;">${docName}</strong></td></tr>` +
+      `<tr><td style="font-size:15px;color:#111827;line-height:1.6;direction:${dir};text-align:${align};">${questionLabel}: ${q.question}</td></tr>` +
+      `</table>` +
+      `</td></tr></table>`;
+  });
+
+  const headerSubject = buildBatchQuestionsSubject(clientName, language);
+
+  const contentRows =
+    `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">` +
+    `<tr><td style="font-size:15px; color:${C.body}; line-height:1.6; padding-bottom:16px; font-family:${FONT}; direction:${dir}; text-align:${align};">${greeting}</td></tr>` +
+    `<tr><td style="font-size:15px; color:${C.body}; line-height:1.6; padding-bottom:24px; font-family:${FONT}; direction:${dir}; text-align:${align};">${intro}</td></tr>` +
+    `<tr><td style="padding-bottom:16px;">${cardsHtml}</td></tr>` +
+    `<tr><td style="font-size:15px; color:${C.body}; line-height:1.6; padding-bottom:16px; font-family:${FONT}; direction:${dir}; text-align:${align};">${replyText}</td></tr>` +
+    `</table>` +
+    dividerRow() +
+    `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">` +
+    `<tr><td align="center" style="font-size:14px; color:${C.muted}; line-height:1.5; font-family:${FONT};">${footerText}</td></tr>` +
+    `</table>`;
+
+  return wrapWithHeader(headerSubject, contentRows, dir);
+}

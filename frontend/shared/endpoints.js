@@ -66,4 +66,7 @@ const ENDPOINTS = {
 
     // --- Review & Approve queue (DL-292) ---
     ADMIN_PENDING_APPROVAL:    `${CF_BASE}/admin-pending-approval`,
+
+    // --- Batch questions (DL-328) ---
+    SEND_BATCH_QUESTIONS:      `${CF_BASE}/send-batch-questions`,
 };
