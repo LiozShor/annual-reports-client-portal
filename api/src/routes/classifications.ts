@@ -204,40 +204,16 @@ classifications.get('/get-pending-classifications', async (c) => {
     }
 
     // ---- Step 4: Fetch documents + templates + categories (parallel) ----
-    // DL-321: Scope documents fetch to only reports referenced by pending classifications.
-    // Build union of reportIdSet (from classifications) + all reports in clientToReports map.
-    const allRelevantReportIds = new Set<string>(reportIdSet);
-    for (const reports of clientToReports.values()) {
-      for (const r of reports) allRelevantReportIds.add(r.reportId);
-    }
-
-    const relevantReportIdList = Array.from(allRelevantReportIds);
-
-    // DL-321: Chunked parallel fetch — same pattern as REPORTS chunk fetch above.
-    // Chunk size 50. If no relevant reports, skip the fetch entirely.
-    const docFetchPromise: Promise<any[]> = relevantReportIdList.length === 0
-      ? Promise.resolve([])
-      : Promise.all(
-          (() => {
-            const chunks: Promise<any[]>[] = [];
-            for (let i = 0; i < relevantReportIdList.length; i += 50) {
-              const chunk = relevantReportIdList.slice(i, i + 50);
-              const orClauses = chunk.map(id => `FIND('${id}', ARRAYJOIN({report}))`).join(',');
-              const formula = `AND({status} != 'Waived', OR(${orClauses}))`;
-              chunks.push(
-                airtable.listAllRecords(TABLES.DOCUMENTS, {
-                  filterByFormula: formula,
-                  // DL-320: include onedrive_item_id for shared-ref map (multi-match sibling visibility)
-                  fields: ['report', 'type', 'issuer_name', 'status', 'category', 'onedrive_item_id'],
-                })
-              );
-            }
-            return chunks;
-          })()
-        ).then(batches => batches.flat());
-
+    // DL-321 HOTFIX: revert scoped FIND/ARRAYJOIN docs fetch — caused 20s+ timeouts under
+    // concurrent load (FIND on linked field has no index, evaluated per-row × 50 clauses).
+    // Restore DL-320 cached unscoped fetch with onedrive_item_id field for sharedRefMap.
     const [docRecords, templateRecords, categoryRecords] = await Promise.all([
-      docFetchPromise,
+      getCachedOrFetch(c.env.CACHE_KV, 'cache:documents_non_waived_v2', 300, () =>
+        airtable.listAllRecords(TABLES.DOCUMENTS, {
+          filterByFormula: `{status} != 'Waived'`,
+          fields: ['report', 'type', 'issuer_name', 'status', 'category', 'onedrive_item_id'],
+        })
+      ),
       getCachedOrFetch(c.env.CACHE_KV, 'cache:templates', 3600,
         () => airtable.listAllRecords(TABLES.TEMPLATES)),
       getCachedOrFetch(c.env.CACHE_KV, 'cache:categories', 3600,
