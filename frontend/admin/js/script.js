@@ -4100,10 +4100,6 @@ function buildClientListRowHtml(clientName, clientItems, isActive) {
     }
     const total = pendingCount + reviewedCount;
 
-    const badgesHtml = pendingCount > 0
-        ? `<span class="ai-accordion-stat-badge badge-matched">${pendingCount} ממתינים</span>`
-        : `<span class="ai-accordion-stat-badge badge-success">✓ הושלם</span>`;
-
     const clientId = clientItems[0].client_id;
     const docManagerBtn = clientId
         ? `<a href="../document-manager.html?client_id=${encodeURIComponent(clientId)}"
@@ -4113,20 +4109,24 @@ function buildClientListRowHtml(clientName, clientItems, isActive) {
            </a>`
         : '';
 
+    // DL-332: zero-pending clients render nothing in the pending slot
+    const pendingHtml = pendingCount > 0
+        ? `<span class="ai-client-pending-num" title="${pendingCount} ממתינים">${pendingCount}</span>`
+        : '';
+
     return `
         <div class="ai-client-row ai-accordion-header${isActive ? ' active' : ''}"
              data-client="${escapeHtml(clientName)}"
              data-client-id="${escapeAttr(clientId || '')}"
              onclick="selectClient(this.dataset.client)">
-            <div class="ai-accordion-title" style="min-width: 0;">
-                ${icon('user', 'icon-sm')}
+            <div class="ai-accordion-actions">${docManagerBtn}</div>
+            <div class="ai-accordion-title" style="min-width: 0; flex: 1;">
                 <div style="min-width: 0;">
-                    <div style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${escapeHtml(clientName)}</div>
+                    <div style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-weight:500;">${escapeHtml(clientName)}</div>
                     <div class="ai-client-progress">${reviewedCount}/${total} נבדקו</div>
                 </div>
             </div>
-            <div class="ai-accordion-stats">${badgesHtml}</div>
-            <div class="ai-accordion-actions">${docManagerBtn}</div>
+            <div class="ai-accordion-stats">${pendingHtml}</div>
         </div>
     `;
 }
@@ -4259,7 +4259,7 @@ function renderAICards(items, allFilteredItems) {
             <div class="ai-summary-primary">${clientsWithPending} לקוחות ממתינים</div>
             <div class="ai-summary-progress">
                 <div class="ai-summary-progress-labels">
-                    <span class="ai-summary-progress-text">${totalReviewed} / ${totalAll} נבדקו</span>
+                    <span class="ai-summary-progress-text">${totalReviewed} / ${totalAll} מסמכים נבדקו</span>
                     <span class="ai-summary-progress-pct">${reviewedPct}%</span>
                 </div>
                 <div class="ai-summary-progress-track"><div class="ai-summary-progress-fill" style="width:${reviewedPct}%"></div></div>
