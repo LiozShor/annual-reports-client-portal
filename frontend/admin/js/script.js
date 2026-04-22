@@ -4245,20 +4245,27 @@ function renderAICards(items, allFilteredItems) {
     const totalReviewed = allItems.length - totalPending;
     const totalAll = allItems.length;
     const clientsWithPending = Object.entries(allGroups).filter(([, ci]) => ci.some(i => (i.review_status || 'pending') === 'pending')).length;
+    const summaryStr = totalAll > 0
+        ? `${totalPending} מסמכים ממתינים · ${clientsWithPending} לקוחות · ${totalReviewed}/${totalAll} נבדקו`
+        : '';
+    // Legacy summary bar (hidden by DL-330 CSS but kept in DOM for backwards compat)
     const summaryBar = document.getElementById('aiSummaryBar');
     const summaryText = document.getElementById('aiSummaryText');
     if (summaryBar && summaryText) {
         if (totalAll > 0) {
-            summaryText.textContent = `${totalPending} מסמכים ממתינים · ${clientsWithPending} לקוחות · ${totalReviewed}/${totalAll} נבדקו`;
+            summaryText.textContent = summaryStr;
             summaryBar.style.display = 'block';
         } else {
             summaryBar.style.display = 'none';
         }
     }
 
+    // Sticky summary header (desktop + mobile) — sits at top of pane 1
+    const headerHtml = summaryStr ? `<div class="ai-clients-header" id="aiClientsHeader">${escapeHtml(summaryStr)}</div>` : '';
+
     if (isMobile) {
         // Mobile: render legacy grouped accordions into #aiClientsPane (docs/detail panes hidden by CSS)
-        let html = '';
+        let html = headerHtml;
         for (const [clientName, clientItems] of Object.entries(groups)) {
             html += buildClientAccordionHtml(clientName, clientItems, false);
         }
@@ -4280,8 +4287,8 @@ function renderAICards(items, allFilteredItems) {
                 || null;
         }
 
-        // Pane 1: client rows
-        let listHtml = '';
+        // Pane 1: client rows (preceded by sticky summary header)
+        let listHtml = headerHtml;
         for (const [clientName, clientItems] of Object.entries(groups)) {
             listHtml += buildClientListRowHtml(clientName, clientItems, clientName === selectedClientName);
         }
