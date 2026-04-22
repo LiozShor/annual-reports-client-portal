@@ -4327,8 +4327,7 @@ function renderAICard(item) {
             // Card-style radio options
             const radiosHtml = sameTypeDocs.map(d => {
                 const docName = d.name_short || d.name || d.template_id;
-                // DL-271: Prefer name_html for radio labels — includes period suffix from issuer_name
-                const docLabel = d.name_html || d.name_short || d.name || d.template_id;
+                const docLabel = d.name_short || d.name_html || d.name || d.template_id;
                 return `
                     <label class="ai-comparison-radio">
                         <input type="radio" name="compare_${escapeAttr(item.id)}"
