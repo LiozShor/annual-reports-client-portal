@@ -3309,7 +3309,7 @@ tr:hover .client-view-link {
 
 .ai-review-split {
     display: grid;
-    grid-template-columns: 260px minmax(360px, 440px) 1fr;
+    grid-template-columns: 260px minmax(480px, 640px) 1fr;
     gap: var(--sp-3);
     align-items: start;
     height: calc(100vh - 180px);
@@ -3351,6 +3351,31 @@ tr:hover .client-view-link {
 .ai-review-docs .ai-review-card {
     max-width: none;
     margin-inline: 0;
+}
+
+/* DL-330: kill nested scroll inside pane 2 — the outer .ai-review-docs is the only scroll container on desktop.
+   .ai-accordion-content defaults to max-height/overflow-y which creates an inner scroll; reset for desktop 3-pane. */
+.ai-review-docs .ai-accordion {
+    margin-bottom: 0;
+    box-shadow: none;
+    animation: none;
+}
+.ai-review-docs .ai-accordion-body {
+    max-height: none !important;
+    overflow: visible;
+    border: none;
+    border-radius: 0;
+}
+.ai-review-docs .ai-accordion-content {
+    max-height: none;
+    overflow: visible;
+    padding: var(--sp-3) var(--sp-2);
+}
+.ai-review-docs .ai-accordion-header {
+    border-radius: var(--radius-md);
+}
+.ai-review-docs .ai-accordion.open .ai-accordion-header {
+    border-radius: var(--radius-md) var(--radius-md) 0 0;
 }
 
 /* Client row — reuses .ai-accordion-header styling, adds .active highlight */
@@ -3405,12 +3430,16 @@ tr:hover .client-view-link {
     color: var(--gray-500);
 }
 
-@media (max-width: 1400px) {
-    .ai-review-split { grid-template-columns: 220px minmax(320px, 380px) 1fr; gap: var(--sp-2); }
+@media (max-width: 1600px) {
+    .ai-review-split { grid-template-columns: 240px minmax(440px, 560px) 1fr; gap: var(--sp-2); }
+}
+
+@media (max-width: 1300px) {
+    .ai-review-split { grid-template-columns: 220px minmax(400px, 480px) 1fr; gap: var(--sp-2); }
 }
 
 @media (max-width: 1100px) {
-    .ai-review-split { grid-template-columns: 200px 320px 1fr; gap: var(--sp-2); }
+    .ai-review-split { grid-template-columns: 200px 380px 1fr; gap: var(--sp-2); }
 }
 
 /* Mobile breakpoint for 3-pane is handled by the existing mobile block below (line ~4617) — unchanged behavior per DL-330 scope */
