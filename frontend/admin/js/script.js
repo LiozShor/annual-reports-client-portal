@@ -3746,6 +3746,16 @@ async function loadAIClassifications(silent = false, prefetchOnly = false) {
                 const uniqueClients = new Set(pendingForBadge.map(i => i.client_id).filter(Boolean)).size;
                 syncAIBadge(badge, uniqueClients);
                 perfEnd('dl317:aiClassifications:fetch', _tF);
+                // DL-323: if data hadn't changed but we never rendered (race: prefetch landed
+                // data, then silent switchTab arrived with identical data and short-circuited
+                // before the early render block at line 3709 had a chance), render now.
+                if (!aiClassificationsEverRendered && !prefetchOnly) {
+                    const _tR = perfStart();
+                    resetPreviewPanel();
+                    applyAIFilters();
+                    aiClassificationsEverRendered = true;
+                    perfEnd('dl317:aiClassifications:render', _tR);
+                }
                 return;
             }
         }
