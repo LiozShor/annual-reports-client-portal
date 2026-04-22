@@ -3538,6 +3538,10 @@ tr:hover .client-view-link {
     cursor: pointer;
     border-bottom: 1px solid var(--gray-100);
     transition: background 0.12s ease;
+    /* Density override: reduce padding from .ai-accordion-header's sp-4/sp-5 */
+    padding: var(--sp-2) var(--sp-3);
+    min-height: 0;
+    /* flex/align-items/gap already provided by .ai-accordion-header */
 }
 .ai-client-row:last-child { border-bottom: none; }
 .ai-client-row:hover { background: var(--gray-50); }
@@ -3551,6 +3555,20 @@ tr:hover .client-view-link {
     font-size: var(--text-xs);
     color: var(--gray-500);
     margin-top: 2px;
+}
+.ai-client-row.active .ai-client-progress {
+    color: var(--gray-600);
+}
+
+.ai-client-pending-num {
+    font-size: var(--text-sm);
+    font-weight: 500;
+    color: var(--warning-500);
+    white-space: nowrap;
+    padding-inline: var(--sp-2);
+}
+.ai-client-row.active .ai-client-pending-num {
+    color: var(--gray-700);
 }
 
 .ai-docs-placeholder {

@@ -1,6 +1,46 @@
 # Annual Reports CRM - Current Status
 
-**Last Updated:** 2026-04-22 (DL-330 AI Review 3-pane rework — IMPLEMENTED, needs testing)
+**Last Updated:** 2026-04-23 (DL-332 AI Review pane 1 density redesign — IMPLEMENTED, needs testing)
+
+## DL-332 AI Review Pane 1 Density Redesign — IMPLEMENTED — NEED TESTING
+
+Branch `DL-332-ai-review-pane1-density`. Standalone visual win (Phase 3 of the broader cockpit plan; Phases 1/2/4 will be logged separately). Rewrites `buildClientListRowHtml` (`script.js:4095`) + extends `.ai-client-row` CSS (`style.css:3537`) so pane 1 shows 12+ clients per 1080p viewport vs. ~6 today.
+
+- **Dropped:** `user` icon, green/grey pill badges ("N [pending-label]" / "✓ [done-label]").
+- **Added:** `.ai-client-pending-num` — amber `--warning-500` inline number, `font-weight: 500` (colorblind-safety via weight + hue). Empty string for zero-pending clients (absence = done signal).
+- **Layout:** DOM order actions→title→stats; `flex: 1` on title wrapper; folder-open icon stays visual-right in RTL (start side).
+- **Active-state contrast:** pending number → `--gray-700`; subtitle → `--gray-600`.
+- **Row height target:** 40–44px; 46–48px acceptable if subtitle cramps.
+- **Cache-bust:** `style.css?v=294`, `script.js?v=298`.
+- **Mobile:** unchanged — different code path (`buildClientAccordionHtml`).
+- **Preserved:** DL-330 `selectClient` contract, DL-306 `?client=X` deep-link attribute, DL-053 silent-refresh idempotency, DL-278 `scrollIntoView` target class.
+
+**Impl method:** `/subagent-driven-development` — Workstream A (CSS) + B (JS) dispatched in parallel (both landed in commit `34c49c9`, message slightly mislabeled "workstream B" — left as-is); Workstream C (cache-bust + design log + INDEX + status) inline.
+
+**Files:** `frontend/admin/js/script.js`, `frontend/admin/css/style.css`, `frontend/admin/index.html`, `.agent/design-logs/ai-review/332-ai-review-pane1-density.md`, `.agent/design-logs/INDEX.md`, `.agent/current-status.md`.
+
+### Active TODOs — Test DL-332: Pane 1 Density
+
+- [ ] 12+ clients visible on 1920×1080 at standard zoom.
+- [ ] 9+ clients visible on 1366×768.
+- [ ] Row height measures 40–44px (46–48px acceptable if subtitle cramps).
+- [ ] Subtitle "X/Y [reviewed-label]" legible at 12px in both default and selected-row states.
+- [ ] Pending count = amber number only, `font-weight: 500`. Distinguishable under Chrome deuteranopia/protanopia simulator.
+- [ ] Zero-pending clients show nothing in pending slot; doesn't read as broken. If it does → escalate to muted ✓ fallback.
+- [ ] Selected row: `--brand-50` fill + `--brand-500` start border; pending number demotes to `--gray-700`.
+- [ ] Hover state unchanged (`--gray-50` fill).
+- [ ] `user` icon gone; folder-open icon still on start side (visual-right in RTL), clickable without triggering row selection.
+- [ ] Click row → `selectClient` fires, pane 2 re-renders, `.active` moves.
+- [ ] Deep-link `?client=X` auto-selects the correct row (DL-306).
+- [ ] Silent-refresh tick leaves selected row highlighted and in place (DL-053).
+- [ ] Mobile (<768px) unchanged — screenshot compare.
+- [ ] `style.css?v=294` + `script.js?v=298` bumped; hard reload loads new files.
+- [ ] No console errors on tab open / client switch / poll tick.
+- [ ] No regression on DL-075/109/278/306/330.
+
+Design log: `.agent/design-logs/ai-review/332-ai-review-pane1-density.md`
+
+---
 
 ## DL-330 AI Review 3-Pane Rework — IMPLEMENTED — NEED TESTING
 
