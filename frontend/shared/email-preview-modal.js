@@ -18,7 +18,7 @@
 (function () {
   'use strict';
 
-  window.showEmailPreviewModal = async function ({ reportId, clientName, getToken, endpoint }) {
+  window.showEmailPreviewModal = async function ({ reportId, clientName, getToken, endpoint, extraPayload }) {
     // 1) Idempotency: close any pre-existing preview overlay first.
     const existing = document.querySelector('.ai-modal-overlay.email-preview-overlay');
     if (existing) {
@@ -190,11 +190,20 @@
     }
 
     try {
-      const sep = endpoint.indexOf('?') === -1 ? '?' : '&';
-      const url = `${endpoint}${sep}report_id=${encodeURIComponent(reportId)}&preview=1`;
-      const resp = await fetch(url, {
-        headers: { Authorization: `Bearer ${getToken()}` }
-      });
+      let resp;
+      if (extraPayload) {
+        resp = await fetch(endpoint, {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${getToken()}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ report_id: reportId, preview: true, ...extraPayload }),
+        });
+      } else {
+        const sep = endpoint.indexOf('?') === -1 ? '?' : '&';
+        const url = `${endpoint}${sep}report_id=${encodeURIComponent(reportId)}&preview=1`;
+        resp = await fetch(url, {
+          headers: { Authorization: `Bearer ${getToken()}` },
+        });
+      }
       let data = {};
       try { data = await resp.json(); } catch (_) { data = {}; }
 
