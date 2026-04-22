@@ -10,7 +10,7 @@
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📋</text></svg>">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" integrity="sha384-vtjasyidUo0kW94K5MXDXntzOJpQgBKXmE7e2Ga4LG0skTTLeBi97eFAXsqewJjw" crossorigin="anonymous"></script>
     <link rel="stylesheet" href="../assets/css/design-system.css">
-    <link rel="stylesheet" href="css/style.css?v=290">
+    <link rel="stylesheet" href="css/style.css?v=291">
 
 </head>
 
@@ -976,30 +976,29 @@
             <!-- AI Review Tab -->
             <div id="tab-ai-review" class="tab-content">
 
-                <!-- Filter Bar -->
-                <div class="ai-filter-bar" style="padding: 8px 12px;">
-                    <div class="filter-group" style="max-width: 260px;">
-                        <label><svg class="icon icon-sm" aria-hidden="true" focusable="false" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"><use href="#icon-search"/></svg></label>
-                        <input type="text" id="aiSearchInput" placeholder="חיפוש לפי שם לקוח..." oninput="debouncedApplyAIFilters()" style="padding: 6px 10px; font-size: 13px;">
-                    </div>
-                </div>
-
-                <!-- Summary -->
-                <div id="aiSummaryBar" class="ai-summary-bar" style="display:none; padding:6px 12px; font-size:13px; color:var(--neutral-600); border-bottom:1px solid var(--neutral-200);">
-                    <span id="aiSummaryText"></span>
-                </div>
+                <!-- Legacy hidden hooks (DL-330 moved search + summary into the clients pane toolbar) -->
+                <div id="aiSummaryBar" class="ai-summary-bar" style="display:none;"><span id="aiSummaryText"></span></div>
 
                 <!-- 3-pane master-detail (DL-330): Clients (right in RTL) | Docs of selected client | Preview (left in RTL) -->
                 <div class="ai-review-split">
-                    <!-- Pane 1: Client list (sticky summary header lives inside, rendered by JS) -->
+                    <!-- Pane 1: Client list with persistent toolbar (summary + search) at top, scrollable list below -->
                     <div class="ai-review-clients" id="aiClientsPane">
+                        <div class="ai-clients-toolbar">
+                            <div class="ai-clients-summary" id="aiClientsHeader"></div>
+                            <div class="ai-clients-search filter-group">
+                                <label><svg class="icon icon-sm" aria-hidden="true" focusable="false" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"><use href="#icon-search"/></svg></label>
+                                <input type="text" id="aiSearchInput" placeholder="חיפוש לפי שם לקוח..." oninput="debouncedApplyAIFilters()">
+                            </div>
+                        </div>
+                        <div class="ai-clients-list" id="aiClientsList"></div>
                         <!-- DL-247: Skeleton shown until prefetch completes -->
                         <div class="skeleton-loader">
                             <div class="skeleton-card"><div class="skeleton skeleton-text-lg" style="width:60%;margin-bottom:var(--sp-3)"></div><div class="skeleton skeleton-text" style="width:40%"></div></div>
                             <div class="skeleton-card"><div class="skeleton skeleton-text-lg" style="width:50%;margin-bottom:var(--sp-3)"></div><div class="skeleton skeleton-text" style="width:45%"></div></div>
                             <div class="skeleton-card"><div class="skeleton skeleton-text-lg" style="width:55%;margin-bottom:var(--sp-3)"></div><div class="skeleton skeleton-text" style="width:35%"></div></div>
                         </div>
-                    </div>
+                        </div><!-- /.ai-clients-list -->
+                    </div><!-- /.ai-review-clients -->
 
                     <!-- Pane 2: Docs of selected client -->
                     <div class="ai-review-docs" id="aiDocsPane">
@@ -1516,7 +1515,7 @@
     <script src="../assets/js/client-detail-modal.js"></script>
     <script src="../shared/print-questionnaire.js"></script>
     <script src="../shared/email-preview-modal.js"></script>
-    <script src="js/script.js?v=294"></script>
+    <script src="js/script.js?v=295"></script>
     <script src="../assets/js/idle-refresh.js?v=281" defer></script>
     <script src="js/chatbot.js"></script>
     <!-- React island: Client Detail Modal (loads after shared scripts) -->

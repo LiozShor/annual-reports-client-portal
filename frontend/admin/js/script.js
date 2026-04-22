@@ -4198,23 +4198,25 @@ function renderAICards(items, allFilteredItems) {
         : selectedClientName;
 
     if (!items || items.length === 0) {
-        if (clientsPane) clientsPane.innerHTML = '';
+        const clientsList = document.getElementById('aiClientsList');
+        const clientsHeader = document.getElementById('aiClientsHeader');
+        if (clientsHeader) clientsHeader.textContent = '';
+        if (clientsList) clientsList.innerHTML = '';
+        else if (clientsPane) clientsPane.innerHTML = '';
         if (docsPane) docsPane.innerHTML = '';
         const sb = document.getElementById('aiSummaryBar');
         if (sb) sb.style.display = 'none';
 
         if (aiClassificationsData.length === 0) {
-            if (clientsPane) clientsPane.style.display = isMobile ? 'none' : 'block';
             if (emptyState) {
                 emptyState.style.display = 'block';
-                // Put empty-state in the visible pane
-                (isMobile ? clientsPane : docsPane)?.appendChild(emptyState);
+                (isMobile ? (clientsList || clientsPane) : docsPane)?.appendChild(emptyState);
             }
         } else {
             if (emptyState) emptyState.style.display = 'none';
-            if (clientsPane) {
-                clientsPane.style.display = 'block';
-                clientsPane.innerHTML = `
+            const target = clientsList || clientsPane;
+            if (target) {
+                target.innerHTML = `
                     <div class="empty-state">
                         <div class="empty-state-icon">${icon('filter-x', 'icon-2xl')}</div>
                         <p>אין תוצאות לסינון הנוכחי</p>
@@ -4260,23 +4262,27 @@ function renderAICards(items, allFilteredItems) {
         }
     }
 
-    // Sticky summary header (desktop + mobile) — sits at top of pane 1
-    const headerHtml = summaryStr ? `<div class="ai-clients-header" id="aiClientsHeader">${escapeHtml(summaryStr)}</div>` : '';
+    // DL-330: write summary into the persistent toolbar header (not blown away on re-render).
+    // Fall back to prepending into pane 1 only if the toolbar isn't present (defensive).
+    const clientsHeader = document.getElementById('aiClientsHeader');
+    if (clientsHeader) clientsHeader.textContent = summaryStr;
+    const clientsList = document.getElementById('aiClientsList');
+    const renderTarget = clientsList || clientsPane;
 
     if (isMobile) {
-        // Mobile: render legacy grouped accordions into #aiClientsPane (docs/detail panes hidden by CSS)
-        let html = headerHtml;
+        // Mobile: render legacy grouped accordions into the clients list (docs/detail panes hidden by CSS)
+        let html = '';
         for (const [clientName, clientItems] of Object.entries(groups)) {
             html += buildClientAccordionHtml(clientName, clientItems, false);
         }
-        if (clientsPane) {
-            clientsPane.innerHTML = html;
+        if (renderTarget) {
+            renderTarget.innerHTML = html;
             if (prevOpenClient) {
-                const el = clientsPane.querySelector(`.ai-accordion[data-client="${CSS.escape(prevOpenClient)}"]`);
+                const el = renderTarget.querySelector(`.ai-accordion[data-client="${CSS.escape(prevOpenClient)}"]`);
                 if (el) el.classList.add('open');
             }
-            initAIReviewComboboxes(clientsPane);
-            safeCreateIcons(clientsPane);
+            initAIReviewComboboxes(renderTarget);
+            safeCreateIcons(renderTarget);
         }
     } else {
         // Desktop 3-pane
@@ -4287,14 +4293,14 @@ function renderAICards(items, allFilteredItems) {
                 || null;
         }
 
-        // Pane 1: client rows (preceded by sticky summary header)
-        let listHtml = headerHtml;
+        // Pane 1: client rows go into the scrollable list (toolbar stays pinned above, untouched)
+        let listHtml = '';
         for (const [clientName, clientItems] of Object.entries(groups)) {
             listHtml += buildClientListRowHtml(clientName, clientItems, clientName === selectedClientName);
         }
-        if (clientsPane) {
-            clientsPane.innerHTML = listHtml;
-            safeCreateIcons(clientsPane);
+        if (renderTarget) {
+            renderTarget.innerHTML = listHtml;
+            safeCreateIcons(renderTarget);
         }
 
         // Pane 2: selected client's accordion (always open)

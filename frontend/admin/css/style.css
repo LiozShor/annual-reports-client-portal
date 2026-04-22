@@ -2395,7 +2395,8 @@ tr:hover .client-view-link {
 }
 
 .ai-missing-docs-group.open .ai-missing-docs-toggle .toggle-arrow {
-    transform: rotate(180deg);
+    /* DL-330: rotate 90° clockwise so right-pointing ▸ becomes down-pointing ▾ when expanded (was 180°, which pointed left and read as collapsed) */
+    transform: rotate(90deg);
 }
 
 .ai-missing-docs-body {
@@ -3293,64 +3294,8 @@ tr:hover .client-view-link {
 
 /* ==================== AI REVIEW 3-PANE (DL-330) ==================== */
 
-/* DL-330 redesign: toolbar is an inline flush row (no card chrome), search sits at the start.
-   Summary moves into the clients-pane sticky header (see .ai-clients-header below), so the
-   separate #aiSummaryBar in the tab is hidden. */
-#tab-ai-review > .ai-filter-bar {
-    background: transparent !important;
-    border: none !important;
-    box-shadow: none !important;
-    padding: 0 !important;
-    margin-bottom: var(--sp-2) !important;
-    width: auto !important;
-    max-width: none !important;
-    gap: var(--sp-3);
-}
-#tab-ai-review > .ai-filter-bar .filter-group {
-    max-width: 360px !important;
-    width: 360px !important;
-    background: white;
-    border: 1px solid var(--gray-200);
-    border-radius: var(--radius-md);
-    padding: 6px 10px;
-    box-shadow: var(--shadow-xs);
-    transition: border-color 0.15s ease, box-shadow 0.15s ease;
-}
-#tab-ai-review > .ai-filter-bar .filter-group:focus-within {
-    border-color: var(--brand-400);
-    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.12);
-}
-#tab-ai-review > .ai-filter-bar .filter-group input[type="text"] {
-    border: none !important;
-    outline: none;
-    background: transparent;
-    padding: 0 !important;
-    width: 100%;
-    min-width: 0 !important;
-    font-size: var(--text-sm);
-}
-#tab-ai-review > .ai-filter-bar .filter-group label {
-    color: var(--gray-400);
-    flex-shrink: 0;
-}
-
-/* Hide the legacy standalone summary bar — summary moves into pane 1 header */
+/* DL-330: legacy .ai-filter-bar + #aiSummaryBar are removed/hidden — search + summary moved into the clients pane toolbar (.ai-clients-toolbar below) */
 #tab-ai-review > #aiSummaryBar { display: none !important; }
-
-/* Sticky header inside the clients pane — holds the summary text, anchors the search to the list */
-.ai-clients-header {
-    position: sticky;
-    top: 0;
-    z-index: 2;
-    padding: var(--sp-3) var(--sp-3) var(--sp-2);
-    background: white;
-    border-bottom: 1px solid var(--gray-100);
-    font-size: var(--text-xs);
-    color: var(--gray-600);
-    line-height: 1.4;
-    font-weight: 500;
-}
-.ai-clients-header:empty { display: none; }
 
 
 /* Break out of the .content max-width:1400px cap so all 3 panes can stretch full-viewport (Outlook-style full-screen usage).
@@ -3409,10 +3354,75 @@ tr:hover .client-view-link {
     min-height: 0;
     min-width: 0;
     height: 100%;
-    overflow-y: auto;
-    overscroll-behavior: contain;
     scrollbar-width: thin;
     scrollbar-color: var(--gray-300) transparent;
+}
+
+/* Pane 1 becomes flex column: toolbar (summary + search) stays pinned at top, list scrolls below */
+.ai-review-clients {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.ai-clients-toolbar {
+    flex-shrink: 0;
+    padding: var(--sp-3);
+    border-bottom: 1px solid var(--gray-100);
+    background: white;
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-2);
+}
+
+.ai-clients-summary {
+    font-size: var(--text-sm);
+    font-weight: 600;
+    color: var(--gray-700);
+    line-height: 1.35;
+}
+.ai-clients-summary:empty { display: none; }
+
+.ai-clients-search {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius-md);
+    padding: 6px 10px;
+    background: white;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.ai-clients-search:focus-within {
+    border-color: var(--brand-400);
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.12);
+}
+.ai-clients-search label {
+    color: var(--gray-400);
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+}
+.ai-clients-search input[type="text"] {
+    border: none !important;
+    outline: none;
+    background: transparent;
+    padding: 0 !important;
+    width: 100%;
+    min-width: 0 !important;
+    font-size: var(--text-sm);
+}
+
+.ai-clients-list {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+}
+
+.ai-review-docs {
+    overflow-y: auto;
+    overscroll-behavior: contain;
 }
 
 .ai-review-clients::-webkit-scrollbar,
