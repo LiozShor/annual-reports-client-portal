@@ -4516,14 +4516,15 @@ function renderAICard(item) {
             </div>
             ${splitBannerHtml}
             ${contractPeriodBannerHtml}
+            ${item.pending_question ? `<div class="batch-q-inline-badge" style="margin:0 var(--sp-5) var(--sp-2)">${icon('message-circle','icon-xs')} שאלה נשמרה: ${escapeHtml(item.pending_question.substring(0,80))}${item.pending_question.length>80?'…':''}</div>` : ''}
             <div class="ai-card-actions">
                 ${actionsHtml}
-            </div>
-            <div class="ai-card-question-row">
-                <button class="btn btn-ghost btn-sm ai-add-question-btn" onclick="openAddQuestionDialog('${escapeAttr(item.id)}')">
-                    ${icon('message-circle','icon-xs')} ${item.pending_question ? 'ערוך שאלה' : 'הוסף שאלה'}
-                </button>
-                ${item.pending_question ? `<span class="batch-q-inline-badge">${icon('message-circle','icon-xs')} ${escapeHtml(item.pending_question.substring(0,80))}${item.pending_question.length>80?'…':''}</span>` : ''}
+                <div class="row-overflow-dropdown">
+                    <button class="action-btn overflow" onclick="toggleRowMenu(this, event)" title="פעולות נוספות">⋮</button>
+                    <div class="row-menu">
+                        <button onclick="closeAllRowMenus(); openAddQuestionDialog('${escapeAttr(item.id)}')">${icon('message-circle', 'icon-sm')} ${item.pending_question ? 'ערוך שאלה' : 'הוסף שאלה'}</button>
+                    </div>
+                </div>
             </div>
         </div>
     `;
