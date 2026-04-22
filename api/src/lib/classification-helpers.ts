@@ -40,6 +40,7 @@ export const REJECTION_REASONS: Record<string, string> = {
   wrong_year: 'שנה לא נכונה',
   wrong_person: 'לא שייך ללקוח',
   not_relevant: 'מסמך לא רלוונטי',
+  has_question: 'בהמתנה לתשובת לקוח',
   other: 'אחר',
 };
 
