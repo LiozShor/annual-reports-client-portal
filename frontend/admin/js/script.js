@@ -3691,7 +3691,7 @@ async function loadDocPreview(recordId) {
             downloadBtn.style.display = '';
         }
     } catch (err) {
-        console.error('Preview load failed');
+        console.error('Preview load failed', { itemId: item.onedrive_item_id, recordId, err });
         if (activePreviewItemId !== recordId) return;
         loading.style.display = 'none';
         iframe.style.display = 'none';
@@ -3717,8 +3717,10 @@ async function loadAIClassifications(silent = false, prefetchOnly = false) {
     if (silent && isFresh) return;
 
     const _tF = perfStart();
+    let _lastStatus = null;
     try {
         const response = await deduplicatedFetch(`${ENDPOINTS.GET_PENDING_CLASSIFICATIONS}?filing_type=all`, { headers: { 'Authorization': `Bearer ${authToken}` } }, FETCH_TIMEOUTS.slow); // DL-238: unified view
+        _lastStatus = response.status;
         const data = await response.json();
 
 
@@ -3784,7 +3786,8 @@ async function loadAIClassifications(silent = false, prefetchOnly = false) {
         return;
     } catch (error) {
         perfEnd('dl317:aiClassifications:fetch', _tF);
-        console.error('AI review load failed', error);
+        const isTimeout = error && (error.name === 'TimeoutError' || /timed out/i.test(error.message || ''));
+        console.error('AI review load failed', { status: _lastStatus, timeout: isTimeout, timeout_ms: FETCH_TIMEOUTS.slow, error });
         if (!silent) {
             const container = document.getElementById('aiCardsContainer');
             container.innerHTML = `

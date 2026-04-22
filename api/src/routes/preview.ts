@@ -34,26 +34,37 @@ const previewHandler = async (c: any) => {
   }
 
   const msGraph = new MSGraphClient(c.env, c.executionCtx);
+  const t0 = Date.now();
+  let stage: 'preview' | 'downloadUrl' = 'preview';
 
   try {
     // Call 1: get embed/preview URL
     const previewResponse = await msGraph.post(`/me/drive/items/${itemId}/preview`, {});
     const previewUrl: string = previewResponse?.getUrl ?? '';
+    const tPreview = Date.now() - t0;
 
     // Call 2: get download URL
+    stage = 'downloadUrl';
     const itemResponse = await msGraph.get(
       `/me/drive/items/${itemId}?$select=@microsoft.graph.downloadUrl`
     );
     const downloadUrl: string = itemResponse?.['@microsoft.graph.downloadUrl'] ?? '';
+    const totalMs = Date.now() - t0;
+    if (totalMs > 3000) {
+      console.warn('[get-preview-url] SLOW', { itemId, preview_ms: tPreview, total_ms: totalMs });
+    }
 
     return c.json({ ok: true, previewUrl, downloadUrl });
   } catch (err: any) {
+    const totalMs = Date.now() - t0;
     const message = err?.message ?? 'MS Graph request failed';
+    console.error('[get-preview-url] failed', { stage, itemId, total_ms: totalMs, message });
     logError(c.executionCtx, c.env, {
       endpoint: '/webhook/get-preview-url',
       error: err as Error,
+      details: `stage=${stage} itemId=${itemId} total_ms=${totalMs}`,
     });
-    return c.json({ ok: false, error: message });
+    return c.json({ ok: false, error: message, stage });
   }
 };
 
