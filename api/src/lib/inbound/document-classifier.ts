@@ -380,9 +380,18 @@ function buildClassifyTool(
             { type: 'null' }
           ],
           description: 'Template ID to assign. Choose from the enum values above. Set to null if confidence < 0.5 or the document does not match any template.'
+        },
+        is_document: {
+          type: 'boolean',
+          description: 'DL-321: Set FALSE only for: (1) decorative/header/logo images (branded email banners, Hebrew title graphics with symbolic icons, standalone company logos), (2) email signature images (handwritten-style names, stamp graphics — even if larger than typical), (3) completely blank/empty scanned pages. Set TRUE for anything that could plausibly be a tax document, receipt, form, contract, or statement — even low-quality scans or unexpected layouts. When in doubt, TRUE.'
+        },
+        non_document_reason: {
+          type: 'string',
+          enum: ['decorative', 'signature', 'blank_page', 'not_applicable'],
+          description: 'DL-321: Required. Set to "not_applicable" when is_document=true. Otherwise set to the category matching why is_document=false.'
         }
       },
-      required: ['evidence', 'issuer_name', 'confidence', 'additional_matches', 'contract_period', 'matched_template_id']
+      required: ['evidence', 'issuer_name', 'confidence', 'additional_matches', 'contract_period', 'matched_template_id', 'is_document', 'non_document_reason']
     },
     cache_control: { type: 'ephemeral' }
   };
@@ -531,7 +540,17 @@ Rules:
 
 - Set matched_template_id to null if confidence < 0.5 or no match found.
 - Hebrew documents are normal — read and understand Hebrew text fully.
-- Extract the issuer organization name from the document's visible content, not from the filename.`;
+- Extract the issuer organization name from the document's visible content, not from the filename.
+
+--- NON-DOCUMENT detection (DL-321) ---
+Some inbound attachments are NOT documents at all. Set is_document=false + non_document_reason for:
+- "decorative": branded email header graphics, Hebrew title images with symbolic icons (eye/heart/house, etc.), standalone company logos, decorative banners — pure visual content, no form/text/data
+- "signature": email signature images (handwritten-style names, scanned stamps, personal sign-off graphics) — even if larger than a typical 50KB signature
+- "blank_page": completely empty scans, pages with only scanner noise or a single stray mark
+
+Set is_document=true (and non_document_reason="not_applicable") for ANY file that plausibly contains a tax document, receipt, form, contract, insurance statement, bank statement, pension/provident report, donation/medical receipt, rental agreement — even if the scan is low-quality, partial, noisy, or in an unexpected layout.
+
+When in doubt, set is_document=true and let a human decide. False negatives (dropping a real document) are far more costly than false positives (a decorative image reaching the review queue). matched_template_id, issuer_name, contract_period, additional_matches can all be null/empty/false when is_document=false.`;
 
   return [{ type: 'text', text, cache_control: { type: 'ephemeral' } }];
 }
@@ -889,7 +908,7 @@ export async function classifyAttachment(
     };
 
     // Extract tool_use block — map new field names to internal format
-    let input: { template_id: string | null; confidence: number; reason: string; issuer_name: string; additional_matches?: Array<{template_id: string; evidence: string; issuer_name: string; confidence: number}>; contract_period?: { start_date: string; end_date: string; covers_full_year: boolean } | null } | null = null;
+    let input: { template_id: string | null; confidence: number; reason: string; issuer_name: string; additional_matches?: Array<{template_id: string; evidence: string; issuer_name: string; confidence: number}>; contract_period?: { start_date: string; end_date: string; covers_full_year: boolean } | null; is_document?: boolean; non_document_reason?: 'decorative' | 'signature' | 'blank_page' | 'not_applicable' } | null = null;
 
     const toolBlock = data.content.find((b) => b.type === 'tool_use');
     if (toolBlock?.input) {
@@ -901,6 +920,9 @@ export async function classifyAttachment(
         issuer_name: (inp.issuer_name as string) ?? '',
         additional_matches: Array.isArray(inp.additional_matches) ? inp.additional_matches as Array<{template_id: string; evidence: string; issuer_name: string; confidence: number}> : [],
         contract_period: inp.contract_period as { start_date: string; end_date: string; covers_full_year: boolean } | null ?? null,
+        // DL-321: default to true (document) when field missing — safer than assuming false
+        is_document: typeof inp.is_document === 'boolean' ? (inp.is_document as boolean) : true,
+        non_document_reason: (inp.non_document_reason as 'decorative' | 'signature' | 'blank_page' | 'not_applicable' | undefined) ?? 'not_applicable',
       };
     } else {
       // Fallback: try parsing text block as JSON
@@ -996,6 +1018,8 @@ export async function classifyAttachment(
       additionalMatches: additionalMatches.length > 0 ? additionalMatches : undefined,
       contractPeriod,
       preQuestionnaire: fallbackMode,
+      isDocument: input.is_document !== false,
+      nonDocumentReason: input.non_document_reason ?? 'not_applicable',
     };
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);

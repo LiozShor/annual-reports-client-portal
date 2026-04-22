@@ -442,6 +442,26 @@ async function processAttachmentWithClassification(
   classification: ClassificationResult | null,
   provenanceNote?: string,
 ): Promise<void> {
+  // DL-321: Short-circuit non-document images (decorative headers, signature images, blank pages).
+  // Classifier can explicitly set isDocument=false when the attachment has no document content.
+  // Guardrails: image-only (PDFs always reach review), confidence >= 0.8 (low-confidence non-doc
+  // verdicts fall through to human review). Over-refusal is the primary risk — bias toward review.
+  if (
+    classification
+    && classification.isDocument === false
+    && classification.confidence >= 0.8
+    && IMAGE_EXTENSIONS.has(getFileExtension(attachment.name))
+  ) {
+    console.warn(
+      `[inbound][DL-321] non-document short-circuit: `
+      + `name="${attachment.name}" size=${attachment.size} `
+      + `reason=${classification.nonDocumentReason ?? 'unknown'} `
+      + `conf=${classification.confidence} client=${clientMatch.clientId} `
+      + `evidence="${(classification.reason || '').slice(0, 120)}"`
+    );
+    return;
+  }
+
   // Step 2: Hash dedup (Layer 2) — but still create record if duplicate (with warning)
   // Exclude records from the current email event to avoid false positives
   const dupResult = await checkFileHashDuplicate(

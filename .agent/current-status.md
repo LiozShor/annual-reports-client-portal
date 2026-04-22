@@ -1,6 +1,26 @@
 # Annual Reports CRM - Current Status
 
-**Last Updated:** 2026-04-21 (DL-320 "also matches" UX rework + robot icon removal — IMPLEMENTED, NEED TESTING)
+**Last Updated:** 2026-04-22 (DL-321 classifier explicit non-document verdict — IMPLEMENTED, NEED TESTING)
+
+## DL-321 Classifier Non-Document Verdict — IMPLEMENTED, NEED TESTING
+
+Branch: `DL-321-classifier-non-document-verdict`. Worker deploy required.
+
+Classifier (Haiku 4.5) can now return `is_document: false` + `non_document_reason` when an inbound attachment is a decorative header/logo image, email signature that escaped DL-305's 50KB filter, or a blank scanned page. Processor short-circuits BEFORE OneDrive upload + `pending_classifications` insert when: `isDocument===false` AND image extension (PNG/JPG/GIF/WEBP/etc) AND `confidence >= 0.8`. PDFs with `is_document=false` still reach review (over-refusal safety). Missing field defaults to `true`. Observability via `console.warn [inbound][DL-321]` (no Airtable error-log spam). Triggered by live a decorative `ATT00001.png` (62KB) slipping past DL-305 on 2026-04-20 and being manually rejected 2026-04-22.
+
+**Test checklist (per §7 of the design log):**
+- [ ] Deploy: `cd api && npx wrangler deploy`
+- [ ] `wrangler tail` briefly — no errors on startup
+- [ ] Anthropic workbench dry-run with new prompt + schema: (a) CPA-XXX decorative header → `{is_document:false, non_document_reason:"decorative", conf≥0.8}`, (b) real T501 PDF first page → `{is_document:true, reason:"not_applicable", matched T501}`, (c) blank scanned page → `{is_document:false, reason:"blank_page"}`
+- [ ] Live: send a test email with a decorative PNG attachment (can reuse CPA-XXX `ATT00001.png`) to `reports@moshe-atsits.co.il` → NO new row in `pending_classifications`, Worker log shows `[inbound][DL-321] non-document short-circuit`, OneDrive folder untouched
+- [ ] Live regression: send a real T501 PDF → normal AI Review card appears, no short-circuit log
+- [ ] Live guardrail: send a blurry/low-quality scan of a real receipt → either classified normally OR `is_document:false` with `confidence < 0.8` (falls through to human review — MUST NOT be silently dropped)
+- [ ] Observability sweep: 24h after deploy, grep Worker tail for `[inbound][DL-321]` — spot-check 5 drops for false-positives; if any look like real docs, roll back
+- [ ] No regression in DL-315 `preQuestionnaire` path: send a decorative image to a client who hasn't submitted the Tally questionnaire → still short-circuits (fallbackMode doesn't bypass the guard)
+
+Design log: `.agent/design-logs/ai-review/321-classifier-non-document-verdict.md`
+
+---
 
 ## DL-320 "Also Matches" UX Rework + Robot Icon Removal — IMPLEMENTED, NEED TESTING
 
