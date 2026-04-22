@@ -79,6 +79,13 @@ const getField = (val: unknown): unknown =>
 
 // GET /webhook/get-pending-classifications
 classifications.get('/get-pending-classifications', async (c) => {
+  // DL-323: hoist perf state so catch block can log marks too
+  const t0 = Date.now();
+  const marks: string[] = [];
+  const mark = (label: string, extra?: Record<string, unknown>) => {
+    const ms = Date.now() - t0;
+    marks.push(extra ? `${label}=${ms}ms ${JSON.stringify(extra)}` : `${label}=${ms}ms`);
+  };
   try {
     // ---- Authentication (office mode only) ----
     const authHeader = c.req.header('Authorization') || '';
@@ -104,11 +111,15 @@ classifications.get('/get-pending-classifications', async (c) => {
       return c.json({ ok: false, error: 'Unauthorized' }, 401);
     }
 
+    // DL-323: per-step perf instrumentation. Logs to wrangler tail only when total > 5s
+    // (or on error) so the 80% happy path doesn't spam logs. State hoisted above try {}.
+
     // ---- Step 1: Search classifications ----
     const records = await airtable.listAllRecords(TABLES.CLASSIFICATIONS, {
       filterByFormula: `AND({notification_status} = '', {review_status} != 'splitting')`,
       sort: [{ field: 'received_at', direction: 'desc' }],
     });
+    mark('step1.classifications', { n: records.length });
 
     if (records.length === 0) {
       return c.json({ ok: true, items: [], stats: EMPTY_STATS });
@@ -164,6 +175,7 @@ classifications.get('/get-pending-classifications', async (c) => {
         if (Array.isArray(docs)) for (const d of docs) docIdsToFetch.add(d as string);
       }
     }
+    mark('step2.reports', { nChunks: reportChunkPromises.length, nReports: reportBatches.flat().length });
 
     // Filter deduped by filing_type (DL-238: skip when 'all')
     const filteredByType = filingType === 'all' ? deduped : deduped.filter(rec => {
@@ -209,6 +221,7 @@ classifications.get('/get-pending-classifications', async (c) => {
         if (Array.isArray(docs)) for (const d of docs) docIdsToFetch.add(d as string);
       }
     }
+    mark('step3.clientReports', { nChunks: clientChunkPromises.length, nReports: clientBatches.flat().length, nDocIds: docIdsToFetch.size });
 
     // ---- Step 4: Fetch documents + templates + categories (parallel) ----
     // DL-322: scope DOCUMENTS fetch by RECORD_ID() of the linked `documents` field on REPORTS
@@ -241,6 +254,7 @@ classifications.get('/get-pending-classifications', async (c) => {
       getCachedOrFetch(c.env.CACHE_KV, 'cache:categories', 3600,
         () => airtable.listAllRecords(TABLES.CATEGORIES)),
     ]);
+    mark('step4.docs+templates+categories', { nDocs: docRecords.length, nTemplates: templateRecords.length, nCategories: categoryRecords.length });
 
     // ---- Step 5: Build lookups ----
     const templateMap = buildTemplateMap(templateRecords);
@@ -454,12 +468,19 @@ classifications.get('/get-pending-classifications', async (c) => {
     }
 
     // ---- Step 9: Return ----
+    mark('step9.return', { nItems: items.length, filing_type: filingType });
+    const totalMs = Date.now() - t0;
+    if (totalMs > 5000) {
+      console.warn('[classifications] SLOW', { total_ms: totalMs, filing_type: filingType, marks });
+    }
     return c.json({ ok: true, items, stats });
   } catch (err) {
-    console.error('[classifications] Unhandled error:', (err as Error).message);
+    const totalMs = Date.now() - t0;
+    console.error('[classifications] Unhandled error:', (err as Error).message, { total_ms: totalMs, marks });
     logError(c.executionCtx, c.env, {
       endpoint: '/webhook/get-client-classifications',
       error: err as Error,
+      details: `total_ms=${totalMs} marks=${marks.join(' | ')}`,
     });
     return c.json({ ok: false, error: (err as Error).message }, 500);
   }
