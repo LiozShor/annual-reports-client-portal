@@ -7007,37 +7007,33 @@ tr:hover .client-edit-link {
 /* ==================== ENTITY TABS ==================== */
 .entity-tabs {
     display: flex;
-    gap: var(--sp-2);
+    gap: var(--sp-1);
 }
 
 .entity-tab {
     display: inline-flex;
     align-items: center;
-    gap: var(--sp-2);
-    padding: var(--sp-2) var(--sp-4);
-    border-radius: var(--radius-full);
+    gap: var(--sp-1-5, 6px);
+    padding: 4px var(--sp-2);
+    border-radius: var(--radius-sm);
     border: 1px solid transparent;
+    background: transparent;
     font-size: var(--text-sm);
     font-weight: 500;
+    color: var(--gray-500);
     cursor: pointer;
-    transition: all 0.15s ease;
+    transition: color 0.15s ease, background 0.15s ease;
     font-family: inherit;
 }
 
 .entity-tab.active {
-    background: var(--brand-600);
-    color: white;
-}
-
-.entity-tab:not(.active) {
-    background: var(--gray-100);
-    color: var(--gray-600);
-    border-color: var(--gray-200);
+    background: var(--brand-50);
+    color: var(--brand-700);
 }
 
 .entity-tab:not(.active):hover {
-    background: var(--gray-200);
     color: var(--gray-700);
+    background: var(--gray-100);
 }
 
 /* Mobile entity segmented control */
