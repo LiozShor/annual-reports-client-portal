@@ -3595,6 +3595,7 @@ const REJECTION_REASONS = {
     wrong_year: 'שנה לא נכונה',
     wrong_person: 'לא שייך ללקוח',
     not_relevant: 'מסמך לא רלוונטי',
+    has_question: 'בהמתנה לתשובת לקוח',
     other: 'אחר'
 };
 
@@ -4539,15 +4540,8 @@ function renderAICard(item) {
             </div>
             ${splitBannerHtml}
             ${contractPeriodBannerHtml}
-            ${item.pending_question ? `<div class="batch-q-inline-badge">${icon('message-circle','icon-xs')} שאלה נשמרה: ${escapeHtml(item.pending_question.substring(0, 80))}${item.pending_question.length > 80 ? '…' : ''}</div>` : ''}
             <div class="ai-card-actions">
                 ${actionsHtml}
-                <div class="row-overflow-dropdown">
-                    <button class="action-btn overflow" onclick="toggleRowMenu(this, event)" title="פעולות נוספות">⋮</button>
-                    <div class="row-menu">
-                        <button onclick="closeAllRowMenus(); openAddQuestionDialog('${escapeAttr(item.id)}')">${icon('message-circle', 'icon-sm')} ${item.pending_question ? 'ערוך שאלה' : 'הוסף שאלה'}</button>
-                    </div>
-                </div>
             </div>
         </div>
     `;
@@ -5756,17 +5750,27 @@ function openAddQuestionDialog(itemId) {
             }, FETCH_TIMEOUTS.load);
             const data = await resp.json();
             if (!resp.ok || !data.ok) { showAIToast(data.error || 'שגיאה בשמירה', 'danger'); if (saveBtn) saveBtn.disabled = false; return; }
-            // Update in-memory data and re-render card
+
             item.pending_question = text || '';
-            const card = document.querySelector(`.ai-review-card[data-id="${itemId}"]`);
-            if (card) {
-                const isReviewed = item.review_status && item.review_status !== 'pending';
-                const tmpDiv = document.createElement('div');
-                tmpDiv.innerHTML = isReviewed ? renderReviewedCard(item, item.review_status) : renderAICard(item);
-                card.replaceWith(tmpDiv.firstElementChild);
+
+            // If the card is still pending and a question was added, auto-reject with has_question
+            const isPending = !item.review_status || item.review_status === 'pending';
+            if (text && isPending) {
+                close();
+                item.notes = JSON.stringify({ reason: 'has_question', text: '' });
+                await executeReject(itemId, 'has_question', '');
+            } else {
+                // Already reviewed — just re-render the card with updated badge
+                const card = document.querySelector(`.ai-review-card[data-id="${itemId}"]`);
+                if (card) {
+                    const isReviewed = item.review_status && item.review_status !== 'pending';
+                    const tmpDiv = document.createElement('div');
+                    tmpDiv.innerHTML = isReviewed ? renderReviewedCard(item, item.review_status) : renderAICard(item);
+                    card.replaceWith(tmpDiv.firstElementChild);
+                }
+                showAIToast(text ? 'השאלה נשמרה' : 'השאלה נמחקה');
+                close();
             }
-            showAIToast(text ? 'השאלה נשמרה' : 'השאלה נמחקה');
-            close();
         } catch (_err) {
             showAIToast('שגיאה בתקשורת עם השרת', 'danger');
             if (saveBtn) saveBtn.disabled = false;
