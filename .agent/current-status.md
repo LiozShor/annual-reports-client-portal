@@ -1,5 +1,38 @@
 # Annual Reports CRM - Current Status
 
+**Last Updated:** 2026-04-22 (DL-321/322/323 AI Review perf + UX bundle — LIVE, tests passed)
+
+## DL-321/322/323 AI Review Endpoint Perf + Polish — LIVE (tests passed)
+
+Multi-step debugging arc on `/webhook/get-pending-classifications` (was 14–17 s cold, intermittent 20 s timeouts). Final live: ~3.5 s ceiling, no timeouts.
+
+**Backend journey (all on main, deployed):**
+- **DL-321** — scope DOCUMENTS fetch via `FIND+ARRAYJOIN` chunks. Regressed (20 s timeouts under concurrent load — Airtable evaluates FIND per-row × 50 OR clauses). **Reverted same day** (commit `dbf183a`); kept memoization, dedup window, idle-refresh, dead-code removal.
+- **DL-322** — second attempt: scope by `RECORD_ID()` lookups via `reports.documents` linked field. Worked 80% of the time, intermittent 20 s timeouts remained. Diagnosed via DL-323 instrumentation that the bottleneck wasn't Airtable.
+- **DL-323** — added per-step perf logging to wrangler-tail (silent on happy path, structured JSON on >5 s). Caught the real culprit: **MS Graph `batchResolveUrls` stalling 5–43 s** on stale `DL320_FAKE_*` item IDs. Wrapped MS Graph call in 2 s `Promise.race` timeout (commit `af16c41`). Ceiling now 3.5 s.
+
+**Frontend fixes (all on main, GitHub Pages live):**
+- **DL-321** — widen `deduplicatedFetch` cache to 3 s post-resolve, idle-refresh dialog (5 min hidden + visible → "refresh?"), delete dead `loadAIReviewCount` function.
+- **DL-323** — render-after-prefetch race fix (silent fingerprint shortcut was returning before render fired when prefetch loaded data first), suppress auto-scroll on `renderAICards` path (only scroll on user-initiated completion), add missing `link-2` icon to SVG sprite for DL-320 "הקובץ תואם למסמך נוסף" button.
+
+**Live perf observations:**
+- Cold: ~3.5 s (was 14–17 s)
+- Warm/dedup hit: ~180 ms
+- 0 TimeoutErrors observed after MS Graph timeout cap
+- `wrangler tail` instrumentation kept in place for future diagnosis (silent unless >5 s)
+
+**Cache versions:** admin assets `v=281`. Worker version `09b8b0a7-0192-4f33-a3c6-e743da0a9fb1` (post-MS-Graph-timeout deploy).
+
+**Open follow-ups (low priority, not blocking):**
+- Delete two stale fake records from DOCUMENTS table: `DL320_FAKE_64C4DBC058CB41AD`, `DL320_FAKE_FEF94CAD96E03C94` — root cause of the MS Graph 404s. With them gone the 2 s timeout never trips, dropping cold path to ~2 s.
+- Investigate `/webhook/edit-documents` 422 alert seen 2026-04-22 ("must provide an array of up to 10 record objects") — separate batching bug, not touched.
+- DL-321 design log Section 7 manual tests still officially unchecked but functionally validated in this session (no timeouts, render works, idle-refresh deferred test).
+
+**Branches merged to main:**
+`DL-321-ai-review-perf-bundle` → `DL-321-hotfix-revert-scoped-fetch` → `DL-322-record-id-scoped-docs` (reverted then reapplied) → `DL-323-perf-logs` → `DL-323-msgraph-timeout` → `DL-323-render-after-prefetch` → `DL-323-scroll-and-icon`. Final main HEAD: `1252f7d`.
+
+---
+
 **Last Updated:** 2026-04-21 (DL-320 "also matches" UX rework + robot icon removal — IMPLEMENTED, NEED TESTING)
 
 ## DL-320 "Also Matches" UX Rework + Robot Icon Removal — IMPLEMENTED, NEED TESTING
