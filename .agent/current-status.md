@@ -1,5 +1,18 @@
 # Annual Reports CRM - Current Status
 
+**Last Updated:** 2026-04-22 (DL-328 follow-up polish — LIVE)
+
+## DL-328 Follow-up Polish — COMPLETED ✓
+
+All merged to main and deployed.
+
+- **Email subject:** `שאלות לגבי המסמכים שהעברת - דו״ח שנתי {year}` (filing type + year, not client name)
+- **Contact help block** added to batch-questions HE email (`contactBlock()`)
+- **AI card layout fixes:** State D assign-section takes full row (reject + ⋮ wrap below); done-banner `flex-wrap` so 3 buttons don't overflow
+- **Dialog save-only:** edit-questions modal footer is now save + cancel; send removed from dialog
+- **Done-prompt layout:** preview stacked directly under send button, clearly scoped to the send action
+- **CSS cache:** v=282; **script.js cache:** v=291
+
 **Last Updated:** 2026-04-22 (DL-329 preview timeout + error UX fix — LIVE, tests passed)
 
 ## DL-329 Preview Timeout + "signal timed out" Error UX — COMPLETED ✓
