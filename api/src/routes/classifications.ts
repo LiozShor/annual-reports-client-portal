@@ -430,6 +430,8 @@ classifications.get('/get-pending-classifications', async (c) => {
             other_report_docs: siblingDocs?.all || [],
           };
         })(),
+        // DL-328: office-saved question for this classification (cleared after batch send)
+        pending_question: (f.pending_question as string) || '',
       };
     });
 
@@ -2004,6 +2006,33 @@ classifications.post('/dismiss-classifications', async (c) => {
     console.error('[dismiss-classifications] Error:', (err as Error).message);
     return c.json({ ok: false, error: (err as Error).message }, 500);
   }
+});
+
+// POST /webhook/save-classification-question — DL-328
+// Saves or clears pending_question on a single classification record.
+classifications.post('/save-classification-question', async (c) => {
+  const env = c.env;
+  const authHeader = c.req.header('Authorization') || '';
+  if (!authHeader.startsWith('Bearer ')) {
+    return c.json({ ok: false, error: 'UNAUTHORIZED' }, 401);
+  }
+  const { verifyToken } = await import('../lib/token');
+  const tokenResult = await verifyToken(authHeader.slice(7), env.SECRET_KEY);
+  if (!tokenResult.valid) {
+    return c.json({ ok: false, error: 'INVALID_TOKEN' }, 401);
+  }
+
+  let body: { classification_id?: string; question?: string };
+  try { body = await c.req.json(); } catch { return c.json({ ok: false, error: 'Invalid JSON' }, 400); }
+
+  const { classification_id, question } = body;
+  if (!classification_id) return c.json({ ok: false, error: 'Missing classification_id' }, 400);
+
+  const airtable = new AirtableClient(env.AIRTABLE_BASE_ID, env.AIRTABLE_PAT);
+  await airtable.updateRecord(TABLES.CLASSIFICATIONS, classification_id, {
+    pending_question: question || null,
+  });
+  return c.json({ ok: true });
 });
 
 export default classifications;

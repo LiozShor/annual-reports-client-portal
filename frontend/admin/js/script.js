@@ -4279,8 +4279,6 @@ function renderAICard(item) {
         ${icon('eye', 'icon-sm')} תצוגה מקדימה
     </button>`;
 
-    const moreBtn = `<button class="btn btn-ghost btn-sm ai-card-more-btn" style="padding:4px 6px;" onclick="event.stopPropagation(); toggleCardMenu(this, '${escapeAttr(item.id)}', '${escapeOnclick(item.client_name)}')" title="עוד פעולות">${icon('more-horizontal', 'icon-sm')}</button>`;
-
     // DL-320: decorative "?" robot help icon removed per NN/G tooltip guidelines
     let classificationHtml = '';
     let actionsHtml = '';
@@ -4528,7 +4526,7 @@ function renderAICard(item) {
                     ${item.is_unrequested && !item.pre_questionnaire ? '<span class="ai-unrequested-badge" title="מסמך שלא נדרש מהלקוח">לא נדרש</span>' : ''}
                     ${item.pre_questionnaire ? '<span class="ai-pre-questionnaire-badge" title="הלקוח טרם מילא את השאלון — הסיווג בוצע מול הקטלוג המלא">טרם מולא שאלון</span>' : ''}
                 </div>
-                ${viewFileBtn}${moreBtn}
+                ${viewFileBtn}
             </div>
             <div class="ai-card-body">
                 <div class="ai-classification-result">
@@ -4539,12 +4537,13 @@ function renderAICard(item) {
             </div>
             ${splitBannerHtml}
             ${contractPeriodBannerHtml}
+            ${item.pending_question ? `<div class="batch-q-inline-badge">${icon('message-circle','icon-xs')} שאלה נשמרה: ${escapeHtml(item.pending_question.substring(0, 80))}${item.pending_question.length > 80 ? '…' : ''}</div>` : ''}
             <div class="ai-card-actions">
                 ${actionsHtml}
                 <div class="row-overflow-dropdown">
                     <button class="action-btn overflow" onclick="toggleRowMenu(this, event)" title="פעולות נוספות">⋮</button>
                     <div class="row-menu">
-                        <button onclick="closeAllRowMenus(); openBatchQuestionsModal('${escapeOnclick(item.client_name)}', '${escapeAttr(item.id)}')">${icon('message-circle', 'icon-sm')} שאל שאלה על מסמך זה</button>
+                        <button onclick="closeAllRowMenus(); openAddQuestionDialog('${escapeAttr(item.id)}')">${icon('message-circle', 'icon-sm')} ${item.pending_question ? 'ערוך שאלה' : 'הוסף שאלה'}</button>
                     </div>
                 </div>
             </div>
@@ -4639,7 +4638,6 @@ function renderReviewedCard(item, reviewStatus) {
     // (moved from pre-approve cards; reuses DL-314 showAIAlsoMatchModal as-is)
     const isApproved = reviewStatus === 'approved';
 
-    const moreBtn = `<button class="btn btn-ghost btn-sm ai-card-more-btn" style="padding:4px 6px;" onclick="event.stopPropagation(); toggleCardMenu(this, '${escapeAttr(item.id)}', '${escapeOnclick(item.client_name)}', ${JSON.stringify({ alsoMatch: isApproved, canChangeDecision: true })})" title="עוד פעולות">${icon('more-horizontal', 'icon-sm')}</button>`;
 
     const alsoMatchBtn = isApproved
         ? `<button class="btn btn-outline btn-sm ai-also-match-btn" onclick="showAIAlsoMatchModal('${escapeAttr(item.id)}')">
@@ -4681,9 +4679,10 @@ function renderReviewedCard(item, reviewStatus) {
                     <div class="row-menu">
                         ${canChangeDecision ? `<button onclick="closeAllRowMenus(); startReReview('${escapeAttr(item.id)}')">${icon('rotate-ccw', 'icon-sm')} שנה החלטה</button>` : ''}
                         ${isApproved ? `<button onclick="closeAllRowMenus(); showAIAlsoMatchModal('${escapeAttr(item.id)}')">${icon('copy-plus', 'icon-sm')} הקובץ תואם למסמך נוסף</button>` : ''}
-                        <button onclick="closeAllRowMenus(); openBatchQuestionsModal('${escapeOnclick(item.client_name)}', '${escapeAttr(item.id)}')">${icon('message-circle', 'icon-sm')} שאל שאלה על מסמך זה</button>
+                        <button onclick="closeAllRowMenus(); openAddQuestionDialog('${escapeAttr(item.id)}')">${icon('message-circle', 'icon-sm')} ${item.pending_question ? 'ערוך שאלה' : 'הוסף שאלה'}</button>
                     </div>
                 </div>
+                ${item.pending_question ? `<div class="batch-q-inline-badge">${icon('message-circle','icon-xs')} שאלה נשמרה: ${escapeHtml(item.pending_question.substring(0, 80))}${item.pending_question.length > 80 ? '…' : ''}</div>` : ''}
             </div>
         </div>
     `;
@@ -5703,33 +5702,126 @@ function showClientReviewDonePrompt(clientName, userInitiated = false) {
 }
 
 // DL-328: Compose batch clarification questions for a client's AI Review batch
-function openBatchQuestionsModal(clientName, preselectedItemId) {
+// DL-328: Save/edit a pending question on a single classification record (persisted to Airtable)
+function openAddQuestionDialog(itemId) {
+    const item = aiClassificationsData.find(i => i.id === itemId);
+    if (!item) return;
+
+    document.querySelectorAll('.add-question-overlay').forEach(el => el.remove());
+
+    const existing = item.pending_question || '';
+    const overlay = document.createElement('div');
+    overlay.className = 'ai-modal-overlay add-question-overlay';
+    overlay.innerHTML = `
+        <div class="ai-modal-panel" dir="rtl" style="max-width:480px;width:90vw;">
+            <div class="msg-compose-header" style="display:flex;align-items:center;justify-content:space-between;padding:16px;">
+                <div style="font-weight:600;font-size:15px;">${existing ? 'ערוך שאלה' : 'הוסף שאלה'}</div>
+                <button type="button" class="aq-close" style="background:transparent;border:none;font-size:20px;cursor:pointer;color:#6b7280;padding:4px 8px;">✕</button>
+            </div>
+            <div style="padding:0 16px 8px;font-size:13px;color:#6b7280;">
+                ${escapeHtml(item.attachment_name || 'מסמך')}
+            </div>
+            <div style="padding:0 16px 16px;">
+                <textarea class="aq-text" style="width:100%;min-height:100px;padding:10px;border:1px solid #d1d5db;border-radius:6px;resize:vertical;font-family:inherit;font-size:14px;box-sizing:border-box;" dir="rtl" placeholder="הקלד שאלה ללקוח…">${escapeHtml(existing)}</textarea>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;padding:12px 16px;border-top:1px solid var(--border-color,#e5e7eb);">
+                <button type="button" class="btn btn-primary btn-sm aq-save">שמור שאלה</button>
+                ${existing ? `<button type="button" class="btn btn-ghost btn-sm aq-clear" style="color:var(--danger-600,#dc2626)">מחק שאלה</button>` : ''}
+                <button type="button" class="btn btn-ghost btn-sm aq-cancel">ביטול</button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(overlay);
+    requestAnimationFrame(() => overlay.classList.add('show'));
+
+    const textarea = overlay.querySelector('.aq-text');
+    textarea.focus();
+    textarea.setSelectionRange(textarea.value.length, textarea.value.length);
+
+    function close() {
+        overlay.classList.remove('show');
+        setTimeout(() => { if (overlay.parentNode) overlay.parentNode.removeChild(overlay); }, 200);
+    }
+
+    async function saveQuestion(text) {
+        const saveBtn = overlay.querySelector('.aq-save');
+        if (saveBtn) saveBtn.disabled = true;
+        try {
+            const resp = await fetchWithTimeout(ENDPOINTS.SAVE_CLASSIFICATION_QUESTION, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
+                body: JSON.stringify({ classification_id: itemId, question: text || null }),
+            }, FETCH_TIMEOUTS.load);
+            const data = await resp.json();
+            if (!resp.ok || !data.ok) { showAIToast(data.error || 'שגיאה בשמירה', 'danger'); if (saveBtn) saveBtn.disabled = false; return; }
+            // Update in-memory data and re-render card
+            item.pending_question = text || '';
+            const card = document.querySelector(`.ai-review-card[data-id="${itemId}"]`);
+            if (card) {
+                const isReviewed = item.review_status && item.review_status !== 'pending';
+                const tmpDiv = document.createElement('div');
+                tmpDiv.innerHTML = isReviewed ? renderReviewedCard(item, item.review_status) : renderAICard(item);
+                card.replaceWith(tmpDiv.firstElementChild);
+            }
+            showAIToast(text ? 'השאלה נשמרה' : 'השאלה נמחקה');
+            close();
+        } catch (_err) {
+            showAIToast('שגיאה בתקשורת עם השרת', 'danger');
+            if (saveBtn) saveBtn.disabled = false;
+        }
+    }
+
+    overlay.querySelector('.aq-save').addEventListener('click', () => saveQuestion(textarea.value.trim()));
+    overlay.querySelector('.aq-cancel').addEventListener('click', close);
+    overlay.querySelector('.aq-close').addEventListener('click', close);
+    const clearBtn = overlay.querySelector('.aq-clear');
+    if (clearBtn) clearBtn.addEventListener('click', () => saveQuestion(''));
+    overlay.addEventListener('click', e => { if (e.target === overlay) close(); });
+}
+
+// DL-328: Compose + send batch questions email.
+// Pre-populates from pending_question fields saved on individual classification records.
+function openBatchQuestionsModal(clientName) {
     const clientItems = aiClassificationsData.filter(i => i.client_name === clientName);
     const reportId = clientItems[0]?.report_record_id;
     if (!reportId) { showAIToast('לא נמצא מזהה תיק', 'danger'); return; }
 
-    // Remove any existing instance
     document.querySelectorAll('.ai-modal-overlay.batch-questions-overlay').forEach(el => el.remove());
 
-    // Build file dropdown options from reviewed items
+    // Items that already have a saved question — pre-populate one card each
+    const preloaded = clientItems.filter(i => i.pending_question);
+
     const optionsHtml = clientItems.map((item, idx) => {
         const label = item.attachment_name || 'מסמך ללא שם';
         const suffix = item.matched_short_name ? ' — ' + item.matched_short_name : '';
         return `<option value="${idx}">${escapeHtml(label + suffix)}</option>`;
     }).join('');
 
-    function buildCardHtml(num, isFirst) {
+    function buildCardHtml(num, isFirst, selectedIdx, prefillText) {
+        const selVal = selectedIdx != null ? String(selectedIdx) : '';
+        const textVal = prefillText ? escapeHtml(prefillText) : '';
         return `<div class="batch-q-card" style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:12px;display:flex;flex-direction:column;gap:8px;">
             <div style="display:flex;align-items:center;justify-content:space-between;">
                 <span style="font-size:13px;font-weight:600;color:#6b7280">שאלה ${num}</span>
-                <button type="button" class="btn btn-ghost btn-sm batch-q-remove" style="padding:2px 8px;font-size:12px;${isFirst ? 'display:none' : ''}">הסר</button>
+                <button type="button" class="btn btn-ghost btn-sm batch-q-remove" style="padding:2px 8px;font-size:12px;${isFirst && !prefillText ? 'display:none' : ''}">הסר</button>
             </div>
             <select class="batch-q-file" style="width:100%;padding:6px 8px;border:1px solid #d1d5db;border-radius:6px;font-size:14px;font-family:inherit;" dir="rtl">
                 <option value="">בחר מסמך…</option>
                 ${optionsHtml}
             </select>
-            <textarea class="batch-q-text" style="width:100%;min-height:72px;padding:8px;border:1px solid #d1d5db;border-radius:6px;resize:vertical;font-family:inherit;font-size:14px;" dir="rtl" placeholder="הקלד שאלה…"></textarea>
+            <textarea class="batch-q-text" style="width:100%;min-height:72px;padding:8px;border:1px solid #d1d5db;border-radius:6px;resize:vertical;font-family:inherit;font-size:14px;" dir="rtl" placeholder="הקלד שאלה…">${textVal}</textarea>
         </div>`;
+    }
+
+    // Build initial cards: one per preloaded question, or one empty card
+    let initialCardsHtml = '';
+    if (preloaded.length > 0) {
+        initialCardsHtml = preloaded.map((item, i) => {
+            const idx = clientItems.indexOf(item);
+            return buildCardHtml(i + 1, i === 0, idx, item.pending_question);
+        }).join('');
+    } else {
+        initialCardsHtml = buildCardHtml(1, true, null, null);
     }
 
     const overlay = document.createElement('div');
@@ -5741,12 +5833,11 @@ function openBatchQuestionsModal(clientName, preselectedItemId) {
                 <button type="button" class="batch-q-close" style="background:transparent;border:none;font-size:20px;cursor:pointer;color:#6b7280;padding:4px 8px;">✕</button>
             </div>
             <div class="batch-q-body" style="flex:1 1 auto;overflow-y:auto;padding:0 16px 16px;display:flex;flex-direction:column;gap:8px;">
-                ${buildCardHtml(1, true)}
+                ${initialCardsHtml}
                 <button type="button" class="btn btn-ghost btn-sm batch-q-add" style="align-self:flex-start;margin-top:4px;">+ הוסף שאלה</button>
             </div>
             <div class="batch-q-footer" style="display:flex;align-items:center;gap:8px;padding:12px 16px;border-top:1px solid var(--border-color,#e5e7eb);flex-wrap:wrap;">
-                <button type="button" class="btn btn-secondary btn-sm batch-q-preview">${icon('eye','icon-xs')} תצוגה מקדימה</button>
-                <button type="button" class="btn btn-primary btn-sm batch-q-send">${icon('send','icon-xs')} שלח שאלות</button>
+                <button type="button" class="btn btn-primary btn-sm batch-q-send">${icon('send','icon-xs')} הוסף שאלה</button>
                 <button type="button" class="btn btn-ghost btn-sm batch-q-cancel">ביטול</button>
             </div>
         </div>
@@ -5758,9 +5849,16 @@ function openBatchQuestionsModal(clientName, preselectedItemId) {
     const body = overlay.querySelector('.batch-q-body');
     const addBtn = overlay.querySelector('.batch-q-add');
     const sendBtn = overlay.querySelector('.batch-q-send');
-    const previewBtn = overlay.querySelector('.batch-q-preview');
     const cancelBtn = overlay.querySelector('.batch-q-cancel');
     const closeBtn = overlay.querySelector('.batch-q-close');
+
+    // Set select values for pre-populated cards (can't set via HTML attribute for <select>)
+    if (preloaded.length > 0) {
+        body.querySelectorAll('.batch-q-file').forEach((select, i) => {
+            const idx = clientItems.indexOf(preloaded[i]);
+            if (idx >= 0) select.value = String(idx);
+        });
+    }
 
     function renumberCards() {
         const cards = body.querySelectorAll('.batch-q-card');
@@ -5802,37 +5900,18 @@ function openBatchQuestionsModal(clientName, preselectedItemId) {
         });
     }
 
-    wireRemoveBtn(body.querySelector('.batch-q-card'));
-
-    if (preselectedItemId) {
-        const preIdx = clientItems.findIndex(i => i.id === preselectedItemId);
-        if (preIdx >= 0) {
-            const firstSelect = body.querySelector('.batch-q-file');
-            if (firstSelect) firstSelect.value = String(preIdx);
-        }
-    }
+    body.querySelectorAll('.batch-q-card').forEach(card => wireRemoveBtn(card));
 
     addBtn.addEventListener('click', () => {
         const cardCount = body.querySelectorAll('.batch-q-card').length;
         const tempDiv = document.createElement('div');
-        tempDiv.innerHTML = buildCardHtml(cardCount + 1, false);
+        tempDiv.innerHTML = buildCardHtml(cardCount + 1, false, null, null);
         const newCard = tempDiv.firstElementChild;
         body.insertBefore(newCard, addBtn);
         wireRemoveBtn(newCard);
         renumberCards();
     });
 
-    previewBtn.addEventListener('click', () => {
-        const qs = collectQuestions();
-        if (!validateQuestions(qs)) { showAIToast('יש להזין לפחות שאלה אחת', 'danger'); return; }
-        window.showEmailPreviewModal({
-            reportId,
-            clientName,
-            getToken: () => authToken,
-            endpoint: ENDPOINTS.SEND_BATCH_QUESTIONS,
-            extraPayload: { questions: qs },
-        });
-    });
 
     sendBtn.addEventListener('click', async () => {
         const qs = collectQuestions();
@@ -5850,6 +5929,19 @@ function openBatchQuestionsModal(clientName, preselectedItemId) {
                 sendBtn.disabled = false;
                 return;
             }
+            // Clear pending_question in memory and re-render cards with questions
+            clientItems.forEach(item => {
+                if (item.pending_question) {
+                    item.pending_question = '';
+                    const card = document.querySelector(`.ai-review-card[data-id="${item.id}"]`);
+                    if (card) {
+                        const isReviewed = item.review_status && item.review_status !== 'pending';
+                        const tmpDiv = document.createElement('div');
+                        tmpDiv.innerHTML = isReviewed ? renderReviewedCard(item, item.review_status) : renderAICard(item);
+                        card.replaceWith(tmpDiv.firstElementChild);
+                    }
+                }
+            });
             _batchQuestionsSentClients.add(clientName);
             close();
             showAIToast('השאלות נשלחו ללקוח');

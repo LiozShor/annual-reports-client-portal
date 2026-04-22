@@ -9,7 +9,7 @@ import type { BatchQuestionItem } from '../lib/email-html';
 
 const sendBatchQuestions = new Hono<{ Bindings: Env }>();
 
-const TABLES = { REPORTS: 'tbls7m3hmHC4hhQVy' };
+const TABLES = { REPORTS: 'tbls7m3hmHC4hhQVy', CLASSIFICATIONS: 'tbloiSDN3rwRcl1ii' };
 const SENDER = 'reports@moshe-atsits.co.il';
 
 function first(val: unknown): string {
@@ -73,7 +73,7 @@ sendBatchQuestions.post('/send-batch-questions', async (c) => {
     const graph = new MSGraphClient(c.env, c.executionCtx);
     await graph.sendMail(subject, html, clientEmail, SENDER);
 
-    // Append to client_notes
+    // Append to client_notes + clear pending_question on classification records
     const existingNotes = first(report.fields.client_notes);
     let notes: unknown[] = [];
     try { notes = JSON.parse(existingNotes || '[]'); } catch { notes = []; }
@@ -84,9 +84,12 @@ sendBatchQuestions.post('/send-batch-questions', async (c) => {
       items: validQuestions,
       language,
     });
-    await airtable.updateRecord(TABLES.REPORTS, report_id, {
-      client_notes: JSON.stringify(notes),
-    });
+
+    const fileIds = validQuestions.map(q => q.file_id).filter(Boolean);
+    await Promise.all([
+      airtable.updateRecord(TABLES.REPORTS, report_id, { client_notes: JSON.stringify(notes) }),
+      ...fileIds.map(id => airtable.updateRecord(TABLES.CLASSIFICATIONS, id, { pending_question: null })),
+    ]);
 
     return c.json({ ok: true });
 
