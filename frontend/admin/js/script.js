@@ -4251,6 +4251,21 @@ function renderAICards(items, allFilteredItems) {
     const summaryStr = totalAll > 0
         ? `${totalPending} מסמכים ממתינים · ${clientsWithPending} לקוחות · ${totalReviewed}/${totalAll} נבדקו`
         : '';
+    // DL-330 redesign: structured summary — drops the "N מסמכים ממתינים" line per user request; keeps
+    // clients-waiting count + reviewed/total with a progress bar. Rendered into .ai-clients-summary.
+    const reviewedPct = totalAll > 0 ? Math.round((totalReviewed / totalAll) * 100) : 0;
+    const summaryHtml = totalAll > 0
+        ? `
+            <div class="ai-summary-primary">${clientsWithPending} לקוחות ממתינים</div>
+            <div class="ai-summary-progress">
+                <div class="ai-summary-progress-labels">
+                    <span class="ai-summary-progress-text">${totalReviewed} / ${totalAll} נבדקו</span>
+                    <span class="ai-summary-progress-pct">${reviewedPct}%</span>
+                </div>
+                <div class="ai-summary-progress-track"><div class="ai-summary-progress-fill" style="width:${reviewedPct}%"></div></div>
+            </div>
+        `
+        : '';
     // Legacy summary bar (hidden by DL-330 CSS but kept in DOM for backwards compat)
     const summaryBar = document.getElementById('aiSummaryBar');
     const summaryText = document.getElementById('aiSummaryText');
@@ -4263,10 +4278,10 @@ function renderAICards(items, allFilteredItems) {
         }
     }
 
-    // DL-330: write summary into the persistent toolbar header (not blown away on re-render).
+    // DL-330: write structured summary (stat + progress bar) into the persistent toolbar header.
     // Fall back to prepending into pane 1 only if the toolbar isn't present (defensive).
     const clientsHeader = document.getElementById('aiClientsHeader');
-    if (clientsHeader) clientsHeader.textContent = summaryStr;
+    if (clientsHeader) clientsHeader.innerHTML = summaryHtml;
     const clientsList = document.getElementById('aiClientsList');
     const renderTarget = clientsList || clientsPane;
 

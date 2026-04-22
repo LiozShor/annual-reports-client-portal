@@ -3376,12 +3376,54 @@ tr:hover .client-view-link {
 }
 
 .ai-clients-summary {
-    font-size: var(--text-sm);
-    font-weight: 600;
-    color: var(--gray-700);
-    line-height: 1.35;
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-2);
 }
 .ai-clients-summary:empty { display: none; }
+
+.ai-summary-primary {
+    font-size: var(--text-sm);
+    font-weight: 600;
+    color: var(--gray-800);
+    line-height: 1.25;
+}
+
+.ai-summary-progress {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+.ai-summary-progress-labels {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    font-size: var(--text-xs);
+    line-height: 1.1;
+}
+.ai-summary-progress-text {
+    color: var(--gray-500);
+    font-weight: 500;
+}
+.ai-summary-progress-pct {
+    color: var(--brand-600);
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+}
+.ai-summary-progress-track {
+    height: 6px;
+    background: var(--gray-100);
+    border-radius: 999px;
+    overflow: hidden;
+    position: relative;
+}
+.ai-summary-progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--brand-500) 0%, var(--brand-400) 100%);
+    border-radius: 999px;
+    transition: width 0.3s ease-out;
+    min-width: 2px;
+}
 
 .ai-clients-search {
     display: flex;
