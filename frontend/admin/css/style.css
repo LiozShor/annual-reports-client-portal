@@ -3291,29 +3291,116 @@ tr:hover .client-view-link {
     }
 }
 
-/* ==================== AI REVIEW SPLIT VIEW ==================== */
+/* ==================== AI REVIEW 3-PANE (DL-330) ==================== */
 
 .ai-review-split {
     display: grid;
-    grid-template-columns: minmax(450px, 520px) 1fr;
-    gap: var(--sp-5);
+    grid-template-columns: 240px 340px 1fr;
+    gap: var(--sp-4);
     align-items: start;
     height: calc(100vh - 200px);
     overflow: hidden;
+    overscroll-behavior: none;
 }
 
-.ai-review-master {
+.ai-review-clients,
+.ai-review-docs {
     min-height: 0;
     min-width: 0;
     height: 100%;
     overflow-y: auto;
-    padding-bottom: 50vh;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+    scrollbar-color: var(--gray-300) transparent;
+    background: white;
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
 }
 
-.ai-review-master .ai-review-card {
+.ai-review-clients::-webkit-scrollbar,
+.ai-review-docs::-webkit-scrollbar { width: 6px; }
+.ai-review-clients::-webkit-scrollbar-thumb,
+.ai-review-docs::-webkit-scrollbar-thumb {
+    background: var(--gray-300);
+    border-radius: 3px;
+}
+.ai-review-clients::-webkit-scrollbar-thumb:hover,
+.ai-review-docs::-webkit-scrollbar-thumb:hover {
+    background: var(--gray-400);
+}
+
+.ai-review-docs {
+    padding: var(--sp-3);
+}
+
+.ai-review-docs .ai-review-card {
     max-width: none;
     margin-inline: 0;
 }
+
+/* Client row — reuses .ai-accordion-header styling, adds .active highlight */
+.ai-client-row {
+    cursor: pointer;
+    border-bottom: 1px solid var(--gray-100);
+    transition: background 0.12s ease;
+}
+.ai-client-row:last-child { border-bottom: none; }
+.ai-client-row:hover { background: var(--gray-50); }
+.ai-client-row.active {
+    background: var(--brand-50);
+    border-inline-start: 3px solid var(--brand-500);
+}
+.ai-client-row .ai-accordion-icon { display: none; }
+
+.ai-client-progress {
+    font-size: var(--text-xs);
+    color: var(--gray-500);
+    margin-top: 2px;
+}
+
+.ai-docs-placeholder {
+    min-height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: var(--gray-400);
+    gap: var(--sp-3);
+    padding: var(--sp-5);
+    text-align: center;
+}
+
+.ai-docs-header {
+    padding: var(--sp-3) var(--sp-2);
+    margin-bottom: var(--sp-3);
+    border-bottom: 1px solid var(--gray-100);
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--sp-3);
+}
+.ai-docs-header h3 {
+    margin: 0;
+    font-size: var(--text-base);
+    font-weight: 600;
+    color: var(--gray-800);
+}
+.ai-docs-header .ai-docs-header-meta {
+    font-size: var(--text-xs);
+    color: var(--gray-500);
+}
+
+@media (max-width: 1200px) {
+    .ai-review-split { grid-template-columns: 200px 300px 1fr; gap: var(--sp-3); }
+}
+
+@media (max-width: 900px) {
+    /* Still wider than mobile-modal breakpoint: collapse to 2-col (clients row hidden via a toggle later; for now, compress) */
+    .ai-review-split { grid-template-columns: 180px 280px 1fr; gap: var(--sp-2); }
+}
+
+/* Mobile breakpoint for 3-pane is handled by the existing mobile block below (line ~4617) — unchanged behavior per DL-330 scope */
 
 .ai-review-detail {
     height: 100%;
@@ -3324,6 +3411,7 @@ tr:hover .client-view-link {
     display: flex;
     flex-direction: column;
     overflow: hidden;
+    overscroll-behavior: contain;
 }
 
 .preview-header-bar {
@@ -4512,18 +4600,27 @@ tr.reminder-loading td:last-child {
         flex-direction: column;
     }
 
-    /* AI Review responsive */
+    /* AI Review responsive — mobile behavior unchanged from pre-DL-330 (single column, accordions render into #aiClientsPane, mobile preview modal unchanged) */
     .ai-review-split {
         grid-template-columns: 1fr;
         height: auto;
         overflow: visible;
     }
 
+    .ai-review-docs,
     .ai-review-detail {
         display: none;
     }
 
-    .ai-review-master .ai-review-card {
+    .ai-review-clients {
+        height: auto;
+        overflow: visible;
+        border: none;
+        box-shadow: none;
+        background: transparent;
+    }
+
+    .ai-review-clients .ai-review-card {
         max-width: 600px;
         margin-inline: auto;
     }

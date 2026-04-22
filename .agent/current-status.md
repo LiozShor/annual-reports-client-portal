@@ -1,6 +1,40 @@
 # Annual Reports CRM - Current Status
 
-**Last Updated:** 2026-04-22 (DL-328 follow-up polish — LIVE)
+**Last Updated:** 2026-04-22 (DL-330 AI Review 3-pane rework — IMPLEMENTED, needs testing)
+
+## DL-330 AI Review 3-Pane Rework — IMPLEMENTED — NEED TESTING
+
+Branch `DL-330-ai-review-scroll-ux` (rename pending to `DL-330-ai-review-3pane-rework`). AI Review tab restructured from 2-pane (sticky preview + one long scrollable accordion column) to 3-pane master-detail (clients / docs-of-selected-client / preview). Each pane owns its scroll via `overscroll-behavior: contain`. Widths 240/340/flex on ≥1200px; shrinks at 1200/900; mobile unchanged (existing modal + full-width accordion list).
+
+- **Client rows (pane 1)** reuse `.ai-accordion-header` markup + new "X/Y נבדקו" progress sub-label. `onclick="selectClient(name)"` replaces accordion toggle on desktop.
+- **Selected client's docs (pane 2)** — full `.ai-accordion` markup (always open) rendered on demand; preserves all legacy queries + badge updates.
+- **Summary bar** extended to `"N מסמכים ממתינים · M לקוחות · X/Y נבדקו"`.
+- **Mobile unchanged:** `renderAICards` dispatches on `@media (max-width: 768px)` and renders legacy grouped-accordion HTML into `#aiClientsPane`.
+- **Cache-bust:** `script.js?v=293`.
+
+**Files:** `frontend/admin/index.html`, `frontend/admin/css/style.css`, `frontend/admin/js/script.js` (added `selectedClientName`, `buildClientAccordionHtml`, `buildClientListRowHtml`, `initAIReviewComboboxes`, `selectClient`; rewrote `renderAICards` to dispatch mobile/desktop).
+
+### Active TODOs — Test DL-330: 3-pane AI Review
+- [ ] Three panes render at 240/340/flex on ≥1200px.
+- [ ] Pane 1 shows client rows with same look as today's accordion header + "X/Y נבדקו" sub-label.
+- [ ] Clicking a client highlights in pane 1 and populates pane 2 with that client's docs.
+- [ ] Wheel over pane 1 scrolls only pane 1.
+- [ ] Wheel over pane 2 scrolls only pane 2.
+- [ ] Wheel over preview iframe scrolls only the PDF.
+- [ ] Clicking a doc card's preview loads pane 3 and keeps pane-1/pane-2 scroll.
+- [ ] Switching clients resets pane 3 to placeholder.
+- [ ] Summary bar shows "N ממתינים · M לקוחות · X/Y נבדקו" and updates after approve/reject.
+- [ ] DL-306 deep-link (`?client=<id>`) auto-selects that client in pane 1.
+- [ ] Silent-refresh preserves `selectedClientName`.
+- [ ] Mobile (<768px) unchanged — full-width accordions + mobile preview modal still work.
+- [ ] 1200–1366px laptop: no horizontal scroll, preview ≥ 600px.
+- [ ] No regression on DL-075/109/237/278/306.
+
+Design log: `.agent/design-logs/ai-review/330-ai-review-3pane-rework.md`
+
+---
+
+**Previous Last Updated:** 2026-04-22 (DL-328 follow-up polish — LIVE)
 
 ## DL-328 Follow-up Polish — COMPLETED ✓
 

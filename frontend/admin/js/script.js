@@ -566,7 +566,7 @@ let mobilePreviewCurrentIdx = -1;
 
 function getMobilePreviewCardIds() {
     // Get visible card IDs in DOM order (respects current filters)
-    const cards = document.querySelectorAll('#aiCardsContainer .ai-review-card:not([style*="display: none"])');
+    const cards = document.querySelectorAll('#aiClientsPane .ai-review-card:not([style*="display: none"]), #aiDocsPane .ai-review-card:not([style*="display: none"])');
     return Array.from(cards).map(c => c.dataset.id).filter(Boolean);
 }
 
@@ -3587,6 +3587,8 @@ let aiCurrentReassignId = null;
 let aiReviewLoaded = false;
 let aiReviewLoadedAt = 0;
 let activePreviewItemId = null;
+// DL-330: 3-pane layout — currently-selected client on desktop (null = auto-pick first pending)
+let selectedClientName = null;
 
 const REJECTION_REASONS = {
     image_quality: 'איכות תמונה ירודה',
@@ -3812,16 +3814,20 @@ async function loadAIClassifications(silent = false, prefetchOnly = false) {
         const isTimeout = error && (error.name === 'TimeoutError' || /timed out/i.test(error.message || ''));
         console.error('AI review load failed', { status: _lastStatus, timeout: isTimeout, timeout_ms: FETCH_TIMEOUTS.slow, error });
         if (!silent) {
-            const container = document.getElementById('aiCardsContainer');
-            container.innerHTML = `
-                <div class="empty-state">
-                    <div class="empty-state-icon">${icon('alert-triangle', 'icon-2xl')}</div>
-                    <p style="color: var(--danger-500);">לא ניתן לטעון את הסיווגים. נסה שוב.</p>
-                    <button class="btn btn-secondary mt-4" onclick="loadAIClassifications()">
-                        ${icon('refresh-cw', 'icon-sm')} נסה שוב
-                    </button>
-                </div>
-            `;
+            const container = document.getElementById('aiClientsPane');
+            if (container) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">${icon('alert-triangle', 'icon-2xl')}</div>
+                        <p style="color: var(--danger-500);">לא ניתן לטעון את הסיווגים. נסה שוב.</p>
+                        <button class="btn btn-secondary mt-4" onclick="loadAIClassifications()">
+                            ${icon('refresh-cw', 'icon-sm')} נסה שוב
+                        </button>
+                    </div>
+                `;
+            }
+            const docsPane = document.getElementById('aiDocsPane');
+            if (docsPane) docsPane.innerHTML = '';
             safeCreateIcons();
         }
     }
@@ -3901,7 +3907,7 @@ function applyAIFilters(keepPage) {
 function goToAIPage(page) {
     _aiPage = page;
     applyAIFilters(true);
-    document.getElementById('aiCardsContainer')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    document.getElementById('aiClientsPane')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 // Client/spouse template pairs — same document type, different person
@@ -3958,236 +3964,179 @@ function quickAssignFromComparison(recordId, templateId, docRecordId, docName) {
     }, { confirmText: 'שייך' });
 }
 
-function renderAICards(items, allFilteredItems) {
-    const container = document.getElementById('aiCardsContainer');
-    const emptyState = document.getElementById('aiEmptyState');
+// DL-330: mobile uses legacy full grouped-accordion rendering; desktop uses 3-pane split
+function isAIReviewMobileLayout() {
+    return window.matchMedia('(max-width: 768px)').matches;
+}
 
-    // Preserve the single open accordion across re-renders
-    const openAccordionClient = container.querySelector('.ai-accordion.open')?.dataset.client || null;
+// DL-330: Build the full client accordion HTML block (header + body + doc cards).
+// `open` controls the initial .open class. Used both on mobile (all clients) and
+// on desktop pane 2 (selected client only, always open).
+function buildClientAccordionHtml(clientName, clientItems, open) {
+    let pendingCount = 0, reviewedCount = 0;
+    for (const i of clientItems) {
+        if ((i.review_status || 'pending') === 'pending') pendingCount++;
+        else reviewedCount++;
+    }
 
-    if (!items || items.length === 0) {
-        container.innerHTML = '';
-        const sb = document.getElementById('aiSummaryBar');
-        if (sb) sb.style.display = 'none';
+    let badgesHtml = '';
+    if (pendingCount > 0) {
+        badgesHtml = `<span class="ai-accordion-stat-badge badge-matched">${pendingCount} מסמכים ממתינים</span>`;
+    }
 
-        if (aiClassificationsData.length === 0) {
-            container.style.display = 'none';
-            emptyState.style.display = 'block';
-        } else {
-            container.style.display = 'block';
-            emptyState.style.display = 'none';
-            container.innerHTML = `
-                <div class="empty-state">
-                    <div class="empty-state-icon">${icon('filter-x', 'icon-2xl')}</div>
-                    <p>אין תוצאות לסינון הנוכחי</p>
+    const clientId = clientItems[0].client_id;
+    const docManagerBtn = clientId
+        ? `<a href="../document-manager.html?client_id=${encodeURIComponent(clientId)}"
+             target="_blank" class="ai-doc-manager-link"
+             onclick="event.stopPropagation()" title="לניהול המסמכים">
+             ${icon('folder-open', 'icon-xs')}
+           </a>`
+        : '';
+
+    let html = `
+        <div class="ai-accordion${open ? ' open' : ''}" data-client="${escapeHtml(clientName)}" data-client-id="${escapeAttr(clientId || '')}">
+            <div class="ai-accordion-header" onclick="toggleAIAccordion(this)">
+                <div class="ai-accordion-title">
+                    ${icon('user', 'icon-sm')}
+                    ${escapeHtml(clientName)}
                 </div>
-            `;
-        }
-        safeCreateIcons(container);
-        return;
-    }
-
-    container.style.display = 'block';
-    emptyState.style.display = 'none';
-
-    // Group by client_name
-    const groups = {};
-    for (const item of items) {
-        const clientName = item.client_name || 'לא ידוע';
-        if (!groups[clientName]) groups[clientName] = [];
-        groups[clientName].push(item);
-    }
-
-    // DL-268: Summary bar uses all filtered items (across all pages), not just current page slice
-    const allItems = allFilteredItems || items;
-    const allGroups = {};
-    for (const i of allItems) { const cn = i.client_name || 'לא ידוע'; if (!allGroups[cn]) allGroups[cn] = []; allGroups[cn].push(i); }
-    const totalPending = allItems.filter(i => (i.review_status || 'pending') === 'pending').length;
-    const clientsWithPending = Object.entries(allGroups).filter(([, ci]) => ci.some(i => (i.review_status || 'pending') === 'pending')).length;
-    const summaryBar = document.getElementById('aiSummaryBar');
-    const summaryText = document.getElementById('aiSummaryText');
-    if (summaryBar && summaryText) {
-        if (totalPending > 0) {
-            summaryText.textContent = `${totalPending} מסמכים ממתינים לבדיקה · ${clientsWithPending} לקוחות`;
-            summaryBar.style.display = 'block';
-        } else {
-            summaryBar.style.display = 'none';
-        }
-    }
-
-    let html = '';
-
-    for (const [clientName, clientItems] of Object.entries(groups)) {
-        // Count by card state for accordion badges
-        let identifiedCount = 0; // full + fuzzy
-        let mismatchCount = 0;   // issuer-mismatch
-        let unmatchedCount = 0;  // unmatched
-        // DL-086: Count pending vs reviewed
-        let pendingCount = 0;
-        let reviewedCount = 0;
-        let approvedCount = 0;
-        let rejectedCount = 0;
-        for (const i of clientItems) {
-            const rs = i.review_status || 'pending';
-            if (rs === 'pending') {
-                pendingCount++;
-                const s = getCardState(i);
-                if (s === 'full' || s === 'fuzzy') identifiedCount++;
-                else if (s === 'issuer-mismatch') mismatchCount++;
-                else unmatchedCount++;
-            } else {
-                reviewedCount++;
-                if (rs === 'rejected') rejectedCount++;
-                else approvedCount++;
-            }
-        }
-
-        // Build accordion stat badge
-        let badgesHtml = '';
-        if (pendingCount > 0) {
-            badgesHtml = `<span class="ai-accordion-stat-badge badge-matched">${pendingCount} מסמכים ממתינים</span>`;
-        }
-
-        // Build document manager link button (icon-only, next to expand arrow)
-        const clientId = clientItems[0].client_id;
-        const docManagerBtn = clientId
-            ? `<a href="../document-manager.html?client_id=${encodeURIComponent(clientId)}"
-                 target="_blank" class="ai-doc-manager-link"
-                 onclick="event.stopPropagation()" title="לניהול המסמכים">
-                 ${icon('folder-open', 'icon-xs')}
-               </a>`
-            : '';
-
-        html += `
-            <div class="ai-accordion" data-client="${escapeHtml(clientName)}" data-client-id="${escapeAttr(clientId || '')}">
-                <div class="ai-accordion-header" onclick="toggleAIAccordion(this)">
-                    <div class="ai-accordion-title">
-                        ${icon('user', 'icon-sm')}
-                        ${escapeHtml(clientName)}
-                    </div>
-                    <div class="ai-accordion-stats">
-                        ${badgesHtml}
-                    </div>
-                    <div class="ai-accordion-actions">
-                        ${docManagerBtn}
-                        <span class="ai-accordion-icon">▾</span>
-                    </div>
+                <div class="ai-accordion-stats">
+                    ${badgesHtml}
                 </div>
-                <div class="ai-accordion-body">
-        `;
-
-        // DL-199: Client communication notes timeline (in-place expand)
-        const clientNotesRaw = clientItems.find(i => i.client_notes)?.client_notes;
-        if (clientNotesRaw) {
-            let cnArr = [];
-            try { cnArr = JSON.parse(clientNotesRaw.replace(/[\n\r\t]/g, m => m === '\n' ? '\\n' : m === '\r' ? '\\r' : '\\t')); if (!Array.isArray(cnArr)) cnArr = []; } catch(e) {}
-            // Filter out office replies — only show client messages on AI review
-            cnArr = cnArr.filter(n => n.type !== 'office_reply');
-            if (cnArr.length > 0) {
-                const sorted = [...cnArr].sort((a, b) => (b.date || '').localeCompare(a.date || ''));
-                const renderEntry = n => {
-                    const isEmail = n.source === 'email';
-                    const iconName = isEmail ? 'mail' : 'pencil';
-                    const iconClass = isEmail ? 'cn-icon--email' : 'cn-icon--manual';
-                    const rawDate = n.date || '';
-                    const dateStr = rawDate.match(/^(\d{4})-(\d{2})-(\d{2})/) ? rawDate.slice(0, 10).replace(/^(\d{4})-(\d{2})-(\d{2})/, '$3-$2-$1') : rawDate;
-                    return `<div class="ai-cn-entry">
-                        ${icon(iconName, 'icon-sm ${iconClass}')}
-                        <span class="ai-cn-date">${escapeHtml(dateStr)}</span>
-                        <span class="ai-cn-summary">${escapeHtml(n.summary)}</span>
-                    </div>`;
-                };
-                const previewHtml = sorted.slice(0, 5).map(renderEntry).join('');
-                const hasMore = sorted.length > 5;
-                const expandedHtml = hasMore
-                    ? `<div class="ai-cn-expanded">${sorted.slice(5).map(renderEntry).join('')}</div>`
-                    : '';
-
-                html += `<div class="ai-cn-section">
-                    <div class="ai-cn-header">📋 הודעות הלקוח (${cnArr.length})</div>
-                    <div class="ai-cn-entries">${previewHtml}${expandedHtml}</div>
-                    ${hasMore ? `<span class="ai-cn-toggle" onclick="toggleClientNotes(this)">הצג הכל ▼</span>` : ''}
-                </div>`;
-            }
-        }
-
-        // Document status overview — grouped by category, collapsible
-        const allDocs = (clientItems[0].all_docs || []);
-        const groupMissingDocs = (clientItems[0].missing_docs || []);
-        const displayDocs = allDocs.length > 0 ? allDocs : groupMissingDocs;
-        const docsReceivedCount = clientItems[0].docs_received_count || 0;
-        const docsTotalCount = clientItems[0].docs_total_count || displayDocs.length;
-        const hasStatusVariation = allDocs.length > 0 && docsReceivedCount > 0;
-
-        if (displayDocs.length > 0) {
-            // Group by category
-            const catGroups = [];
-            let currentCat = null;
-            for (const d of displayDocs) {
-                const cat = d.category || 'other';
-                if (cat !== currentCat) {
-                    currentCat = cat;
-                    catGroups.push({
-                        category: cat,
-                        name: d.category_name || cat,
-                        emoji: d.category_emoji || '',
-                        docs: []
-                    });
-                }
-                catGroups[catGroups.length - 1].docs.push(d);
-            }
-
-            let categoriesHtml = '<div class="ai-missing-category-tags">';
-            for (const group of catGroups) {
-                categoriesHtml += group.docs.map(d => renderDocTag(d)).join('');
-            }
-            categoriesHtml += '</div>';
-
-            const toggleLabel = hasStatusVariation
-                ? `מסמכים נדרשים (${docsReceivedCount}/${docsTotalCount} התקבלו)`
-                : `מסמכים חסרים (${groupMissingDocs.length})`;
-
-            html += `
-                    <div class="ai-missing-docs-group">
-                        <div class="ai-missing-docs-toggle" onclick="toggleMissingDocs(this)">
-                            <span class="toggle-arrow">▸</span>
-                            ${toggleLabel}
-                        </div>
-                        <div class="ai-missing-docs-body">
-                            ${categoriesHtml}
-                        </div>
-                    </div>
-            `;
-        }
-
-        html += `
-                    <div class="ai-accordion-content">
-        `;
-
-        for (const item of clientItems) {
-            html += renderAICard(item);
-        }
-
-        html += `
-                    </div>
+                <div class="ai-accordion-actions">
+                    ${docManagerBtn}
+                    <span class="ai-accordion-icon">▾</span>
                 </div>
             </div>
+            <div class="ai-accordion-body">
+    `;
+
+    // DL-199: Client communication notes timeline (in-place expand)
+    const clientNotesRaw = clientItems.find(i => i.client_notes)?.client_notes;
+    if (clientNotesRaw) {
+        let cnArr = [];
+        try { cnArr = JSON.parse(clientNotesRaw.replace(/[\n\r\t]/g, m => m === '\n' ? '\\n' : m === '\r' ? '\\r' : '\\t')); if (!Array.isArray(cnArr)) cnArr = []; } catch(e) {}
+        cnArr = cnArr.filter(n => n.type !== 'office_reply');
+        if (cnArr.length > 0) {
+            const sorted = [...cnArr].sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+            const renderEntry = n => {
+                const isEmail = n.source === 'email';
+                const iconName = isEmail ? 'mail' : 'pencil';
+                const iconClass = isEmail ? 'cn-icon--email' : 'cn-icon--manual';
+                const rawDate = n.date || '';
+                const dateStr = rawDate.match(/^(\d{4})-(\d{2})-(\d{2})/) ? rawDate.slice(0, 10).replace(/^(\d{4})-(\d{2})-(\d{2})/, '$3-$2-$1') : rawDate;
+                return `<div class="ai-cn-entry">
+                    ${icon(iconName, 'icon-sm ${iconClass}')}
+                    <span class="ai-cn-date">${escapeHtml(dateStr)}</span>
+                    <span class="ai-cn-summary">${escapeHtml(n.summary)}</span>
+                </div>`;
+            };
+            const previewHtml = sorted.slice(0, 5).map(renderEntry).join('');
+            const hasMore = sorted.length > 5;
+            const expandedHtml = hasMore
+                ? `<div class="ai-cn-expanded">${sorted.slice(5).map(renderEntry).join('')}</div>`
+                : '';
+
+            html += `<div class="ai-cn-section">
+                <div class="ai-cn-header">📋 הודעות הלקוח (${cnArr.length})</div>
+                <div class="ai-cn-entries">${previewHtml}${expandedHtml}</div>
+                ${hasMore ? `<span class="ai-cn-toggle" onclick="toggleClientNotes(this)">הצג הכל ▼</span>` : ''}
+            </div>`;
+        }
+    }
+
+    const allDocs = (clientItems[0].all_docs || []);
+    const groupMissingDocs = (clientItems[0].missing_docs || []);
+    const displayDocs = allDocs.length > 0 ? allDocs : groupMissingDocs;
+    const docsReceivedCount = clientItems[0].docs_received_count || 0;
+    const docsTotalCount = clientItems[0].docs_total_count || displayDocs.length;
+    const hasStatusVariation = allDocs.length > 0 && docsReceivedCount > 0;
+
+    if (displayDocs.length > 0) {
+        const catGroups = [];
+        let currentCat = null;
+        for (const d of displayDocs) {
+            const cat = d.category || 'other';
+            if (cat !== currentCat) {
+                currentCat = cat;
+                catGroups.push({ category: cat, name: d.category_name || cat, emoji: d.category_emoji || '', docs: [] });
+            }
+            catGroups[catGroups.length - 1].docs.push(d);
+        }
+        let categoriesHtml = '<div class="ai-missing-category-tags">';
+        for (const group of catGroups) categoriesHtml += group.docs.map(d => renderDocTag(d)).join('');
+        categoriesHtml += '</div>';
+
+        const toggleLabel = hasStatusVariation
+            ? `מסמכים נדרשים (${docsReceivedCount}/${docsTotalCount} התקבלו)`
+            : `מסמכים חסרים (${groupMissingDocs.length})`;
+
+        html += `
+                <div class="ai-missing-docs-group">
+                    <div class="ai-missing-docs-toggle" onclick="toggleMissingDocs(this)">
+                        <span class="toggle-arrow">▸</span>
+                        ${toggleLabel}
+                    </div>
+                    <div class="ai-missing-docs-body">
+                        ${categoriesHtml}
+                    </div>
+                </div>
         `;
     }
 
-    container.innerHTML = html;
+    html += `<div class="ai-accordion-content">`;
+    for (const item of clientItems) html += renderAICard(item);
+    html += `</div></div></div>`;
+    return html;
+}
 
-    // Restore the single open accordion
-    if (openAccordionClient) {
-        const el = container.querySelector(`.ai-accordion[data-client="${CSS.escape(openAccordionClient)}"]`);
-        if (el) el.classList.add('open');
+// DL-330: Build a compact client-row for desktop pane 1. Reuses .ai-accordion-header
+// look (per user requirement "exactly like today") but click selects the client into pane 2.
+function buildClientListRowHtml(clientName, clientItems, isActive) {
+    let pendingCount = 0, reviewedCount = 0;
+    for (const i of clientItems) {
+        if ((i.review_status || 'pending') === 'pending') pendingCount++;
+        else reviewedCount++;
     }
+    const total = pendingCount + reviewedCount;
 
-    // Initialize inline comboboxes (unmatched + mismatch fallback)
+    const badgesHtml = pendingCount > 0
+        ? `<span class="ai-accordion-stat-badge badge-matched">${pendingCount} ממתינים</span>`
+        : `<span class="ai-accordion-stat-badge badge-success">✓ הושלם</span>`;
+
+    const clientId = clientItems[0].client_id;
+    const docManagerBtn = clientId
+        ? `<a href="../document-manager.html?client_id=${encodeURIComponent(clientId)}"
+             target="_blank" class="ai-doc-manager-link"
+             onclick="event.stopPropagation()" title="לניהול המסמכים">
+             ${icon('folder-open', 'icon-xs')}
+           </a>`
+        : '';
+
+    return `
+        <div class="ai-client-row ai-accordion-header${isActive ? ' active' : ''}"
+             data-client="${escapeHtml(clientName)}"
+             data-client-id="${escapeAttr(clientId || '')}"
+             onclick="selectClient(this.dataset.client)">
+            <div class="ai-accordion-title" style="min-width: 0;">
+                ${icon('user', 'icon-sm')}
+                <div style="min-width: 0;">
+                    <div style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${escapeHtml(clientName)}</div>
+                    <div class="ai-client-progress">${reviewedCount}/${total} נבדקו</div>
+                </div>
+            </div>
+            <div class="ai-accordion-stats">${badgesHtml}</div>
+            <div class="ai-accordion-actions">${docManagerBtn}</div>
+        </div>
+    `;
+}
+
+// DL-330: Initialize inline comboboxes in a freshly-rendered subtree.
+function initAIReviewComboboxes(container) {
+    if (!container) return;
     container.querySelectorAll('.doc-combobox-container').forEach(el => {
         const recordId = el.dataset.recordId;
         const itemData = aiClassificationsData.find(i => i.id === recordId);
-        // DL-224: Show all docs (not just missing) — received ones get checkmark badge
         const ownDocs = itemData ? (itemData.all_docs || itemData.missing_docs || []) : [];
         const otherDocsArr = itemData?.other_report_docs || [];
         const hasBothTypes = otherDocsArr.length > 0;
@@ -4197,7 +4146,6 @@ function renderAICards(items, allFilteredItems) {
                 const btn = el.closest('.ai-card-actions')?.querySelector('.btn-ai-assign-confirm');
                 if (btn) btn.disabled = !templateId;
             },
-            // DL-239: Pass other filing type docs for toggle
             ...(hasBothTypes ? {
                 otherDocs: otherDocsArr,
                 ownFilingType: itemData.filing_type || 'annual_report',
@@ -4205,28 +4153,186 @@ function renderAICards(items, allFilteredItems) {
             } : {}),
         });
     });
+}
 
-    safeCreateIcons(container);
+// DL-330: 3-pane desktop selector. Called from client-row onclick.
+function selectClient(clientName) {
+    if (!clientName) return;
+    if (isAIReviewMobileLayout()) return;  // mobile uses accordion toggle
+    selectedClientName = clientName;
 
-    // DL-306: deep-link from PA banner — auto-scroll + expand matching accordion once per page load
+    // Update .active class on pane 1 without re-rendering
+    const clientsPane = document.getElementById('aiClientsPane');
+    if (clientsPane) {
+        clientsPane.querySelectorAll('.ai-client-row').forEach(row => {
+            row.classList.toggle('active', row.dataset.client === clientName);
+        });
+    }
+
+    // Re-render pane 2
+    const docsPane = document.getElementById('aiDocsPane');
+    if (!docsPane) return;
+    const clientItems = aiClassificationsData.filter(i => (i.client_name || 'לא ידוע') === clientName);
+    if (clientItems.length > 0) {
+        docsPane.innerHTML = buildClientAccordionHtml(clientName, clientItems, true);
+        initAIReviewComboboxes(docsPane);
+        safeCreateIcons(docsPane);
+    } else {
+        docsPane.innerHTML = '';
+    }
+
+    // Fresh client → clear stale preview
+    resetPreviewPanel();
+}
+
+function renderAICards(items, allFilteredItems) {
+    const clientsPane = document.getElementById('aiClientsPane');
+    const docsPane = document.getElementById('aiDocsPane');
+    const emptyState = document.getElementById('aiEmptyState');
+    const placeholder = document.getElementById('aiDocsPlaceholder');
+    const isMobile = isAIReviewMobileLayout();
+
+    // Preserve state across re-renders
+    const prevOpenClient = isMobile
+        ? (clientsPane?.querySelector('.ai-accordion.open')?.dataset.client || null)
+        : selectedClientName;
+
+    if (!items || items.length === 0) {
+        if (clientsPane) clientsPane.innerHTML = '';
+        if (docsPane) docsPane.innerHTML = '';
+        const sb = document.getElementById('aiSummaryBar');
+        if (sb) sb.style.display = 'none';
+
+        if (aiClassificationsData.length === 0) {
+            if (clientsPane) clientsPane.style.display = isMobile ? 'none' : 'block';
+            if (emptyState) {
+                emptyState.style.display = 'block';
+                // Put empty-state in the visible pane
+                (isMobile ? clientsPane : docsPane)?.appendChild(emptyState);
+            }
+        } else {
+            if (emptyState) emptyState.style.display = 'none';
+            if (clientsPane) {
+                clientsPane.style.display = 'block';
+                clientsPane.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">${icon('filter-x', 'icon-2xl')}</div>
+                        <p>אין תוצאות לסינון הנוכחי</p>
+                    </div>
+                `;
+            }
+        }
+        if (clientsPane) safeCreateIcons(clientsPane);
+        return;
+    }
+
+    if (clientsPane) clientsPane.style.display = 'block';
+    if (emptyState) emptyState.style.display = 'none';
+
+    // Group by client_name
+    const groups = {};
+    for (const item of items) {
+        const clientName = item.client_name || 'לא ידוע';
+        if (!groups[clientName]) groups[clientName] = [];
+        groups[clientName].push(item);
+    }
+
+    // DL-268 + DL-330: Summary bar extended with overall X/Y reviewed
+    const allItems = allFilteredItems || items;
+    const allGroups = {};
+    for (const i of allItems) { const cn = i.client_name || 'לא ידוע'; if (!allGroups[cn]) allGroups[cn] = []; allGroups[cn].push(i); }
+    const totalPending = allItems.filter(i => (i.review_status || 'pending') === 'pending').length;
+    const totalReviewed = allItems.length - totalPending;
+    const totalAll = allItems.length;
+    const clientsWithPending = Object.entries(allGroups).filter(([, ci]) => ci.some(i => (i.review_status || 'pending') === 'pending')).length;
+    const summaryBar = document.getElementById('aiSummaryBar');
+    const summaryText = document.getElementById('aiSummaryText');
+    if (summaryBar && summaryText) {
+        if (totalAll > 0) {
+            summaryText.textContent = `${totalPending} מסמכים ממתינים · ${clientsWithPending} לקוחות · ${totalReviewed}/${totalAll} נבדקו`;
+            summaryBar.style.display = 'block';
+        } else {
+            summaryBar.style.display = 'none';
+        }
+    }
+
+    if (isMobile) {
+        // Mobile: render legacy grouped accordions into #aiClientsPane (docs/detail panes hidden by CSS)
+        let html = '';
+        for (const [clientName, clientItems] of Object.entries(groups)) {
+            html += buildClientAccordionHtml(clientName, clientItems, false);
+        }
+        if (clientsPane) {
+            clientsPane.innerHTML = html;
+            if (prevOpenClient) {
+                const el = clientsPane.querySelector(`.ai-accordion[data-client="${CSS.escape(prevOpenClient)}"]`);
+                if (el) el.classList.add('open');
+            }
+            initAIReviewComboboxes(clientsPane);
+            safeCreateIcons(clientsPane);
+        }
+    } else {
+        // Desktop 3-pane
+        // Auto-pick selectedClientName if absent or stale
+        if (!selectedClientName || !groups[selectedClientName]) {
+            selectedClientName = Object.entries(groups).find(([, ci]) => ci.some(i => (i.review_status || 'pending') === 'pending'))?.[0]
+                || Object.keys(groups)[0]
+                || null;
+        }
+
+        // Pane 1: client rows
+        let listHtml = '';
+        for (const [clientName, clientItems] of Object.entries(groups)) {
+            listHtml += buildClientListRowHtml(clientName, clientItems, clientName === selectedClientName);
+        }
+        if (clientsPane) {
+            clientsPane.innerHTML = listHtml;
+            safeCreateIcons(clientsPane);
+        }
+
+        // Pane 2: selected client's accordion (always open)
+        if (docsPane) {
+            if (selectedClientName && groups[selectedClientName]) {
+                docsPane.innerHTML = buildClientAccordionHtml(selectedClientName, groups[selectedClientName], true);
+                initAIReviewComboboxes(docsPane);
+                safeCreateIcons(docsPane);
+            } else {
+                docsPane.innerHTML = `<div class="ai-docs-placeholder">${icon('users', 'icon-2xl')}<p>בחר לקוח כדי להציג את המסמכים</p></div>`;
+                safeCreateIcons(docsPane);
+            }
+        }
+    }
+
+    // DL-306: deep-link from PA banner — auto-select matching client once per page load
     if (!window.__dl306DeepLinkHandled) {
         try {
             const deepLinkClient = new URLSearchParams(window.location.search).get('client');
             if (deepLinkClient) {
-                const target = container.querySelector(`.ai-accordion[data-client-id="${CSS.escape(deepLinkClient)}"]`);
-                if (target) {
+                // The deep-link param is a client_id; map to client_name
+                const match = allItems.find(i => i.client_id === deepLinkClient);
+                const deepClientName = match?.client_name;
+                if (deepClientName && groups[deepClientName]) {
                     window.__dl306DeepLinkHandled = true;
-                    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                    if (!target.classList.contains('open')) {
-                        const header = target.querySelector('.ai-accordion-header');
-                        if (header) toggleAIAccordion(header);
+                    if (isMobile) {
+                        const target = clientsPane?.querySelector(`.ai-accordion[data-client-id="${CSS.escape(deepLinkClient)}"]`);
+                        if (target) {
+                            target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                            if (!target.classList.contains('open')) {
+                                const header = target.querySelector('.ai-accordion-header');
+                                if (header) toggleAIAccordion(header);
+                            }
+                        }
+                    } else {
+                        selectClient(deepClientName);
+                        const row = clientsPane?.querySelector(`.ai-client-row[data-client-id="${CSS.escape(deepLinkClient)}"]`);
+                        if (row) row.scrollIntoView({ behavior: 'smooth', block: 'start' });
                     }
                 }
             }
         } catch (e) { /* no-op */ }
     }
 
-    // DL-210: Show review-done prompt for clients where all items are already reviewed
+    // DL-210: review-done prompt when all client items are reviewed
     for (const [clientName, clientItems] of Object.entries(groups)) {
         const pendingLeft = clientItems.filter(i => (i.review_status || 'pending') === 'pending').length;
         if (pendingLeft === 0 && clientItems.length > 0) {
@@ -4811,10 +4917,9 @@ function toggleAIAccordion(header) {
     const accordion = header.closest('.ai-accordion');
     const isOpen = accordion.classList.contains('open');
 
-    // Close all other accordions — only one open at a time
-    accordion.closest('#aiCardsContainer')
-        .querySelectorAll('.ai-accordion.open')
-        .forEach(el => el.classList.remove('open'));
+    // Close all other accordions — only one open at a time (scoped to whichever pane the accordion lives in)
+    const scope = accordion.closest('#aiClientsPane, #aiDocsPane') || document;
+    scope.querySelectorAll('.ai-accordion.open').forEach(el => el.classList.remove('open'));
 
     // Toggle the clicked one (re-open if it wasn't already open)
     if (!isOpen) {
@@ -6115,7 +6220,8 @@ async function dismissClientReview(clientName) {
 
         // Check if everything is empty
         if (aiClassificationsData.length === 0) {
-            document.getElementById('aiCardsContainer').style.display = 'none';
+            const cp = document.getElementById('aiClientsPane'); if (cp) cp.style.display = 'none';
+            const dp = document.getElementById('aiDocsPane'); if (dp) dp.style.display = 'none';
             document.getElementById('aiEmptyState').style.display = 'block';
             safeCreateIcons();
         }
@@ -6147,7 +6253,8 @@ function animateAndRemoveAI(recordId) {
 
             // Check if everything is empty
             if (aiClassificationsData.length === 0) {
-                document.getElementById('aiCardsContainer').style.display = 'none';
+                const cp = document.getElementById('aiClientsPane'); if (cp) cp.style.display = 'none';
+                const dp = document.getElementById('aiDocsPane'); if (dp) dp.style.display = 'none';
                 document.getElementById('aiEmptyState').style.display = 'block';
                 safeCreateIcons();
             }
