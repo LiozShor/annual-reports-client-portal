@@ -3294,25 +3294,14 @@ tr:hover .client-view-link {
 /* ==================== AI REVIEW 3-PANE (DL-330) ==================== */
 
 /* DL-330: search + summary bars were stretching full-viewport after the breakout.
-   Cap them to the clients-column width and right-align (RTL hugs right edge). */
+   Cap them to the clients-column width and right-align (RTL hugs right edge). !important used
+   to beat any inline width from legacy .ai-filter-bar rule + surrounding tab breakout. */
 #tab-ai-review > .ai-filter-bar,
 #tab-ai-review > #aiSummaryBar {
-    max-width: 300px;
-    margin-inline-start: auto;
-    margin-inline-end: 0;
-    margin-bottom: var(--sp-2);
-    box-sizing: border-box;
-}
-#tab-ai-review > .ai-filter-bar { padding: var(--sp-2) var(--sp-3); }
-
-
-/* DL-330: constrain the search bar + summary bar to the clients-column width (RTL: hugs the right edge).
-   Without this, the viewport-breakout on #tab-ai-review stretches them across the full screen. */
-#tab-ai-review > .ai-filter-bar,
-#tab-ai-review > #aiSummaryBar {
-    max-width: 300px;
-    margin-inline-start: auto;
-    margin-inline-end: 0;
+    max-width: 300px !important;
+    width: 300px !important;
+    margin-inline-start: auto !important;
+    margin-inline-end: 0 !important;
     margin-bottom: var(--sp-2);
     box-sizing: border-box;
 }
