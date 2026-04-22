@@ -204,7 +204,7 @@ Active and pending logs. For completed history, see [ARCHIVE-INDEX.md](ARCHIVE-I
 | 183 | [183-cc-spouse-email-questionnaire.md](email/183-cc-spouse-email-questionnaire.md) | Done | CC Spouse Email on Questionnaire Send |
 | 185 | [185-daily-natan-digest-email.md](email/185-daily-natan-digest-email.md) | Done | Daily Natan Digest Email |
 | 187 | [187-stage3-attention-bounce.md](admin-ui/187-stage3-attention-bounce.md) | Done | Stage 3 Attention Bounce Animation |
-| 328 | [328-ai-review-ask-client-questions.md](admin-ui/328-ai-review-ask-client-questions.md) | In Progress | AI Review — Ask Client Questions About Reviewed Batch |
+| 328 | [328-ai-review-ask-client-questions.md](admin-ui/328-ai-review-ask-client-questions.md) | Completed | AI Review — Ask Client Questions About Reviewed Batch |
 
 ---
 *Last reorganized: 2026-03-25 — 157 logs across 10 domain folders*
