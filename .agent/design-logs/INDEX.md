@@ -2,12 +2,12 @@
 
 Active and pending logs. For completed history, see [ARCHIVE-INDEX.md](ARCHIVE-INDEX.md).
 
-**Total logs:** 212 | **Active:** 114 | **Archived:** 98
+**Total logs:** 213 | **Active:** 115 | **Archived:** 98
 
 ## Folder Structure
 
 - `admin-ui/` — Admin UI (32)
-- `ai-review/` — AI Review & Classification (32)
+- `ai-review/` — AI Review & Classification (33)
 - `capital-statements/` — Capital Statements (4)
 - `client-portal/` — Client Portal & Questionnaires (13)
 - `documents/` — Documents & OneDrive (20)
@@ -21,6 +21,7 @@ Active and pending logs. For completed history, see [ARCHIVE-INDEX.md](ARCHIVE-I
 
 | # | File | Status | Summary |
 |---|------|--------|---------|
+| 332 | [332-ai-review-pane1-density.md](ai-review/332-ai-review-pane1-density.md) | IMPLEMENTED — NEED TESTING | AI Review pane 1 density redesign (Phase 3 of cockpit plan, standalone). Drop `user` icon + pill badges from client rows; inline amber `.ai-client-pending-num` (`--warning-500`, `font-weight: 500`) in place of the "N [pending-label]" green pill; zero-pending clients render nothing in the pending slot. Row chrome trimmed (`padding: --sp-2/--sp-3`, `min-height: 0`) so 12+ clients fit per 1080p viewport (vs. ~6 today). Folder-open icon stays on start side (visual-right in RTL). Selected-row palette preserved; subtitle demoted to `--gray-600` on active, pending number demoted to `--gray-700`. Mobile unchanged. Cache-bust v=293→294 / v=297→298. All DL-330 / DL-306 / DL-278 / DL-053 hooks intact. Impl via `/subagent-driven-development` (workstreams A/B in parallel + C inline) |
 | 330 | [330-ai-review-3pane-rework.md](ai-review/330-ai-review-3pane-rework.md) | IMPLEMENTED — NEED TESTING | AI Review tab reworked from 2-pane (sticky preview + single scrollable accordion column) to 3-pane master-detail (clients / docs-of-selected-client / preview). Each pane owns its scroll (`overscroll-behavior: contain`), widths 240/340/flex on ≥1200px. Client rows reuse `.ai-accordion-header` markup + new "X/Y reviewed" per-client counter; summary bar extended to "N pending · M clients · X/Y reviewed". Accordion click handler retired; `selectClient(name)` renders pane 2 + resets pane 3. Mobile modal untouched. Addresses "two scroll areas competing" + "long card list feels endless" |
 | 329 | [329-preview-timeout-error-ux.md](admin-ui/329-preview-timeout-error-ux.md) | COMPLETED | Preview URL timeout 10s→20s; `humanizeError()` replaces raw "signal timed out" with Hebrew copy across all showModal call sites (12 total); inline retry button in preview panel on TimeoutError only |
 | 322 | [322-note-save-silent-failures.md](infrastructure/322-note-save-silent-failures.md) | IMPLEMENTED — NEED TESTING | Instrument `summarizeAndSaveNote` (processor.ts:292-404) 4 silent-exit paths (dedup, body_too_short, llm_skip, exception). New `event_type: INBOUND_NOTE_SKIPPED` (severity INFO via existing `logSecurity`) for the 3 by-design skips; `logError` (INTERNAL) for catch path. JSON details `{reason, message_id, report_id, client_id}`. No PII in details. Zero behavior change — observability-only. Triggered by coralhouse2@gmail.com 2026-04-21 note that matched but never saved |
