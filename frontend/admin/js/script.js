@@ -5593,18 +5593,24 @@ function transitionCardToReviewed(recordId, newReviewStatus, responseData) {
         const clientItems = aiClassificationsData.filter(i => i.client_name === clientName);
         const pendingLeft = clientItems.filter(i => (i.review_status || 'pending') === 'pending').length;
         if (pendingLeft === 0 && clientItems.length > 0) {
-            showClientReviewDonePrompt(clientName);
+            // DL-323: user just took an action on this client → scroll to confirm
+            showClientReviewDonePrompt(clientName, true);
         }
     }
 }
 
 // DL-210: Show "mark review as done?" prompt when all client items are reviewed
-function showClientReviewDonePrompt(clientName) {
+// DL-323: userInitiated=true only when called from a user action (approve/reject/reassign).
+// Render path (renderAICards) passes false so the page doesn't auto-scroll on every refresh
+// to whichever already-completed client happens to be last in the list.
+function showClientReviewDonePrompt(clientName, userInitiated = false) {
     const accordion = document.querySelector(`.ai-accordion[data-client="${CSS.escape(clientName)}"]`);
     if (!accordion) return;
 
-    // Scroll to accordion header
-    accordion.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    // Scroll to accordion header — only when the user just acted on this client
+    if (userInitiated) {
+        accordion.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
 
     // Remove existing prompt if any
     const existing = accordion.querySelector('.ai-review-done-prompt');

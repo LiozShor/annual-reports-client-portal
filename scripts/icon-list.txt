@@ -46,6 +46,7 @@ hourglass
 inbox
 info
 landmark
+link-2
 loader
 lock
 log-out
