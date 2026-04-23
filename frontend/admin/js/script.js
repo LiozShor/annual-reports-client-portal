@@ -4024,7 +4024,7 @@ function buildClientAccordionHtml(clientName, clientItems, open) {
         cnArr = cnArr.filter(n => n.type !== 'office_reply');
         if (cnArr.length > 0) {
             const sorted = [...cnArr].sort((a, b) => (b.date || '').localeCompare(a.date || ''));
-            const cnReportId = clientItems[0]?.report_id || '';
+            const cnReportId = clientItems[0]?.report_record_id || '';
             const cnYear = clientItems[0]?.year || '';
             const renderEntry = n => {
                 const isEmail = n.source === 'email';
