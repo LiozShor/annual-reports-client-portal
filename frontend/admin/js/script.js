@@ -1152,8 +1152,9 @@ async function deleteRecentMessage(noteId, reportId, mode) {
 }
 
 // DL-266: Show inline reply input below a message
-function showReplyInput(noteId, reportId) {
-    const row = document.querySelector(`.msg-row[data-note-id="${noteId}"]`)
+function showReplyInput(noteId, reportId, containerEl) {
+    const row = containerEl
+             || document.querySelector(`.msg-row[data-note-id="${noteId}"]`)
              || document.querySelector(`.ai-cn-entry[data-note-id="${noteId}"]`);
     if (!row) return;
     // Don't add twice
@@ -4033,7 +4034,7 @@ function buildClientAccordionHtml(clientName, clientItems, open) {
                 const dateStr = rawDate.match(/^(\d{4})-(\d{2})-(\d{2})/) ? rawDate.slice(0, 10).replace(/^(\d{4})-(\d{2})-(\d{2})/, '$3-$2-$1') : rawDate;
                 const nId = n.id ? escapeAttr(String(n.id)) : '';
                 const replyBtn = nId
-                    ? `<button class="ai-cn-action-btn" title="הגב" onclick="event.stopPropagation();showReplyInput('${nId}','${escapeAttr(cnReportId)}')">${icon('message-square', 'icon-xs')}</button>`
+                    ? `<button class="ai-cn-action-btn" title="הגב" onclick="event.stopPropagation();showReplyInput('${nId}','${escapeAttr(cnReportId)}',this.closest('.ai-cn-entry'))">${icon('message-square', 'icon-xs')}</button>`
                     : '';
                 return `<div class="ai-cn-entry" data-note-id="${nId}" data-report-id="${escapeAttr(cnReportId)}" data-client-name="${escapeAttr(clientName)}" data-year="${escapeAttr(cnYear)}">
                     ${icon(iconName, 'icon-sm ${iconClass}')}
