@@ -2,12 +2,12 @@
 
 Active and pending logs. For completed history, see [ARCHIVE-INDEX.md](ARCHIVE-INDEX.md).
 
-**Total logs:** 215 | **Active:** 117 | **Archived:** 98
+**Total logs:** 213 | **Active:** 115 | **Archived:** 98
 
 ## Folder Structure
 
 - `admin-ui/` — Admin UI (32)
-- `ai-review/` — AI Review & Classification (34)
+- `ai-review/` — AI Review & Classification (33)
 - `capital-statements/` — Capital Statements (4)
 - `client-portal/` — Client Portal & Questionnaires (13)
 - `documents/` — Documents & OneDrive (20)
@@ -21,7 +21,6 @@ Active and pending logs. For completed history, see [ARCHIVE-INDEX.md](ARCHIVE-I
 
 | # | File | Status | Summary |
 |---|------|--------|---------|
-| 334 | [334-cockpit-middle-and-actions.md](ai-review/334-cockpit-middle-and-actions.md) | IMPLEMENTED — NEED TESTING | AI Review cockpit phase 1: pane 2 becomes thin scannable rows (~30px, state-stripe color code, middle-truncated filename, muted category, flag-dot cluster, `?` glyph for pending questions). Pane 3 splits vertically — preview iframe (top ~58%) + new `.ai-actions-panel#aiActionsPanel` (bottom, state-aware). New `renderActionsPanel(item)` emits 7 state variants (full / fuzzy / issuer-mismatch / unmatched / approved / rejected / reassigned) with additive sections (split-PDF / contract-period T901-T902 / pending-question). Introduces `findItemActionsEl` + `refreshItemDom` so all 14 `.ai-review-card[data-id]` callers (approve/reject/assign/startReReview/setCardLoading/showInlineConfirm/etc.) branch mobile (fat card) vs desktop (thin row + panel). `selectDocument` + auto-select-first-pending on `selectClient`. Bundles DL-053 silent-refresh merge-by-id + preserve `activePreviewItemId` across poll. DL-306 deep-link + DL-278 scroll + DL-314 multi-match modal preserved. Mobile <768px unchanged (`isAIReviewMobileLayout` guards). Cache-bust v=294→295 / v=298→299 |
 | 333 | [333-batch-questions-off-hours-queue.md](email/333-batch-questions-off-hours-queue.md) | IMPLEMENTED — NEED TESTING | DL-328 "שאל את הלקוח" batch-questions email now defers to next 08:00 Israel when sent off-hours (20:00-08:00). Mirrors DL-264/273 PidTagDeferredSendTime pattern; `client_notes` `batch_questions_sent` entry stamped with `graph_message_id` + `queued:true` so DL-281 queue modal surfaces it as a third row type (`שאלות לאחר סקירה`). Toast swaps to info-tone "השאלות נשלחו לבוקר — יישלחו ב־08:00" when queued. Preview path unchanged. `QueuedRow` type extended to `'doc_request' \| 'reply' \| 'batch_questions'`. script.js v=297→v=298. Zero schema change |
 | 332 | [332-ai-review-pane1-density.md](ai-review/332-ai-review-pane1-density.md) | IMPLEMENTED — NEED TESTING | AI Review pane 1 density redesign (Phase 3 of cockpit plan, standalone). Drop `user` icon + pill badges from client rows; inline amber `.ai-client-pending-num` (`--warning-500`, `font-weight: 500`) in place of the "N [pending-label]" green pill; zero-pending clients render nothing in the pending slot. Row chrome trimmed (`padding: --sp-2/--sp-3`, `min-height: 0`) so 12+ clients fit per 1080p viewport (vs. ~6 today). Folder-open icon stays on start side (visual-right in RTL). Selected-row palette preserved; subtitle demoted to `--gray-600` on active, pending number demoted to `--gray-700`. Mobile unchanged. Cache-bust v=293→294 / v=297→298. All DL-330 / DL-306 / DL-278 / DL-053 hooks intact. Impl via `/subagent-driven-development` (workstreams A/B in parallel + C inline) |
 | 330 | [330-ai-review-3pane-rework.md](ai-review/330-ai-review-3pane-rework.md) | IMPLEMENTED — NEED TESTING | AI Review tab reworked from 2-pane (sticky preview + single scrollable accordion column) to 3-pane master-detail (clients / docs-of-selected-client / preview). Each pane owns its scroll (`overscroll-behavior: contain`), widths 240/340/flex on ≥1200px. Client rows reuse `.ai-accordion-header` markup + new "X/Y reviewed" per-client counter; summary bar extended to "N pending · M clients · X/Y reviewed". Accordion click handler retired; `selectClient(name)` renders pane 2 + resets pane 3. Mobile modal untouched. Addresses "two scroll areas competing" + "long card list feels endless" |
