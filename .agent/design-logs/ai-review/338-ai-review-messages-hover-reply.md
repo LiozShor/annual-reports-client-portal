@@ -84,3 +84,9 @@ Hovering an entry in the AI Review client messages timeline reveals a reply butt
 - Reused `showReplyInput` verbatim except the 1-line OR-selector patch.
 - The icon template bug `` `icon-sm ${iconClass}` `` in the original `renderEntry` was preserved as-is (out of scope).
 - Removed the now-superseded `.ai-cn-open .ai-cn-summary` rule (replaced by the hover/expanded rule).
+- **Bug 1 fixed:** Reply button passed `this.closest('.ai-cn-entry')` as 3rd arg to `showReplyInput` — avoids null-lookup on `.msg-row`.
+- **Bug 2 fixed:** `cnReportId` used `report_record_id` (not `report_id`) — classifications endpoint field name.
+- **Bug 3 fixed:** Skipped `showPostReplyPrompt` for `.ai-cn-entry` context; calls `loadRecentMessages()` instead.
+- **Bug 4 fixed:** `expandReplyCompose` send handler OR-selector + no early return when row is null in AI Review context.
+- **Reply display added:** Built `replyMap` from `office_reply` notes (keyed by `reply_to`); nested `cn-office-reply` card below each message entry. CSS override `width: 100%; margin-right: var(--sp-6)` pushes card to its own line.
+- Final cache: `script.js?v=312`, `style.css?v=298`.

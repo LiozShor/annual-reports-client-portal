@@ -1,24 +1,25 @@
 # Annual Reports CRM - Current Status
 
-**Last Updated:** 2026-04-23 (DL-338 AI Review client messages hover-reveal reply + 2-line clamp — IMPLEMENTED — NEED TESTING)
+**Last Updated:** 2026-04-23 (DL-338 fully implemented + reply display fixed — NEED TESTING)
 
-## DL-338 AI Review Messages — Hover Reply + 2-Line Clamp — IMPLEMENTED — NEED TESTING
+## DL-338 AI Review Messages — Hover Reply + 2-Line Clamp + Reply Display — IMPLEMENTED — NEED TESTING
 
-Branch `DL-338-ai-review-messages-ui`. The "הודעות הלקוח" timeline inside the AI Review accordion now matches the dashboard panel: 2-line clamp that expands on hover, and a reply button that appears on hover.
+Branch `DL-338-ai-review-messages-ui` merged to main. The "הודעות הלקוח" timeline inside the AI Review accordion now: 2-line clamp that expands on hover, hover-reveal reply button, inline textarea reply zone, office replies displayed nested below their parent message.
 
-- **`showReplyInput` patch:** `script.js:1156` — OR-selector now also matches `.ai-cn-entry[data-note-id]` so the existing reply infrastructure works from the AI Review context.
-- **`renderEntry` update:** adds `data-note-id`, `data-report-id`, `data-client-name`, `data-year` to each `.ai-cn-entry`; adds `.ai-cn-action-btn` reply button (hidden by default, `opacity: 0`).
-- **CSS:** `.ai-cn-entry` gets `flex-wrap: wrap` + hover bg; `.ai-cn-summary` replaced `white-space: nowrap` with 2-line `-webkit-line-clamp`; `.ai-cn-action-btn` new rule (opacity-0 → 1 on hover); `.ai-cn-entry .msg-reply-zone` full-width override.
-- **Cache-bust:** `script.js?v=306→307`, `style.css?v=296→297`.
+- **Reply button:** appears on hover (`opacity: 0 → 1`); passes `containerEl` directly to `showReplyInput` so no `.msg-row` query needed.
+- **Reply send (inline):** `sendReply` works; skips `showPostReplyPrompt` in AI Review context (calls `loadRecentMessages()` instead).
+- **Reply send (expanded compose):** `expandReplyCompose` OR-selector fix + no early return when `.msg-row` not found.
+- **Office reply display:** `replyMap` built from `office_reply` notes keyed by `reply_to`; `cn-office-reply` card rendered nested below each message. CSS: `width: 100%; margin-right: var(--sp-6)` pushes to own line.
+- **Cache:** `script.js?v=312`, `style.css?v=298`.
 
-### Active TODOs — Test DL-338: AI Review Messages Hover Reply
-- [ ] AI Review tab: hover a client message entry → reply button appears, hover bg activates.
+### Active TODOs — Test DL-338: AI Review Messages
+- [ ] Hover a client message entry → reply button appears, hover bg activates.
 - [ ] Text longer than 2 lines is clamped; hover unclamps to full.
-- [ ] Click reply → inline textarea appears below the entry; type + send → toast "תגובה נשלחה ✓".
-- [ ] Legacy notes without `n.id` → no reply button, no JS error.
+- [ ] Click reply → inline textarea appears below entry; type + send → toast "תגובה נשלחה ✓".
+- [ ] Sent reply appears as "תגובת המשרד" nested card below the message on next load.
+- [ ] Expanded compose modal "שלח תגובה" button works from AI Review context.
 - [ ] Dashboard "הודעות אחרונות מלקוחות" panel unaffected.
-- [ ] Hard reload → `?v=307` / `?v=297` served.
-- [ ] Mobile layout intact.
+- [ ] Hard reload → `?v=312` / `?v=298` served.
 Design log: `.agent/design-logs/ai-review/338-ai-review-messages-hover-reply.md`
 
 ---
