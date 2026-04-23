@@ -84,3 +84,31 @@ New required behavior (boss request):
 - Decided NOT to re-render the full accordion via `renderAICards` after keepOnHold path — instead, DOM surgery: remove non-held cards, remove done-prompt, update stats badge. Simpler and avoids full re-render flicker.
 - `renderOnHoldCard` does NOT show the contract-period request buttons (T901/T902) — they're not relevant until the question is answered and the doc is resolved.
 - `renderOnHoldCard` does NOT show the "also match" or overflow menu — office should resolve the pending question first, then act on the doc via `startReReview`.
+
+## 9. Post-Deploy Additions (2026-04-23)
+
+### Hold card enhancements (merged to main, `script.js?v=314`, `style.css?v=300`)
+
+**Sent date in question header:**
+- `renderOnHoldCard` resolves the sent date from `item.reviewed_at` first, then falls back to the `batch_questions_sent` entry's `date` field inside `item.client_notes` (needed for backfilled rows that have no `reviewed_at`).
+- Label reads: `שאלה שנשלחה ללקוח בתאריך <date>:`.
+
+**Client reply shown on hold card:**
+- `renderOnHoldCard` parses `item.client_notes`, locates the `batch_questions_sent` entry whose `items[].attachment_name` matches `item.attachment_name` to get the question-sent timestamp, then finds the most recent inbound note (`source === 'email'`, not `office_reply`/`batch_questions_sent`) that arrived after that timestamp.
+- Rendered as a blue `.ai-held-reply` card below the question: "תגובת הלקוח (date): <raw_snippet or summary>".
+- New CSS: `.ai-held-reply`, `.ai-held-reply-label`, `.ai-held-reply-text`.
+
+**Filter `batch_questions_sent` from client messages timeline (AI Review):**
+- `renderAICards` note filter (`script.js:4026`) extended: `n.type !== 'office_reply' && n.type !== 'batch_questions_sent'`.
+- Prevents the outbound questions entry (no summary, no id) from rendering as a blank pencil-icon row in the AI Review client timeline.
+
+**Bug fix — `${iconClass}` literal:**
+- `renderEntry` in `renderAICards` was calling `icon(iconName, 'icon-sm ${iconClass}')` with single quotes — `${iconClass}` was never interpolated. Fixed to backticks.
+
+### Backfill (2026-04-23) — pre-DL-335 clients
+
+Two clients had their docs dismissed before DL-335 deployed. Backfill script `tmp/backfill-hold-docs.mjs` (now deleted) re-inserted rows into `pending_classifications` with `review_status: 'on_hold'`, then `onedrive_item_id` was resolved via the production MS Graph access token read from Cloudflare KV (`wrangler kv key get ms_graph_access_token --remote`).
+
+Two `pending_classifications` rows created (record IDs in Airtable, `onedrive_item_id` resolved from production KV token).
+
+**Pattern for future backfills:** when docs are dismissed before hold state was available, use `tmp/` script + Airtable API (`AIRTABLE_API_KEY`) + MS Graph access token from remote KV to resolve `onedrive_item_id`.

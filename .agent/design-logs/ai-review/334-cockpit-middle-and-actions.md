@@ -2,7 +2,7 @@
 
 **Status:** [DRAFT]
 **Date:** 2026-04-23
-**Related Logs:** DL-053 (silent-refresh merge-by-id), DL-075 (original split-view), DL-086 (reviewed state transitions), DL-199 (client notes timeline), DL-237 (PDF split), DL-269/270/271 (contract period), DL-278 (scroll-into-view), DL-306 (deep-link), DL-314 (multi-template match), DL-320 (also-match UX), DL-330 (3-pane rework), DL-332 (pane 1 density), DL-NNN-on-hold (batch-questions dismissal adds `on_hold` review_status — in flight, ships first)
+**Related Logs:** DL-053 (silent-refresh merge-by-id), DL-075 (original split-view), DL-086 (reviewed state transitions), DL-199 (client notes timeline), DL-237 (PDF split), DL-269/270/271 (contract period), DL-278 (scroll-into-view), DL-306 (deep-link), DL-314 (multi-template match), DL-320 (also-match UX), DL-330 (3-pane rework), DL-332 (pane 1 density), DL-335 (batch-questions dismissal adds `on_hold` review_status — in flight, ships first)
 
 **Supersedes:** the previous DL-334 attempt (commit `1ef907f`, reverted from main via `f643a79`). That version over-engineered the panel, duplicated filename, was missing on_hold, and used color tokens without the flat-minimal discipline now required. This v2 plan is a full rewrite.
 
@@ -10,7 +10,7 @@
 
 DL-330 built the 3-pane split (clients → docs → preview). DL-332 densified pane 1. Today's pane 2 still renders full fat cards per doc — every card carries AI reasoning, 3–5 buttons, conditional banners, overflow menu. Result: 4–6 docs per 1080p viewport, preview pane is passive.
 
-DL-NNN-on-hold (in flight, ships first) adds a new `review_status='on_hold'` state: the office can dismiss a client review while sending questions — docs with pending questions flip to on_hold and wait for the client to reply, instead of being rejected or deleted. The old fat-card UI gets on_hold support from that DL. DL-334 **must render on_hold as a first-class state in the cockpit from day one** — the office needs to scan pane 2 and immediately see which docs are waiting on a client reply.
+DL-335 (in flight, ships first) adds a new `review_status='on_hold'` state: the office can dismiss a client review while sending questions — docs with pending questions flip to on_hold and wait for the client to reply, instead of being rejected or deleted. The old fat-card UI gets on_hold support from that DL. DL-334 **must render on_hold as a first-class state in the cockpit from day one** — the office needs to scan pane 2 and immediately see which docs are waiting on a client reply.
 
 DL-334 v2:
 - Pane 2 becomes a flat, minimal list of ~28-30px thin rows. One color stripe per row conveys state.
@@ -40,7 +40,7 @@ From the visual spec + mockup:
 8. **Q:** Transient sub-panels scope?
    **A:** Cover **primary actions area only** — not the whole panel, not the iframe.
 9. **Q:** Mobile?
-   **A:** Untouched. `isAIReviewMobileLayout()` guard at every cockpit code path; mobile keeps `renderAICard` / `renderReviewedCard` (which DL-NNN-on-hold modifies for the fat-card path).
+   **A:** Untouched. `isAIReviewMobileLayout()` guard at every cockpit code path; mobile keeps `renderAICard` / `renderReviewedCard` (which DL-335 modifies for the fat-card path).
 
 ## 3. Research
 
@@ -67,9 +67,9 @@ Information density in review UIs; cockpit pattern (preview + contextual actions
 ### Research Verdict
 The visual spec IS the verdict — a prescriptive flat design tuned for scan density plus a contextual cockpit. Our job is faithful implementation.
 
-## 4. Coordination With DL-NNN-on-hold
+## 4. Coordination With DL-335
 
-**Ordering:** DL-NNN-on-hold ships first. By the time DL-334 starts, `review_status='on_hold'` is a production state. `aiClassificationsData` will contain rows with `review_status='on_hold'` and a valid `pending_question` field.
+**Ordering:** DL-335 ships first. By the time DL-334 starts, `review_status='on_hold'` is a production state. `aiClassificationsData` will contain rows with `review_status='on_hold'` and a valid `pending_question` field.
 
 **Our consumption contract:**
 - `dismissAndSendQuestions(clientName)` (mobile + desktop entry point from the "סיים בדיקה ושליחת שאלות" button): DL-NNN owns this handler. It partitions the client's items into (a) has `pending_question` → flipped to `review_status='on_hold'` in `aiClassificationsData`; (b) no `pending_question` → removed from `aiClassificationsData` (dismissed). DL-334 does NOT modify this handler.
@@ -100,7 +100,7 @@ The visual spec IS the verdict — a prescriptive flat design tuned for scan den
 | `frontend/admin/js/script.js` | ~4159-4186 | `selectClient` — desktop path uses new builder + auto-selects first pending doc |
 | `frontend/admin/js/script.js` | Insert before `getCardState` | New: `findItemActionsEl`, `refreshItemDom`, `truncateMiddle`, `getRowStripeClass`, `getRowCategoryText`, `renderDocRow`, `renderActionsPanel` + state branches, `selectDocument`, `buildClientThinStrip`, `buildDesktopClientDocsHtml` |
 | `frontend/admin/js/script.js` | ~4391-4689 | `renderAICard` — kept intact (mobile only after DL-334) |
-| `frontend/admin/js/script.js` | ~4691-4826 | `renderReviewedCard` — kept intact (mobile only). Already receives `on_hold` support from DL-NNN-on-hold |
+| `frontend/admin/js/script.js` | ~4691-4826 | `renderReviewedCard` — kept intact (mobile only). Already receives `on_hold` support from DL-335 |
 | `frontend/admin/js/script.js` | ~4829+ | `startReReview` — desktop path uses `refreshItemDom`; mobile keeps inline swap |
 | `frontend/admin/js/script.js` | 5006, 5016, 5362, ~5755 (review-render sites), ~5920, ~6125, ~6265, 10669, 10713 | 14 call sites of `.ai-review-card[data-id]` — each branches via `findItemActionsEl` helper or `refreshItemDom` |
 | `frontend/admin/js/script.js` | renderAICards ~4977 | Desktop pane 2 builder swaps from `buildClientAccordionHtml` to `buildDesktopClientDocsHtml` |
@@ -143,7 +143,7 @@ The visual spec IS the verdict — a prescriptive flat design tuned for scan den
 - Font 12px, `color: var(--gray-600)`.
 - Layout: `[▸ arrow 9px] [6px gap] [label]`. Arrow rotates `▾` on expand.
 - Labels (unchanged semantics):
-  - `📋 הודעות ללקוח (N)` — only if `N > 0`.
+  - `📋 הודעות הלקוח (N)` — only if `N > 0`. Shows inbound client messages only (`batch_questions_sent` + `office_reply` types excluded per DL-335 post-deploy fix).
   - `📄 מסמכים נדרשים (X/Y התקבלו)` when `hasStatusVariation`, else `📄 מסמכים חסרים (N)`.
 - Default **collapsed** on every client load (change from mobile, which keeps open).
 - Click anywhere on header toggles.
@@ -270,8 +270,11 @@ The visual spec IS the verdict — a prescriptive flat design tuned for scan den
 **on_hold state (new, equal weight):**
 - Line 1: lozenge + filename already in panel header.
 - Body (key content for this state):
-  - Label (11px `color: var(--gray-600)`): `💬 שאלה נשלחה ללקוח:`.
+  - Label (11px `color: var(--gray-600)`): `💬 שאלה נשלחה ללקוח בתאריך <date>:` (date from `reviewed_at`, fallback to `batch_questions_sent` entry date in `client_notes`).
   - Question block: `background: var(--warning-50); border-radius: 4px; padding: 8px 10px; font-size: 12px; color: var(--warning-800); line-height: 1.5`. Full question text, NOT truncated.
+  - If client has replied (inbound `source=email` note after question-sent date found in `client_notes`): render client reply block immediately below the question block.
+    - Label (11px `color: var(--info-700)`): `📧 תגובת הלקוח (<date>):`.
+    - Reply block: `background: var(--info-50); border-radius: 4px; padding: 8px 10px; font-size: 12px; color: var(--gray-700); line-height: 1.5; white-space: pre-wrap`. Shows `raw_snippet || summary`.
 - Gap 8px.
 - If AI had a classification guess when the question was created, show as secondary context:
   - Line (11px `color: var(--gray-600)`): `🤖 AI זיהה כ: <matched template name in weight 500>`.
@@ -377,7 +380,7 @@ After approve / reject / reassign succeeds:
 6. Run `safeCreateIcons(panel) + initAIReviewComboboxes(panel)` after re-render.
 
 **on_hold transition INTO:**
-- Triggered by `dismissAndSendQuestions` (owned by DL-NNN-on-hold).
+- Triggered by `dismissAndSendQuestions` (owned by DL-335).
 - That handler mutates `review_status` of items-with-questions to `'on_hold'` and removes items-without-questions from `aiClassificationsData`.
 - DL-334 cockpit response: re-render each affected row via the same outerHTML swap. For dismissed rows (case b), the row is simply absent from the list on next render; our `renderDocList` (inside `buildDesktopClientDocsHtml`) handles list shrinking cleanly.
 - If `activePreviewItemId` points to a dismissed doc → clear it and show empty state.
@@ -400,7 +403,7 @@ After approve / reject / reassign succeeds:
 
 - `isAIReviewMobileLayout()` returns true on `(max-width: 768px)`.
 - `selectDocument(id)` on mobile falls through to `loadDocPreview(id)` only — no panel, no row `.active` toggle.
-- Mobile keeps rendering fat cards via `renderAICard` + `renderReviewedCard` (the latter gets on_hold support from DL-NNN-on-hold; DL-334 does not modify that function).
+- Mobile keeps rendering fat cards via `renderAICard` + `renderReviewedCard` (the latter gets on_hold support from DL-335; DL-334 does not modify that function).
 - Cockpit DOM hidden on mobile via `@media (max-width: 768px) { .ai-preview-frame, .ai-actions-panel { display: none; } }` — complementing the existing `.ai-review-docs`/`.ai-review-detail` display:none mobile rule.
 
 ## 8. Workstream Split (for `/subagent-driven-development`)
@@ -472,7 +475,7 @@ All workstreams serialize on `frontend/admin/js/script.js` (shared tooling state
 - [ ] State B: issuer line + radios; hover/selected styles correct.
 - [ ] State B fallback: shows `⚠️ כל מסמכי X כבר התקבלו` + combobox (State D layout).
 - [ ] State D: reasoning block `--gray-50` bg, full `friendlyAIReason`, combobox + `ai-inline-ft-toggle` preserved.
-- [ ] on_hold: `💬 שאלה נשלחה ללקוח:` label + warning-50 question block (full text) + secondary `🤖 AI זיהה כ:` line + single `סיים את ההמתנה` button.
+- [ ] on_hold: `💬 שאלה נשלחה ללקוח בתאריך <date>:` label + warning-50 question block (full text) + client reply block (info-50, shown only when inbound note found after question-sent date) + secondary `🤖 AI זיהה כ:` line + single `סיים את ההמתנה` button.
 - [ ] Reviewed: `תואם ל:` line + resolved template name; rejected shows notes block.
 
 ### Primary actions
@@ -518,18 +521,18 @@ All workstreams serialize on `frontend/admin/js/script.js` (shared tooling state
 - [ ] DL-314 multi-match modal: launches from the panel's `הקובץ תואם למסמך נוסף` (approved only).
 - [ ] DL-320 cascade-revert: `shared_ref_count > 1` confirm dialog on `שנה החלטה`.
 - [ ] Mobile <768px: resize → accordion fat cards return; cockpit hidden; no JS errors.
-- [ ] on_hold on mobile: `renderReviewedCard` handles it (from DL-NNN-on-hold); DL-334 does not regress mobile.
+- [ ] on_hold on mobile: `renderReviewedCard` handles it (from DL-335); DL-334 does not regress mobile.
 - [ ] Scroll position in pane 2 preserved across row swap.
 
 ### Housekeeping
 - [ ] Hard-reload loads new cache-bust values; no stale CSS/JS.
 - [ ] No console errors on tab load / client switch / row click / poll tick / re-review / dismiss.
 - [ ] INDEX.md updated, current-status.md updated.
-- [ ] No regression on DL-075 / DL-086 / DL-199 / DL-237 / DL-252 / DL-269-271 / DL-306 / DL-314 / DL-320 / DL-330 / DL-332 / DL-NNN-on-hold.
+- [ ] No regression on DL-075 / DL-086 / DL-199 / DL-237 / DL-252 / DL-269-271 / DL-306 / DL-314 / DL-320 / DL-330 / DL-332 / DL-335.
 
-## 10. Ordering With DL-NNN-on-hold
+## 10. Ordering With DL-335
 
-1. DL-NNN-on-hold lands first (fat-card UI updated for on_hold). Its changes to `renderReviewedCard` remain untouched by DL-334.
+1. DL-335 lands first (fat-card UI updated for on_hold). Its changes to `renderReviewedCard` remain untouched by DL-334.
 2. DL-334 starts on a main that already has on_hold live. When Wave A/B land, on_hold is rendered in the cockpit everywhere it matters from the first implementation commit.
 3. DL-334 does NOT ship without on_hold support. Every state branch in the new code names `on_hold` explicitly.
 
@@ -539,7 +542,7 @@ All workstreams serialize on `frontend/admin/js/script.js` (shared tooling state
 - **on_hold branch coverage.** Easy to miss one (stripe / category / lozenge / body / actions / overflow / panel border / row ? glyph suppression). Workstream A + B each enumerate the on_hold branch explicitly in a checklist before marking done.
 - **14 `.ai-review-card[data-id]` callers.** Missed one = broken handler on desktop. Each caller gets a one-line audit comment: mobile-or-desktop-targetable.
 - **Short viewport < 700px tall.** Panel overflows into its own scroll. Acceptable per spec; verify in Section 7.
-- **Cache-bust conflict.** DL-333 is at `?v=298`; DL-334's final bump must exceed that.
+- **Cache-bust conflict.** DL-335 post-deploy additions landed at `script.js?v=314` / `style.css?v=300`; DL-334's final bump must exceed those values.
 
 ## 12. Implementation Notes (Post-Code)
 *(To be filled during/after implementation.)*
