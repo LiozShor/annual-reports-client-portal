@@ -10,7 +10,7 @@
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📋</text></svg>">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" integrity="sha384-vtjasyidUo0kW94K5MXDXntzOJpQgBKXmE7e2Ga4LG0skTTLeBi97eFAXsqewJjw" crossorigin="anonymous"></script>
     <link rel="stylesheet" href="../assets/css/design-system.css">
-    <link rel="stylesheet" href="css/style.css?v=301">
+    <link rel="stylesheet" href="css/style.css?v=300">
 
 </head>
 
@@ -1015,37 +1015,34 @@
                         </div>
                     </div>
 
-                    <!-- Pane 3: Preview panel + actions panel (DL-334 v2 cockpit) -->
+                    <!-- Pane 3: Preview panel -->
                     <div class="ai-review-detail" id="aiReviewDetail">
-                        <div class="ai-preview-frame">
-                            <div class="preview-header-bar" id="previewHeaderBar" style="display: none;">
-                                <span class="preview-file-name" id="previewFileName"></span>
-                                <a href="#" target="_blank" id="previewOpenTab" class="btn btn-ghost btn-sm">
-                                    <svg class="icon icon-sm" aria-hidden="true" focusable="false" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"><use href="#icon-external-link"/></svg> פתח בלשונית
-                                </a>
-                                <a href="#" id="previewDownload" class="btn btn-ghost btn-sm" style="display:none;" download>
-                                    <svg class="icon icon-sm" aria-hidden="true" focusable="false" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"><use href="#icon-download"/></svg> הורד
-                                </a>
-                            </div>
-                            <div class="preview-placeholder" id="previewPlaceholder">
-                                <svg class="icon icon-2xl" aria-hidden="true" focusable="false" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"><use href="#icon-file-search"/></svg>
-                                <p>לחץ על כרטיס מסמך לתצוגה מקדימה</p>
-                            </div>
-                            <div class="preview-loading" id="previewLoading" style="display: none;">
-                                <div class="spinner spinner-lg"></div>
-                                <p>טוען תצוגה מקדימה...</p>
-                            </div>
-                            <div class="preview-error" id="previewError" style="display: none;">
-                                <svg class="icon icon-2xl" aria-hidden="true" focusable="false" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"><use href="#icon-alert-triangle"/></svg>
-                                <p id="previewErrorMsg">לא ניתן לטעון תצוגה מקדימה</p>
-                                <button id="previewRetryBtn" class="btn btn-secondary btn-sm mt-2" style="display:none;">
-                                    <svg class="icon icon-sm" aria-hidden="true" focusable="false" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"><use href="#icon-refresh-cw"/></svg>
-                                    נסה שוב
-                                </button>
-                            </div>
-                            <iframe class="preview-iframe" id="previewIframe" style="display: none;"></iframe>
+                        <div class="preview-header-bar" id="previewHeaderBar" style="display: none;">
+                            <span class="preview-file-name" id="previewFileName"></span>
+                            <a href="#" target="_blank" id="previewOpenTab" class="btn btn-ghost btn-sm">
+                                <svg class="icon icon-sm" aria-hidden="true" focusable="false" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"><use href="#icon-external-link"/></svg> פתח בלשונית
+                            </a>
+                            <a href="#" id="previewDownload" class="btn btn-ghost btn-sm" style="display:none;" download>
+                                <svg class="icon icon-sm" aria-hidden="true" focusable="false" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"><use href="#icon-download"/></svg> הורד
+                            </a>
                         </div>
-                        <div class="ai-actions-panel" id="aiActionsPanel"></div>
+                        <div class="preview-placeholder" id="previewPlaceholder">
+                            <svg class="icon icon-2xl" aria-hidden="true" focusable="false" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"><use href="#icon-file-search"/></svg>
+                            <p>לחץ על כרטיס מסמך לתצוגה מקדימה</p>
+                        </div>
+                        <div class="preview-loading" id="previewLoading" style="display: none;">
+                            <div class="spinner spinner-lg"></div>
+                            <p>טוען תצוגה מקדימה...</p>
+                        </div>
+                        <div class="preview-error" id="previewError" style="display: none;">
+                            <svg class="icon icon-2xl" aria-hidden="true" focusable="false" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"><use href="#icon-alert-triangle"/></svg>
+                            <p id="previewErrorMsg">לא ניתן לטעון תצוגה מקדימה</p>
+                            <button id="previewRetryBtn" class="btn btn-secondary btn-sm mt-2" style="display:none;">
+                                <svg class="icon icon-sm" aria-hidden="true" focusable="false" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"><use href="#icon-refresh-cw"/></svg>
+                                נסה שוב
+                            </button>
+                        </div>
+                        <iframe class="preview-iframe" id="previewIframe" style="display: none;"></iframe>
                     </div>
                     <div id="aiPagination" class="ai-review-pagination"></div>
                 </div>
@@ -1518,7 +1515,7 @@
     <script src="../assets/js/client-detail-modal.js"></script>
     <script src="../shared/print-questionnaire.js"></script>
     <script src="../shared/email-preview-modal.js"></script>
-    <script src="js/script.js?v=316"></script>
+    <script src="js/script.js?v=314"></script>
     <script src="../assets/js/idle-refresh.js?v=281" defer></script>
     <script src="js/chatbot.js"></script>
     <!-- React island: Client Detail Modal (loads after shared scripts) -->

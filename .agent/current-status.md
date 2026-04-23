@@ -1,20 +1,8 @@
 # Annual Reports CRM - Current Status
 
-**Last Updated:** 2026-04-23 (DL-334 AI Review cockpit v2 — IMPLEMENTED — NEED TESTING)
 **Last Updated:** 2026-04-23 (DL-334 AI Review cockpit v2 — PLAN DRAFTED, awaiting implementation approval)
 **Last Updated:** 2026-04-23 (DL-336 template picker UI in also-match + reassign modals — COMPLETED)
 **Last Updated:** 2026-04-23 (DL-331 edit-documents batch 422 fix — IMPLEMENTED, deploy pending)
-
-## DL-334 AI Review Cockpit v2 — IMPLEMENTED — NEED TESTING
-
-Branch `claude-session-20260423-174103`. All four workstreams (C pane 3 DOM + CSS → A pane 2 rows → B state-aware actions panel → D silent-refresh merge-by-id + housekeeping) landed in one commit. `node -c` passed. Cache-bust `style.css?v=301` / `script.js?v=316`.
-
-### Active TODOs — Test DL-334: AI Review cockpit v2
-- [ ] DL-334 v2 cockpit — verify end-to-end in browser (see DL §9 validation plan). Key gates: pane 2 density, on_hold first-class rendering, transitions without full-rerender, DL-335 integration (finish-and-send-questions CTA on mixed client), silent refresh preservation, mobile <768px unchanged.
-
-Design log: `.agent/design-logs/ai-review/334-cockpit-middle-and-actions.md`
-
----
 
 ## DL-334 AI Review Cockpit v2 — PLAN DRAFTED (awaiting approval)
 
