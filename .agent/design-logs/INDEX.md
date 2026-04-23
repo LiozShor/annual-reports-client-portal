@@ -7,7 +7,7 @@ Active and pending logs. For completed history, see [ARCHIVE-INDEX.md](ARCHIVE-I
 ## Folder Structure
 
 - `admin-ui/` — Admin UI (32)
-- `ai-review/` — AI Review & Classification (34)
+- `ai-review/` — AI Review & Classification (35)
 - `capital-statements/` — Capital Statements (4)
 - `client-portal/` — Client Portal & Questionnaires (13)
 - `documents/` — Documents & OneDrive (20)
@@ -21,6 +21,7 @@ Active and pending logs. For completed history, see [ARCHIVE-INDEX.md](ARCHIVE-I
 
 | # | File | Status | Summary |
 |---|------|--------|---------|
+| 338 | [338-ai-review-messages-hover-reply.md](ai-review/338-ai-review-messages-hover-reply.md) | IMPLEMENTED — NEED TESTING | AI Review tab client messages timeline: hover reveals reply button + 2-line clamp unclamped on hover. `showReplyInput` patched with 1-line OR-selector to also match `.ai-cn-entry[data-note-id]`. `renderEntry` adds data attrs + `.ai-cn-action-btn`. CSS: `.ai-cn-entry` gets `flex-wrap`, hover bg; `.ai-cn-summary` 2-line clamp; new `.ai-cn-action-btn` opacity-0→1 on hover. script.js v=306→307, style.css v=296→297 |
 | 337 | [337-raw-text-instead-of-ai-summary.md](ai-review/337-raw-text-instead-of-ai-summary.md) | IMPLEMENTED — NEED TESTING | AI Review tab client-notes timeline now shows raw client email text (`raw_snippet`) instead of AI summary; falls back to `summary` for legacy notes / manual notes. Matches Dashboard Recent Messages + Pending-Approval modal fallback pattern (`script.js:1083`, `:7521`). Doc-Manager exempt — still shows "סיכום AI:" labeled summary. Backend + summarizer unchanged. script.js v=305→306 |
 | 334 | [334-cockpit-middle-and-actions.md](ai-review/334-cockpit-middle-and-actions.md) | DRAFT | AI Review cockpit phase 1 (v2 plan) — pane 2 thin rows (28-30px, state-stripe including on_hold amber) + pane 3 vertical split (preview top / state-aware actions panel bottom). Filename renders ONCE in panel header, never in row. Flat-minimal (0.5px borders, sentence case, 400/500 weights, no new tokens). Full on_hold integration: row category `⏳ ממתין ללקוח`, panel lozenge, body shows question + AI guess, single `סיים את ההמתנה` button → `startReReview`. Coordinates with DL-335 (no changes to `dismissAndSendQuestions` / `dismissClientReview` / `renderReviewedCard`; DL-334 only consumes their output). Bundles DL-053 silent-refresh merge-by-id. Mobile <768px untouched via `isAIReviewMobileLayout` guards. Supersedes the reverted v1 attempt (commit `1ef907f`, reverted via `f643a79`). Status DRAFT — awaiting implementation approval |
 | 333 | [333-batch-questions-off-hours-queue.md](email/333-batch-questions-off-hours-queue.md) | IMPLEMENTED — NEED TESTING | DL-328 "שאל את הלקוח" batch-questions email now defers to next 08:00 Israel when sent off-hours (20:00-08:00). Mirrors DL-264/273 PidTagDeferredSendTime pattern; `client_notes` `batch_questions_sent` entry stamped with `graph_message_id` + `queued:true` so DL-281 queue modal surfaces it as a third row type (`שאלות לאחר סקירה`). Toast swaps to info-tone "השאלות נשלחו לבוקר — יישלחו ב־08:00" when queued. Preview path unchanged. `QueuedRow` type extended to `'doc_request' \| 'reply' \| 'batch_questions'`. script.js v=297→v=298. Zero schema change |
