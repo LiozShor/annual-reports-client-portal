@@ -4030,7 +4030,9 @@ function buildClientAccordionHtml(clientName, clientItems, open) {
                 const rawDate = n.date || '';
                 const dateStr = rawDate.match(/^(\d{4})-(\d{2})-(\d{2})/) ? rawDate.slice(0, 10).replace(/^(\d{4})-(\d{2})-(\d{2})/, '$3-$2-$1') : rawDate;
                 const nId = n.id ? escapeAttr(String(n.id)) : '';
-                const replyBtn = `<button class="ai-cn-action-btn" title="הגב" onclick="event.stopPropagation();showReplyInput('${nId}','${escapeAttr(cnReportId)}',this.closest('.ai-cn-entry'))">${icon('message-square', 'icon-xs')}</button>`;
+                const replyBtn = nId
+                    ? `<button class="ai-cn-action-btn" title="הגב" onclick="event.stopPropagation();showReplyInput('${nId}','${escapeAttr(cnReportId)}',this.closest('.ai-cn-entry'))">${icon('message-square', 'icon-xs')}</button>`
+                    : '';
                 return `<div class="ai-cn-entry" data-note-id="${nId}" data-report-id="${escapeAttr(cnReportId)}" data-client-name="${escapeAttr(clientName)}" data-year="${escapeAttr(cnYear)}">
                     ${icon(iconName, 'icon-sm ${iconClass}')}
                     <span class="ai-cn-date">${escapeHtml(dateStr)}</span>
