@@ -1,6 +1,35 @@
 # Annual Reports CRM - Current Status
 
-**Last Updated:** 2026-04-23 (DL-332 AI Review pane 1 density redesign — IMPLEMENTED, needs testing)
+**Last Updated:** 2026-04-23 (DL-335 on-hold state for docs awaiting client reply — IMPLEMENTED, needs testing)
+
+## DL-335 On-Hold State for Docs Awaiting Client Reply — IMPLEMENTED — NEED TESTING
+
+Branch `DL-335-ai-review-on-hold-docs` **merged to main** 2026-04-23. Docs with pending questions now stay in AI Review in "ממתין ללקוח" hold state instead of being dismissed after sending the batch-questions email. The outgoing email now appears in the per-client messages timeline (`הודעות הלקוח`). When the client replies, office manually resolves the held doc via the "סיים המתנה" button.
+
+- **Backend:** `api/src/routes/send-batch-questions.ts` — replaces `pending_question: null` with `review_status: 'on_hold'`; extends `client_notes` entry with `id`, `summary`, `source`, `type: 'batch_questions_sent'`; returns `held_count`.
+- **Frontend AI Review:** `frontend/admin/js/script.js` — new `renderOnHoldCard(item)` renders amber "ממתין ללקוח" badge + question text + resolve button; `renderReviewedCard()` early-returns to it for `on_hold` status; `dismissClientReview()` accepts `{ keepOnHold }` filter to conditionally delete rows; `dismissAndSendQuestions()` flips local state for held items.
+- **Frontend per-client timeline:** `frontend/assets/js/document-manager.js` — new `batch_questions_sent` branch in `renderClientNotes()` renders amber outbound card with "שאלות ששלח המשרד" label + per-file bullet list.
+- **CSS:** `.lozenge-on-hold`, `.reviewed-on-hold`, `.ai-held-question`, `.cn-icon--office-question`, `.cn-entry--outbound`, `.cn-bq-items` (amber theme using `--warning-*` tokens).
+- **Pre-commit hook:** `.claude/hooks/agent-pii-guard.py` — added allowlist patterns for Hebrew UI labels `(הודעות הלקוח)` and `ממתינים לתשובה`.
+- **Cache-bust:** `script.js?v=298→299`, design log and INDEX updated.
+- **Airtable:** no schema change — `review_status` is free-text field.
+
+### Active TODOs — Test DL-335: On-Hold Docs
+- [ ] Ask 3 questions on 3 docs + approve 2 + reject 1 (6 total); click `סיים בדיקה ושליחת שאלות`; verify: 3 gone, 3 remain with amber "ממתין ללקוח" badge + question text visible.
+- [ ] Verify `batch_questions_sent` entry renders in per-client timeline (doc-manager) as amber outbound card with per-file bullet list.
+- [ ] Verify no `batch_questions_sent` entry appears in dashboard Recent Messages panel.
+- [ ] Client replies by email; inbound pipeline captures it; reply shows in per-client timeline below the outbound questions entry.
+- [ ] Click "סיים המתנה — טפל במסמך" on held card → standard approve/reject/reassign row appears → approve works → row deleted from `pending_classifications`.
+- [ ] Refresh AI Review tab — held cards still present with `on_hold` status.
+- [ ] DL-281 queue modal still renders `שאלות לאחר סקירה` rows correctly.
+- [ ] DL-333 off-hours queue: deferred send still works; toast shows "נשלח לבוקר".
+- [ ] Client with zero `pending_question` items — no hold state, behavior identical to before.
+- [ ] Client with 100% `pending_question` items — all on_hold; accordion shows only held cards.
+- [ ] `wrangler deploy` succeeds; no startup errors.
+
+Design log: `.agent/design-logs/ai-review/335-ai-review-on-hold-docs.md`
+
+---
 
 ## DL-332 AI Review Pane 1 Density Redesign — IMPLEMENTED — NEED TESTING
 
