@@ -2251,11 +2251,9 @@ tr:hover .client-view-link {
     padding: 2px 4px;
     border-radius: var(--radius-sm);
     color: var(--gray-400);
-    opacity: 0;
-    transition: opacity 0.15s, color 0.15s, background 0.15s;
+    transition: color 0.15s, background 0.15s;
     line-height: 1;
 }
-.ai-cn-entry:hover .ai-cn-action-btn { opacity: 1; }
 .ai-cn-action-btn:hover {
     color: var(--blue-600);
     background: var(--blue-50);
