@@ -2264,6 +2264,11 @@ tr:hover .client-view-link {
     width: 100%;
     margin-top: var(--sp-2);
 }
+.ai-cn-entry .cn-office-reply {
+    width: 100%;
+    margin-top: var(--sp-1);
+    margin-right: var(--sp-6);
+}
 .ai-cn-toggle {
     display: inline-block;
     margin-top: var(--sp-2);
