@@ -9200,9 +9200,6 @@ tr:hover .client-edit-link {
 .ai-also-match-row:hover {
     background: var(--bg-secondary, #F8FAFC);
 }
-.ai-also-match-row input[type="checkbox"]:checked ~ .ai-also-match-label {
-    font-weight: 600;
-}
 .ai-also-match-row input[type="checkbox"] {
     flex-shrink: 0;
 }

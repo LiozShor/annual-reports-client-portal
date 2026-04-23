@@ -5650,14 +5650,14 @@ function showAIAlsoMatchModal(recordId) {
         const isPrimary = d.template_id === primaryTemplateId && ft === item.filing_type;
         if (isReceived || isPrimary) return null;
         const docId = d.doc_record_id || '';
-        const label = escapeHtml((d.name_short || d.name || d.template_id).replace(/<\/?b>/g, ''));
+        const label = d.name_short || d.name || d.template_id;
         const person = d.person || 'client';
         const personLabel = person === 'spouse' ? 'בן/בת זוג' : 'לקוח';
         return `
             <label class="ai-also-match-row" data-template-id="${escapeAttr(d.template_id)}" data-doc-record-id="${escapeAttr(docId)}" data-filing-type="${escapeAttr(ft)}" data-report-id="${escapeAttr(ft === item.filing_type ? (item.report_record_id || '') : (item.other_report_id || ''))}">
                 <input type="checkbox" class="ai-also-match-checkbox">
                 <span class="ai-also-match-person">${escapeHtml(personLabel)}</span>
-                <span class="ai-also-match-label">${label}</span>
+                <span class="ai-also-match-label">${renderDocLabel(label)}</span>
             </label>
         `;
     };
