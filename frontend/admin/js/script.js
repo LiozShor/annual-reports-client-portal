@@ -5650,7 +5650,7 @@ function showAIAlsoMatchModal(recordId) {
         const isPrimary = d.template_id === primaryTemplateId && ft === item.filing_type;
         if (isReceived || isPrimary) return null;
         const docId = d.doc_record_id || '';
-        const label = d.name_html || d.name_short || d.name || d.template_id;
+        const label = d.name_short || d.name || d.template_id;
         const person = d.person || 'client';
         const personLabel = person === 'spouse' ? 'בן/בת זוג' : 'לקוח';
         return `
@@ -5687,7 +5687,9 @@ function showAIAlsoMatchModal(recordId) {
                     <i data-lucide="file" class="icon-sm" style="display:inline;vertical-align:middle;"></i>
                     ${escapeHtml(item.attachment_name || 'ללא שם')}
                 </div>
-                <div class="ai-also-match-list" style="max-height:320px;overflow-y:auto;">
+                <input type="text" id="aiAlsoMatchSearch" placeholder="חיפוש מסמך..." dir="rtl"
+                    style="width:100%;box-sizing:border-box;padding:7px 10px;border:1px solid var(--border-subtle);border-radius:6px;font-size:13px;margin-bottom:8px;background:var(--bg-primary);color:var(--text-primary);">
+                <div class="ai-also-match-list" style="max-height:300px;overflow-y:auto;">
                     ${ownRows || '<div style="padding:12px;color:var(--text-secondary);font-size:13px;">אין מסמכים חסרים בדוח זה</div>'}
                     ${otherRows ? `
                         <div class="ai-also-match-divider" style="margin:12px 0 6px 0;padding:4px 0;border-top:1px solid var(--border-subtle);font-size:12px;color:var(--text-secondary);">
@@ -5697,23 +5699,65 @@ function showAIAlsoMatchModal(recordId) {
                     ` : ''}
                 </div>
             </div>
-            <div class="ai-modal-footer">
-                <button class="btn btn-ghost btn-sm" onclick="closeAIAlsoMatchModal()">ביטול</button>
-                <button class="btn btn-success btn-sm" id="aiAlsoMatchConfirmBtn" onclick="confirmAIAlsoMatch('${escapeAttr(recordId)}')" disabled>
-                    <i data-lucide="link-2" class="icon-sm"></i> שייך לכל המסמכים
+            <div class="ai-modal-footer" style="justify-content:space-between;flex-wrap:wrap;gap:8px;">
+                <button class="btn btn-ghost btn-sm" id="aiAlsoMatchAddDocBtn" type="button" style="margin-left:auto;">
+                    <i data-lucide="plus" class="icon-sm"></i> הוסף מסמך ידני
                 </button>
+                <div style="display:flex;gap:8px;">
+                    <button class="btn btn-ghost btn-sm" onclick="closeAIAlsoMatchModal()">ביטול</button>
+                    <button class="btn btn-success btn-sm" id="aiAlsoMatchConfirmBtn" onclick="confirmAIAlsoMatch('${escapeAttr(recordId)}')" disabled>
+                        <i data-lucide="link-2" class="icon-sm"></i> שייך לכל המסמכים
+                    </button>
+                </div>
             </div>
         </div>
     `;
     document.body.appendChild(overlay);
 
-    // Enable confirm when any row is checked
     const confirmBtn = overlay.querySelector('#aiAlsoMatchConfirmBtn');
+    const list = overlay.querySelector('.ai-also-match-list');
+
+    const updateConfirmBtn = () => {
+        const anyChecked = overlay.querySelectorAll('.ai-also-match-checkbox:checked').length > 0;
+        confirmBtn.disabled = !anyChecked;
+    };
+
+    // Enable confirm when any row is checked
     overlay.querySelectorAll('.ai-also-match-checkbox').forEach(cb => {
-        cb.addEventListener('change', () => {
-            const any = overlay.querySelectorAll('.ai-also-match-checkbox:checked').length > 0;
-            confirmBtn.disabled = !any;
+        cb.addEventListener('change', updateConfirmBtn);
+    });
+
+    // Search filter
+    overlay.querySelector('#aiAlsoMatchSearch').addEventListener('input', e => {
+        const q = e.target.value.trim().toLowerCase();
+        list.querySelectorAll('.ai-also-match-row').forEach(row => {
+            const text = row.querySelector('.ai-also-match-label')?.textContent?.toLowerCase() || '';
+            row.style.display = (!q || text.includes(q)) ? '' : 'none';
         });
+    });
+
+    // Add manual doc
+    overlay.querySelector('#aiAlsoMatchAddDocBtn').addEventListener('click', () => {
+        const newRow = document.createElement('label');
+        newRow.className = 'ai-also-match-row ai-also-match-new-doc-row';
+        newRow.dataset.templateId = 'general_doc';
+        newRow.dataset.docRecordId = '';
+        newRow.dataset.filingType = item.filing_type;
+        newRow.dataset.reportId = item.report_record_id || '';
+        newRow.dataset.newDocName = '';
+        newRow.innerHTML = `
+            <input type="checkbox" class="ai-also-match-checkbox" checked>
+            <input type="text" class="ai-also-match-new-doc-input" placeholder="שם המסמך..." dir="rtl"
+                style="flex:1;padding:4px 8px;border:1px solid var(--border-subtle);border-radius:4px;font-size:13px;background:var(--bg-primary);color:var(--text-primary);" autocomplete="off">
+        `;
+        newRow.querySelector('.ai-also-match-new-doc-input').addEventListener('input', e => {
+            newRow.dataset.newDocName = e.target.value.trim();
+            updateConfirmBtn();
+        });
+        newRow.querySelector('.ai-also-match-checkbox').addEventListener('change', updateConfirmBtn);
+        list.appendChild(newRow);
+        updateConfirmBtn();
+        newRow.querySelector('.ai-also-match-new-doc-input').focus();
     });
 
     overlay.classList.add('show');
@@ -5733,11 +5777,17 @@ async function confirmAIAlsoMatch(recordId) {
     );
     if (checked.length === 0) return;
 
-    const additional_targets = checked.map(row => ({
-        template_id: row.dataset.templateId,
-        doc_record_id: row.dataset.docRecordId || undefined,
-        target_report_id: row.dataset.reportId || undefined,
-    }));
+    const additional_targets = checked.map(row => {
+        const t = {
+            template_id: row.dataset.templateId,
+            doc_record_id: row.dataset.docRecordId || undefined,
+            target_report_id: row.dataset.reportId || undefined,
+        };
+        if (row.dataset.templateId === 'general_doc' && row.dataset.newDocName) {
+            t.new_doc_name = row.dataset.newDocName;
+        }
+        return t;
+    }).filter(t => t.template_id !== 'general_doc' || t.new_doc_name);
 
     closeAIAlsoMatchModal();
     setCardLoading(recordId, `משייך ל-${additional_targets.length} מסמכים...`);
