@@ -1,5 +1,5 @@
 # Design Log 336: Template Picker UI — Also-Match & Reassign Modals
-**Status:** [IMPLEMENTED — NEED TESTING]
+**Status:** [COMPLETED]
 **Date:** 2026-04-23
 **Related Logs:** DL-314 (multi-template match — introduced also-match), DL-320 (also-match UX rework — moved button to post-approve), DL-301 (PA add-doc affordance — established `ensurePaTemplatesLoaded` + pa-add-doc pattern)
 
