@@ -3591,6 +3591,9 @@ let aiReviewLoadedAt = 0;
 let activePreviewItemId = null;
 // DL-330: 3-pane layout — currently-selected client on desktop (null = auto-pick first pending)
 let selectedClientName = null;
+// DL-334: transient re-review set — when on_hold/reviewed items are being re-decided, render
+// them as pending (A/B/C/D) regardless of review_status. Cleared on cancel or on transition.
+const _aiReReviewing = new Set();
 
 const REJECTION_REASONS = {
     image_quality: 'איכות תמונה ירודה',
@@ -3624,7 +3627,10 @@ async function getDocPreviewUrl(itemId) {
 
 function resetPreviewPanel() {
     activePreviewItemId = null;
+    window.activePreviewItemId = null;
     document.querySelectorAll('.ai-review-card.preview-active').forEach(c => c.classList.remove('preview-active'));
+    // DL-334: dual-clear — also drop .ai-doc-row.active from any thin row
+    document.querySelectorAll('.ai-doc-row.active').forEach(el => el.classList.remove('active'));
     const placeholder = document.getElementById('previewPlaceholder');
     const loading = document.getElementById('previewLoading');
     const error = document.getElementById('previewError');
@@ -3637,6 +3643,9 @@ function resetPreviewPanel() {
     if (iframe) { iframe.style.display = 'none'; iframe.src = 'about:blank'; }
     if (header) header.style.display = 'none';
     if (download) { download.style.display = 'none'; download.href = '#'; }
+    // DL-334: if actions panel exists, clear it to empty state
+    const panel = document.getElementById('aiActionsPanel');
+    if (panel && typeof renderActionsPanel === 'function') renderActionsPanel(null);
 }
 
 async function loadDocPreview(recordId) {
@@ -3789,14 +3798,55 @@ async function loadAIClassifications(silent = false, prefetchOnly = false) {
             }
         }
 
-        aiClassificationsData = newItems;
+        // DL-334 / DL-053: silent refresh merge-by-id — preserve object references so
+        // window.activePreviewItemId (and anything else holding a ref from the previous tick)
+        // doesn't desync. Full refresh and prefetch paths keep the old wholesale replace.
+        const RENDER_CRITICAL_FIELDS = [
+            'review_status', 'pending_question', 'matched_template_id', 'matched_template_title',
+            'ai_confidence', 'confidence', 'attachment_name', 'is_suggested',
+            'is_unrequested', 'requires_issuer_fix', 'shared_ref_count', 'on_hold_question',
+            'on_hold_question_preview', 'on_hold_last_reply_at'
+        ];
+        let mergedList;
+        let silentMutatedIds = null; // list of ids whose render-critical fields changed
+        let silentAddedOrRemoved = false;
+        if (silent && aiClassificationsData.length > 0 && !prefetchOnly) {
+            const prevMap = new Map(aiClassificationsData.map(i => [String(i.id), i]));
+            const newIdsSet = new Set();
+            silentMutatedIds = [];
+            mergedList = [];
+            for (const nr of newItems) {
+                const idKey = String(nr.id);
+                newIdsSet.add(idKey);
+                const prev = prevMap.get(idKey);
+                if (prev) {
+                    let changed = false;
+                    for (const f of RENDER_CRITICAL_FIELDS) {
+                        if (prev[f] !== nr[f]) { changed = true; break; }
+                    }
+                    Object.assign(prev, nr); // mutate in place — preserve reference
+                    if (changed) silentMutatedIds.push(idKey);
+                    mergedList.push(prev);
+                } else {
+                    silentAddedOrRemoved = true;
+                    mergedList.push(nr);
+                }
+            }
+            if (prevMap.size !== newIdsSet.size) silentAddedOrRemoved = true;
+            else {
+                for (const k of prevMap.keys()) if (!newIdsSet.has(k)) { silentAddedOrRemoved = true; break; }
+            }
+            aiClassificationsData = mergedList;
+        } else {
+            aiClassificationsData = newItems;
+        }
         aiReviewLoaded = true;
         aiReviewLoadedAt = Date.now();
 
         // Cheap updates run even in prefetch — users see correct badge/stats before clicking the tab
         updateAIStats(data.stats || {});
         const badge = document.getElementById('aiReviewTabBadge');
-        const pendingForBadge = newItems.filter(i => (i.review_status || 'pending') === 'pending');
+        const pendingForBadge = aiClassificationsData.filter(i => (i.review_status || 'pending') === 'pending');
         const uniqueClients = new Set(pendingForBadge.map(i => i.client_id).filter(Boolean)).size;
         syncAIBadge(badge, uniqueClients);
 
@@ -3805,9 +3855,34 @@ async function loadAIClassifications(silent = false, prefetchOnly = false) {
         // Heavy render deferred until user clicks the tab
         if (!prefetchOnly) {
             const _tR = perfStart();
-            resetPreviewPanel();
-            applyAIFilters();
-            aiClassificationsEverRendered = true;
+            if (silent && silentMutatedIds !== null && !silentAddedOrRemoved) {
+                // Silent path: swap individual thin rows for changed items only — preserves scroll + active state.
+                for (const idKey of silentMutatedIds) {
+                    const it = aiClassificationsData.find(x => String(x.id) === idKey);
+                    if (it && typeof refreshItemDom === 'function') refreshItemDom(it);
+                }
+                // Re-sync active item + row + panel against merged data (handles status changes from another tab)
+                const activeId = window.activePreviewItemId;
+                if (activeId) {
+                    const activeItem = aiClassificationsData.find(x => String(x.id) === String(activeId));
+                    if (activeItem) {
+                        // Re-apply .ai-doc-row.active (in case the row was re-rendered)
+                        document.querySelectorAll('.ai-doc-row.active').forEach(el => el.classList.remove('active'));
+                        const row = document.querySelector(`.ai-doc-row[data-id="${CSS.escape(String(activeItem.id))}"]`);
+                        if (row) row.classList.add('active');
+                        if (typeof renderActionsPanel === 'function') renderActionsPanel(activeItem);
+                    } else {
+                        // Active item dismissed / removed elsewhere — clear panel.
+                        window.activePreviewItemId = null;
+                        if (typeof renderActionsPanel === 'function') renderActionsPanel(null);
+                    }
+                }
+                aiClassificationsEverRendered = true;
+            } else {
+                resetPreviewPanel();
+                applyAIFilters();
+                aiClassificationsEverRendered = true;
+            }
             perfEnd('dl317:aiClassifications:render', _tR);
         }
         return;
@@ -3925,7 +4000,773 @@ function friendlyAIReason(reason) {
     return reason;
 }
 
+// DL-334: Middle-truncate a filename preserving the extension.
+function truncateMiddle(name, maxLen = 42) {
+    if (!name || name.length <= maxLen) return name || '';
+    const dotIdx = name.lastIndexOf('.');
+    const ext = dotIdx > 0 && name.length - dotIdx <= 6 ? name.slice(dotIdx) : '';
+    const base = ext ? name.slice(0, -ext.length) : name;
+    const keep = maxLen - ext.length - 1; // 1 for ellipsis
+    if (keep <= 4) return name.slice(0, maxLen - 1) + '…';
+    const left = Math.ceil(keep / 2);
+    const right = keep - left;
+    return base.slice(0, left) + '…' + base.slice(-right) + ext;
+}
+
+// DL-334: Resolve the stripe modifier class for a doc row.
+// getCardState returns 'full' | 'fuzzy' | 'issuer-mismatch' | 'unmatched'.
+// Workstream B will add on_hold to getCardState; until then we branch on review_status here.
+function getRowStripeClass(item) {
+    const rs = item.review_status;
+    if (rs === 'on_hold') return 'ai-doc-row--state-on-hold';
+    if (rs === 'approved') return 'ai-doc-row--state-approved';
+    if (rs === 'rejected') return 'ai-doc-row--state-rejected';
+    if (rs === 'reassigned') return 'ai-doc-row--state-reassigned';
+    // pending — branch by getCardState
+    const st = getCardState(item);
+    if (st === 'full') return 'ai-doc-row--state-full';
+    if (st === 'fuzzy') return 'ai-doc-row--state-fuzzy';
+    if (st === 'issuer-mismatch') return 'ai-doc-row--state-issuer';
+    return 'ai-doc-row--state-unmatched';
+}
+
+// DL-334: Resolve the end-aligned category text for a doc row.
+// on_hold overrides category — returns {text, isOnHold} so caller can style.
+function getRowCategoryText(item) {
+    if (item.review_status === 'on_hold') {
+        return { text: '⏳ ממתין ללקוח', isOnHold: true };
+    }
+    const cat = item.matched_category_short_name
+              || item.matched_short_name
+              || item.matched_template_name
+              || '';
+    return { text: cat, isOnHold: false };
+}
+
+// DL-334: Render one thin pane-2 row. See DL-334 §7 "Doc rows".
+function renderDocRow(item) {
+    const id = String(item.id);
+    const rawName = item.attachment_name || item.filename || 'ללא שם';
+    const stripeClass = getRowStripeClass(item);
+    const cat = getRowCategoryText(item);
+    const showQGlyph = item.pending_question && item.review_status !== 'on_hold';
+    const qTitle = showQGlyph ? String(item.pending_question).slice(0, 80) : '';
+
+    // Flag dot (duplicate / unrequested / pre_questionnaire) — labels match renderAICard verbatim.
+    const flagLabels = [];
+    if (item.is_duplicate) flagLabels.push('כפול');
+    if (item.is_unrequested && !item.pre_questionnaire) flagLabels.push('לא נדרש');
+    if (item.pre_questionnaire) flagLabels.push('טרם מולא שאלון');
+    const flagDotHtml = flagLabels.length > 0
+        ? `<span class="ai-doc-row__flag-dot" title="${escapeAttr(flagLabels.join(' · '))}"></span>`
+        : '';
+
+    return `<div class="ai-doc-row ${stripeClass}" data-id="${escapeAttr(id)}" title="${escapeAttr(rawName)}" onclick="selectDocument('${escapeAttr(id)}')">
+        <span class="ai-doc-row__stripe"></span>
+        <span class="ai-doc-row__filename">${escapeHtml(truncateMiddle(rawName))}</span>
+        ${showQGlyph ? `<span class="ai-doc-row__question-glyph" title="${escapeAttr(qTitle)}">?</span>` : ''}
+        <span class="ai-doc-row__category"${cat.isOnHold ? ' style="color: var(--warning-600);"' : ''}>${escapeHtml(cat.text)}</span>
+        ${flagDotHtml}
+    </div>`;
+}
+
+// DL-334: Sticky thin strip at the top of pane 2.
+function buildClientThinStrip(clientName, items) {
+    const reviewed = items.filter(i => ['approved', 'rejected', 'reassigned'].includes(i.review_status)).length;
+    const total = items.length;
+    const clientId = items[0]?.client_id || '';
+    const folderBtn = clientId
+        ? `<button class="ai-pane2-top__folder" type="button"
+               onclick="event.stopPropagation(); window.open('../document-manager.html?client_id=${encodeURIComponent(clientId)}', '_blank');"
+               title="פתח ניהול מסמכים">${icon('folder-open', 'w-3.5 h-3.5')}</button>`
+        : '';
+    return `<div class="ai-pane2-top">
+        <span class="ai-pane2-top__counter">${reviewed}/${total} נבדקו</span>
+        ${folderBtn}
+    </div>`;
+}
+
+// DL-334: Toggle a section's `.open` class + show/hide its content sibling.
+function toggleSection(headerEl) {
+    if (!headerEl) return;
+    const isOpen = headerEl.classList.toggle('open');
+    // Content is the next element sibling.
+    const content = headerEl.nextElementSibling;
+    if (content) content.style.display = isOpen ? '' : 'none';
+}
+
+// DL-334: Build the desktop pane-2 HTML for a selected client.
+// Structure: sticky strip → collapsed client-notes header → collapsed missing-docs
+// header → separator → flat list of renderDocRow.
+function buildDesktopClientDocsHtml(clientName, items) {
+    let html = buildClientThinStrip(clientName, items);
+
+    // --- Client notes section (collapsed by default; only if N > 0 inbound notes) ---
+    const clientNotesRaw = items.find(i => i.client_notes)?.client_notes;
+    let notesHtml = '';
+    let notesCount = 0;
+    if (clientNotesRaw) {
+        let cnArr = [];
+        try { cnArr = JSON.parse(clientNotesRaw.replace(/[\n\r\t]/g, m => m === '\n' ? '\\n' : m === '\r' ? '\\r' : '\\t')); if (!Array.isArray(cnArr)) cnArr = []; } catch (e) {}
+        const replyMap = {};
+        for (const n of cnArr) {
+            if (n.type === 'office_reply' && n.reply_to) replyMap[n.reply_to] = n;
+        }
+        // Filter: inbound client messages only (exclude office_reply + batch_questions_sent).
+        cnArr = cnArr.filter(n => n.type !== 'office_reply' && n.type !== 'batch_questions_sent');
+        notesCount = cnArr.length;
+        if (notesCount > 0) {
+            const sorted = [...cnArr].sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+            const cnReportId = items[0]?.report_record_id || '';
+            const cnYear = items[0]?.year || '';
+            const renderEntry = n => {
+                const isEmail = n.source === 'email';
+                const iconName = isEmail ? 'mail' : 'pencil';
+                const iconClass = isEmail ? 'cn-icon--email' : 'cn-icon--manual';
+                const rawDate = n.date || '';
+                const dateStr = rawDate.match(/^(\d{4})-(\d{2})-(\d{2})/) ? rawDate.slice(0, 10).replace(/^(\d{4})-(\d{2})-(\d{2})/, '$3-$2-$1') : rawDate;
+                const nId = n.id ? escapeAttr(String(n.id)) : '';
+                const replyBtn = nId
+                    ? `<button class="ai-cn-action-btn" title="הגב" onclick="event.stopPropagation();showReplyInput('${nId}','${escapeAttr(cnReportId)}',this.closest('.ai-cn-entry'))">${icon('message-square', 'icon-xs')}</button>`
+                    : '';
+                const reply = nId ? replyMap[nId] : null;
+                const replyHtml = reply
+                    ? `<div class="cn-office-reply">
+                        <div class="cn-reply-label">${icon('corner-down-left', 'icon-xs')} תגובת המשרד</div>
+                        <div class="cn-reply-text">${escapeHtml(reply.summary)}</div>
+                        <div class="cn-reply-date">${(reply.date || '').slice(0, 10).replace(/^(\d{4})-(\d{2})-(\d{2})/, '$3-$2-$1')}</div>
+                    </div>` : '';
+                return `<div class="ai-cn-entry" data-note-id="${nId}" data-report-id="${escapeAttr(cnReportId)}" data-client-name="${escapeAttr(clientName)}" data-year="${escapeAttr(cnYear)}">
+                    ${icon(iconName, `icon-sm ${iconClass}`)}
+                    <span class="ai-cn-date">${escapeHtml(dateStr)}</span>
+                    <span class="ai-cn-summary">${escapeHtml(n.raw_snippet || n.summary || '')}</span>
+                    ${replyBtn}
+                    ${replyHtml}
+                </div>`;
+            };
+            const previewHtml = sorted.slice(0, 5).map(renderEntry).join('');
+            const hasMore = sorted.length > 5;
+            const expandedHtml = hasMore
+                ? `<div class="ai-cn-expanded">${sorted.slice(5).map(renderEntry).join('')}</div>`
+                : '';
+            notesHtml = `<div class="ai-section-header" onclick="toggleSection(this)">
+                    <span class="ai-section-header__arrow">▸</span>
+                    📋 הודעות הלקוח (${notesCount})
+                </div>
+                <div class="ai-cn-section" style="display: none;">
+                    <div class="ai-cn-entries">${previewHtml}${expandedHtml}</div>
+                    ${hasMore ? `<span class="ai-cn-toggle" onclick="toggleClientNotes(this)">הצג הכל ▼</span>` : ''}
+                </div>`;
+        }
+    }
+    html += notesHtml;
+
+    // --- Missing docs section (collapsed by default) ---
+    const allDocs = (items[0].all_docs || []);
+    const groupMissingDocs = (items[0].missing_docs || []);
+    const displayDocs = allDocs.length > 0 ? allDocs : groupMissingDocs;
+    const docsReceivedCount = items[0].docs_received_count || 0;
+    const docsTotalCount = items[0].docs_total_count || displayDocs.length;
+    const hasStatusVariation = allDocs.length > 0 && docsReceivedCount > 0;
+    if (displayDocs.length > 0) {
+        const catGroups = [];
+        let currentCat = null;
+        for (const d of displayDocs) {
+            const cat = d.category || 'other';
+            if (cat !== currentCat) {
+                currentCat = cat;
+                catGroups.push({ category: cat, name: d.category_name || cat, emoji: d.category_emoji || '', docs: [] });
+            }
+            catGroups[catGroups.length - 1].docs.push(d);
+        }
+        let categoriesHtml = '<div class="ai-missing-category-tags">';
+        for (const group of catGroups) categoriesHtml += group.docs.map(d => renderDocTag(d)).join('');
+        categoriesHtml += '</div>';
+        const label = hasStatusVariation
+            ? `📄 מסמכים נדרשים (${docsReceivedCount}/${docsTotalCount} התקבלו)`
+            : `📄 מסמכים חסרים (${groupMissingDocs.length})`;
+        html += `<div class="ai-section-header" onclick="toggleSection(this)">
+                <span class="ai-section-header__arrow">▸</span>
+                ${label}
+            </div>
+            <div class="ai-missing-docs-body" style="display: none;">
+                ${categoriesHtml}
+            </div>`;
+    }
+
+    // --- Separator before doc list ---
+    html += `<div class="ai-section-separator"></div>`;
+
+    // --- Doc list (flat; keep same order as buildClientAccordionHtml) ---
+    for (const item of items) {
+        html += renderDocRow(item);
+    }
+
+    return html;
+}
+
+// DL-334: Pane-2 row click — select a doc into the cockpit.
+window.selectDocument = function(id) {
+    if (isAIReviewMobileLayout()) {
+        loadDocPreview(id);
+        return;
+    }
+    const item = aiClassificationsData.find(i => String(i.id) === String(id));
+    if (!item) return;
+    document.querySelectorAll('.ai-doc-row.active').forEach(el => el.classList.remove('active'));
+    const row = document.querySelector(`.ai-doc-row[data-id="${CSS.escape(String(id))}"]`);
+    if (row) {
+        row.classList.add('active');
+        // DL-278: keep the active row in view on desktop.
+        try { row.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); } catch (e) {}
+    }
+    window.activePreviewItemId = id;
+    loadDocPreview(id);
+    if (typeof renderActionsPanel === 'function') renderActionsPanel(item);
+};
+
+// DL-334: Locate the desktop actions panel iff it is currently rendering the given item id.
+function findItemActionsEl(id) {
+    const p = document.getElementById('aiActionsPanel');
+    if (!p) return null;
+    return p.dataset.itemId && String(p.dataset.itemId) === String(id) ? p : null;
+}
+
+// DL-334: Format an ISO-ish date string as DD.MM.YYYY (no time). Returns '' for falsy input.
+function _formatPanelDate(dateStr) {
+    if (!dateStr) return '';
+    const m = String(dateStr).match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (m) return `${m[3]}.${m[2]}.${m[1]}`;
+    try {
+        const d = new Date(dateStr);
+        if (!isNaN(d)) {
+            const dd = String(d.getDate()).padStart(2, '0');
+            const mm = String(d.getMonth() + 1).padStart(2, '0');
+            return `${dd}.${mm}.${d.getFullYear()}`;
+        }
+    } catch (e) {}
+    return String(dateStr);
+}
+
+// DL-334: Single-item DOM refresh after a mutation. Desktop swaps the thin row + re-renders
+// the actions panel (if the item is active). Mobile falls through to its own in-place swap
+// (renderAICard / renderReviewedCard / renderOnHoldCard path owned by callers).
+function refreshItemDom(item) {
+    if (!item) return;
+    if (isAIReviewMobileLayout()) {
+        // Mobile fat-card path — existing callers (transitionCardToReviewed, startReReview,
+        // cancelReReview) already do an outerHTML swap via `.ai-review-card[data-id]`.
+        // Nothing for us to do here.
+        return;
+    }
+    const pane2 = document.querySelector('.ai-review-docs');
+    const pane2Scroll = pane2 ? pane2.scrollTop : 0;
+
+    // Swap the thin row in pane 2
+    const oldRow = document.querySelector(`.ai-doc-row[data-id="${CSS.escape(String(item.id))}"]`);
+    if (oldRow) {
+        const tmp = document.createElement('div');
+        tmp.innerHTML = renderDocRow(item).trim();
+        const newRow = tmp.firstElementChild;
+        oldRow.replaceWith(newRow);
+        if (window.activePreviewItemId && String(window.activePreviewItemId) === String(item.id)) {
+            newRow.classList.add('active');
+        }
+    }
+
+    // Re-render panel if this item is active
+    if (window.activePreviewItemId && String(window.activePreviewItemId) === String(item.id)) {
+        renderActionsPanel(item);
+    }
+
+    if (pane2) pane2.scrollTop = pane2Scroll;
+}
+
+// DL-334: render the pane-3 actions panel (single entry point). Desktop-only.
+function renderActionsPanel(item) {
+    const panel = document.getElementById('aiActionsPanel');
+    if (!panel) return;
+    if (isAIReviewMobileLayout()) return;
+
+    panel.className = 'ai-actions-panel';
+    if (!item) {
+        panel.classList.add('ai-actions-panel--empty');
+        panel.dataset.itemId = '';
+        panel.innerHTML = `
+            <div class="ai-ap-empty">
+                <span class="ai-ap-empty__icon">◉</span>
+                <div>בחר מסמך לבדיקה</div>
+            </div>`;
+        return;
+    }
+    panel.dataset.itemId = String(item.id);
+
+    const rs = item.review_status;
+    const reReviewing = _aiReReviewing.has(item.id);
+    let variant;
+    if (!reReviewing && rs === 'on_hold') variant = 'on-hold';
+    else if (!reReviewing && rs === 'approved') variant = 'approved';
+    else if (!reReviewing && rs === 'rejected') variant = 'rejected';
+    else if (!reReviewing && rs === 'reassigned') variant = 'reassigned';
+    else {
+        const st = getCardState(item);
+        if (st === 'full') variant = 'full';
+        else if (st === 'fuzzy') variant = 'fuzzy';
+        else if (st === 'issuer-mismatch') variant = 'issuer';
+        else variant = 'unmatched';
+    }
+    panel.classList.add(`ai-actions-panel--${variant}`);
+
+    const header = _renderPanelHeader(item, variant);
+    let body;
+    if (variant === 'on-hold') body = _renderPanelOnHold(item);
+    else if (variant === 'approved' || variant === 'rejected' || variant === 'reassigned')
+        body = _renderPanelReviewed(item, variant);
+    else if (variant === 'full' || variant === 'fuzzy')
+        body = _renderPanelFullOrFuzzy(item, variant, reReviewing);
+    else if (variant === 'issuer')
+        body = _renderPanelIssuerMismatch(item, reReviewing);
+    else
+        body = _renderPanelUnmatched(item, reReviewing);
+
+    const additive = _renderPanelAdditive(item, variant, reReviewing);
+
+    panel.innerHTML = header
+        + `<div class="ai-ap-divider"></div>`
+        + `<div class="ai-ap-body">${body}</div>`
+        + additive;
+
+    try { safeCreateIcons(panel); } catch (e) {}
+    try { initAIReviewComboboxes(panel); } catch (e) {}
+}
+
+function _renderPanelHeader(item, variant) {
+    const rawName = item.attachment_name || item.filename || 'ללא שם';
+    let lozenge = '';
+    if (variant === 'approved')   lozenge = `<span class="ai-ap-lozenge ai-ap-lozenge--approved">✓ אושר</span>`;
+    else if (variant === 'rejected')   lozenge = `<span class="ai-ap-lozenge ai-ap-lozenge--rejected">⚠ דורש תיקון</span>`;
+    else if (variant === 'reassigned') lozenge = `<span class="ai-ap-lozenge ai-ap-lozenge--reassigned">✓ שויך מחדש</span>`;
+    else if (variant === 'on-hold')    lozenge = `<span class="ai-ap-lozenge ai-ap-lozenge--on-hold">⏳ ממתין ללקוח</span>`;
+
+    const filingChip = item.filing_type
+        ? `<span class="ai-filing-type-badge ai-ft-${escapeAttr(item.filing_type)}">${escapeHtml(FILING_TYPE_LABELS[item.filing_type] || item.filing_type)}</span>`
+        : '';
+
+    const flagChips = [];
+    if (item.is_duplicate) flagChips.push('כפול');
+    if (item.is_unrequested && !item.pre_questionnaire) flagChips.push('לא נדרש');
+    if (item.pre_questionnaire) flagChips.push('טרם מולא שאלון');
+    const flagChipsHtml = flagChips.map(l =>
+        `<span class="ai-ap-flag-chip" style="background: var(--warning-50); color: var(--warning-700); padding: 1px 6px; border-radius: 3px; font-size: 11px;">${escapeHtml(l)}</span>`
+    ).join('');
+
+    const sender = item.sender_email || '';
+    const dateStr = _formatPanelDate(item.received_at);
+    const line2Parts = [sender, dateStr].filter(Boolean).map(escapeHtml);
+    const line2 = line2Parts.length > 0
+        ? `<div class="ai-ap-header__line2">${line2Parts.join(' · ')}</div>`
+        : '';
+
+    return `<div class="ai-ap-header">
+        <div class="ai-ap-header__line1">
+            ${lozenge}
+            <span class="ai-ap-filename" title="${escapeAttr(rawName)}">${escapeHtml(rawName)}</span>
+            ${filingChip}
+            ${flagChipsHtml}
+        </div>
+        ${line2}
+    </div>`;
+}
+
+function _renderPanelFullOrFuzzy(item, variant, reReviewing) {
+    const docName = appendContractPeriod(item.matched_short_name || item.matched_template_name || 'לא ידוע', item);
+    const rawConf = item.ai_confidence || item.confidence || 0;
+    const pct = rawConf ? Math.round(rawConf * 100) : null;
+    const pctStr = pct != null ? ` <span style="color: var(--gray-500);">(${pct}%)</span>` : '';
+    return `<div style="font-size: 12px; color: var(--gray-700);">
+        🤖 AI חושב שזה: <span style="font-weight: 500;">${renderDocLabel(docName)}</span>${pctStr}
+    </div>`;
+}
+
+function _renderPanelIssuerMismatch(item, reReviewing) {
+    const templateName = appendContractPeriod(item.matched_short_name || item.matched_template_name || item.matched_template_id || '', item);
+    const aiIssuer = item.issuer_name || 'לא ידוע';
+    const missingDocs = item.missing_docs || [];
+    const relatedIds = RELATED_TEMPLATES[item.matched_template_id] || [item.matched_template_id];
+    const sameTypeDocs = missingDocs.filter(d => relatedIds.includes(d.template_id));
+
+    if (sameTypeDocs.length === 0) {
+        // Fall through to unmatched-style combobox
+        return `<div style="font-size: 12px; color: var(--gray-700);">
+                🤖 AI חושב שזה: <span style="font-weight: 500;">${renderDocLabel(templateName)}</span>
+            </div>
+            <div style="font-size: 12px; color: var(--gray-700); margin-top: 6px;">
+                🤖 AI חושב שהתקבל מ: <span style="font-weight: 500;">${escapeHtml(aiIssuer)}</span>
+            </div>
+            <div style="font-size: 11px; color: var(--warning-700); margin-top: 6px;">
+                ⚠️ כל מסמכי ${renderDocLabel(templateName)} כבר התקבלו
+            </div>
+            <div style="font-size: 11px; color: var(--gray-600); margin-top: 8px;">שייך ל:</div>
+            <div class="ai-inline-ft-toggle" data-record-id="${escapeAttr(item.id)}" style="display:none"></div>
+            <div class="doc-combobox-container ai-ap-combobox" data-record-id="${escapeAttr(item.id)}"></div>`;
+    }
+
+    const radiosHtml = sameTypeDocs.map(d => {
+        const docName = d.name_short || d.name || d.template_id;
+        const docLabel = d.name_short || d.name_html || d.name || d.template_id;
+        return `<label class="ai-ap-radio-item ai-comparison-radio">
+            <input type="radio" name="ap_compare_${escapeAttr(item.id)}"
+                data-template-id="${escapeAttr(d.template_id)}"
+                data-doc-record-id="${escapeAttr(d.doc_record_id || '')}"
+                data-doc-name="${escapeAttr(String(docName).replace(/<\/?b>/g, ''))}"
+                onchange="handleComparisonRadio('${escapeAttr(item.id)}', this)">
+            <span>${renderDocLabel(docLabel)}</span>
+        </label>`;
+    }).join('');
+
+    return `<div style="font-size: 12px; color: var(--gray-700);">
+            🤖 AI חושב שהתקבל מ: <span style="font-weight: 500;">${escapeHtml(aiIssuer)}</span>
+        </div>
+        <div style="font-size: 11px; color: var(--gray-600); margin-top: 6px;">האם זה אחד מהבאים?</div>
+        <div class="ai-ap-radio-list ai-validation-options" style="margin-top: 4px;">${radiosHtml}</div>`;
+}
+
+function _renderPanelUnmatched(item, reReviewing) {
+    const reason = item.ai_reason ? friendlyAIReason(item.ai_reason) : '';
+    const reasonBlock = reason
+        ? `<div class="ai-ap-reasoning-block" style="background: var(--gray-50); border-radius: 4px; padding: 8px 10px; font-size: 11px; color: var(--gray-700); line-height: 1.5; margin-top: 6px;">${escapeHtml(reason)}</div>`
+        : '';
+    return `<div style="font-size: 12px;">
+            <span style="color: var(--gray-500);">🤖</span>
+            <span style="font-weight: 500; color: var(--gray-800);">לא זוהה</span>
+        </div>
+        ${reasonBlock}
+        <div style="font-size: 11px; color: var(--gray-600); margin-top: 8px;">שייך ל:</div>
+        <div class="ai-inline-ft-toggle" data-record-id="${escapeAttr(item.id)}" style="display:none"></div>
+        <div class="doc-combobox-container ai-ap-combobox" data-record-id="${escapeAttr(item.id)}"></div>`;
+}
+
+function _renderPanelOnHold(item) {
+    // Resolve question-sent date (reuse renderOnHoldCard logic)
+    let questionSentDate = item.reviewed_at || null;
+    let clientReplyHtml = '';
+    if (item.client_notes) {
+        let cnArr = [];
+        try {
+            cnArr = JSON.parse(String(item.client_notes).replace(/[\n\r\t]/g, m => m === '\n' ? '\\n' : m === '\r' ? '\\r' : '\\t'));
+            if (!Array.isArray(cnArr)) cnArr = [];
+        } catch (e) {}
+        const bqEntry = cnArr.find(n => n.type === 'batch_questions_sent'
+            && Array.isArray(n.items) && n.items.some(i => i.attachment_name === item.attachment_name));
+        if (bqEntry && bqEntry.date && !questionSentDate) questionSentDate = bqEntry.date;
+        const replies = cnArr.filter(n =>
+            n.source === 'email' &&
+            n.type !== 'batch_questions_sent' &&
+            n.type !== 'office_reply' &&
+            (!questionSentDate || (n.date || '') > questionSentDate)
+        ).sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+        if (replies.length > 0) {
+            const r = replies[0];
+            const rDate = _formatPanelDate(r.date);
+            clientReplyHtml = `<div style="font-size: 11px; color: var(--info-700); margin-top: 8px;">📧 תגובת הלקוח${rDate ? ` (${rDate})` : ''}:</div>
+                <div class="ai-ap-reply-block" style="background: var(--info-50); border-radius: 4px; padding: 8px 10px; font-size: 12px; color: var(--gray-700); line-height: 1.5; white-space: pre-wrap; margin-top: 4px;">${escapeHtml(r.raw_snippet || r.summary || '')}</div>`;
+        }
+    }
+
+    const sentDateStr = questionSentDate ? _formatPanelDate(questionSentDate) : '';
+    const sentLabel = sentDateStr
+        ? `💬 שאלה נשלחה ללקוח בתאריך ${escapeHtml(sentDateStr)}:`
+        : `💬 שאלה נשלחה ללקוח:`;
+
+    const questionBlock = item.pending_question
+        ? `<div class="ai-ap-question-block" style="background: var(--warning-50); border-radius: 4px; padding: 8px 10px; font-size: 12px; color: var(--warning-800); line-height: 1.5; margin-top: 4px;">${escapeHtml(item.pending_question)}</div>`
+        : '';
+
+    const aiGuess = item.matched_template_id
+        ? `<div style="font-size: 11px; color: var(--gray-600); margin-top: 8px;">🤖 AI זיהה כ: <span style="font-weight: 500;">${renderDocLabel(item.matched_short_name || item.matched_template_name || '')}</span></div>`
+        : '';
+
+    return `<div style="font-size: 11px; color: var(--gray-600);">${sentLabel}</div>
+        ${questionBlock}
+        ${clientReplyHtml}
+        ${aiGuess}`;
+}
+
+function _renderPanelReviewed(item, variant) {
+    let displayName;
+    if (variant === 'rejected') {
+        displayName = item.attachment_name || item.matched_short_name || 'לא ידוע';
+    } else if (variant === 'reassigned') {
+        const siblings = [...(item.all_docs || []), ...(item.other_report_docs || [])];
+        const target = item.onedrive_item_id
+            ? siblings.find(d => d.onedrive_item_id === item.onedrive_item_id && d.status === 'Received')
+            : null;
+        const targetName = target && (target.name_short || target.name);
+        displayName = appendContractPeriod(
+            targetName || item.matched_short_name || item.matched_template_name || item.attachment_name || 'לא ידוע',
+            item
+        );
+    } else {
+        // approved
+        displayName = appendContractPeriod(item.matched_short_name || item.matched_template_name || 'לא ידוע', item);
+    }
+
+    let rejectionBlock = '';
+    if (variant === 'rejected' && item.notes) {
+        try {
+            const notesData = typeof item.notes === 'string' ? JSON.parse(item.notes) : item.notes;
+            const reasonLabel = REJECTION_REASONS[notesData.reason] || notesData.reason || '';
+            const notesText = notesData.text || '';
+            if (reasonLabel || notesText) {
+                rejectionBlock = `<div class="ai-ap-reasoning-block" style="background: var(--gray-50); border-radius: 4px; padding: 8px 10px; font-size: 11px; color: var(--gray-700); line-height: 1.5; margin-top: 6px;">
+                    ${reasonLabel ? `<strong>${escapeHtml(reasonLabel)}</strong>` : ''}${reasonLabel && notesText ? ': ' : ''}${escapeHtml(notesText)}
+                </div>`;
+            }
+        } catch (e) {}
+    }
+
+    return `<div style="font-size: 12px;">
+            <span style="color: var(--gray-500);">תואם ל:</span>
+            <span style="font-weight: 500;"> ${renderDocLabel(displayName)}</span>
+        </div>
+        ${rejectionBlock}`;
+}
+
+function _renderPanelAdditive(item, variant, reReviewing) {
+    const id = item.id;
+    const idA = escapeAttr(id);
+    const idJs = escapeOnclick(String(id));
+
+    // --- Primary actions ---
+    let primaryHtml = '';
+    if (variant === 'full' || variant === 'fuzzy') {
+        const addToRequired = item.is_unrequested && !!item.matched_template_id;
+        const approveDisabled = item.is_unrequested && !item.matched_template_id;
+        const approveLabel = addToRequired
+            ? '✓ נכון - הוסף מסמך זה לרשימת המסמכים הדרושים'
+            : '✓ נכון';
+        const approveHandler = addToRequired
+            ? `approveAIClassificationAddRequired('${idA}', '${escapeAttr(item.matched_template_id)}')`
+            : `approveAIClassification('${idA}')`;
+        const approveAttrs = approveDisabled
+            ? `aria-disabled="true" title="לא ניתן לאשר מסמך שלא נדרש — יש לשייך מחדש או לדחות"`
+            : `onclick="${approveHandler}"`;
+        const cancelBtn = reReviewing
+            ? `<button class="ai-ap-btn ai-ap-btn--ghost" onclick="cancelReReview('${idA}')">ביטול</button>`
+            : '';
+        primaryHtml = `<div class="ai-ap-primary-actions" style="display: flex; flex-direction: column; gap: 4px;">
+            <div style="display: flex; gap: 4px;">
+                <button class="ai-ap-btn ai-ap-btn--primary-success" style="flex: 1;" ${approveAttrs}>${escapeHtml(approveLabel)}</button>
+                <button class="ai-ap-btn ai-ap-btn--ghost" style="flex: 1;" onclick="showAIReassignModal('${idA}')">שייך מחדש</button>
+            </div>
+            <button class="ai-ap-btn ai-ap-btn--danger-ghost ai-ap-btn--full" onclick="rejectAIClassification('${idA}')">✕ מסמך לא רלוונטי</button>
+            ${cancelBtn}
+        </div>`;
+    } else if (variant === 'issuer') {
+        const missingDocs = item.missing_docs || [];
+        const relatedIds = RELATED_TEMPLATES[item.matched_template_id] || [item.matched_template_id];
+        const sameTypeDocs = missingDocs.filter(d => relatedIds.includes(d.template_id));
+        const cancelBtn = reReviewing
+            ? `<button class="ai-ap-btn ai-ap-btn--ghost" onclick="cancelReReview('${idA}')">ביטול</button>`
+            : '';
+        if (sameTypeDocs.length === 0) {
+            // Fallback to unmatched-style primary
+            primaryHtml = `<div class="ai-ap-primary-actions" style="display: flex; flex-direction: column; gap: 4px;">
+                <div style="display: flex; gap: 4px;">
+                    <button class="ai-ap-btn ai-ap-btn--primary-success btn-ai-assign-confirm" style="flex: 1;" disabled onclick="assignAIUnmatched('${idA}', this)">שייך</button>
+                    <button class="ai-ap-btn ai-ap-btn--danger-ghost ai-ap-btn--icon-only" style="width: 40px;" onclick="rejectAIClassification('${idA}')">✕</button>
+                </div>
+                ${cancelBtn}
+            </div>`;
+        } else {
+            primaryHtml = `<div class="ai-ap-primary-actions" style="display: flex; flex-direction: column; gap: 4px;">
+                <div style="display: flex; gap: 4px;">
+                    <button class="ai-ap-btn ai-ap-btn--primary-success btn-ai-comparison-assign" style="flex: 1;" disabled onclick="quickAssignSelected('${idA}')">אישור ושיוך</button>
+                    <button class="ai-ap-btn ai-ap-btn--danger-ghost ai-ap-btn--icon-only" style="width: 40px;" onclick="rejectAIClassification('${idA}')">✕</button>
+                </div>
+                <button class="ai-ap-btn ai-ap-btn--ghost ai-ap-btn--full" onclick="showAIReassignModal('${idA}')">לא מצאתי ברשימה</button>
+                ${cancelBtn}
+            </div>`;
+        }
+    } else if (variant === 'unmatched') {
+        const cancelBtn = reReviewing
+            ? `<button class="ai-ap-btn ai-ap-btn--ghost" onclick="cancelReReview('${idA}')">ביטול</button>`
+            : '';
+        primaryHtml = `<div class="ai-ap-primary-actions" style="display: flex; flex-direction: column; gap: 4px;">
+            <div style="display: flex; gap: 4px;">
+                <button class="ai-ap-btn ai-ap-btn--primary-success btn-ai-assign-confirm" style="flex: 1;" disabled onclick="assignAIUnmatched('${idA}', this)">שייך</button>
+                <button class="ai-ap-btn ai-ap-btn--danger-ghost ai-ap-btn--icon-only" style="width: 40px;" onclick="rejectAIClassification('${idA}')">✕</button>
+            </div>
+            ${cancelBtn}
+        </div>`;
+    } else if (variant === 'on-hold') {
+        primaryHtml = `<div class="ai-ap-primary-actions">
+            <button class="ai-ap-btn ai-ap-btn--warning ai-ap-btn--full" onclick="startReReview('${idA}')">סיים את ההמתנה</button>
+        </div>`;
+    } else if (variant === 'approved' || variant === 'rejected' || variant === 'reassigned') {
+        const alsoMatch = variant === 'approved'
+            ? `<button class="ai-ap-btn ai-ap-btn--ghost ai-ap-btn--full" onclick="showAIAlsoMatchModal('${idA}')">📋 הקובץ תואם למסמך נוסף</button>`
+            : '';
+        primaryHtml = `<div class="ai-ap-primary-actions" style="display: flex; flex-direction: column; gap: 4px;">
+            <button class="ai-ap-btn ai-ap-btn--ghost ai-ap-btn--full" onclick="startReReview('${idA}')">🔄 שנה החלטה</button>
+            ${alsoMatch}
+        </div>`;
+    }
+
+    // --- Pending-question secondary block (non-on_hold) ---
+    const pendingQBlock = (variant !== 'on-hold' && item.pending_question)
+        ? `<div class="ai-ap-pending-question" style="background: var(--info-50); border-radius: 4px; padding: 6px 8px; font-size: 11px; color: var(--info-700); margin-top: 6px;">💬 שאלה נשמרה: ${escapeHtml(item.pending_question)}</div>`
+        : '';
+
+    // --- Secondary actions (split, contract-period, overflow) ---
+    const secondaryBtns = [];
+    if (item.page_count && item.page_count >= 2) {
+        secondaryBtns.push(`<button class="ai-ap-btn ai-ap-btn--ghost ai-ap-btn--small" onclick="openSplitModal('${idA}')">✂️ פיצול PDF</button>`);
+    }
+    if (['T901', 'T902'].includes(item.matched_template_id)) {
+        const cp = item.contract_period;
+        const rid = idA;
+        const year = item.year || new Date().getFullYear();
+        if (cp && cp.coversFullYear) {
+            secondaryBtns.push(`<span class="ai-ap-contract-full" style="background: var(--success-50); color: var(--success-700); padding: 4px 8px; border-radius: 3px; font-size: 11px;">📅 חוזה שנתי מלא ✓</span>`);
+        } else {
+            const hasStart = cp && cp.startDate;
+            const hasEnd = cp && cp.endDate;
+            const startMonth = hasStart ? new Date(cp.startDate).getMonth() + 1 : null;
+            const endMonth = hasEnd ? new Date(cp.endDate).getMonth() + 1 : null;
+            const startVal = hasStart ? cp.startDate.substring(0, 7) : '';
+            const endVal = hasEnd ? cp.endDate.substring(0, 7) : '';
+            const startLabel = startMonth ? `${String(startMonth).padStart(2, '0')}.${year}` : '__.__';
+            const endLabel = endMonth ? `${String(endMonth).padStart(2, '0')}.${year}` : '__.__';
+            const statusText = cp ? 'חוזה חלקי' : 'לא זוהו תאריכים';
+            let reqBtns = '';
+            if (startMonth && startMonth > 1) {
+                reqBtns += `<button class="ai-ap-btn ai-ap-btn--ghost ai-ap-btn--small btn-request-period" data-record-id="${rid}" data-gap="before" onclick="event.stopPropagation(); requestMissingPeriod('${rid}', 1, ${startMonth - 1}, this)">+ בקש חוזה ${formatPeriodLabel(1, startMonth - 1, year)}</button>`;
+            }
+            if (endMonth && endMonth < 12) {
+                reqBtns += `<button class="ai-ap-btn ai-ap-btn--ghost ai-ap-btn--small btn-request-period" data-record-id="${rid}" data-gap="after" onclick="event.stopPropagation(); requestMissingPeriod('${rid}', ${endMonth + 1}, 12, this)">+ בקש חוזה ${formatPeriodLabel(endMonth + 1, 12, year)}</button>`;
+            }
+            secondaryBtns.push(`<span class="ai-ap-contract-partial ai-contract-period-banner" data-record-id="${rid}" style="font-size: 11px;">📅 ${statusText}:
+                מ <span class="contract-date-editable" data-field="start" data-value="${escapeAttr(startVal)}" onclick="event.stopPropagation(); editContractDate('${rid}', 'start', this)" title="לחץ לעריכה">${startLabel}</span>
+                עד <span class="contract-date-editable" data-field="end" data-value="${escapeAttr(endVal)}" onclick="event.stopPropagation(); editContractDate('${rid}', 'end', this)" title="לחץ לעריכה">${endLabel}</span>
+                ${reqBtns}
+            </span>`);
+        }
+    }
+
+    // Overflow menu
+    const qLabel = item.pending_question ? 'ערוך שאלה' : 'הוסף שאלה';
+    const overflowItems = [];
+    if (variant === 'approved' || variant === 'rejected' || variant === 'reassigned') {
+        overflowItems.push(`<button class="ai-ap-overflow__item" onclick="startReReview('${idA}'); _closePanelOverflow();">שנה החלטה</button>`);
+        if (variant === 'approved') {
+            overflowItems.push(`<button class="ai-ap-overflow__item" onclick="showAIAlsoMatchModal('${idA}'); _closePanelOverflow();">הקובץ תואם למסמך נוסף</button>`);
+        }
+        overflowItems.push(`<button class="ai-ap-overflow__item" onclick="openAddQuestionDialog('${idA}'); _closePanelOverflow();">${qLabel}</button>`);
+    } else {
+        // pending (non-on_hold) + on-hold
+        overflowItems.push(`<button class="ai-ap-overflow__item" onclick="openAddQuestionDialog('${idA}'); _closePanelOverflow();">${qLabel}</button>`);
+    }
+
+    const overflowHtml = `<div class="ai-ap-overflow">
+        <button class="ai-ap-overflow__btn" onclick="_togglePanelOverflow(this, event)" title="פעולות נוספות">⋮</button>
+        <div class="ai-ap-overflow__menu">${overflowItems.join('')}</div>
+    </div>`;
+    secondaryBtns.push(overflowHtml);
+
+    const secondaryHtml = `<div class="ai-ap-secondary-actions" style="display: flex; gap: 4px; flex-wrap: wrap; align-items: center;">${secondaryBtns.join('')}</div>`;
+
+    return primaryHtml + pendingQBlock + secondaryHtml;
+}
+
+// DL-334: Overflow menu toggles + document-click close handler (bound once).
+function _togglePanelOverflow(btn, event) {
+    if (event) event.stopPropagation();
+    const wrap = btn.closest('.ai-ap-overflow');
+    if (!wrap) return;
+    const wasOpen = wrap.classList.contains('open');
+    _closePanelOverflow();
+    if (!wasOpen) wrap.classList.add('open');
+}
+function _closePanelOverflow() {
+    document.querySelectorAll('.ai-ap-overflow.open').forEach(el => el.classList.remove('open'));
+}
+if (!window._aiPanelOverflowHandlerInstalled) {
+    document.addEventListener('click', (e) => {
+        if (!e.target.closest('.ai-ap-overflow')) _closePanelOverflow();
+    });
+    window._aiPanelOverflowHandlerInstalled = true;
+}
+
+// DL-334: Desktop reject-notes sub-panel — scoped to .ai-ap-primary-actions.
+function showPanelRejectNotes(recordId) {
+    const panel = findItemActionsEl(recordId);
+    if (!panel) return false;
+    const actionsDiv = panel.querySelector('.ai-ap-primary-actions');
+    if (!actionsDiv) return false;
+
+    actionsDiv.dataset.originalHtml = actionsDiv.innerHTML;
+    actionsDiv.innerHTML = `
+        <div class="ai-ap-reject-notes">
+            <select class="ai-reject-reason-select" style="width: 100%; height: 30px; border: 0.5px solid var(--gray-200); border-radius: 3px; font-size: 12px; padding: 0 8px;">
+                <option value="">בחר סיבה...</option>
+                ${Object.entries(REJECTION_REASONS).map(([k, v]) => `<option value="${k}">${escapeHtml(v)}</option>`).join('')}
+            </select>
+            <textarea class="ai-reject-notes-text" placeholder="הערות נוספות (אופציונלי)" rows="2" style="width: 100%; margin-top: 6px; border: 0.5px solid var(--gray-200); border-radius: 3px; font-size: 12px; padding: 6px 8px; min-height: 60px;"></textarea>
+            <div style="display: flex; gap: 6px; margin-top: 6px;">
+                <button class="ai-ap-btn ai-ap-btn--danger-ghost ai-reject-confirm-btn" style="flex: 1;" disabled>מסמך לא רלוונטי</button>
+                <button class="ai-ap-btn ai-ap-btn--ghost ai-reject-cancel-btn" style="width: 60px;">ביטול</button>
+            </div>
+        </div>`;
+
+    const select = actionsDiv.querySelector('.ai-reject-reason-select');
+    const confirmBtn = actionsDiv.querySelector('.ai-reject-confirm-btn');
+    const cancelBtn = actionsDiv.querySelector('.ai-reject-cancel-btn');
+
+    function restore() {
+        if (actionsDiv.dataset.originalHtml != null) {
+            actionsDiv.innerHTML = actionsDiv.dataset.originalHtml;
+            delete actionsDiv.dataset.originalHtml;
+        }
+        document.removeEventListener('keydown', escHandler);
+    }
+    function escHandler(e) { if (e.key === 'Escape') restore(); }
+    document.addEventListener('keydown', escHandler);
+
+    select.addEventListener('change', () => { confirmBtn.disabled = !select.value; });
+    cancelBtn.addEventListener('click', restore);
+    confirmBtn.addEventListener('click', async () => {
+        const reason = select.value;
+        const notes = actionsDiv.querySelector('.ai-reject-notes-text').value.trim();
+        document.removeEventListener('keydown', escHandler);
+        await executeReject(recordId, reason, notes);
+    });
+    return true;
+}
+
+// DL-334: Loading overlay over primary-actions only.
+function showPanelLoading(recordId, on, text) {
+    const panel = findItemActionsEl(recordId);
+    if (!panel) return;
+    const actions = panel.querySelector('.ai-ap-primary-actions');
+    if (!actions) return;
+    let overlay = actions.querySelector('.ai-ap-transient-loading');
+    if (on) {
+        if (!overlay) {
+            overlay = document.createElement('div');
+            overlay.className = 'ai-ap-transient-loading';
+            overlay.innerHTML = `<div class="spinner"></div><span>${escapeHtml(text || 'מעבד...')}</span>`;
+            actions.style.position = actions.style.position || 'relative';
+            actions.appendChild(overlay);
+        }
+    } else if (overlay) {
+        overlay.remove();
+    }
+}
+
 function getCardState(item) {
+    // DL-334: on_hold is a first-class state UNLESS user is re-reviewing it (see _aiReReviewing)
+    if (item && item.review_status === 'on_hold' && !_aiReReviewing.has(item.id)) return 'on_hold';
     if (!item.matched_template_id) return 'unmatched';
     const q = item.issuer_match_quality;
     if (q === 'mismatch') return 'issuer-mismatch';
@@ -3939,20 +4780,23 @@ function toggleMissingDocs(el) {
 
 
 function handleComparisonRadio(recordId, radioEl) {
-    const card = document.querySelector(`.ai-review-card[data-id="${recordId}"]`);
+    // DL-334: Desktop-or-mobile-targetable — use panel scope on desktop, fat card on mobile.
+    const card = findItemActionsEl(recordId) || document.querySelector(`.ai-review-card[data-id="${recordId}"]`);
     if (!card) return;
-    // Deselect all radios in this card
-    card.querySelectorAll('.ai-comparison-radio').forEach(r => r.classList.remove('selected'));
-    radioEl.closest('.ai-comparison-radio').classList.add('selected');
+    // Deselect all radios in this card/panel
+    card.querySelectorAll('.ai-comparison-radio, .ai-ap-radio-item').forEach(r => r.classList.remove('selected'));
+    const wrap = radioEl.closest('.ai-comparison-radio') || radioEl.closest('.ai-ap-radio-item');
+    if (wrap) wrap.classList.add('selected');
     // Enable assign button
     const assignBtn = card.querySelector('.btn-ai-comparison-assign');
     if (assignBtn) assignBtn.disabled = false;
 }
 
 function quickAssignSelected(recordId) {
-    const card = document.querySelector(`.ai-review-card[data-id="${recordId}"]`);
+    // DL-334: Desktop-or-mobile-targetable.
+    const card = findItemActionsEl(recordId) || document.querySelector(`.ai-review-card[data-id="${recordId}"]`);
     if (!card) return;
-    const selectedRadio = card.querySelector('.ai-validation-options input[type="radio"]:checked');
+    const selectedRadio = card.querySelector('input[type="radio"]:checked');
     if (!selectedRadio) return;
     const templateId = selectedRadio.dataset.templateId;
     const docRecordId = selectedRadio.dataset.docRecordId || '';
@@ -4195,7 +5039,8 @@ function selectClient(clientName) {
     if (!docsPane) return;
     const clientItems = aiClassificationsData.filter(i => (i.client_name || 'לא ידוע') === clientName);
     if (clientItems.length > 0) {
-        docsPane.innerHTML = buildClientAccordionHtml(clientName, clientItems, true);
+        // DL-334: desktop uses the new thin-row cockpit layout (mobile still uses accordion).
+        docsPane.innerHTML = buildDesktopClientDocsHtml(clientName, clientItems);
         initAIReviewComboboxes(docsPane);
         safeCreateIcons(docsPane);
     } else {
@@ -4204,6 +5049,19 @@ function selectClient(clientName) {
 
     // Fresh client → clear stale preview
     resetPreviewPanel();
+
+    // DL-334: Auto-select first pending/on_hold doc into the cockpit.
+    if (clientItems.length > 0) {
+        const firstPending = clientItems.find(i => !i.review_status || i.review_status === 'pending' || i.review_status === 'on_hold');
+        if (firstPending) {
+            selectDocument(firstPending.id);
+        } else {
+            // No pending — clear actions panel to empty state (Workstream B will replace with renderer).
+            const panel = document.getElementById('aiActionsPanel');
+            if (panel) panel.innerHTML = '';
+            if (typeof renderActionsPanel === 'function') renderActionsPanel(null);
+        }
+    }
 }
 
 function renderAICards(items, allFilteredItems) {
@@ -4340,12 +5198,18 @@ function renderAICards(items, allFilteredItems) {
             safeCreateIcons(renderTarget);
         }
 
-        // Pane 2: selected client's accordion (always open)
+        // Pane 2: selected client — DL-334 thin-row cockpit (mobile path above keeps accordion).
         if (docsPane) {
             if (selectedClientName && groups[selectedClientName]) {
-                docsPane.innerHTML = buildClientAccordionHtml(selectedClientName, groups[selectedClientName], true);
+                docsPane.innerHTML = buildDesktopClientDocsHtml(selectedClientName, groups[selectedClientName]);
                 initAIReviewComboboxes(docsPane);
                 safeCreateIcons(docsPane);
+                // Re-apply .active row if the previously-active item is still in the list.
+                const activeId = window.activePreviewItemId;
+                if (activeId && groups[selectedClientName].some(i => String(i.id) === String(activeId))) {
+                    const row = docsPane.querySelector(`.ai-doc-row[data-id="${CSS.escape(String(activeId))}"]`);
+                    if (row) row.classList.add('active');
+                }
             } else {
                 docsPane.innerHTML = `<div class="ai-docs-placeholder">${icon('users', 'icon-2xl')}<p>בחר לקוח כדי להציג את המסמכים</p></div>`;
                 safeCreateIcons(docsPane);
@@ -4935,9 +5799,6 @@ function startReReview(recordId) {
     const item = aiClassificationsData.find(i => i.id === recordId);
     if (!item) return;
 
-    const card = document.querySelector(`.ai-review-card[data-id="${recordId}"]`);
-    if (!card) return;
-
     // DL-320: cascade revert when this file is linked to other doc records (DL-314 multi-match).
     // Changing the primary decision should also clear all sibling records that were linked to this file.
     const sharedCount = (item.shared_ref_count | 0);
@@ -4952,6 +5813,18 @@ function startReReview(recordId) {
         showConfirmDialog(msg, () => { cascadeRevertAIClassification(recordId); }, 'המשך ונקה', true);
         return;
     }
+
+    // DL-334: Desktop path — flip _aiReReviewing + re-render via cockpit actions panel.
+    // (Desktop-or-mobile-targetable: desktop short-circuit; mobile falls through below.)
+    if (!isAIReviewMobileLayout()) {
+        _aiReReviewing.add(recordId);
+        refreshItemDom(item);
+        return;
+    }
+
+    // DL-334 mobile-only path follows.
+    const card = document.querySelector(`.ai-review-card[data-id="${recordId}"]`);
+    if (!card) return;
 
     // Restore original action buttons based on card state
     const state = getCardState(item);
@@ -5036,6 +5909,14 @@ function cancelReReview(recordId) {
     const item = aiClassificationsData.find(i => i.id === recordId);
     if (!item) return;
 
+    // DL-334: Desktop path — clear re-review flag + re-render via cockpit.
+    // (Desktop-or-mobile-targetable: desktop short-circuit; mobile falls through.)
+    if (!isAIReviewMobileLayout()) {
+        _aiReReviewing.delete(recordId);
+        refreshItemDom(item);
+        return;
+    }
+
     const card = document.querySelector(`.ai-review-card[data-id="${recordId}"]`);
     if (!card) return;
 
@@ -5108,6 +5989,12 @@ function formatAISuccessToast(data) {
 }
 
 function setCardLoading(recordId, text) {
+    // DL-334: Desktop-or-mobile-targetable — overlay on actions panel primary-actions on desktop,
+    // whole-card overlay on mobile fat card.
+    if (!isAIReviewMobileLayout()) {
+        showPanelLoading(recordId, true, text);
+        return;
+    }
     const card = document.querySelector(`.ai-review-card[data-id="${recordId}"]`);
     if (!card) return;
     card.classList.add('ai-loading');
@@ -5118,6 +6005,11 @@ function setCardLoading(recordId, text) {
 }
 
 function clearCardLoading(recordId) {
+    // DL-334: Desktop-or-mobile-targetable.
+    if (!isAIReviewMobileLayout()) {
+        showPanelLoading(recordId, false);
+        return;
+    }
     const card = document.querySelector(`.ai-review-card[data-id="${recordId}"]`);
     if (!card) return;
     card.classList.remove('ai-loading');
@@ -5460,6 +6352,10 @@ async function resubmitReassign(recordId, templateId, docRecordId, newDocName, m
 }
 
 async function rejectAIClassification(recordId) {
+    // DL-334: desktop uses cockpit actions panel; mobile falls through to fat-card flow.
+    if (!isAIReviewMobileLayout()) {
+        if (showPanelRejectNotes(recordId)) return;
+    }
     showRejectNotesPanel(recordId);
 }
 
@@ -6088,13 +6984,19 @@ function transitionCardToReviewed(recordId, newReviewStatus, responseData) {
         item.reviewed_at = new Date().toISOString();
     }
 
-    // Re-render the card in-place
-    const card = document.querySelector(`.ai-review-card[data-id="${recordId}"]`);
-    if (card) {
-        const tmpDiv = document.createElement('div');
-        tmpDiv.innerHTML = renderReviewedCard(item || { id: recordId, review_status: newReviewStatus }, newReviewStatus);
-        const newCard = tmpDiv.firstElementChild;
-        card.replaceWith(newCard);
+    // DL-334: Desktop path — clear re-review flag and refresh via cockpit.
+    // (Desktop-or-mobile-targetable: desktop swaps thin row + panel; mobile swaps fat card.)
+    if (!isAIReviewMobileLayout() && item) {
+        _aiReReviewing.delete(recordId);
+        refreshItemDom(item);
+    } else {
+        const card = document.querySelector(`.ai-review-card[data-id="${recordId}"]`);
+        if (card) {
+            const tmpDiv = document.createElement('div');
+            tmpDiv.innerHTML = renderReviewedCard(item || { id: recordId, review_status: newReviewStatus }, newReviewStatus);
+            const newCard = tmpDiv.firstElementChild;
+            card.replaceWith(newCard);
+        }
     }
 
     recalcAIStats();
@@ -6257,12 +7159,18 @@ function openAddQuestionDialog(itemId) {
                 await executeReject(itemId, 'has_question', '');
             } else {
                 // Already reviewed — just re-render the card with updated badge
-                const card = document.querySelector(`.ai-review-card[data-id="${itemId}"]`);
-                if (card) {
-                    const isReviewed = item.review_status && item.review_status !== 'pending';
-                    const tmpDiv = document.createElement('div');
-                    tmpDiv.innerHTML = isReviewed ? renderReviewedCard(item, item.review_status) : renderAICard(item);
-                    card.replaceWith(tmpDiv.firstElementChild);
+                // DL-334: Desktop-or-mobile-targetable — refresh both fat-card (mobile)
+                // and thin row + panel (desktop).
+                if (!isAIReviewMobileLayout()) {
+                    refreshItemDom(item);
+                } else {
+                    const card = document.querySelector(`.ai-review-card[data-id="${itemId}"]`);
+                    if (card) {
+                        const isReviewed = item.review_status && item.review_status !== 'pending';
+                        const tmpDiv = document.createElement('div');
+                        tmpDiv.innerHTML = isReviewed ? renderReviewedCard(item, item.review_status) : renderAICard(item);
+                        card.replaceWith(tmpDiv.firstElementChild);
+                    }
                 }
                 showAIToast(text ? 'השאלה נשמרה' : 'השאלה נמחקה');
                 close();
@@ -6460,14 +7368,20 @@ function openBatchQuestionsModal(clientName) {
                 return;
             }
             // Apply locally + re-render affected cards
+            // DL-334: Desktop-or-mobile-targetable — refresh both fat-card (mobile)
+            // and thin row + panel (desktop).
             for (const { op } of results) {
                 op.item.pending_question = op.text || '';
-                const card = document.querySelector(`.ai-review-card[data-id="${op.item.id}"]`);
-                if (card) {
-                    const isReviewed = op.item.review_status && op.item.review_status !== 'pending';
-                    const tmpDiv = document.createElement('div');
-                    tmpDiv.innerHTML = isReviewed ? renderReviewedCard(op.item, op.item.review_status) : renderAICard(op.item);
-                    card.replaceWith(tmpDiv.firstElementChild);
+                if (!isAIReviewMobileLayout()) {
+                    refreshItemDom(op.item);
+                } else {
+                    const card = document.querySelector(`.ai-review-card[data-id="${op.item.id}"]`);
+                    if (card) {
+                        const isReviewed = op.item.review_status && op.item.review_status !== 'pending';
+                        const tmpDiv = document.createElement('div');
+                        tmpDiv.innerHTML = isReviewed ? renderReviewedCard(op.item, op.item.review_status) : renderAICard(op.item);
+                        card.replaceWith(tmpDiv.firstElementChild);
+                    }
                 }
             }
             close();
@@ -6639,6 +7553,23 @@ async function dismissClientReview(clientName, { keepOnHold = false } = {}) {
 
 function animateAndRemoveAI(recordId) {
     aiClassificationsData = aiClassificationsData.filter(item => item.id !== recordId);
+
+    // DL-334: Desktop-or-mobile-targetable — remove thin row on desktop, fat card on mobile.
+    if (!isAIReviewMobileLayout()) {
+        const row = document.querySelector(`.ai-doc-row[data-id="${CSS.escape(String(recordId))}"]`);
+        if (row) row.remove();
+        if (window.activePreviewItemId && String(window.activePreviewItemId) === String(recordId)) {
+            window.activePreviewItemId = null;
+            try { renderActionsPanel(null); } catch (e) {}
+        }
+        if (aiClassificationsData.length === 0) {
+            const cp = document.getElementById('aiClientsPane'); if (cp) cp.style.display = 'none';
+            const dp = document.getElementById('aiDocsPane'); if (dp) dp.style.display = 'none';
+            const es = document.getElementById('aiEmptyState'); if (es) es.style.display = 'block';
+        }
+        recalcAIStats();
+        return;
+    }
 
     const card = document.querySelector(`.ai-review-card[data-id="${recordId}"]`);
     if (card) {
@@ -11045,6 +11976,12 @@ function isValidEmail(email) {
 // ==================== INLINE CONFIRM (AI Review cards) ====================
 
 function showInlineConfirm(recordId, message, onConfirm, opts = {}) {
+    // DL-334: On desktop there is no fat-card — the panel buttons themselves are the
+    // affordance, so treat them as the confirm and invoke onConfirm immediately.
+    if (!isAIReviewMobileLayout()) {
+        try { onConfirm && onConfirm(); } catch (e) { console.error(e); }
+        return;
+    }
     const card = document.querySelector(`.ai-review-card[data-id="${recordId}"]`);
     if (!card) return;
     const actionsDiv = card.querySelector('.ai-card-actions');
@@ -11089,6 +12026,8 @@ function showInlineConfirm(recordId, message, onConfirm, opts = {}) {
 }
 
 function cancelInlineConfirm(recordId) {
+    // DL-334: Desktop has no inline-confirm overlay to restore (see showInlineConfirm).
+    if (!isAIReviewMobileLayout()) return;
     const card = document.querySelector(`.ai-review-card[data-id="${recordId}"]`);
     if (!card) return;
     const actionsDiv = card.querySelector('.ai-card-actions');
