@@ -4018,6 +4018,10 @@ function buildClientAccordionHtml(clientName, clientItems, open) {
     if (clientNotesRaw) {
         let cnArr = [];
         try { cnArr = JSON.parse(clientNotesRaw.replace(/[\n\r\t]/g, m => m === '\n' ? '\\n' : m === '\r' ? '\\r' : '\\t')); if (!Array.isArray(cnArr)) cnArr = []; } catch(e) {}
+        const replyMap = {};
+        for (const n of cnArr) {
+            if (n.type === 'office_reply' && n.reply_to) replyMap[n.reply_to] = n;
+        }
         cnArr = cnArr.filter(n => n.type !== 'office_reply');
         if (cnArr.length > 0) {
             const sorted = [...cnArr].sort((a, b) => (b.date || '').localeCompare(a.date || ''));
@@ -4033,11 +4037,19 @@ function buildClientAccordionHtml(clientName, clientItems, open) {
                 const replyBtn = nId
                     ? `<button class="ai-cn-action-btn" title="הגב" onclick="event.stopPropagation();showReplyInput('${nId}','${escapeAttr(cnReportId)}',this.closest('.ai-cn-entry'))">${icon('message-square', 'icon-xs')}</button>`
                     : '';
+                const reply = nId ? replyMap[nId] : null;
+                const replyHtml = reply
+                    ? `<div class="cn-office-reply">
+                        <div class="cn-reply-label">${icon('corner-down-left', 'icon-xs')} תגובת המשרד</div>
+                        <div class="cn-reply-text">${escapeHtml(reply.summary)}</div>
+                        <div class="cn-reply-date">${(reply.date || '').slice(0, 10).replace(/^(\d{4})-(\d{2})-(\d{2})/, '$3-$2-$1')}</div>
+                    </div>` : '';
                 return `<div class="ai-cn-entry" data-note-id="${nId}" data-report-id="${escapeAttr(cnReportId)}" data-client-name="${escapeAttr(clientName)}" data-year="${escapeAttr(cnYear)}">
                     ${icon(iconName, 'icon-sm ${iconClass}')}
                     <span class="ai-cn-date">${escapeHtml(dateStr)}</span>
                     <span class="ai-cn-summary">${escapeHtml(n.raw_snippet || n.summary || '')}</span>
                     ${replyBtn}
+                    ${replyHtml}
                 </div>`;
             };
             const previewHtml = sorted.slice(0, 5).map(renderEntry).join('');
