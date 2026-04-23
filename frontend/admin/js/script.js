@@ -4022,7 +4022,7 @@ function buildClientAccordionHtml(clientName, clientItems, open) {
         for (const n of cnArr) {
             if (n.type === 'office_reply' && n.reply_to) replyMap[n.reply_to] = n;
         }
-        cnArr = cnArr.filter(n => n.type !== 'office_reply');
+        cnArr = cnArr.filter(n => n.type !== 'office_reply' && n.type !== 'batch_questions_sent');
         if (cnArr.length > 0) {
             const sorted = [...cnArr].sort((a, b) => (b.date || '').localeCompare(a.date || ''));
             const cnReportId = clientItems[0]?.report_record_id || '';
