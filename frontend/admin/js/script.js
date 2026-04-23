@@ -13,7 +13,6 @@ function perfEnd(name, start) {
     if (!window.__ADMIN_PERF__ || !start) return;
     const dur = performance.now() - start;
     try { performance.measure('dl311:' + name, { start, end: performance.now() }); } catch (_) {}
-    if (dur > 50) console.log(`[DL311 PERF] ${name} ${dur.toFixed(1)}ms`);
 }
 
 // DL-314: safeCreateIcons is now a no-op — sprite <use> references render natively,
