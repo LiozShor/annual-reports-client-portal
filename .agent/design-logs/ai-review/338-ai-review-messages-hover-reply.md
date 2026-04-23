@@ -1,5 +1,5 @@
 # Design Log 338: AI Review Client Messages — Hover-Reveal Reply + 2-Line Clamp
-**Status:** [IMPLEMENTED — NEED TESTING]
+**Status:** [COMPLETED 2026-04-23]
 **Date:** 2026-04-23
 **Related Logs:** DL-199 (client communication notes), DL-261 (recent messages panel), DL-263 (delete + raw text), DL-266 (reply infrastructure), DL-337 (raw text instead of summary)
 

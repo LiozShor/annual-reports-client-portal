@@ -85,6 +85,7 @@ Branch `DL-337-ai-summary-fix`. The AI Review tab's per-client notes timeline (`
 - [ ] Hard reload admin, confirm `?v=306` is served (no stale `v=305`).
 
 Design log: `.agent/design-logs/ai-review/337-raw-text-instead-of-ai-summary.md`
+**Last Updated:** 2026-04-23 (DL-338 COMPLETED — AI Review messages reply UI)
 
 ---
 
@@ -136,6 +137,8 @@ Design log: `.agent/design-logs/ai-review/335-ai-review-on-hold-docs.md`
 
 | DL | Feature | Status |
 |----|---------|--------|
+| DL-338 | AI Review messages — hover reply + reply display | COMPLETED 2026-04-23 |
+| DL-337 | AI Review show raw client email instead of AI summary | COMPLETED 2026-04-23 |
 | DL-335 | On-hold state for docs awaiting client reply | COMPLETED 2026-04-23 |
 | DL-333 | Batch-questions off-hours queue | COMPLETED 2026-04-23 |
 | DL-332 | AI Review pane 1 density redesign | COMPLETED 2026-04-23 |
