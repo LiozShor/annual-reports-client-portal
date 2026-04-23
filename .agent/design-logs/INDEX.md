@@ -2,12 +2,12 @@
 
 Active and pending logs. For completed history, see [ARCHIVE-INDEX.md](ARCHIVE-INDEX.md).
 
-**Total logs:** 214 | **Active:** 116 | **Archived:** 98
+**Total logs:** 215 | **Active:** 117 | **Archived:** 98
 
 ## Folder Structure
 
 - `admin-ui/` — Admin UI (32)
-- `ai-review/` — AI Review & Classification (33)
+- `ai-review/` — AI Review & Classification (34)
 - `capital-statements/` — Capital Statements (4)
 - `client-portal/` — Client Portal & Questionnaires (13)
 - `documents/` — Documents & OneDrive (20)
@@ -21,6 +21,7 @@ Active and pending logs. For completed history, see [ARCHIVE-INDEX.md](ARCHIVE-I
 
 | # | File | Status | Summary |
 |---|------|--------|---------|
+| 334 | [334-cockpit-middle-and-actions.md](ai-review/334-cockpit-middle-and-actions.md) | DRAFT | AI Review cockpit phase 1 (v2 plan) — pane 2 thin rows (28-30px, state-stripe including on_hold amber) + pane 3 vertical split (preview top / state-aware actions panel bottom). Filename renders ONCE in panel header, never in row. Flat-minimal (0.5px borders, sentence case, 400/500 weights, no new tokens). Full on_hold integration: row category `⏳ ממתין ללקוח`, panel lozenge, body shows question + AI guess, single `סיים את ההמתנה` button → `startReReview`. Coordinates with DL-335 (no changes to `dismissAndSendQuestions` / `dismissClientReview` / `renderReviewedCard`; DL-334 only consumes their output). Bundles DL-053 silent-refresh merge-by-id. Mobile <768px untouched via `isAIReviewMobileLayout` guards. Supersedes the reverted v1 attempt (commit `1ef907f`, reverted via `f643a79`). Status DRAFT — awaiting implementation approval |
 | 333 | [333-batch-questions-off-hours-queue.md](email/333-batch-questions-off-hours-queue.md) | IMPLEMENTED — NEED TESTING | DL-328 "שאל את הלקוח" batch-questions email now defers to next 08:00 Israel when sent off-hours (20:00-08:00). Mirrors DL-264/273 PidTagDeferredSendTime pattern; `client_notes` `batch_questions_sent` entry stamped with `graph_message_id` + `queued:true` so DL-281 queue modal surfaces it as a third row type (`שאלות לאחר סקירה`). Toast swaps to info-tone "השאלות נשלחו לבוקר — יישלחו ב־08:00" when queued. Preview path unchanged. `QueuedRow` type extended to `'doc_request' \| 'reply' \| 'batch_questions'`. script.js v=297→v=298. Zero schema change |
 | 336 | [336-template-picker-ui.md](ai-review/336-template-picker-ui.md) | COMPLETED | Template picker UI in also-match + reassign modals: replaces `createDocCombobox` free-text path with search + categorized template list + variable wizard + chip feedback. New `_buildDocTemplatePicker(container, item, opts)` reuses `ensurePaTemplatesLoaded` + `pa-add-doc-*` CSS. `createDocCombobox` gets backwards-compatible `onExpand` hook. script.js v=302→303, style.css v=295→296 |
 | 335 | [335-ai-review-on-hold-docs.md](ai-review/335-ai-review-on-hold-docs.md) | IMPLEMENTED — NEED TESTING | Hold state for AI Review docs awaiting client reply: `review_status='on_hold'` keeps rows in queue after questions sent; amber "ממתין ללקוח" card + "סיים המתנה" resolve button; `client_notes` entry extended with `id`/`summary`/`source` to render in per-client timeline (הודעות הלקוח) as outbound card. `dismissClientReview` keepOnHold filter. script.js v=298→299 |
