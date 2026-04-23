@@ -4031,7 +4031,7 @@ function buildClientAccordionHtml(clientName, clientItems, open) {
                 return `<div class="ai-cn-entry">
                     ${icon(iconName, 'icon-sm ${iconClass}')}
                     <span class="ai-cn-date">${escapeHtml(dateStr)}</span>
-                    <span class="ai-cn-summary">${escapeHtml(n.summary)}</span>
+                    <span class="ai-cn-summary">${escapeHtml(n.raw_snippet || n.summary || '')}</span>
                 </div>`;
             };
             const previewHtml = sorted.slice(0, 5).map(renderEntry).join('');
