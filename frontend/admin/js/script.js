@@ -4849,9 +4849,10 @@ function renderOnHoldCard(item) {
 
     const displayName = appendContractPeriod(item.matched_short_name || item.matched_template_name || 'לא ידוע', item);
 
+    const sentDateStr = item.reviewed_at ? ` בתאריך ${formatAIDate(item.reviewed_at)}` : '';
     const heldQuestionHtml = item.pending_question
         ? `<div class="ai-held-question">
-            <div class="ai-held-question-label">${icon('message-circle', 'icon-xs')} שאלה שנשלחה ללקוח:</div>
+            <div class="ai-held-question-label">${icon('message-circle', 'icon-xs')} שאלה שנשלחה ללקוח${sentDateStr}:</div>
             ${escapeHtml(item.pending_question)}
           </div>`
         : '';
@@ -6243,9 +6244,11 @@ async function dismissAndSendQuestions(clientName) {
         _batchQuestionsSentClients.add(clientName);
         // DL-335: flip held items to on_hold in local data so they re-render immediately
         const heldCount = data.held_count || 0;
+        const sentAt = new Date().toISOString();
         aiClassificationsData.forEach(i => {
             if (i.client_name === clientName && i.pending_question) {
                 i.review_status = 'on_hold';
+                i.reviewed_at = sentAt;
             }
         });
         if (data.queued) {
