@@ -39,11 +39,14 @@
     --warning-50:  #FFFBEB;
     --warning-100: #FEF3C7;
     --warning-500: #F59E0B;
+    --warning-600: #b45309;
     --warning-700: #92400E;
+    --warning-800: #78350f;
 
     /* Semantic — Danger */
     --danger-50:  #FEF2F2;
     --danger-100: #FEE2E2;
+    --danger-300: #fca5a5;
     --danger-500: #EF4444;
     --danger-700: #B91C1C;
 

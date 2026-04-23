@@ -1,6 +1,6 @@
 # Design Log 334: AI Review Cockpit — Middle Column Thin Rows + Right-Side Actions Panel (v2)
 
-**Status:** [DRAFT]
+**Status:** [IMPLEMENTED — NEED TESTING]
 **Date:** 2026-04-23
 **Related Logs:** DL-053 (silent-refresh merge-by-id), DL-075 (original split-view), DL-086 (reviewed state transitions), DL-199 (client notes timeline), DL-237 (PDF split), DL-269/270/271 (contract period), DL-278 (scroll-into-view), DL-306 (deep-link), DL-314 (multi-template match), DL-320 (also-match UX), DL-330 (3-pane rework), DL-332 (pane 1 density), DL-335 (batch-questions dismissal adds `on_hold` review_status — in flight, ships first)
 
@@ -545,4 +545,16 @@ All workstreams serialize on `frontend/admin/js/script.js` (shared tooling state
 - **Cache-bust conflict.** DL-335 post-deploy additions landed at `script.js?v=314` / `style.css?v=300`; DL-334's final bump must exceed those values.
 
 ## 12. Implementation Notes (Post-Code)
-*(To be filled during/after implementation.)*
+
+Landed 2026-04-23 via `/subagent-driven-development` (serial C → A → B → D).
+
+- **Design tokens (C):** 3 tokens added to `frontend/assets/css/design-system.css` — `--warning-600`, `--warning-800`, `--danger-300`. No other token churn.
+- **CSS scaffold (C):** 55+ new classes in `frontend/admin/css/style.css` under the DL-334 section — pane 3 DOM split (`.ai-preview-frame` + `.ai-actions-panel#aiActionsPanel`), thin-row rows, state stripes, section headers, panel shell, lozenges, body blocks, primary/secondary actions, transient sub-panels, overflow menu, empty state. Mobile media query hides the new cockpit DOM; <768px path untouched.
+- **Workstream A:** 8 new helpers in `script.js` (`truncateMiddle`, `getRowStripeClass` — `on_hold` first-class amber, `getRowCategoryText` — "⏳ ממתין ללקוח" swap, `renderDocRow`, `buildClientThinStrip`, `toggleSection`, `buildDesktopClientDocsHtml`, `selectDocument`). `selectClient` + `renderAICards` desktop paths now delegate to the new builder; mobile paths unchanged.
+- **Workstream B:** 13 new functions total — `renderActionsPanel` (single entry point) + 7 branch renderers (header, full/fuzzy, issuer-mismatch, unmatched, on_hold, reviewed, additive) + transient reject-notes and loading sub-panels (cover primary actions area only) + overflow `⋮` menu wiring. Introduced `_aiReReviewing` Set for transient re-review mode. `getCardState` gained explicit `on_hold` branch. Audited all 14 `.ai-review-card[data-id]` callers: desktop paths branch via `findItemActionsEl` / `refreshItemDom` with `isAIReviewMobileLayout` guard.
+- **Workstream D:**
+  - **DL-053 silent-refresh merge-by-id:** `loadAIClassifications` silent path now builds a `Map(prev)` keyed by id, `Object.assign`s new field values into existing item refs, drops removed ids, pushes new ones. When `silent && no add/remove`, renders via per-row `refreshItemDom` only (no full re-render); also re-syncs `window.activePreviewItemId` → `.ai-doc-row.active` + `renderActionsPanel(activeItem)`. When the active item disappears mid-poll, clears id + panel to empty state.
+  - **Dual-clear:** `resetPreviewPanel` extended to also strip `.ai-doc-row.active` and call `renderActionsPanel(null)` so stale active rows/panel don't survive a dismiss.
+- **14 `.ai-review-card[data-id]` callers audited** (Workstream B); each is either mobile-only or branch-guarded via `isAIReviewMobileLayout`.
+- **Cache-bust:** `design-system.css` versionless (shared), `style.css?v=301` (Workstream C bump, no further CSS changes in A/B/D), `script.js?v=316` (final bump to force hard-reload after A+B+D JS landed).
+- **Known follow-up:** Workstream B inlined some token-specific styles in JS where Workstream C's class contract was scaffold-only; a later pass can fold those back into CSS for consistency. Non-blocking.
