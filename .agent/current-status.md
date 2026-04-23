@@ -1,6 +1,30 @@
 # Annual Reports CRM - Current Status
 
-**Last Updated:** 2026-04-23 (DL-336 template picker UI in also-match + reassign modals — COMPLETED)
+**Last Updated:** 2026-04-23 (DL-337 AI Review tab shows raw client email text — IMPLEMENTED — NEED TESTING)
+
+## DL-337 AI Review Tab — Show Raw Client Email Instead of AI Summary — IMPLEMENTED — NEED TESTING
+
+Branch `DL-337-ai-summary-fix`. The AI Review tab's per-client notes timeline (`הודעות הלקוח`) was the last admin surface still rendering the AI-generated Hebrew summary. Dashboard Recent Messages + Pending-Approval modal already prefer `raw_snippet || summary`. This change brings AI Review in line. Doc-Manager is explicitly exempt — still shows the "סיכום AI:" labeled summary for office deep-dive.
+
+- **Frontend:** `frontend/admin/js/script.js:4034` — swapped `${escapeHtml(n.summary)}` for `${escapeHtml(n.raw_snippet || n.summary || '')}`. Matches the fallback pattern used at `:1083` (Dashboard) and `:7521` (PA modal).
+- **Backend / summarizer:** unchanged. `api/src/lib/inbound/processor.ts:414` already persists `raw_snippet` (≤1000 chars of cleaned email body). Summarizer still runs for doc-manager + digest consumers.
+- **Schema:** no change. Single `Reports.client_notes` JSON field holds both `summary` and `raw_snippet`.
+- **Cache-bust:** `script.js?v=305→306`.
+- **Trigger:** real inbound email 2026-04-23 10:24 — AI one-sentence summary dropped the client's action request + business-state context and garbled a password binding. Raw text is short and unambiguous — show it.
+
+### Active TODOs — Test DL-337: Raw Client Text in AI Review
+- [ ] AI Review tab for the trigger email shows the full raw client message — not the AI summary.
+- [ ] Side-by-side: Dashboard Recent Messages + PA modal Notes + AI Review tab show identical raw text for the same note.
+- [ ] Doc-Manager for the same client — still shows AI summary with "סיכום AI:" label (exempt surface untouched).
+- [ ] Legacy note (saved before DL-199 raw_snippet was stored) — falls back to `summary` and still renders.
+- [ ] Long / multi-paragraph raw_snippet renders without breaking `.ai-cn-entry` layout. If it does → add `white-space: pre-wrap` + max-height on `.ai-cn-summary` in `style.css`.
+- [ ] Expand-all toggle (`toggleClientNotes`) + "Open in Doc Manager" button still work.
+- [ ] Manual office notes (no `raw_snippet`) still render via `summary` fallback.
+- [ ] Hard reload admin, confirm `?v=306` is served (no stale `v=305`).
+
+Design log: `.agent/design-logs/ai-review/337-raw-text-instead-of-ai-summary.md`
+
+---
 
 ## DL-336 Template Picker UI — Also-Match & Reassign Modals — COMPLETED
 

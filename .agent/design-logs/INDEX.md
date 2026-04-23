@@ -7,7 +7,7 @@ Active and pending logs. For completed history, see [ARCHIVE-INDEX.md](ARCHIVE-I
 ## Folder Structure
 
 - `admin-ui/` — Admin UI (32)
-- `ai-review/` — AI Review & Classification (33)
+- `ai-review/` — AI Review & Classification (34)
 - `capital-statements/` — Capital Statements (4)
 - `client-portal/` — Client Portal & Questionnaires (13)
 - `documents/` — Documents & OneDrive (20)
@@ -21,6 +21,7 @@ Active and pending logs. For completed history, see [ARCHIVE-INDEX.md](ARCHIVE-I
 
 | # | File | Status | Summary |
 |---|------|--------|---------|
+| 337 | [337-raw-text-instead-of-ai-summary.md](ai-review/337-raw-text-instead-of-ai-summary.md) | IMPLEMENTED — NEED TESTING | AI Review tab client-notes timeline now shows raw client email text (`raw_snippet`) instead of AI summary; falls back to `summary` for legacy notes / manual notes. Matches Dashboard Recent Messages + Pending-Approval modal fallback pattern (`script.js:1083`, `:7521`). Doc-Manager exempt — still shows "סיכום AI:" labeled summary. Backend + summarizer unchanged. script.js v=305→306 |
 | 333 | [333-batch-questions-off-hours-queue.md](email/333-batch-questions-off-hours-queue.md) | IMPLEMENTED — NEED TESTING | DL-328 "שאל את הלקוח" batch-questions email now defers to next 08:00 Israel when sent off-hours (20:00-08:00). Mirrors DL-264/273 PidTagDeferredSendTime pattern; `client_notes` `batch_questions_sent` entry stamped with `graph_message_id` + `queued:true` so DL-281 queue modal surfaces it as a third row type (`שאלות לאחר סקירה`). Toast swaps to info-tone "השאלות נשלחו לבוקר — יישלחו ב־08:00" when queued. Preview path unchanged. `QueuedRow` type extended to `'doc_request' \| 'reply' \| 'batch_questions'`. script.js v=297→v=298. Zero schema change |
 | 336 | [336-template-picker-ui.md](ai-review/336-template-picker-ui.md) | COMPLETED | Template picker UI in also-match + reassign modals: replaces `createDocCombobox` free-text path with search + categorized template list + variable wizard + chip feedback. New `_buildDocTemplatePicker(container, item, opts)` reuses `ensurePaTemplatesLoaded` + `pa-add-doc-*` CSS. `createDocCombobox` gets backwards-compatible `onExpand` hook. script.js v=302→303, style.css v=295→296 |
 | 335 | [335-ai-review-on-hold-docs.md](ai-review/335-ai-review-on-hold-docs.md) | IMPLEMENTED — NEED TESTING | Hold state for AI Review docs awaiting client reply: `review_status='on_hold'` keeps rows in queue after questions sent; amber "ממתין ללקוח" card + "סיים המתנה" resolve button; `client_notes` entry extended with `id`/`summary`/`source` to render in per-client timeline (הודעות הלקוח) as outbound card. `dismissClientReview` keepOnHold filter. script.js v=298→299 |
