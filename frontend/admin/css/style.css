@@ -5399,6 +5399,27 @@ tr.reminder-loading td:last-child {
     align-items: center;
     gap: var(--sp-1);
 }
+.ai-held-reply {
+    margin-top: var(--sp-2);
+    padding: var(--sp-2) var(--sp-3);
+    background: var(--info-50, #eff6ff);
+    border: 1px solid var(--info-200, #bfdbfe);
+    border-radius: var(--radius-sm);
+    font-size: var(--text-sm);
+    color: var(--gray-700);
+}
+.ai-held-reply-label {
+    font-weight: 600;
+    font-size: var(--text-xs);
+    color: var(--info-700, #1d4ed8);
+    margin-bottom: var(--sp-1);
+    display: flex;
+    align-items: center;
+    gap: var(--sp-1);
+}
+.ai-held-reply-text {
+    white-space: pre-wrap;
+}
 
 /* Rejection details under lozenge */
 .ai-reviewed-rejection-info {

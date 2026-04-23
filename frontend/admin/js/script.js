@@ -4045,7 +4045,7 @@ function buildClientAccordionHtml(clientName, clientItems, open) {
                         <div class="cn-reply-date">${(reply.date || '').slice(0, 10).replace(/^(\d{4})-(\d{2})-(\d{2})/, '$3-$2-$1')}</div>
                     </div>` : '';
                 return `<div class="ai-cn-entry" data-note-id="${nId}" data-report-id="${escapeAttr(cnReportId)}" data-client-name="${escapeAttr(clientName)}" data-year="${escapeAttr(cnYear)}">
-                    ${icon(iconName, 'icon-sm ${iconClass}')}
+                    ${icon(iconName, `icon-sm ${iconClass}`)}
                     <span class="ai-cn-date">${escapeHtml(dateStr)}</span>
                     <span class="ai-cn-summary">${escapeHtml(n.raw_snippet || n.summary || '')}</span>
                     ${replyBtn}
@@ -4866,12 +4866,41 @@ function renderOnHoldCard(item) {
 
     const displayName = appendContractPeriod(item.matched_short_name || item.matched_template_name || 'לא ידוע', item);
 
-    const sentDateStr = item.reviewed_at ? ` בתאריך ${formatAIDate(item.reviewed_at)}` : '';
+    // Resolve question-sent date: prefer reviewed_at, fallback to batch_questions_sent entry in client_notes
+    let questionSentDate = item.reviewed_at || null;
+    let clientReplyHtml = '';
+    if (item.client_notes) {
+        let cnArr = [];
+        try {
+            cnArr = JSON.parse(item.client_notes.replace(/[\n\r\t]/g, m => m === '\n' ? '\\n' : m === '\r' ? '\\r' : '\\t'));
+            if (!Array.isArray(cnArr)) cnArr = [];
+        } catch(e) {}
+        const bqEntry = cnArr.find(n => n.type === 'batch_questions_sent' &&
+            Array.isArray(n.items) && n.items.some(i => i.attachment_name === item.attachment_name));
+        if (bqEntry?.date && !questionSentDate) questionSentDate = bqEntry.date;
+        // Most recent inbound reply after the question was sent
+        const replies = cnArr.filter(n =>
+            n.source === 'email' &&
+            n.type !== 'batch_questions_sent' &&
+            n.type !== 'office_reply' &&
+            (!questionSentDate || (n.date || '') > questionSentDate)
+        ).sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+        if (replies.length > 0) {
+            const r = replies[0];
+            const rDate = r.date ? ` (${formatAIDate(r.date)})` : '';
+            clientReplyHtml = `<div class="ai-held-reply">
+                <div class="ai-held-reply-label">${icon('mail', 'icon-xs')} תגובת הלקוח${rDate}:</div>
+                <div class="ai-held-reply-text">${escapeHtml(r.raw_snippet || r.summary || '')}</div>
+            </div>`;
+        }
+    }
+
+    const sentDateStr = questionSentDate ? ` בתאריך ${formatAIDate(questionSentDate)}` : '';
     const heldQuestionHtml = item.pending_question
         ? `<div class="ai-held-question">
             <div class="ai-held-question-label">${icon('message-circle', 'icon-xs')} שאלה שנשלחה ללקוח${sentDateStr}:</div>
             ${escapeHtml(item.pending_question)}
-          </div>`
+          </div>${clientReplyHtml}`
         : '';
 
     return `
