@@ -1,6 +1,6 @@
 # Annual Reports CRM - Current Status
 
-**Last Updated:** 2026-04-23 (DL-335 on-hold state for docs awaiting client reply — COMPLETED, live verified)
+**Last Updated:** 2026-04-23 (bulk live verification — DL-335, 332, 330, 320, 319, 317, 314-SVG all passed)
 
 ## DL-335 On-Hold State for Docs Awaiting Client Reply — COMPLETED
 
@@ -24,7 +24,7 @@ Design log: `.agent/design-logs/ai-review/335-ai-review-on-hold-docs.md`
 
 ---
 
-## DL-332 AI Review Pane 1 Density Redesign — IMPLEMENTED — NEED TESTING
+## DL-332 AI Review Pane 1 Density Redesign — COMPLETED
 
 Branch `DL-332-ai-review-pane1-density`. Standalone visual win (Phase 3 of the broader cockpit plan; Phases 1/2/4 will be logged separately). Rewrites `buildClientListRowHtml` (`script.js:4095`) + extends `.ai-client-row` CSS (`style.css:3537`) so pane 1 shows 12+ clients per 1080p viewport vs. ~6 today.
 
@@ -89,7 +89,7 @@ Design log: `.agent/design-logs/email/333-batch-questions-off-hours-queue.md`
 
 ---
 
-## DL-330 AI Review 3-Pane Rework — IMPLEMENTED — NEED TESTING
+## DL-330 AI Review 3-Pane Rework — COMPLETED
 
 Branch `DL-330-ai-review-scroll-ux` (rename pending to `DL-330-ai-review-3pane-rework`). AI Review tab restructured from 2-pane (sticky preview + one long scrollable accordion column) to 3-pane master-detail (clients / docs-of-selected-client / preview). Each pane owns its scroll via `overscroll-behavior: contain`. Widths 240/340/flex on ≥1200px; shrinks at 1200/900; mobile unchanged (existing modal + full-width accordion list).
 
@@ -208,7 +208,7 @@ Design log: `.agent/design-logs/ai-review/321-classifier-non-document-verdict.md
 
 ---
 
-## DL-320 "Also Matches" UX Rework + Robot Icon Removal — IMPLEMENTED, NEED TESTING
+## DL-320 "Also Matches" UX Rework + Robot Icon Removal — COMPLETED
 
 Branch: `DL-320-also-match-ux-rework`. Worker deploy required.
 
@@ -280,7 +280,7 @@ Design log: `.agent/design-logs/infrastructure/322-note-save-silent-failures.md`
 ---
 
 
-## DL-319 Approve-as-Required Button — IMPLEMENTED, NEED TESTING
+## DL-319 Approve-as-Required Button — COMPLETED
 
 Branch: `claude-session-20260421-091040`. Worker deploy required.
 
@@ -376,7 +376,7 @@ Design log: `.agent/design-logs/ai-review/314-multi-template-match.md`
 - DL-315 follow-up: per-target conflict resolution UI (v1 aborts whole batch on any conflict).
 **Last Updated:** 2026-04-21 (DL-317 fetch-only prefetch — IMPLEMENTED, NEED TESTING)
 
-## DL-317 Fetch-Only Prefetch for Heavy Tab Loaders — IMPLEMENTED, NEED TESTING (2026-04-21)
+## DL-317 Fetch-Only Prefetch for Heavy Tab Loaders — COMPLETED
 
 Branch: `DL-317-fetch-only-prefetch` · admin panel only · `script.js?v=273`
 
@@ -409,7 +409,7 @@ Design log: `.agent/design-logs/admin-ui/313-hover-tab-dropdowns.md`
 **Last Updated:** 2026-04-20 (DL-308 approve-send email preview — COMPLETED, live)
 **Last Updated:** 2026-04-21 (DL-314 SVG sprite icons — IMPLEMENTED, NEED TESTING)
 
-## DL-314 SVG Sprite Icons — IMPLEMENTED, NEED TESTING (2026-04-21)
+## DL-314 SVG Sprite Icons — COMPLETED
 
 Branch: `DL-314-svg-sprite-icons` · admin panel only · `script.js?v=271`
 
