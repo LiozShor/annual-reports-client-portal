@@ -1,6 +1,25 @@
 # Annual Reports CRM - Current Status
 
 **Last Updated:** 2026-04-23 (DL-336 template picker UI in also-match + reassign modals — COMPLETED)
+**Last Updated:** 2026-04-23 (DL-331 edit-documents batch 422 fix — IMPLEMENTED, deploy pending)
+
+## DL-331 edit-documents batch 422 fix — IMPLEMENTED — NEED TESTING
+
+Branch `DL-331-edit-documents-422-fix`. Pure sanitizer `api/src/lib/batch-sanitize.mjs` wired into `POST /webhook/edit-documents` before the 10-record Airtable PATCH loop. Drops entries with non-`recXXXXXXXXXXXXXX` id or all-undefined fields; logs via `logError({category: 'VALIDATION'})`. 7 `node --test` cases pass. Root cause of 2026-04-22 alert: Tally payload can produce `status_changes: [{id, new_status: undefined}]` → JSON.stringify strips undefined → Airtable rejects whole 10-record chunk with 422.
+
+**Files:** `api/src/lib/batch-sanitize.mjs` (new), `api/src/routes/edit-documents.ts` (wired sanitizer), `api/test/edit-documents-sanitize.test.mjs` (new), `api/package.json` (test script).
+
+### Active TODOs — Test DL-331: edit-documents 422 sanitizer
+- [ ] `cd api && npm test` — 7 cases pass.
+- [ ] `wrangler deploy` from `api/` — deploy succeeds.
+- [ ] Craft POST to `/webhook/edit-documents` with `extensions.status_changes: [{id: 'recXXXXXXXXXXXXXX', new_status: undefined}]` + one valid waive. Expect `200 ok:true`; waive lands; dropped entry logged.
+- [ ] Regression: admin doc-manager waive + add still works on a live client (Network tab PATCH 200).
+- [ ] `wrangler tail` 10 min after deploy — no new 422s from `/webhook/edit-documents`.
+- [ ] Follow-up DL: fix arg-order in `api/src/lib/error-logger.ts:40` (`new AirtableClient(PAT, BASE_ID)` → `(BASE_ID, PAT)`) — blocks VALIDATION logs from reaching `security_logs`.
+
+Design log: `.agent/design-logs/documents/331-edit-documents-batch-422-fix.md`
+
+---
 
 ## DL-336 Template Picker UI — Also-Match & Reassign Modals — COMPLETED
 
