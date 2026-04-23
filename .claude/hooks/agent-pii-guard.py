@@ -30,6 +30,10 @@ ALLOWLIST_PATTERNS = [
     re.compile(r'#\s*(CPA-\d+)'),            # markdown comment references are usually ok
     re.compile(r'\(הודעות הלקוח\)'),         # UI label in parentheses, not PII
     re.compile(r'ממתינים לתשובה'),           # UI label in design doc
+    re.compile(r'שייך'),                     # UI button label (DL-336 design log + tests)
+    re.compile(r'הוסף'),                     # UI button label (DL-336 design log + tests)
+    re.compile(r'חפש מסמך'),                 # UI search placeholder label
+    re.compile(r'או מסמך מותאם אישית'),      # UI divider label
 ]
 
 
