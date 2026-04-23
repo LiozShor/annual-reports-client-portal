@@ -1,6 +1,35 @@
 # Annual Reports CRM - Current Status
 
-**Last Updated:** 2026-04-23 (DL-335 on-hold state for docs awaiting client reply — IMPLEMENTED, needs testing)
+**Last Updated:** 2026-04-23 (DL-336 template picker UI in also-match + reassign modals — IMPLEMENTED, needs testing)
+
+## DL-336 Template Picker UI — Also-Match & Reassign Modals — IMPLEMENTED — NEED TESTING
+
+Branch `DL-336-template-picker-ui`. Replaces the `createDocCombobox` free-text path in both modals with a proper template picker: search → categorized list → variable wizard → chip feedback.
+
+- **New function:** `_buildDocTemplatePicker(container, item, opts)` in `script.js` — reuses `ensurePaTemplatesLoaded` + `pa-add-doc-*` CSS, uses container-relative selectors to avoid conflict with PA picker.
+- **Also-match modal:** "הוסף מסמך נוסף" section now calls `_buildDocTemplatePicker`; `overlay._pickerTarget` replaces `overlay.dataset.combobox*`; `confirmAIAlsoMatch` updated.
+- **Reassign modal:** `createDocCombobox` gets new backwards-compatible `onExpand` option; clicking "הוסף מסמך חדש" expands `#aiReassignExpandedPicker` div with full template picker; `closeAIReassignModal` clears it; `confirmAIReassign` checks `_aiReassignExpandedTarget` first.
+- **CSS:** `.ai-picker-chip`, `.ai-picker-chip-label`, `.ai-picker-chip-clear` added after `.ai-also-match-label` block.
+- **Cache-bust:** `script.js?v=302→303`, `style.css?v=295→296`.
+
+### Active TODOs — Test DL-336: Template Picker
+- [ ] Also-match modal opens → "הוסף מסמך נוסף" shows loading then search + categorized template list
+- [ ] Search filters list; empty categories auto-hide
+- [ ] Pick template (no variables) → chip appears immediately with ×
+- [ ] Pick T501 (has issuer_name) → variable input row appears → fill → confirm → chip shows resolved name
+- [ ] Custom free-text → type name → הוסף → chip appears
+- [ ] Chip × → resets to picker state (list reappears)
+- [ ] 2 checkboxes checked + 1 picker pick → שייך sends 3 targets
+- [ ] 0 checkboxes + picker pick → שייך enabled; sends 1 target
+- [ ] Reassign modal: own-docs combobox works as before (no regression)
+- [ ] Click "הוסף מסמך חדש" in reassign dropdown → expanded picker panel appears below
+- [ ] Pick template in expanded picker → שייך enabled; uses picker target
+- [ ] closeAIReassignModal clears the expanded picker
+- [ ] No regression on other createDocCombobox surfaces (unmatched card, etc.)
+
+Design log: `.agent/design-logs/ai-review/336-template-picker-ui.md`
+
+---
 
 ## DL-335 On-Hold State for Docs Awaiting Client Reply — IMPLEMENTED — NEED TESTING
 

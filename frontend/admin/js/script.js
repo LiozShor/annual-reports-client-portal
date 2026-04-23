@@ -3314,7 +3314,7 @@ function exportReviewToExcel() {
 
 // ==================== DOC SEARCH COMBOBOX ====================
 
-function createDocCombobox(container, docs, { currentMatchId = null, onSelect = null, allowCreate = false, otherDocs = null, ownFilingType = null, otherFilingType = null } = {}) {
+function createDocCombobox(container, docs, { currentMatchId = null, onSelect = null, allowCreate = false, onExpand = null, otherDocs = null, ownFilingType = null, otherFilingType = null } = {}) {
     // DL-239: Track active doc set for filing type toggle
     let activeDocs = docs;
 
@@ -3459,7 +3459,7 @@ function createDocCombobox(container, docs, { currentMatchId = null, onSelect = 
         if (createBtn) {
             createBtn.addEventListener('mousedown', (e) => {
                 e.preventDefault();
-                enterCreateMode();
+                if (onExpand) { close(); onExpand(); } else { enterCreateMode(); }
             });
         }
 
@@ -5494,6 +5494,7 @@ async function executeReject(recordId, rejectionReason, notes) {
 
 // DL-239: Track selected report for cross-filing-type reassign
 let aiReassignSelectedReportId = null;
+let _aiReassignExpandedTarget = null;
 
 function showAIReassignModal(recordId) {
     const item = aiClassificationsData.find(i => i.id === recordId);
@@ -5519,12 +5520,28 @@ function showAIReassignModal(recordId) {
     const comboContainer = document.getElementById('aiReassignComboboxContainer');
     const currentMatchId = item ? item.matched_template_id : null;
 
+    _aiReassignExpandedTarget = null;
     document.getElementById('aiReassignConfirmBtn').disabled = true;
     createDocCombobox(comboContainer, ownDocs, {
         currentMatchId,
         allowCreate: true,
         onSelect: (templateId) => {
+            _aiReassignExpandedTarget = null;
+            const expandedPicker = document.getElementById('aiReassignExpandedPicker');
+            if (expandedPicker) { expandedPicker.style.display = 'none'; expandedPicker.innerHTML = ''; }
             document.getElementById('aiReassignConfirmBtn').disabled = !templateId;
+        },
+        onExpand: () => {
+            _aiReassignExpandedTarget = null;
+            const picker = document.getElementById('aiReassignExpandedPicker');
+            if (!picker) return;
+            picker.style.display = '';
+            _buildDocTemplatePicker(picker, item, {
+                onPick: (target) => {
+                    _aiReassignExpandedTarget = target;
+                    document.getElementById('aiReassignConfirmBtn').disabled = !target;
+                },
+            });
         },
         // DL-239: Pass other filing type docs for in-dropdown toggle
         ...(hasBothTypes ? {
@@ -5540,20 +5557,33 @@ function showAIReassignModal(recordId) {
 
 function closeAIReassignModal() {
     document.getElementById('aiReassignModal').classList.remove('show');
+    const expandedPicker = document.getElementById('aiReassignExpandedPicker');
+    if (expandedPicker) { expandedPicker.style.display = 'none'; expandedPicker.innerHTML = ''; }
+    _aiReassignExpandedTarget = null;
     aiCurrentReassignId = null;
 }
 
 async function confirmAIReassign() {
+    if (!aiCurrentReassignId) return;
+    const recordId = aiCurrentReassignId;
+    const item = aiClassificationsData.find(i => i.id === recordId);
+
+    // DL-336: If user picked from the expanded template picker, use that
+    if (_aiReassignExpandedTarget) {
+        const t = _aiReassignExpandedTarget;
+        closeAIReassignModal();
+        await submitAIReassign(recordId, t.template_id, t.doc_record_id || '', null, t.new_doc_name || '', false, null);
+        return;
+    }
+
     const combobox = document.querySelector('#aiReassignComboboxContainer .doc-combobox');
     const templateId = combobox ? combobox.dataset.selectedValue : '';
     const docRecordId = combobox ? combobox.dataset.selectedDocId : '';
     const newDocName = combobox ? (combobox.dataset.newDocName || '') : '';
-    if (!templateId || !aiCurrentReassignId) return;
+    if (!templateId) return;
 
-    const recordId = aiCurrentReassignId;
     // DL-239: Capture selected report ID for cross-type reassign before closing
     const selectedReportId = aiReassignSelectedReportId;
-    const item = aiClassificationsData.find(i => i.id === recordId);
     const isCrossType = selectedReportId && item && selectedReportId !== item.report_record_id;
     closeAIReassignModal();
 
@@ -5633,6 +5663,160 @@ async function submitAIReassign(recordId, templateId, docRecordId, loadingText, 
 // One AI Review file → N doc records. Admin picks additional templates via a
 // checkbox modal. POSTs action='also_match' with additional_targets[].
 // Server shares one onedrive_item_id across all target records.
+
+// DL-336: Reusable template picker (search + categories + variable wizard + chip feedback).
+// Uses container-relative selectors to avoid conflicts with PA picker (which uses global IDs).
+function _buildDocTemplatePicker(container, item, opts) {
+    const onPick = opts && opts.onPick ? opts.onPick : () => {};
+
+    function renderPick(cached) {
+        const filingType = item.filing_type || 'annual_report';
+        const relevant = cached.apiTemplates.filter(t => !t.filing_type || t.filing_type === filingType);
+        const groups = {};
+        for (const tpl of relevant) {
+            const cid = tpl.category || 'other';
+            if (!groups[cid]) groups[cid] = [];
+            groups[cid].push(tpl);
+        }
+        let listHtml = '';
+        for (const cat of cached.apiCategories) {
+            const catTpls = groups[cat.id];
+            if (!catTpls || catTpls.length === 0) continue;
+            const items = catTpls.map(tpl => {
+                const display = _paFormatTemplateTitle(tpl, item, null);
+                return `<div class="pa-add-doc-option" data-template-id="${escapeAttr(tpl.template_id)}">${escapeHtml(display)}</div>`;
+            }).join('');
+            listHtml += `<div class="pa-add-doc-cat">${escapeHtml((cat.emoji || '') + ' ' + (cat.name_he || ''))}</div>${items}`;
+        }
+        if (!listHtml) listHtml = `<div class="pa-add-doc-empty">אין תבניות זמינות</div>`;
+
+        container.innerHTML = `
+            <input type="text" class="pa-add-doc-search" placeholder="🔍 חפש מסמך..." dir="rtl" autocomplete="off">
+            <div class="pa-add-doc-list" style="max-height:220px;overflow-y:auto;">${listHtml}</div>
+            <div class="pa-add-doc-divider">או מסמך מותאם אישית</div>
+            <div class="pa-add-doc-custom">
+                <input type="text" class="ai-tpl-custom-input" placeholder="שם המסמך..." dir="auto">
+                <button type="button" class="pa-add-doc-custom-btn">${icon('plus', 'icon-xs')} הוסף</button>
+            </div>`;
+        safeCreateIcons(container);
+
+        const searchEl = container.querySelector('.pa-add-doc-search');
+        const listEl = container.querySelector('.pa-add-doc-list');
+        searchEl.addEventListener('input', () => {
+            const q = searchEl.value.trim().toLowerCase();
+            listEl.querySelectorAll('.pa-add-doc-option').forEach(o => {
+                o.style.display = (!q || o.textContent.toLowerCase().includes(q)) ? '' : 'none';
+            });
+            listEl.querySelectorAll('.pa-add-doc-cat').forEach(c => {
+                let sib = c.nextElementSibling, hasVisible = false;
+                while (sib && !sib.classList.contains('pa-add-doc-cat')) {
+                    if (sib.classList.contains('pa-add-doc-option') && sib.style.display !== 'none') { hasVisible = true; break; }
+                    sib = sib.nextElementSibling;
+                }
+                c.style.display = hasVisible ? '' : 'none';
+            });
+        });
+
+        listEl.querySelectorAll('.pa-add-doc-option').forEach(opt => {
+            opt.addEventListener('click', () => pickTemplate(opt.dataset.templateId, cached));
+        });
+
+        const customInput = container.querySelector('.ai-tpl-custom-input');
+        const customBtn = container.querySelector('.pa-add-doc-custom-btn');
+        const submitCustom = () => {
+            const name = customInput.value.trim();
+            if (!name) { customInput.style.borderColor = 'var(--danger-500)'; customInput.focus(); return; }
+            customInput.style.borderColor = '';
+            showChip(name, { template_id: 'general_doc', new_doc_name: name });
+        };
+        customBtn.addEventListener('click', submitCustom);
+        customInput.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); submitCustom(); } });
+    }
+
+    function pickTemplate(templateId, cached) {
+        const tpl = cached.apiTemplates.find(t => t.template_id === templateId);
+        if (!tpl) return;
+        const autoVars = ['year', 'spouse_name'];
+        const userVars = (tpl.variables || []).filter(v => !autoVars.includes(v));
+        if (userVars.length > 0) {
+            renderVars(tpl, userVars, cached);
+        } else {
+            const display = _paFormatTemplateTitle(tpl, item, {});
+            showChip(display, { template_id: tpl.template_id });
+        }
+    }
+
+    function renderVars(tpl, userVars, cached) {
+        const initialTitle = _paFormatTemplateTitle(tpl, item, null);
+        const fields = userVars.map(v => {
+            const label = _PA_VAR_LABELS[v] || v;
+            return `<div class="pa-add-doc-var-row">
+                <label>${escapeHtml(label)}</label>
+                <input type="text" class="pa-add-doc-var-input" data-var="${escapeAttr(v)}" dir="rtl" placeholder="${escapeHtml(label)}">
+            </div>`;
+        }).join('');
+        container.innerHTML = `
+            <div class="pa-add-doc-step-title">${icon('file-text', 'icon-xs')} <span class="ai-tpl-step-title-text">${escapeHtml(initialTitle)}</span></div>
+            <div class="pa-add-doc-vars">${fields}</div>
+            <div class="pa-add-doc-actions">
+                <button type="button" class="btn btn-sm ai-tpl-back-btn">${icon('arrow-right', 'icon-xs')} חזור</button>
+                <button type="button" class="btn btn-sm btn-primary ai-tpl-confirm-btn">הבא ${icon('arrow-left', 'icon-xs')}</button>
+            </div>`;
+        safeCreateIcons(container);
+        const inputs = container.querySelectorAll('.pa-add-doc-var-input');
+        const titleText = container.querySelector('.ai-tpl-step-title-text');
+        const updateTitle = () => {
+            const collected = {};
+            inputs.forEach(inp => { collected[inp.dataset.var] = inp.value.trim(); });
+            if (titleText) titleText.textContent = _paFormatTemplateTitle(tpl, item, collected);
+        };
+        inputs.forEach((inp, i) => {
+            inp.addEventListener('input', updateTitle);
+            inp.addEventListener('keydown', e => {
+                if (e.key === 'Enter') { e.preventDefault(); if (i < inputs.length - 1) inputs[i + 1].focus(); else confirmVars(); }
+            });
+        });
+        if (inputs.length) setTimeout(() => inputs[0].focus(), 50);
+        container.querySelector('.ai-tpl-back-btn').addEventListener('click', () => renderPick(cached));
+        container.querySelector('.ai-tpl-confirm-btn').addEventListener('click', confirmVars);
+        function confirmVars() {
+            const collected = {};
+            let missing = null;
+            inputs.forEach(inp => {
+                const val = inp.value.trim();
+                if (!val && !missing) { missing = inp; }
+                else { inp.style.borderColor = ''; }
+                collected[inp.dataset.var] = val;
+            });
+            if (missing) { missing.style.borderColor = 'var(--danger-500)'; missing.focus(); return; }
+            const { nameHe } = _paResolveTemplateName(tpl, collected, item);
+            showChip(nameHe || _paFormatTemplateTitle(tpl, item, collected), { template_id: tpl.template_id, new_doc_name: nameHe });
+        }
+    }
+
+    function showChip(label, target) {
+        container.innerHTML = `
+            <div class="ai-picker-chip">
+                <span class="ai-picker-chip-label">${escapeHtml(label)}</span>
+                <button type="button" class="ai-picker-chip-clear" aria-label="הסר">×</button>
+            </div>`;
+        container.querySelector('.ai-picker-chip-clear').addEventListener('click', () => {
+            onPick(null);
+            ensurePaTemplatesLoaded(item.client_id, item.report_record_id, item.filing_type)
+                .then(cached => renderPick(cached))
+                .catch(() => {});
+        });
+        onPick(target);
+    }
+
+    container.innerHTML = `<div class="pa-add-doc-empty">טוען...</div>`;
+    ensurePaTemplatesLoaded(item.client_id, item.report_record_id, item.filing_type)
+        .then(cached => renderPick(cached))
+        .catch(err => {
+            console.error('DL-336: template fetch failed', err);
+            container.innerHTML = `<div class="pa-add-doc-empty" style="color:var(--danger-600);">שגיאה בטעינת תבניות</div>`;
+        });
+}
 
 function showAIAlsoMatchModal(recordId) {
     const item = aiClassificationsData.find(i => i.id === recordId);
@@ -5718,8 +5902,8 @@ function showAIAlsoMatchModal(recordId) {
 
     const updateConfirmBtn = () => {
         const anyChecked = overlay.querySelectorAll('.ai-also-match-checkbox:checked').length > 0;
-        const hasCombobox = !!(overlay.dataset.comboboxTemplateId);
-        confirmBtn.disabled = !(anyChecked || hasCombobox);
+        const hasPick = !!(overlay._pickerTarget);
+        confirmBtn.disabled = !(anyChecked || hasPick);
     };
 
     // Enable confirm when any checkbox row is checked
@@ -5736,24 +5920,12 @@ function showAIAlsoMatchModal(recordId) {
         });
     });
 
-    // Combobox for adding additional doc (templates + freestyle)
+    // Template picker for adding an additional doc (DL-336: search + categories + variable wizard + chip)
     const comboboxContainer = overlay.querySelector('#aiAlsoMatchComboboxContainer');
-    createDocCombobox(comboboxContainer, ownDocs, {
-        allowCreate: true,
-        otherDocs: otherDocs.length ? otherDocs : null,
-        ownFilingType: item.filing_type,
-        otherFilingType: otherFt,
-        onSelect: (templateId, docId) => {
-            if (templateId) {
-                overlay.dataset.comboboxTemplateId = templateId;
-                overlay.dataset.comboboxDocId = docId || '';
-                overlay.dataset.comboboxReportId = item.report_record_id || '';
-            } else {
-                delete overlay.dataset.comboboxTemplateId;
-                delete overlay.dataset.comboboxDocId;
-                delete overlay.dataset.comboboxReportId;
-            }
-            // For __NEW__ (freestyle), update new_doc_name live from input value
+    overlay._pickerTarget = null;
+    _buildDocTemplatePicker(comboboxContainer, item, {
+        onPick: (target) => {
+            overlay._pickerTarget = target;
             updateConfirmBtn();
         },
     });
@@ -5773,7 +5945,6 @@ async function confirmAIAlsoMatch(recordId) {
     const checked = Array.from(overlay.querySelectorAll('.ai-also-match-row')).filter(row =>
         row.querySelector('.ai-also-match-checkbox')?.checked
     );
-    if (checked.length === 0) return;
 
     const additional_targets = checked.map(row => {
         const t = {
@@ -5787,25 +5958,16 @@ async function confirmAIAlsoMatch(recordId) {
         return t;
     }).filter(t => t.template_id !== 'general_doc' || t.new_doc_name);
 
-    // Also pick up combobox selection
-    const comboboxTemplateId = overlay.dataset.comboboxTemplateId;
-    if (comboboxTemplateId) {
-        const comboboxTarget = {
-            template_id: comboboxTemplateId,
-            doc_record_id: overlay.dataset.comboboxDocId || undefined,
-            target_report_id: overlay.dataset.comboboxReportId || undefined,
-        };
-        if (comboboxTemplateId === '__NEW__') {
-            const newNameInput = overlay.querySelector('.doc-combobox-input');
-            const newName = newNameInput ? newNameInput.value.trim() : '';
-            if (newName) {
-                comboboxTarget.template_id = 'general_doc';
-                comboboxTarget.new_doc_name = newName;
-                additional_targets.push(comboboxTarget);
-            }
-        } else {
-            additional_targets.push(comboboxTarget);
-        }
+    // Also pick up template picker selection (DL-336)
+    const pickerTarget = overlay._pickerTarget;
+    if (pickerTarget) {
+        const item = aiClassificationsData.find(i => i.id === recordId);
+        additional_targets.push({
+            template_id: pickerTarget.template_id,
+            doc_record_id: pickerTarget.doc_record_id || undefined,
+            target_report_id: item?.report_record_id || undefined,
+            ...(pickerTarget.new_doc_name ? { new_doc_name: pickerTarget.new_doc_name } : {}),
+        });
     }
 
     if (additional_targets.length === 0) return;
