@@ -15,6 +15,7 @@ import { logError } from '../lib/error-logger';
 import { checkAutoAdvanceToReview } from '../lib/auto-advance';
 import { isLastReference } from '../lib/file-refcount';
 import { DRIVE_ID } from '../lib/classification-helpers';
+import { sanitizeBatchUpdates } from '../lib/batch-sanitize.mjs';
 import type { Env } from '../lib/types';
 
 const editDocuments = new Hono<{ Bindings: Env }>();
@@ -395,8 +396,21 @@ editDocuments.post('/edit-documents', async (c) => {
         ),
       }));
 
-      for (let i = 0; i < airtableUpdates.length; i += 10) {
-        await airtable.batchUpdate(TABLES.DOCUMENTS, airtableUpdates.slice(i, i + 10));
+      // DL-331: drop malformed records (bad id shape / empty fields) so one
+      // bad entry doesn't 422 the entire 10-record Airtable batch.
+      const { valid, dropped } = sanitizeBatchUpdates(airtableUpdates);
+      if (dropped.length > 0) {
+        console.warn('[edit-documents] dropped malformed updates:', JSON.stringify(dropped));
+        logError(c.executionCtx, c.env, {
+          endpoint: '/webhook/edit-documents',
+          error: new Error(`Dropped ${dropped.length} malformed batchUpdate records`),
+          category: 'VALIDATION',
+          details: JSON.stringify({ report_record_id: data.report_record_id, dropped }),
+        });
+      }
+
+      for (let i = 0; i < valid.length; i += 10) {
+        await airtable.batchUpdate(TABLES.DOCUMENTS, valid.slice(i, i + 10));
       }
     }
 
