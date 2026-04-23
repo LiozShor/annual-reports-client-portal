@@ -1414,12 +1414,9 @@ function expandReplyCompose(noteId, reportId, initialText, onCollapse, clientNam
         const text = textarea.value.trim();
         if (!text) return;
         clearTimeout(previewTimer);
-        // Find the row to pass to sendReply for the post-reply prompt
-        const row = document.querySelector(`.msg-row[data-note-id="${noteId}"]`);
-        if (!row) {
-            overlay.remove();
-            return;
-        }
+        // Find the row to clean up inline zone + post-reply prompt
+        const row = document.querySelector(`.msg-row[data-note-id="${noteId}"]`)
+                 || document.querySelector(`.ai-cn-entry[data-note-id="${noteId}"]`);
         // Make sure the compact reply zone exists with the text, then trigger sendReply
         // Simplest: directly POST via the same pipeline, then close modal + run post-prompt
         sendBtn.disabled = true;
@@ -1448,7 +1445,7 @@ function expandReplyCompose(noteId, reportId, initialText, onCollapse, clientNam
             } else {
                 showAIToast('תגובה נשלחה ✓', 'success');
             }
-            if (!result.email_failed) {
+            if (!result.email_failed && row && !row.classList.contains('ai-cn-entry')) {
                 showPostReplyPrompt(noteId, reportId, row);
             } else {
                 loadRecentMessages();
