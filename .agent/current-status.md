@@ -1,8 +1,8 @@
 # Annual Reports CRM - Current Status
 
-**Last Updated:** 2026-04-23 (DL-336 template picker UI in also-match + reassign modals — IMPLEMENTED, needs testing)
+**Last Updated:** 2026-04-23 (DL-336 template picker UI in also-match + reassign modals — COMPLETED)
 
-## DL-336 Template Picker UI — Also-Match & Reassign Modals — IMPLEMENTED — NEED TESTING
+## DL-336 Template Picker UI — Also-Match & Reassign Modals — COMPLETED
 
 Branch `DL-336-template-picker-ui`. Replaces the `createDocCombobox` free-text path in both modals with a proper template picker: search → categorized list → variable wizard → chip feedback.
 
@@ -12,22 +12,7 @@ Branch `DL-336-template-picker-ui`. Replaces the `createDocCombobox` free-text p
 - **CSS:** `.ai-picker-chip`, `.ai-picker-chip-label`, `.ai-picker-chip-clear` added after `.ai-also-match-label` block.
 - **Cache-bust:** `script.js?v=302→303`, `style.css?v=295→296`.
 
-### Active TODOs — Test DL-336: Template Picker
-- [ ] Also-match modal opens → "הוסף מסמך נוסף" shows loading then search + categorized template list
-- [ ] Search filters list; empty categories auto-hide
-- [ ] Pick template (no variables) → chip appears immediately with ×
-- [ ] Pick T501 (has issuer_name) → variable input row appears → fill → confirm → chip shows resolved name
-- [ ] Custom free-text → type name → הוסף → chip appears
-- [ ] Chip × → resets to picker state (list reappears)
-- [ ] 2 checkboxes checked + 1 picker pick → שייך sends 3 targets
-- [ ] 0 checkboxes + picker pick → שייך enabled; sends 1 target
-- [ ] Reassign modal: own-docs combobox works as before (no regression)
-- [ ] Click "הוסף מסמך חדש" in reassign dropdown → expanded picker panel appears below
-- [ ] Pick template in expanded picker → שייך enabled; uses picker target
-- [ ] closeAIReassignModal clears the expanded picker
-- [ ] No regression on other createDocCombobox surfaces (unmatched card, etc.)
-
-Design log: `.agent/design-logs/ai-review/336-template-picker-ui.md`
+Tested and passed 2026-04-23. script.js v=304.
 
 ---
 
