@@ -5695,7 +5695,7 @@ function _buildDocTemplatePicker(container, item, opts) {
             <div class="pa-add-doc-list" style="max-height:220px;overflow-y:auto;">${listHtml}</div>
             <div class="pa-add-doc-divider">או מסמך מותאם אישית</div>
             <div class="pa-add-doc-custom">
-                <input type="text" class="ai-tpl-custom-input" placeholder="שם המסמך..." dir="auto">
+                <input type="text" class="ai-tpl-custom-input" placeholder="שם המסמך..." dir="rtl">
                 <button type="button" class="pa-add-doc-custom-btn">${icon('plus', 'icon-xs')} הוסף</button>
             </div>`;
         safeCreateIcons(container);
@@ -5888,10 +5888,10 @@ function showAIAlsoMatchModal(recordId) {
                 </div>
             </div>
             <div class="ai-modal-footer">
-                <button class="btn btn-ghost btn-sm" onclick="closeAIAlsoMatchModal()">ביטול</button>
                 <button class="btn btn-success btn-sm" id="aiAlsoMatchConfirmBtn" onclick="confirmAIAlsoMatch('${escapeAttr(recordId)}')" disabled>
-                    <i data-lucide="link-2" class="icon-sm"></i> שייך
+                    ${icon('link-2', 'icon-sm')} שייך
                 </button>
+                <button class="btn btn-ghost btn-sm" onclick="closeAIAlsoMatchModal()">ביטול</button>
             </div>
         </div>
     `;
@@ -8278,6 +8278,7 @@ const _PA_VAR_LABELS = {
     gambling_source: 'מקור הזכייה',
     rent_income_monthly: 'סכום שכירות חודשי',
     rent_expense_monthly: 'סכום שכירות חודשי',
+    client_name: 'שם המבוטח',
     withholding_client_name: 'שם הלקוח',
     university_name: 'מוסד לימודים',
     degree_type: 'סוג התואר',
