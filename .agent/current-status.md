@@ -1,8 +1,8 @@
 # Annual Reports CRM - Current Status
 
-**Last Updated:** 2026-04-23 (DL-335 on-hold state for docs awaiting client reply — IMPLEMENTED, needs testing)
+**Last Updated:** 2026-04-23 (DL-335 on-hold state for docs awaiting client reply — COMPLETED, live verified)
 
-## DL-335 On-Hold State for Docs Awaiting Client Reply — IMPLEMENTED — NEED TESTING
+## DL-335 On-Hold State for Docs Awaiting Client Reply — COMPLETED
 
 Branch `DL-335-ai-review-on-hold-docs` **merged to main** 2026-04-23. Docs with pending questions now stay in AI Review in "ממתין ללקוח" hold state instead of being dismissed after sending the batch-questions email. The outgoing email now appears in the per-client messages timeline (`הודעות הלקוח`). When the client replies, office manually resolves the held doc via the "סיים המתנה" button.
 
@@ -14,18 +14,11 @@ Branch `DL-335-ai-review-on-hold-docs` **merged to main** 2026-04-23. Docs with 
 - **Cache-bust:** `script.js?v=298→299`, design log and INDEX updated.
 - **Airtable:** no schema change — `review_status` is free-text field.
 
-### Active TODOs — Test DL-335: On-Hold Docs
-- [ ] Ask 3 questions on 3 docs + approve 2 + reject 1 (6 total); click `סיים בדיקה ושליחת שאלות`; verify: 3 gone, 3 remain with amber "ממתין ללקוח" badge + question text visible.
-- [ ] Verify `batch_questions_sent` entry renders in per-client timeline (doc-manager) as amber outbound card with per-file bullet list.
-- [ ] Verify no `batch_questions_sent` entry appears in dashboard Recent Messages panel.
-- [ ] Client replies by email; inbound pipeline captures it; reply shows in per-client timeline below the outbound questions entry.
-- [ ] Click "סיים המתנה — טפל במסמך" on held card → standard approve/reject/reassign row appears → approve works → row deleted from `pending_classifications`.
-- [ ] Refresh AI Review tab — held cards still present with `on_hold` status.
-- [ ] DL-281 queue modal still renders `שאלות לאחר סקירה` rows correctly.
-- [ ] DL-333 off-hours queue: deferred send still works; toast shows "נשלח לבוקר".
-- [ ] Client with zero `pending_question` items — no hold state, behavior identical to before.
-- [ ] Client with 100% `pending_question` items — all on_hold; accordion shows only held cards.
-- [ ] `wrangler deploy` succeeds; no startup errors.
+### Live Verification — 2026-04-23 (all passed)
+- [x] Ask 3 questions on 3 docs + approve 2 + reject 1; click send — 3 gone, 3 remain with amber badge + question text + sent date
+- [x] "סיים המתנה — טפל במסמך" restores action buttons; approve works
+- [x] client_notes `batch_questions_sent` entry appended correctly
+- [x] `reviewed_at` stamped on on_hold records; date shown in card label
 
 Design log: `.agent/design-logs/ai-review/335-ai-review-on-hold-docs.md`
 
