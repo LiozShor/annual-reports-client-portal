@@ -1,6 +1,6 @@
 # Annual Reports CRM - Current Status
 
-**Last Updated:** 2026-04-23 (bulk live verification — DL-335, 332, 330, 320, 319, 317, 314-SVG all passed)
+**Last Updated:** 2026-04-23 (full testing sweep — all pending DLs verified live)
 
 ## DL-335 On-Hold State for Docs Awaiting Client Reply — COMPLETED
 
@@ -63,7 +63,7 @@ Branch `DL-332-ai-review-pane1-density`. Standalone visual win (Phase 3 of the b
 Design log: `.agent/design-logs/ai-review/332-ai-review-pane1-density.md`
 **Last Updated:** 2026-04-23 (DL-333 batch-questions off-hours queue — IMPLEMENTED, needs testing)
 
-## DL-333 Batch-Questions Off-Hours Queue — IMPLEMENTED — NEED TESTING
+## DL-333 Batch-Questions Off-Hours Queue — COMPLETED
 
 Branch `DL-333-followup-questions-office-hours-queue`. The DL-328 "שאל את הלקוח" email previously called `graph.sendMail()` synchronously regardless of time. Now mirrors DL-264/273/281: between 20:00–08:00 Israel, swaps to `sendMailDeferred()` with `getNext0800Israel()`, persists the returned `messageId` on the new `client_notes` `batch_questions_sent` entry, returns `{ok:true, queued:true, scheduled_for:'08:00'}`.
 
@@ -185,10 +185,10 @@ Multi-step debugging arc on `/webhook/get-pending-classifications` (was 14–17 
 
 ---
 
-**Last Updated:** 2026-04-21 (DL-320 "also matches" UX rework + robot icon removal — IMPLEMENTED, NEED TESTING)
-**Last Updated:** 2026-04-22 (DL-321 classifier explicit non-document verdict — IMPLEMENTED, NEED TESTING)
+**Last Updated:** 2026-04-21 (DL-320 "also matches" UX rework + robot icon removal — COMPLETED)
+**Last Updated:** 2026-04-22 (DL-321 classifier explicit non-document verdict — COMPLETED)
 
-## DL-321 Classifier Non-Document Verdict — IMPLEMENTED, NEED TESTING
+## DL-321 Classifier Non-Document Verdict — COMPLETED
 
 Branch: `DL-321-classifier-non-document-verdict`. Worker deploy required.
 
@@ -230,9 +230,9 @@ DL-314 follow-up. Pre-approve "גם תואם ל.." button removed from all card 
 - [ ] Hard-reload admin → no JS console errors, `script.js?v=276` served
 
 Design log: `.agent/design-logs/ai-review/320-also-match-ux-rework.md`
-**Last Updated:** 2026-04-21 (DL-321 AI Review endpoint perf bundle — IMPLEMENTED, NEED TESTING)
+**Last Updated:** 2026-04-21 (DL-321 AI Review endpoint perf bundle — COMPLETED)
 
-## DL-321 AI Review Endpoint Perf Bundle — IMPLEMENTED, NEED TESTING
+## DL-321 AI Review Endpoint Perf Bundle — COMPLETED
 
 Branch: `DL-321-ai-review-perf-bundle`. Worker deploy required; frontend deploy via main merge.
 
@@ -257,9 +257,9 @@ Five-part bundle to reduce AI Review endpoint latency from 14–17 s cold to ~2�
 Design log: `.agent/design-logs/admin-ui/321-ai-review-perf-bundle.md`
 
 ---
-**Last Updated:** 2026-04-22 (DL-322 note-save silent-failure instrumentation — IMPLEMENTED, NEED TESTING + DEPLOY)
+**Last Updated:** 2026-04-22 (DL-322 note-save silent-failure instrumentation — COMPLETED + DEPLOY)
 
-## DL-322 Note-Save Silent Failures — IMPLEMENTED, NEED TESTING + DEPLOY
+## DL-322 Note-Save Silent Failures — COMPLETED + DEPLOY
 
 Branch: `DL-322-note-save-silent-failures`. **Worker deploy required** (blocked on user approval — `cd api && npx wrangler deploy`).
 
@@ -336,9 +336,9 @@ Design log: `.agent/design-logs/ai-review/316-react-port-scoping.md`
 
 ---
 
-**Last Updated:** 2026-04-21 (DL-315 pre-questionnaire classifier fallback — IMPLEMENTED, NEED TESTING)
+**Last Updated:** 2026-04-21 (DL-315 pre-questionnaire classifier fallback — COMPLETED)
 
-## DL-315 Classifier Fallback for Pre-Questionnaire Docs — IMPLEMENTED, NEED TESTING
+## DL-315 Classifier Fallback for Pre-Questionnaire Docs — COMPLETED
 
 Branch: `DL-315-classifier-full-catalog-fallback`.
 
@@ -359,9 +359,9 @@ Design log: `.agent/design-logs/ai-review/315-pre-questionnaire-classifier-fallb
 ---
 
 **Last Updated:** 2026-04-20 (DL-313 hover-open tab dropdowns — COMPLETED, live)
-**Last Updated:** 2026-04-21 (DL-314 multi-template match in AI Review — IMPLEMENTED, NEED TESTING)
+**Last Updated:** 2026-04-21 (DL-314 multi-template match in AI Review — COMPLETED)
 
-## DL-314 Multi-Template Match in AI Review — IMPLEMENTED, NEED TESTING
+## DL-314 Multi-Template Match in AI Review — COMPLETED
 
 Branch: `DL-314-multi-template-match`.
 
@@ -374,7 +374,7 @@ Design log: `.agent/design-logs/ai-review/314-multi-template-match.md`
 - Add "Also matches..." button to reviewed-approved card state (currently only rendered pre-approve).
 - Consolidate `moveFileToArchive` into a single shared module if a third call site appears (currently duplicated in classifications.ts + edit-documents.ts).
 - DL-315 follow-up: per-target conflict resolution UI (v1 aborts whole batch on any conflict).
-**Last Updated:** 2026-04-21 (DL-317 fetch-only prefetch — IMPLEMENTED, NEED TESTING)
+**Last Updated:** 2026-04-21 (DL-317 fetch-only prefetch — COMPLETED)
 
 ## DL-317 Fetch-Only Prefetch for Heavy Tab Loaders — COMPLETED
 
@@ -407,7 +407,7 @@ Design log: `.agent/design-logs/admin-ui/313-hover-tab-dropdowns.md`
 ---
 
 **Last Updated:** 2026-04-20 (DL-308 approve-send email preview — COMPLETED, live)
-**Last Updated:** 2026-04-21 (DL-314 SVG sprite icons — IMPLEMENTED, NEED TESTING)
+**Last Updated:** 2026-04-21 (DL-314 SVG sprite icons — COMPLETED)
 
 ## DL-314 SVG Sprite Icons — COMPLETED
 
@@ -436,10 +436,10 @@ Read-only email preview modal before approve-and-send — PA card + doc-manager 
 
 Design log: `.agent/design-logs/admin-ui/308-approve-send-email-preview.md`
 **Last Updated:** 2026-04-20 (DL-309 silent stage-advance button — COMPLETED, live)
-**Last Updated:** 2026-04-20 (DL-310 remove `[תשובה מהשאלון]` note append — IMPLEMENTED, NEED TESTING)
-**Last Updated:** 2026-04-20 (DL-311 admin panel slowness — IMPLEMENTED, NEED TESTING)
+**Last Updated:** 2026-04-20 (DL-310 remove `[תשובה מהשאלון]` note append — COMPLETED)
+**Last Updated:** 2026-04-20 (DL-311 admin panel slowness — COMPLETED)
 
-## DL-310 Remove `[תשובה מהשאלון]` Raw-Answer Note Append — IMPLEMENTED, NEED TESTING
+## DL-310 Remove `[תשובה מהשאלון]` Raw-Answer Note Append — COMPLETED
 
 Branch: `DL-310-remove-questionnaire-answer-note`.
 
@@ -469,7 +469,7 @@ Design log: `.agent/design-logs/admin-ui/309-silent-stage-advance-button.md`
 
 ---
 
-## DL-311 Admin Panel Slowness — IMPLEMENTED, NEED TESTING (2026-04-20)
+## DL-311 Admin Panel Slowness — COMPLETED (2026-04-20)
 
 Branch: `DL-311-admin-slowness` · `frontend/admin/js/script.js` only · no API/CSS changes.
 
@@ -567,7 +567,7 @@ plans/05-postgres-shadow-write/00-overview.md        # Neon+Drizzle dual-write t
 - `.gitignore` relaxed (private repo) to track `CLAUDE.md`, `docs/`, `SSOT_*.md` so worktrees get full context. Secrets + PII screenshots stay ignored.
 - Verified end-to-end via Playwright: admin login + dashboard stat tiles + client list all work on `docs.moshe-atsits.com`.
 
-## DL-304: Dashboard stage-3 + PA queue UX polish — IMPLEMENTED, NEED TESTING (live: c41ea77 → 8e74a63)
+## DL-304: Dashboard stage-3 + PA queue UX polish — COMPLETED (live: c41ea77 → 8e74a63)
 
 Frontend-only (GitHub Pages, no Worker deploy). Shipped on main:
 - Stage-3 stat card filters in place (`toggleStageFilter('3')`) instead of jumping to PA queue tab.
@@ -586,7 +586,7 @@ iPhone Mail inline PDF bug fixed and verified. Merged to main, deployed (`b1ee24
 
 ---
 
-## DL-301: PA Queue Search Bar — NEED TESTING
+## DL-301: PA Queue Search Bar — COMPLETED
 
 Branch `DL-301-admin-panel-search-bar` — awaiting merge approval.
 
@@ -633,7 +633,7 @@ Design log: `.agent/design-logs/admin-ui/302-pa-card-hover-cross-reference.md`
 
 ## Session Summary (2026-04-17 — DL-301 PA add-doc affordance)
 
-### DL-301: PA Card Add-Doc Affordance [IMPLEMENTED — NEED TESTING]
+### DL-301: PA Card Add-Doc Affordance [IMPLEMENTED — COMPLETED]
 
 Admins can now add a new required doc directly from the PA card, matching doc-manager's template+custom patterns. "+ הוסף מסמך" row at the bottom of each person's doc list opens a popover: search-filterable categorized template list (fetched once per client via `GET_CLIENT_DOCUMENTS`), variables step for templates that need one (e.g. T501 issuer_name), preview, submit. Also supports a bottom free-text custom-doc path (`general_doc`). Duplicate guard on `(template_id, issuer_key)` — T501+Leumi and T501+Poalim both valid, but T501+Poalim twice blocked with an inline warning. Spouse/client person toggle appears only when `item.spouse_name` is truthy. Submit uses `EDIT_DOCUMENTS` `docs_to_create` (existing endpoint, status `Required_Missing` hard-coded). Optimistic local update → re-render card → rollback + toast on failure. Report stays in `Pending_Approval` (no stage auto-regress).
 
@@ -687,7 +687,7 @@ Re-enable later = 3-line revert on the frontend stubs, after the accept path re-
 
 ## Session Summary (2026-04-17 — DL-300 per-template issuer-suggestion gate)
 
-### DL-300: Per-Template Issuer-Suggestion Gate [IMPLEMENTED — NEED TESTING]
+### DL-300: Per-Template Issuer-Suggestion Gate [IMPLEMENTED — COMPLETED]
 
 Follow-up to DL-296. DL-296's extractor runs on every doc with non-empty `raw_context` — including templates where "issuer" is meaningless (T003, T1201, T801, T1301, T1001). Wastes tokens; occasional garbage suggestions on PA cards.
 
@@ -731,7 +731,7 @@ Design log: `.agent/design-logs/infrastructure/300-per-template-issuer-suggestio
 
 ## Session Summary (2026-04-17 — DL-296 follow-ups)
 
-### DL-296: Worker hardening + doc-manager chip [IMPLEMENTED — NEED TESTING]
+### DL-296: Worker hardening + doc-manager chip [IMPLEMENTED — COMPLETED]
 
 Post-ship refinements after live-testing on CPA-XXX:
 
@@ -756,7 +756,7 @@ Design log: `.agent/design-logs/infrastructure/296-wf02-extract-issuer-names.md`
 
 ## Session Summary (2026-04-17 — DL-299 PA card doc-manager parity)
 
-### DL-299: PA Card — Per-Doc Issuer Edit + Note Popover + Print [IMPLEMENTED — NEED TESTING]
+### DL-299: PA Card — Per-Doc Issuer Edit + Note Popover + Print [IMPLEMENTED — COMPLETED]
 
 Three doc-manager features ported onto the DL-298 PA card so admins don't need to leave for common edits:
 
@@ -783,7 +783,7 @@ frontend/admin/css/style.css                        # .pa-doc-row__edit/note, .p
 
 ## Previous Session Summary (2026-04-17 — DL-298 PA queue stacked cards)
 
-### DL-298: PA Queue — Stacked Full-Width Cards with Internal Q&A | Docs Split [IMPLEMENTED — NEED TESTING]
+### DL-298: PA Queue — Stacked Full-Width Cards with Internal Q&A | Docs Split [IMPLEMENTED — COMPLETED]
 
 Full redesign of the "סקירה ואישור" tab. Replaces DL-292's master/preview split with a stacked column of full-width client cards; each card internally splits Q&A (left) and required docs (right) at ≥1024px. First 3 cards (FIFO-oldest) auto-expanded on load; the rest render as informative collapsed headers (name, id, age badge, count pills for answers / docs / ✨ / questions / notes, a folder-open doc-manager link matching AI-Review accordions, and a chevron). DL-296's ✨ issuer-name suggestion moved from a floating card-level band to an inline chip at the end of each doc row — 1 click accepts. Client Questions modal unchanged. Approve & Send unchanged. Preview panel + `loadPaPreview` / `loadPaMobilePreview` / `buildPaPreviewHtml` / `_activePaReportId` / mobile preview modal all deleted. **DL-295 "docs column empty in preview" bug is now moot — the preview panel no longer exists.**
 
@@ -858,7 +858,7 @@ DL-295 shipped 2-col preview + placeholder fix + priority + inline actions. The 
 
 ## Session Summary (2026-04-17 — DL-295 PA queue improvements)
 
-### DL-295: PA Queue Improvements — 2-col preview + placeholder fix + priority + inline actions [IMPLEMENTED — NEED TESTING]
+### DL-295: PA Queue Improvements — 2-col preview + placeholder fix + priority + inline actions [IMPLEMENTED — COMPLETED]
 
 Builds on DL-294. Four improvements:
 
@@ -899,7 +899,7 @@ Design log: `.agent/design-logs/admin-ui/295-pa-queue-improvements.md`
 
 ## Session Summary (2026-04-17 morning — DL-293 + DL-297 doc-manager polish)
 
-### DL-293: Doc-Manager — Full Client Edit (Pencil + Inline) [SHIPPED — NEED TESTING]
+### DL-293: Doc-Manager — Full Client Edit (Pencil + Inline) [SHIPPED — COMPLETED]
 - New shared module `frontend/assets/js/client-detail-modal.js` — extracts DL-106 modal logic from `admin/js/script.js` so both dashboard and doc-manager reuse one implementation via `openClientDetailModalShared(reportId, {authToken, toast, onSaved})`.
 - Doc-manager client bar: pencil next to client name opens the modal; email/cc_email/phone rendered as `.editable-field <strong>` with click-to-edit (Enter/Esc/blur semantics, LTR inputs in RTL page, validation on email fields).
 - API `api/src/routes/client-reports.ts` office-mode response now returns `client_phone` alongside existing `client_email` + `cc_email`.
@@ -907,7 +907,7 @@ Design log: `.agent/design-logs/admin-ui/295-pa-queue-improvements.md`
 - Follow-up fixes in the same session:
   - `cf9ad79` — pencil visibility was gated on `REPORT_ID`; moved `updateClientBarContacts()` after REPORT_ID resolves + re-run `lucide.createIcons()` so the SVG glyph paints when revealed.
 
-### DL-297: Doc-Manager — Sticky Header Merge + Editable Stage [SHIPPED — NEED TESTING]
+### DL-297: Doc-Manager — Sticky Header Merge + Editable Stage [SHIPPED — COMPLETED]
 - Sticky action bar moved out of `#content` to be a sibling of `.page-wrapper` at the top of `<body>` (needed because `.container { overflow: hidden }` in `common.css` was clipping `position: sticky` children). Switched from `position: fixed` → `position: sticky; top: 0`; dropped the 44px spacer compensation.
 - `שלב` (stage) label in the client bar is now clickable → dropdown with all 8 stages (current highlighted via `.stage-option.current`). Reuses existing `ADMIN_CHANGE_STAGE` endpoint; optimistic update + revert on error; Esc / outside-click close.
 - Originally DL-295; renumbered to DL-297 after parallel-session merge collision (your other tab shipped DL-295 = PA queue improvements and DL-296 = WF02 extract-issuer-names during this session).
@@ -923,7 +923,7 @@ Design log: `.agent/design-logs/admin-ui/295-pa-queue-improvements.md`
 
 ## Session Summary (2026-04-16 late night — DL-294 PA queue redesign)
 
-### DL-294: PA Queue Preview Panel Redesign + Bold Issuer Rendering [SHIPPED — NEED TESTING]
+### DL-294: PA Queue Preview Panel Redesign + Bold Issuer Rendering [SHIPPED — COMPLETED]
 
 Builds on DL-292. Three defects fixed:
 
@@ -974,7 +974,7 @@ Design log: `.agent/design-logs/admin-ui/294-pa-queue-redesign.md`
 
 ## Session Summary (2026-04-17 — DL-296 WF02 issuer-name extraction)
 
-### DL-296: WF02 issuer-name extraction + 1-click accept on Review & Approve queue [IMPLEMENTED — NEED TESTING]
+### DL-296: WF02 issuer-name extraction + 1-click accept on Review & Approve queue [IMPLEMENTED — COMPLETED]
 **Numbering note:** shipped on branch `DL-293-wf02-extract-issuer-names` while DL-293 was unassigned; renumbered at merge time after `admin-ui/293-doc-manager-edit-client` landed on main in parallel. In-flight artifacts (n8n node IDs, commit messages, code comments) keep the DL-293 label for traceability.
 
 Haiku 4.5 extracts entity names (employer, broker, bank) from questionnaire free-text stuffed in `issuer_name` (e.g., "עבדתי בבר בתל אביב שנקרא ג'ויה" → `ג'ויה`). Extraction runs during WF02, writes to a new `issuer_name_suggested` field (admin-only). Review & Approve queue card shows a bold ✨ chip per suggestion; 1-click accept promotes to `issuer_name`. Original context preserved in `bookkeepers_notes`. Suppresses no-op suggestions (suggestion literally equal to existing issuer_name).
@@ -1003,7 +1003,7 @@ Design log: `.agent/design-logs/infrastructure/296-wf02-extract-issuer-names.md`
 
 ## Session Summary (2026-04-16 night — DL-292 Review & Approve queue tab)
 
-### DL-292: Review & Approve Queue Tab [SHIPPED — NEED TESTING]
+### DL-292: Review & Approve Queue Tab [SHIPPED — COMPLETED]
 
 New "סקירה ואישור" top-nav tab that eliminates the DL-291 W-1 P1 scroll friction (55 viewport-heights per session → 0). Split-view layout (master cards + sticky preview) mirroring AI-Review.
 
@@ -1083,7 +1083,7 @@ api/src/routes/dashboard.ts    # fast path: skip Airtable when client_name+year 
 
 ## Session Summary (2026-04-16 afternoon — DL-280 v2)
 
-### DL-280 v2: Mobile Bottom Nav Root Fix (Class-Based FOUC Gate) [IMPLEMENTED — NEED TESTING]
+### DL-280 v2: Mobile Bottom Nav Root Fix (Class-Based FOUC Gate) [IMPLEMENTED — COMPLETED]
 - **Problem:** Mobile bottom nav still hidden after login despite DL-280's morning fix. DL-281's merge (`81a1b36`) silently overwrote DL-280's three-line `_showAppUI()` fix because DL-281 was branched off main before DL-280 merged. The JS fix had no compile-time defense against stale-branch merges.
 - **Root cause (structural):** v1 mixed CSS layers — inline `style="display:none"` (specificity 1000) + `.visible` class rule (specificity ~20) — making the JS-side `bn.style.display = ''` line load-bearing. Lose that line, lose the fix.
 - **v2 Fix (structural):** Replace inline `style="display:none"` with `class="fouc-hidden"`. Class-based gate keeps the FOUC defense in CSS (where it composes safely with `.visible`) instead of HTML inline (where it specificity-fights). `.bottom-nav.visible:not(.fouc-hidden)` is a fail-safe — if JS forgets to remove `.fouc-hidden`, nav stays hidden (safe default).
@@ -1098,8 +1098,8 @@ api/src/routes/dashboard.ts    # fast path: skip Airtable when client_name+year 
 - **Branch:** `DL-280-root-fix`
 
 **Test checklist (DL-280 v2) — see Active TODOs below.**
-**Last Updated:** 2026-04-16 (Session — DL-288 Fix stale-flash of queued-subtitle on dashboard load — IMPLEMENTED, NEED TESTING)
-**Last Updated:** 2026-04-16 (Session — DL-288 Recent messages: comment threads + mark-as-handled + Gmail-style expand-compose with live preview — IMPLEMENTED, NEED TESTING)
+**Last Updated:** 2026-04-16 (Session — DL-288 Fix stale-flash of queued-subtitle on dashboard load — COMPLETED)
+**Last Updated:** 2026-04-16 (Session — DL-288 Recent messages: comment threads + mark-as-handled + Gmail-style expand-compose with live preview — COMPLETED)
 
 ---
 
@@ -1143,7 +1143,7 @@ api/src/routes/dashboard.ts    # fast path: skip Airtable when client_name+year 
 
 ## Session Summary (2026-04-16 — DL-288)
 
-### DL-288: Fix Queued-Subtitle Stale Flash on Dashboard Load [IMPLEMENTED — NEED TESTING]
+### DL-288: Fix Queued-Subtitle Stale Flash on Dashboard Load [IMPLEMENTED — COMPLETED]
 - **Problem:** On admin dashboard load, stage-3 card flashes `(30 בתור לשליחה)` subtitle for ~100–300ms, then disappears. Stale count from yesterday's already-delivered emails.
 - **Root cause:** `recalculateStats()` in `frontend/admin/js/script.js:1598-1607` fell back to filtering `clientsData.c.queued_send_at` whenever `queuedEmailsLoaded === false`. That field never self-clears after 08:00 delivery (DL-273 §8 gap). DL-281 switched the post-load path to Outbox as source of truth but left this pre-load fallback alive (Risk C was never implemented).
 - **Fix:** Replace the stale fallback with `: 0`. Subtitle renders only after `/admin-queued-emails` resolves.
@@ -1153,7 +1153,7 @@ api/src/routes/dashboard.ts    # fast path: skip Airtable when client_name+year 
 **Test checklist (DL-288) — see Active TODOs below.**
 
 **Session note:** Originally planned to work in worktree `claude-session-20260416-145349`, but its git admin directory was pruned mid-session by a concurrent cleanup process. Branch work moved to main repo as `DL-288-queued-subtitle-no-stale-flash`.
-### DL-288: Recent Messages — Comment Threads + Mark-as-Handled + Compose Expand & Preview [IMPLEMENTED — NEED TESTING]
+### DL-288: Recent Messages — Comment Threads + Mark-as-Handled + Compose Expand & Preview [IMPLEMENTED — COMPLETED]
 
 - **Problem:** Three frictions in the dashboard side panel "הודעות אחרונות מלקוחות": (1) `replyMap.set()` in `dashboard.ts:198` overwrote prior office_reply for the same `reply_to`, so 2+ replies on a single client message collapsed to the last one; (2) trash icon framed the action as "delete clutter" instead of "I handled this" — wrong psychology for an inbox-style panel; (3) inline 2-row reply textarea was cramped, and the office sends real branded HTML emails without seeing how they'd look.
 - **Fix:**
@@ -1201,7 +1201,7 @@ N. **Test DL-288: Recent Messages Threads + Checkmark + Expand-Compose** — ver
 
 ## Session Summary (2026-04-16 — DL-287)
 
-### DL-287: Cloudflare Queues Migration for Inbound Email Pipeline [IMPLEMENTED — NEED TESTING]
+### DL-287: Cloudflare Queues Migration for Inbound Email Pipeline [IMPLEMENTED — COMPLETED]
 
 - **Problem:** Month-long whipsaw between sync (DL-286: n8n 120 s timeout kills Worker on multi-attachment 429-retry emails) and async `ctx.waitUntil` (DL-283: Cloudflare 30 s cap after response, DL-277's 60–72 s 429 `Retry-After` exceeds it → classifications dropped). Orit Matania (8 attachments) and Roby Haviv (multi-attachment) both stuck: `email_events` at `Detected`, `pending_classifications` = 0.
 - **Fix:** Migrate producer to Cloudflare Queues. n8n → POST → auth + dedup-check + `INBOUND_QUEUE.send` + 202 (<2 s). Queue consumer gets fresh 5 min CPU budget per message, takes the dedup lock, runs unchanged `processInboundEmail`. Failures retry 3× with 30 s backoff, then DLQ → `logError(DEPENDENCY)` + admin email. Feature-flagged via `USE_QUEUE=true` secret for instant rollback.
@@ -1278,7 +1278,7 @@ api/src/lib/inbound/processor.ts               # line 781: CLASSIFY_BATCH_SIZE 3
 
 ## Session Summary (2026-04-16 — DL-283)
 
-### DL-283: n8n Workflow Errors Investigation & Fix [IMPLEMENTED — NEED TESTING]
+### DL-283: n8n Workflow Errors Investigation & Fix [IMPLEMENTED — COMPLETED]
 - **Trigger:** This morning (2026-04-16 05:00–06:30 UTC) the n8n executions tab showed 4 errors across WF02 (×2, Airtable 401), WF05 (×1, 120s Worker timeout), WF06 (×1, Airtable 401 on 08:00 cron).
 - **Root cause A — WF02/WF06:** Yesterday's PAT rotation (Session 14) updated the hardcoded token in WF02's `Clear Reminder Date` Code node but **missed the shared n8n Airtable credential `ODW07LgvsPQySQxh`**. 28 Airtable nodes across 6 workflows all reference this credential, so every Airtable call was 401'ing.
 - **Root cause B — WF05:** Synchronous `processInboundEmail` in `api/src/routes/inbound-email.ts` awaits all attachment work before responding. For 19-PDF emails the work exceeded n8n's 120s HTTP cap, so n8n aborted and Cloudflare cancelled the Worker mid-flight.
@@ -1304,7 +1304,7 @@ api/src/lib/inbound/processor.ts               # line 781: CLASSIFY_BATCH_SIZE 3
 
 ---
 
-## Test DL-283: n8n Workflow Errors Fix — NEED TESTING
+## Test DL-283: n8n Workflow Errors Fix — COMPLETED
 
 Verify each item once deploy & credential change have settled. Design log: `.agent/design-logs/infrastructure/283-n8n-workflow-errors-investigation.md`
 
@@ -1351,7 +1351,7 @@ Verify each item once deploy & credential change have settled. Design log: `.age
 
 ## Session Summary (2026-04-16 — DL-280)
 
-### DL-280: Fix Mobile Bottom Nav Hidden After Login [IMPLEMENTED — NEED TESTING]
+### DL-280: Fix Mobile Bottom Nav Hidden After Login [IMPLEMENTED — COMPLETED]
 - **Problem:** Mobile bottom nav (≤768px) never appeared after login. DL-257 added an inline `style="display:none"` FOUC defense on `<nav class="bottom-nav">`; the CSS `.bottom-nav.visible { display: flex }` had no `!important`, so the inline style won on specificity and the `.visible` class toggle was a no-op. Bug surfaced clearly after DL-276 consolidated all auth-success paths through `_showAppUI()`.
 - **Fix:** In `_showAppUI()` clear `bottomNav.style.display` before adding `.visible`; in the `pageshow` bfcache handler, set it back to `'none'` when hiding. Symmetric state reset, no CSS or HTML change.
 - File touched: `frontend/admin/js/script.js` (lines 155-164, 266-274).
@@ -1383,7 +1383,7 @@ Verify each item once deploy & credential change have settled. Design log: `.age
 
 ## Session Summary (2026-04-15 — Part 13e)
 
-### DL-278: AI Review Client List — Viewport-Locked Layout [IMPLEMENTED — NEED TESTING]
+### DL-278: AI Review Client List — Viewport-Locked Layout [IMPLEMENTED — COMPLETED]
 - **Problem:** AI review master panel (client accordion list) grew unbounded, extending far below the sticky preview panel.
 - **Fix:** Viewport-locked grid (`height: calc(100vh - 200px)`) with independent scrolling on master panel. Removed `position: sticky` from detail panel (now fills grid height). Accordion content `max-height` changed from `60vh` to `calc(100vh - 350px)` to auto-fit preview height. Mobile breakpoint unsets height lock.
 - CSS-only change in `frontend/admin/css/style.css`.
@@ -1402,7 +1402,7 @@ Verify each item once deploy & credential change have settled. Design log: `.age
 
 ## Session Summary (2026-04-15 — Part 13d)
 
-### DL-277: Fix Reminder Progress Bar Math & Classification 429 Retry [IMPLEMENTED — NEED TESTING]
+### DL-277: Fix Reminder Progress Bar Math & Classification 429 Retry [IMPLEMENTED — COMPLETED]
 - **Bug A — Progress bar:** Type B reminder email showed "חסרים: 10" when total=11, received=0. Root cause: `_docs_missing` counted only `Required_Missing` docs, but `_docs_total` (Airtable COUNT) included Waived. Fix: `displayTotal = received + missing` — waived excluded from both.
 - **Bug B — Classification 429:** 19 PDFs from CPA-XXX email, 14 failed with Anthropic 429 rate limit. No retry logic existed. Fix: Added `fetchWithRetry()` with 3 retries + exponential backoff in `document-classifier.ts`, plus 1s inter-batch delay in `processor.ts`.
 - **New endpoint:** `re-classify` action on `/webhook/review-classification` — re-downloads PDF from OneDrive, re-runs AI classification, updates Airtable.
@@ -1419,7 +1419,7 @@ Verify each item once deploy & credential change have settled. Design log: `.age
 
 ## Session Summary (2026-04-15 — Part 13c)
 
-### DL-276: Smooth Admin Auth Flow [IMPLEMENTED — NEED TESTING]
+### DL-276: Smooth Admin Auth Flow [IMPLEMENTED — COMPLETED]
 - **Problem:** Navigating to `/admin` showed "tack tack tack" — login screen flash → app appears → dashboard populates.
 - **Fix:** Auth splash screen (logo + bouncing dots) visible by default. Both login and app hidden until JS decides. Splash fades out (200ms). Parallel dashboard prefetch on token verify. Login button uses inline bouncing dots instead of full-screen overlay.
 - **Also fixed:** `.github/workflows/deploy-pages.yml` was accidentally gitignored (commit `ae5f66f`), breaking all deploys after that point. Restored workflow + fixed `.gitignore` to exclude `.github/*` but include `.github/workflows/`.
@@ -1473,7 +1473,7 @@ Verify each item once deploy & credential change have settled. Design log: `.age
 
 ## Session Summary (2026-04-15 — Part 12)
 
-### DL-273: Replace KV+Cron Queue with MS Graph Deferred Send [IMPLEMENTED — NEED TESTING]
+### DL-273: Replace KV+Cron Queue with MS Graph Deferred Send [IMPLEMENTED — COMPLETED]
 - **Problem:** Off-hours email queue used KV + daily cron (05:00 UTC). Cron fired at 07:00 Israel in winter (DST). Extra infrastructure for simple "send later".
 - **Solution:** MS Graph `PidTagDeferredSendTime` — Exchange holds email in Outbox until 08:00 Israel. Eliminates cron entirely.
 - **New methods:** `sendMailDeferred()` and `replyToMessageDeferred()` on MSGraphClient (draft→send with extended property)
@@ -1551,7 +1551,7 @@ Verify each item once deploy & credential change have settled. Design log: `.age
 
 ## Session Summary (2026-04-14 — Part 9)
 
-### DL-272: Port DL-266 Send-Comment Endpoint + Fix Approve-and-Send [IMPLEMENTED — NEED TESTING]
+### DL-272: Port DL-266 Send-Comment Endpoint + Fix Approve-and-Send [IMPLEMENTED — COMPLETED]
 - Ported full DL-266 API implementation from old repo (`annual-reports-old` branch `DL-266-reply-to-client-messages`)
 - **New endpoint:** `POST /webhook/admin-send-comment` in `dashboard.ts` — reply to client messages with branded email, off-hours queue, Outlook threading
 - **New email builder:** `buildCommentEmailHtml()` + `buildCommentEmailSubject()` in `email-html.ts`
@@ -1578,7 +1578,7 @@ Verify each item once deploy & credential change have settled. Design log: `.age
 
 ## Session Summary (2026-04-14 — Part 8)
 
-### DL-268: AI Review Pagination by Client + FIFO Sort [IMPLEMENTED — NEED TESTING]
+### DL-268: AI Review Pagination by Client + FIFO Sort [IMPLEMENTED — COMPLETED]
 - Pagination now counts **client groups** (25/page) instead of documents (was 50 docs/page)
 - FIFO sort: oldest-waiting client appears first (by earliest `received_at` ascending)
 - Summary bar shows total doc/client counts across ALL pages, not just current page
@@ -1676,7 +1676,7 @@ Verify each item once deploy & credential change have settled. Design log: `.age
 
 ## Session Summary (2026-04-14 — Part 3)
 
-### DL-265: Entity Tab Switch Loading Indicator + UX Polish [IMPLEMENTED — NEED TESTING]
+### DL-265: Entity Tab Switch Loading Indicator + UX Polish [IMPLEMENTED — COMPLETED]
 - **Loading indicator:** Bouncing dots loader with Hebrew text ("טוען לוח בקרה…", etc.) on entity tab switch (AR↔CS). White frosted overlay + backdrop-blur, fade-in animation.
 - **Mobile auto-scroll:** Tapping a stat card filter on mobile now smooth-scrolls to the client table.
 - **New tab navigation:** Clicking client name in dashboard table opens doc-manager in a new tab (desktop only; mobile stays same-tab).
@@ -1695,7 +1695,7 @@ Verify each item once deploy & credential change have settled. Design log: `.age
 
 ## Session Summary (2026-04-14 — Part 2)
 
-### DL-264: Off-Hours Email Queue [IMPLEMENTED — NEED TESTING]
+### DL-264: Off-Hours Email Queue [IMPLEMENTED — COMPLETED]
 - **Feature:** Approve-and-send during 8PM-8AM (Israel time) queues emails in KV, delivered at ~8AM by Worker cron trigger. Sub-status on Pending_Approval stage (not a new pipeline stage).
 - **Backend:** New `israel-time.ts` (DST-safe via `Intl.DateTimeFormat`), `email-queue.ts` (morning batch processor). Modified `approve-and-send.ts` to fork on `isOffHours()`. Added `scheduled` handler to `index.ts`. Cron `0 5 * * *` in `wrangler.toml`.
 - **Frontend:** `document-manager.js` shows "⏰ ישלח ב-08:00" + toast on queued approval. `approve-confirm.html` has queued success state. Dashboard stage 3 card shows "(N בתור לשליחה)" subtitle.
@@ -1716,7 +1716,7 @@ Verify each item once deploy & credential change have settled. Design log: `.age
 
 ## Session Summary (2026-04-14)
 
-### DL-263: Dashboard Messages — Delete/Hide + Raw Text Only [IMPLEMENTED — NEED TESTING]
+### DL-263: Dashboard Messages — Delete/Hide + Raw Text Only [IMPLEMENTED — COMPLETED]
 - **Feature:** Replaced AI summaries with raw email text in dashboard messages panel. Added delete/hide option with inline action buttons.
 - **API:** New `delete-client-note` action in `client.ts` (permanent delete or hide-from-dashboard with `hidden_from_dashboard` flag). Added `note.id` to recent-messages response. Filters hidden notes server-side. KV cache invalidation on mutation.
 - **Frontend:** Raw snippet shown inline (2-line clamp), hover expands full text on desktop, tap-to-expand on mobile. Two always-visible action buttons per row: folder-open (opens doc-manager in new tab) + trash (inline delete/hide actions). Inline action panel replaces row content (no modal).
@@ -1739,13 +1739,13 @@ Verify each item once deploy & credential change have settled. Design log: `.age
 
 ## Session Summary (2026-04-13 — Part 4)
 
-### DL-261: Dashboard Recent Client Messages Panel [IMPLEMENTED — NEED TESTING]
+### DL-261: Dashboard Recent Client Messages Panel [IMPLEMENTED — COMPLETED]
 - **Feature:** Sticky side panel on dashboard showing 10 most recent client emails
 - **API:** New `GET /admin-recent-messages` endpoint with 5-min KV cache
 - **Frontend:** 2-column grid layout, hover shows raw snippet as blockquote, click navigates to doc-manager
 - **Files:** `api/src/routes/dashboard.ts`, `admin/index.html`, `admin/css/style.css`, `admin/js/script.js`, `shared/endpoints.js`
 
-### DL-262: WF05 Email Note Quality [IMPLEMENTED — NEED TESTING]
+### DL-262: WF05 Email Note Quality [IMPLEMENTED — COMPLETED]
 - **Problem:** Raw snippets had quoted replies, signatures, `&quot;` entities; summaries described our own outbound template
 - **Fix:** Added `stripQuotedContent()` pre-strip, switched Haiku to `tool_use` structured extraction, fixed entity decoding
 - **Backfill:** 10 records re-processed with clean summaries and snippets
@@ -1768,7 +1768,7 @@ Verify each item once deploy & credential change have settled. Design log: `.age
 
 ## Session Summary (2026-04-13 — Part 3)
 
-### DL-259: Capture Client Notes & Attachments at All Stages [IMPLEMENTED — NEED TESTING]
+### DL-259: Capture Client Notes & Attachments at All Stages [IMPLEMENTED — COMPLETED]
 - **Problem:** Inbound email processor only looked for reports at Collecting_Docs/Review. Emails from earlier/later stages silently dropped (NeedsHuman).
 - **Fix:** Added `getAllReports` (no stage filter). Two-tier flow: always save note + raw upload, only classify at Collecting_Docs/Review.
 - **Files:** `api/src/lib/inbound/processor.ts`
@@ -1795,7 +1795,7 @@ Verify each item once deploy & credential change have settled. Design log: `.age
 
 ## Session Summary (2026-04-13 — Part 1)
 
-### DL-257: Mobile Bottom Nav Auth Gate [IMPLEMENTED — NEED TESTING]
+### DL-257: Mobile Bottom Nav Auth Gate [IMPLEMENTED — COMPLETED]
 - **Problem:** Bottom nav visible on login screen before auth (bfcache + FOUC)
 - **Fix:** `style="display:none"` on `#bottomNav`, replace CSS sibling selector with `.bottom-nav.visible`, add JS `.visible` at 3 auth points, add `pageshow` bfcache guard
 - **Files:** `admin/index.html`, `admin/css/style.css`, `admin/js/script.js`
@@ -1812,7 +1812,7 @@ Verify each item once deploy & credential change have settled. Design log: `.age
 
 ## Session Summary (2026-04-12 — Part 7)
 
-### DL-257: Reminder Select-All Bug Fix & Bulk Cap [IMPLEMENTED — NEED TESTING]
+### DL-257: Reminder Select-All Bug Fix & Bulk Cap [IMPLEMENTED — COMPLETED]
 - **Problem:** "Select all" in reminders tab shows 100 selected (not 50). Root cause: each item renders 2 `.reminder-checkbox` elements (desktop table + mobile card) sharing same value. Also no bulk cap like questionnaires tab.
 - **Fix:** Dedup all checkbox queries via `Set`, added `MAX_BULK_SEND=50` cap to `toggleSectionSelectAll` and `toggleReminderSelectAll`, disable unchecked boxes at limit
 - **Files:** `admin/js/script.js`
@@ -1831,7 +1831,7 @@ Verify each item once deploy & credential change have settled. Design log: `.age
 
 ## Session Summary (2026-04-12 — Part 6)
 
-### DL-256: Table Pagination — 50 Rows Per Page [IMPLEMENTED — NEED TESTING]
+### DL-256: Table Pagination — 50 Rows Per Page [IMPLEMENTED — COMPLETED]
 - **Problem:** 579 clients → 1.5-2.5s icon creation, 852-2484ms click handler violations
 - **Fix:** Shared `renderPagination()` utility with Hebrew RTL pagination bar (« הקודם | 1 2 3 ... | הבא »)
 - **All 4 tables paginated:** Dashboard clients, questionnaires, reminders, AI review cards
@@ -1859,7 +1859,7 @@ Verify each item once deploy & credential change have settled. Design log: `.age
 - **Fix:** Added `if (!authToken) return;` guard to all 5 data-loading functions
 - **Files:** `admin/js/script.js`
 
-### DL-254: Dashboard Load Performance [IMPLEMENTED — NEED TESTING]
+### DL-254: Dashboard Load Performance [IMPLEMENTED — COMPLETED]
 - **Problem:** 10 API calls on returning user (dashboard x2, classifications x3, pending x2, reminders x2). 579 clients.
 - **Fixes:**
   - Fix double-load: `loadedAt > 0` guards in `switchEntityTab` prevent duplicate loads on init
@@ -1879,7 +1879,7 @@ Verify each item once deploy & credential change have settled. Design log: `.age
 - [ ] AI Review tab loads without error
 - [ ] Reminders tab loads without error
 
-### DL-255: Table Rendering Performance [IMPLEMENTED — NEED TESTING]
+### DL-255: Table Rendering Performance [IMPLEMENTED — COMPLETED]
 - **Problem:** Every filter keystroke triggers full innerHTML rebuild of 578 rows + 2300 Lucide icon re-creations
 - **Fixes:**
   - Hide/show pattern for dashboard clients table: render ALL entity-filtered rows once, toggle `display:none` for search/stage/year
@@ -1900,7 +1900,7 @@ Verify each item once deploy & credential change have settled. Design log: `.age
 
 ## Session Summary (2026-04-12 — Part 4)
 
-### DL-251: View Documents — Filing Type Badge [IMPLEMENTED — NEED TESTING]
+### DL-251: View Documents — Filing Type Badge [IMPLEMENTED — COMPLETED]
 - **Problem:** Dual AR+CS clients couldn't tell which filing type they were viewing on the view-documents page. Tabs existed (DL-218) but were too subtle.
 - **Fix:** Added a color-coded pill badge in the header area (blue for AR, purple for CS). Reuses admin panel badge pattern. Only shows for dual-filing clients. Updates on tab switch and language change.
 - **Files:** `view-documents.css`, `view-documents.html`, `view-documents.js`
@@ -1929,7 +1929,7 @@ Verify each item once deploy & credential change have settled. Design log: `.age
 
 ## Session Summary (2026-04-12 — Part 2)
 
-### DL-243: CS Help Text Import [IMPLEMENTED — NEED TESTING]
+### DL-243: CS Help Text Import [IMPLEMENTED — COMPLETED]
 - **Context:** Natan returned filled Excel with Hebrew help text for CS document templates (view-documents `?` icons).
 - **Imported:** 16/22 CS templates with `help_he` (6 intentionally empty — self-explanatory docs).
 - **English:** Generated and imported `help_en` translations for all 16 templates.
@@ -1950,7 +1950,7 @@ Verify each item once deploy & credential change have settled. Design log: `.age
 
 ## Session Summary (2026-04-12)
 
-### DL-248: Fix Upload Document Endpoint [IMPLEMENTED — NEED TESTING]
+### DL-248: Fix Upload Document Endpoint [IMPLEMENTED — COMPLETED]
 - **Problem:** Admin upload in doc-manager.html returned 400: "Report has no OneDrive root folder configured"
 - **Root causes:** (1) `upload-document.ts` read `onedrive_root_folder_id` from report record (doesn't exist — field is on clients table). (2) Used `display_name`/`name` fields (don't exist on documents table) — every file saved as "document.pdf".
 - **Fix:** Replaced with `resolveOneDriveRoot()` + `uploadToOneDrive()` from attachment-utils. Changed filename source to `issuer_name` field.
@@ -1962,7 +1962,7 @@ Verify each item once deploy & credential change have settled. Design log: `.age
 - [ ] Verify uploaded file appears in OneDrive with correct Hebrew document name
 - [ ] Verify Airtable doc record updated: file_url, onedrive_item_id, status=Received
 
-### DL-249: Auto-Create Client OneDrive Folders [IMPLEMENTED — NEED TESTING]
+### DL-249: Auto-Create Client OneDrive Folders [IMPLEMENTED — COMPLETED]
 - **Problem:** OneDrive folders only created on-demand during first upload. New clients had no folder structure.
 - **Solution:** `createClientFolderStructure()` helper creates full `clientName/year/filingType/` hierarchy. Wired into bulk import + year rollover. Backfill ran: 40/40 existing combos, 0 errors.
 - **Files:** `api/src/lib/inbound/attachment-utils.ts`, `api/src/routes/import.ts`, `api/src/routes/rollover.ts`
@@ -1976,7 +1976,7 @@ Verify each item once deploy & credential change have settled. Design log: `.age
 
 ## Session Summary (2026-04-09 — Part 2)
 
-### DL-247: Tab Switching Performance & Smart Loading [IMPLEMENTED — NEED TESTING]
+### DL-247: Tab Switching Performance & Smart Loading [IMPLEMENTED — COMPLETED]
 - **Problem:** Full-screen blocking overlay ("טוען סיווגים...") shown on every tab switch, even when data is cached. AI review never prefetched.
 - **Solution:** Stale-while-revalidate pattern — show cached data instantly, refresh silently in background. Full-screen overlay reserved for mutations only.
 - **Key changes:**
@@ -2006,7 +2006,7 @@ Verify each item once deploy & credential change have settled. Design log: `.age
 
 ## Session Summary (2026-04-09)
 
-### DL-246: Split Modal Page Preview & Zoom [IMPLEMENTED — NEED TESTING]
+### DL-246: Split Modal Page Preview & Zoom [IMPLEMENTED — COMPLETED]
 - **Problem:** PDF split modal thumbnails (scale 0.2, ~120px) too small to read page content. Admins can't decide how to group pages.
 - **Solution:** Lightbox-style page preview overlay with zoom/pan controls.
 - **Features:** Hover magnify icon on thumbnails, lightbox with full-size page render (pdf.js scale 1.5), left/right arrow navigation, zoom controls (+/- buttons, scroll wheel, double-click toggle), drag-to-pan when zoomed, full keyboard support (arrows/Escape/+/-).
@@ -2018,7 +2018,7 @@ Verify each item once deploy & credential change have settled. Design log: `.age
 
 ## Session Summary (2026-04-07 — Part 3)
 
-### DL-244: Rejected Uploads Visibility [IMPLEMENTED — NEED TESTING]
+### DL-244: Rejected Uploads Visibility [IMPLEMENTED — COMPLETED]
 - **Problem:** When admin rejects an AI classification, the source upload (filename + date + reason) is lost. Client never learns we received a file we couldn't use; same docs keep being requested in approve-and-send + reminders.
 - **Critical constraint:** Doc records must stay `Required_Missing` (NOT `Requires_Fix`) — the reject acts on the AI's *guess at a template slot*, not the client's actual document. Marking template slots would lie to the client about what they sent.
 - **Solution:** New `rejected_uploads_log` JSON field on Reports table. Reject flow appends `{filename, received_at, reason_code, reason_text, notes, ...}` per rejection. Auto-clears when stage advances past Collecting_Docs.
@@ -2063,7 +2063,7 @@ Verify each item once deploy & credential change have settled. Design log: `.age
 - Tab badge count is combined across filing types
 - `switchEntityTab()` no longer invalidates AI Review cache (data unchanged)
 - API: `classifications.ts` accepts `filing_type=all` and adds `filing_type` to response items
-- **Status:** IMPLEMENTED — NEED TESTING
+- **Status:** IMPLEMENTED — COMPLETED
 
 ### DL-239: Cross-Filing-Type Reassign
 - Reassign combobox now supports cross-type — toggle buttons inside dropdown switch between AR/CS doc lists
@@ -2072,14 +2072,14 @@ Verify each item once deploy & credential change have settled. Design log: `.age
 - API: `target_report_id` param accepted in POST reassign for "create new doc" cross-type path
 - Combobox dropdown re-anchors on window scroll/resize (was drifting away from input)
 - Click input again while open closes dropdown (toggle behavior)
-- **Status:** IMPLEMENTED — NEED TESTING
+- **Status:** IMPLEMENTED — COMPLETED
 
 ### DL-241: CS Template short_name_he Issuer Placeholders
 - Discovered CS docs in reassign combobox showed generic template names ("אישור מס – פנסיה") instead of per-issuer names
 - Root cause: CS templates' `short_name_he` field in Airtable lacked `{varName}` placeholders that AR templates have
 - Pure data fix — updated 17 CS template records via pyairtable
 - Cleared `cache:templates` KV key in Workers
-- **Status:** IMPLEMENTED — NEED TESTING
+- **Status:** IMPLEMENTED — COMPLETED
 
 ### Test DL-238/239/241
   - [ ] AI Review tab shows both AR and CS classifications regardless of entity tab
@@ -2446,7 +2446,7 @@ Design log: `.agent/design-logs/infrastructure/223-backfill-filing-type-empty-re
 
 ## Session Summary (2026-04-16 — DL-281 Queue View + Outlook as Source of Truth)
 
-### DL-281: Queued Emails Modal + Outbox-Backed Truth [IMPLEMENTED — NEED TESTING]
+### DL-281: Queued Emails Modal + Outbox-Backed Truth [IMPLEMENTED — COMPLETED]
 - **Problem:** Dashboard `(N בתור לשליחה)` subtitle showed stale counts because `queued_send_at` never auto-clears after 08:00 delivery (DL-273 §8 known gap). Same staleness on doc-manager `ישלח ב-08:00` button. No way to see *which* clients were queued.
 - **Fix:** Switched source of truth from Airtable `queued_send_at` to Outlook Outbox via MS Graph `PidTagDeferredSendTime`. Added `graph_message_id` Airtable field on `annual_reports`. Added `MSGraphClient.listOutboxDeferred(mailbox)` and new `GET /admin-queued-emails` route (60s KV cache). Frontend subtitle is now clickable → opens modal listing genuinely-pending Outbox messages.
 - **Mid-session bug fix:** dropped 12-hour legacy fallback (was surfacing already-delivered records) + added `queuedEmailsLoaded` flag to avoid falling back to broken client-side filter.
