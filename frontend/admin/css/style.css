@@ -2207,13 +2207,17 @@ tr:hover .client-view-link {
 .ai-cn-entry {
     display: flex;
     align-items: center;
+    flex-wrap: wrap;
     gap: var(--sp-2);
     font-size: var(--text-xs);
-    padding: 2px 0;
+    padding: 4px 2px;
+    border-radius: var(--radius-sm);
+    cursor: default;
+    transition: background 0.15s;
 }
+.ai-cn-entry:hover { background: var(--gray-50); }
 .ai-cn-entry + .ai-cn-entry {
     border-top: 1px solid var(--gray-100);
-    padding-top: 4px;
     margin-top: 2px;
 }
 .cn-icon--email { color: var(--info-500); }
@@ -2225,10 +2229,40 @@ tr:hover .client-view-link {
 }
 .ai-cn-summary {
     color: var(--gray-700);
+    flex: 1;
+    min-width: 0;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
     overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    max-width: 350px;
+    cursor: default;
+    transition: all 0.2s;
+}
+.ai-cn-entry:hover .ai-cn-summary,
+.ai-cn-entry.expanded .ai-cn-summary {
+    -webkit-line-clamp: unset;
+    overflow: visible;
+}
+.ai-cn-action-btn {
+    flex-shrink: 0;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 2px 4px;
+    border-radius: var(--radius-sm);
+    color: var(--gray-400);
+    opacity: 0;
+    transition: opacity 0.15s, color 0.15s, background 0.15s;
+    line-height: 1;
+}
+.ai-cn-entry:hover .ai-cn-action-btn { opacity: 1; }
+.ai-cn-action-btn:hover {
+    color: var(--blue-600);
+    background: var(--blue-50);
+}
+.ai-cn-entry .msg-reply-zone {
+    width: 100%;
+    margin-top: var(--sp-2);
 }
 .ai-cn-toggle {
     display: inline-block;
@@ -2246,12 +2280,6 @@ tr:hover .client-view-link {
 .ai-cn-entries-scroll {
     max-height: 300px;
     overflow-y: auto;
-}
-.ai-cn-open .ai-cn-summary {
-    white-space: normal;
-    overflow: visible;
-    text-overflow: unset;
-    max-width: none;
 }
 
 /* Accordion stat badges */

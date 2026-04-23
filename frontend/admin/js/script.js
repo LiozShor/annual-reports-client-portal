@@ -1153,7 +1153,8 @@ async function deleteRecentMessage(noteId, reportId, mode) {
 
 // DL-266: Show inline reply input below a message
 function showReplyInput(noteId, reportId) {
-    const row = document.querySelector(`.msg-row[data-note-id="${noteId}"]`);
+    const row = document.querySelector(`.msg-row[data-note-id="${noteId}"]`)
+             || document.querySelector(`.ai-cn-entry[data-note-id="${noteId}"]`);
     if (!row) return;
     // Don't add twice
     if (row.querySelector('.msg-reply-zone')) return;
@@ -4022,16 +4023,23 @@ function buildClientAccordionHtml(clientName, clientItems, open) {
         cnArr = cnArr.filter(n => n.type !== 'office_reply');
         if (cnArr.length > 0) {
             const sorted = [...cnArr].sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+            const cnReportId = clientItems[0]?.report_id || '';
+            const cnYear = clientItems[0]?.year || '';
             const renderEntry = n => {
                 const isEmail = n.source === 'email';
                 const iconName = isEmail ? 'mail' : 'pencil';
                 const iconClass = isEmail ? 'cn-icon--email' : 'cn-icon--manual';
                 const rawDate = n.date || '';
                 const dateStr = rawDate.match(/^(\d{4})-(\d{2})-(\d{2})/) ? rawDate.slice(0, 10).replace(/^(\d{4})-(\d{2})-(\d{2})/, '$3-$2-$1') : rawDate;
-                return `<div class="ai-cn-entry">
+                const nId = n.id ? escapeAttr(String(n.id)) : '';
+                const replyBtn = nId
+                    ? `<button class="ai-cn-action-btn" title="הגב" onclick="event.stopPropagation();showReplyInput('${nId}','${escapeAttr(cnReportId)}')">${icon('message-square', 'icon-xs')}</button>`
+                    : '';
+                return `<div class="ai-cn-entry" data-note-id="${nId}" data-report-id="${escapeAttr(cnReportId)}" data-client-name="${escapeAttr(clientName)}" data-year="${escapeAttr(cnYear)}">
                     ${icon(iconName, 'icon-sm ${iconClass}')}
                     <span class="ai-cn-date">${escapeHtml(dateStr)}</span>
                     <span class="ai-cn-summary">${escapeHtml(n.raw_snippet || n.summary || '')}</span>
+                    ${replyBtn}
                 </div>`;
             };
             const previewHtml = sorted.slice(0, 5).map(renderEntry).join('');
