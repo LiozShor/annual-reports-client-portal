@@ -110,7 +110,7 @@ sendBatchQuestions.post('/send-batch-questions', async (c) => {
     const fileIds = validQuestions.map(q => q.file_id).filter(Boolean);
     await Promise.all([
       airtable.updateRecord(TABLES.REPORTS, report_id, { client_notes: JSON.stringify(notes) }),
-      ...fileIds.map(id => airtable.updateRecord(TABLES.CLASSIFICATIONS, id, { review_status: 'on_hold' })),
+      ...fileIds.map(id => airtable.updateRecord(TABLES.CLASSIFICATIONS, id, { review_status: 'on_hold', reviewed_at: new Date().toISOString() })),
     ]);
 
     return c.json({ ok: true, queued: offHours, held_count: heldCount, ...(offHours ? { scheduled_for: '08:00' } : {}) });
