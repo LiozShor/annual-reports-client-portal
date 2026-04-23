@@ -84,27 +84,36 @@ sendBatchQuestions.post('/send-batch-questions', async (c) => {
       await graph.sendMail(subject, html, clientEmail, SENDER);
     }
 
-    // Append to client_notes + clear pending_question on classification records.
+    // Append to client_notes + set on_hold on classification records that have questions (DL-335).
+    // Keep pending_question intact on on_hold rows so the held card can display the question text.
     // When queued, stamp graph_message_id so DL-281 queue modal (Outlook = source of truth) can surface it.
     const existingNotes = first(report.fields.client_notes);
     let notes: unknown[] = [];
     try { notes = JSON.parse(existingNotes || '[]'); } catch { notes = []; }
     if (!Array.isArray(notes)) notes = [];
+    const heldCount = validQuestions.length;
+    const summaryHe = `שלחנו ללקוח ${heldCount} שאל${heldCount === 1 ? 'ה' : 'ות'} לגבי המסמכים שהעברת`;
+    const summaryEn = `Sent ${heldCount} question${heldCount === 1 ? '' : 's'} to client about submitted documents`;
     notes.push({
+      id: `bq_${Date.now()}`,
       type: 'batch_questions_sent',
       date: new Date().toISOString(),
+      summary: language === 'en' ? summaryEn : summaryHe,
+      source: 'office_question',
       items: validQuestions,
       language,
       ...(deferredMessageId ? { graph_message_id: deferredMessageId, queued: true } : {}),
     });
 
+    // DL-335: set review_status='on_hold' to keep rows in AI Review (not cleared from queue).
+    // pending_question is kept so the held card can display the question text.
     const fileIds = validQuestions.map(q => q.file_id).filter(Boolean);
     await Promise.all([
       airtable.updateRecord(TABLES.REPORTS, report_id, { client_notes: JSON.stringify(notes) }),
-      ...fileIds.map(id => airtable.updateRecord(TABLES.CLASSIFICATIONS, id, { pending_question: null })),
+      ...fileIds.map(id => airtable.updateRecord(TABLES.CLASSIFICATIONS, id, { review_status: 'on_hold' })),
     ]);
 
-    return c.json({ ok: true, queued: offHours, ...(offHours ? { scheduled_for: '08:00' } : {}) });
+    return c.json({ ok: true, queued: offHours, held_count: heldCount, ...(offHours ? { scheduled_for: '08:00' } : {}) });
 
   } catch (err) {
     console.error('[send-batch-questions] CAUGHT ERROR:', (err as Error).message, (err as Error).stack);

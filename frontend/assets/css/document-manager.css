@@ -2085,6 +2085,28 @@ body {
     color: var(--warning-500);
 }
 
+/* DL-335: office batch-questions outbound entry */
+.cn-icon--office-question {
+    background: var(--warning-100);
+    color: var(--warning-700);
+}
+
+.cn-entry--outbound {
+    border-inline-start: 2px solid var(--warning-300);
+}
+
+.cn-bq-items {
+    margin: var(--sp-1) 0 0 var(--sp-2);
+    padding: 0;
+    list-style: disc;
+    font-size: var(--text-xs);
+    color: var(--gray-600);
+}
+
+.cn-bq-items li {
+    margin-bottom: 2px;
+}
+
 .cn-body {
     flex: 1;
     min-width: 0;

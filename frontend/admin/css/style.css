@@ -2286,6 +2286,12 @@ tr:hover .client-view-link {
     color: var(--success-700);
 }
 
+/* DL-335: held / waiting for reply state */
+.ai-accordion-stat-badge.badge-warning {
+    background: var(--warning-100);
+    color: var(--warning-700);
+}
+
 /* DL-210: Review done prompt */
 .ai-review-done-prompt {
     background: var(--success-50);
@@ -5304,6 +5310,38 @@ tr.reminder-loading td:last-child {
 .ai-review-lozenge.lozenge-rejected {
     background: var(--warning-100, #fef3c7);
     color: var(--warning-700, #b45309);
+}
+
+/* DL-335: on_hold — amber tone (distinct from rejected which is also warning-toned) */
+.ai-review-lozenge.lozenge-on-hold {
+    background: var(--warning-200, #fde68a);
+    color: var(--warning-800, #92400e);
+}
+
+.ai-review-card.reviewed-on-hold {
+    background: var(--warning-50, #fffbeb);
+    border-color: var(--warning-400, #fbbf24) !important;
+    opacity: 1;
+}
+
+/* Held question display block (DL-335) */
+.ai-held-question {
+    margin-top: var(--sp-2);
+    padding: var(--sp-2) var(--sp-3);
+    background: var(--warning-50, #fffbeb);
+    border: 1px solid var(--warning-200, #fde68a);
+    border-radius: var(--radius-sm);
+    font-size: var(--text-sm);
+    color: var(--gray-700);
+}
+.ai-held-question .ai-held-question-label {
+    font-weight: 600;
+    font-size: var(--text-xs);
+    color: var(--warning-700, #b45309);
+    margin-bottom: var(--sp-1);
+    display: flex;
+    align-items: center;
+    gap: var(--sp-1);
 }
 
 /* Rejection details under lozenge */

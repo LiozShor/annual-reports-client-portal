@@ -3192,6 +3192,32 @@ function renderClientNotes() {
             // Skip office_reply entries — they render inside their parent card
             if (entry.type === 'office_reply' && entry.reply_to) continue;
 
+            // DL-335: batch_questions_sent — render as outbound office question card
+            if (entry.type === 'batch_questions_sent') {
+                const rawDate = entry.date || '';
+                const dateStr = rawDate.match(/^(\d{4})-(\d{2})-(\d{2})/) ? rawDate.slice(0, 10).replace(/^(\d{4})-(\d{2})-(\d{2})/, '$3-$2-$1') : rawDate;
+                const queuedNote = entry.queued ? ' <span class="cn-label">(נשלח בבוקר)</span>' : '';
+                let itemsHtml = '';
+                if (Array.isArray(entry.items) && entry.items.length > 0) {
+                    itemsHtml = '<ul class="cn-bq-items">' + entry.items.map(q =>
+                        `<li><strong>${escapeHtml(q.attachment_name || q.short_name || '')}</strong>${q.question ? ': ' + escapeHtml(q.question) : ''}</li>`
+                    ).join('') + '</ul>';
+                }
+                html += `<div class="cn-entry cn-entry--outbound" data-cn-id="${escapeAttr(entry.id || '')}">
+                    <div class="cn-icon cn-icon--office-question">
+                        <i data-lucide="help-circle" class="icon-sm"></i>
+                    </div>
+                    <div class="cn-body">
+                        <div class="cn-meta">
+                            <span>${escapeHtml(dateStr)}</span>${queuedNote}
+                        </div>
+                        <div class="cn-summary"><span class="cn-label">שאלות ששלח המשרד:</span> ${escapeHtml(entry.summary || '')}</div>
+                        ${itemsHtml}
+                    </div>
+                </div>`;
+                continue;
+            }
+
             const isEmail = entry.source === 'email';
             const iconClass = isEmail ? 'cn-icon--email' : (entry.type === 'office_reply' ? 'cn-icon--reply' : 'cn-icon--manual');
             const iconName = isEmail ? 'mail' : (entry.type === 'office_reply' ? 'corner-down-left' : 'pencil');

@@ -28,6 +28,8 @@ ALLOWLIST_PATTERNS = [
     re.compile(r'Leaked token `pat'),        # incident post-mortem reference
     re.compile(r'rotated.*token'),
     re.compile(r'#\s*(CPA-\d+)'),            # markdown comment references are usually ok
+    re.compile(r'\(הודעות הלקוח\)'),         # UI label in parentheses, not PII
+    re.compile(r'ממתינים לתשובה'),           # UI label in design doc
 ]
 
 

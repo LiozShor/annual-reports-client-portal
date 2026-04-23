@@ -4705,6 +4705,11 @@ function renderReviewedCard(item, reviewStatus) {
         ${icon('eye', 'icon-sm')} תצוגה מקדימה
     </button>`;
 
+    // DL-335: on_hold renders its own special card layout — early return
+    if (reviewStatus === 'on_hold') {
+        return renderOnHoldCard(item);
+    }
+
     // Status lozenge
     let lozengeClass, lozengeText;
     if (reviewStatus === 'approved') {
@@ -4824,6 +4829,55 @@ function renderReviewedCard(item, reviewStatus) {
                     </div>
                 </div>
                 ${item.pending_question ? `<div class="batch-q-inline-badge">${icon('message-circle','icon-xs')} שאלה נשמרה: ${escapeHtml(item.pending_question.substring(0, 80))}${item.pending_question.length > 80 ? '…' : ''}</div>` : ''}
+            </div>
+        </div>
+    `;
+}
+
+// DL-335: Render a card in on_hold (waiting for client reply) state
+function renderOnHoldCard(item) {
+    const senderEmail = item.sender_email || '';
+    const receivedAt = item.received_at ? formatAIDate(item.received_at) : '';
+    const senderTooltipParts = [senderEmail, receivedAt].filter(Boolean);
+    const senderTooltip = senderTooltipParts.join(' | ');
+
+    const viewFileBtn = `<button class="btn btn-ghost btn-sm ai-preview-btn"
+        onclick="event.stopPropagation(); loadDocPreview('${escapeAttr(item.id)}')"
+        title="תצוגה מקדימה">
+        ${icon('eye', 'icon-sm')} תצוגה מקדימה
+    </button>`;
+
+    const displayName = appendContractPeriod(item.matched_short_name || item.matched_template_name || 'לא ידוע', item);
+
+    const heldQuestionHtml = item.pending_question
+        ? `<div class="ai-held-question">
+            <div class="ai-held-question-label">${icon('message-circle', 'icon-xs')} שאלה שנשלחה ללקוח:</div>
+            ${escapeHtml(item.pending_question)}
+          </div>`
+        : '';
+
+    return `
+        <div class="ai-review-card reviewed-on-hold" data-id="${escapeAttr(item.id)}" data-review-status="on_hold">
+            <div class="ai-card-top" onclick="loadDocPreview('${escapeAttr(item.id)}');">
+                <div class="ai-file-info">
+                    <span class="ai-review-lozenge lozenge-on-hold">${icon('clock', 'icon-xs')} ממתין ללקוח</span>
+                    ${item.filing_type ? `<span class="ai-filing-type-badge ai-ft-${escapeAttr(item.filing_type)}">${escapeHtml(FILING_TYPE_LABELS[item.filing_type] || item.filing_type)}</span>` : ''}
+                    <span class="ai-file-name clickable-preview" ${senderTooltip ? `title="${escapeAttr(senderTooltip)}"` : ''}>${escapeHtml(item.attachment_name || 'ללא שם')}</span>
+                </div>
+                ${viewFileBtn}
+            </div>
+            <div class="ai-card-body">
+                <div class="ai-classification-result">
+                    <div class="ai-classification-label">
+                        <span class="ai-template-match">${renderDocLabel(displayName)}</span>
+                    </div>
+                </div>
+                ${heldQuestionHtml}
+            </div>
+            <div class="ai-card-actions">
+                <button class="btn btn-outline btn-sm" onclick="startReReview('${escapeAttr(item.id)}')">
+                    ${icon('check-circle', 'icon-xs')} סיים המתנה — טפל במסמך
+                </button>
             </div>
         </div>
     `;
@@ -5796,20 +5850,23 @@ function showClientReviewDonePrompt(clientName, userInitiated = false) {
     const existing = accordion.querySelector('.ai-review-done-prompt');
     if (existing) existing.remove();
 
-    // Count approved/rejected/reassigned
+    // Count approved/rejected/reassigned/on_hold
     const clientItems = aiClassificationsData.filter(i => i.client_name === clientName);
     const approved = clientItems.filter(i => i.review_status === 'approved').length;
     const rejected = clientItems.filter(i => i.review_status === 'rejected').length;
     const reassigned = clientItems.filter(i => i.review_status === 'reassigned').length;
+    const onHold = clientItems.filter(i => i.review_status === 'on_hold').length;
 
     const statParts = [];
     if (approved) statParts.push(`${approved} אושרו`);
     if (reassigned) statParts.push(`${reassigned} שויכו`);
     if (rejected) statParts.push(`${rejected} נדחו`);
+    if (onHold) statParts.push(`${onHold} ממתינים לתשובת`);
 
-    // Check if any items have a saved pending question
+    // DL-335: only show send-questions button if there are questions NOT yet on_hold
+    // (on_hold items already had their questions sent; don't re-send)
     const hasPendingQuestions = !_batchQuestionsSentClients.has(clientName) &&
-        clientItems.some(i => i.pending_question);
+        clientItems.some(i => i.pending_question && i.review_status !== 'on_hold');
 
     const prompt = document.createElement('div');
     prompt.className = 'ai-review-done-prompt';
@@ -6184,12 +6241,20 @@ async function dismissAndSendQuestions(clientName) {
             return;
         }
         _batchQuestionsSentClients.add(clientName);
+        // DL-335: flip held items to on_hold in local data so they re-render immediately
+        const heldCount = data.held_count || 0;
+        aiClassificationsData.forEach(i => {
+            if (i.client_name === clientName && i.pending_question) {
+                i.review_status = 'on_hold';
+            }
+        });
         if (data.queued) {
             showAIToast('השאלות נשלחו לבוקר — יישלחו ב־08:00', 'info');
         } else {
             showAIToast('השאלות נשלחו ללקוח');
         }
-        dismissClientReview(clientName);
+        // DL-335: only dismiss rows that are NOT on_hold; held cards stay in AI Review
+        dismissClientReview(clientName, { keepOnHold: true });
     } catch (_err) {
         showAIToast('שגיאה בתקשורת עם השרת', 'danger');
         if (btn) btn.disabled = false;
@@ -6226,13 +6291,18 @@ function previewBatchQuestions(clientName) {
 }
 
 // DL-210: Remove all reviewed cards for this client from the UI + delete from Airtable
-async function dismissClientReview(clientName) {
+// DL-335: keepOnHold=true skips on_hold rows so they stay in the queue after questions are sent
+async function dismissClientReview(clientName, { keepOnHold = false } = {}) {
     const accordion = document.querySelector(`.ai-accordion[data-client="${CSS.escape(clientName)}"]`);
     if (!accordion) return;
 
-    // Collect record IDs before removing from data
     const clientItems = aiClassificationsData.filter(i => i.client_name === clientName);
-    const recordIds = clientItems.map(i => i.id);
+
+    // DL-335: when keepOnHold, only delete rows that are NOT on_hold
+    const itemsToDelete = keepOnHold
+        ? clientItems.filter(i => i.review_status !== 'on_hold')
+        : clientItems;
+    const recordIds = itemsToDelete.map(i => i.id);
 
     // Delete from Airtable (fire-and-forget, non-blocking)
     if (recordIds.length > 0) {
@@ -6243,6 +6313,25 @@ async function dismissClientReview(clientName) {
         }, FETCH_TIMEOUTS.mutate).catch(err => {
             console.error('[dismissClientReview] Airtable delete failed:', err.message);
         });
+    }
+
+    // DL-335: if some items are kept on hold, re-render the accordion instead of collapsing it
+    const heldItems = keepOnHold ? clientItems.filter(i => i.review_status === 'on_hold') : [];
+    if (heldItems.length > 0) {
+        // Remove dismissed items from data; held items stay
+        aiClassificationsData = aiClassificationsData.filter(i => i.client_name !== clientName || i.review_status === 'on_hold');
+        // Re-render the client's accordion in-place so held cards show
+        const docsPane = accordion.querySelector('.ai-accordion-cards') || accordion;
+        docsPane.querySelectorAll('.ai-review-card:not([data-review-status="on_hold"])').forEach(el => el.remove());
+        // Remove the done-prompt — held state replaces it
+        accordion.querySelector('.ai-review-done-prompt')?.remove();
+        // Update the accordion stats badge
+        const statsEl = accordion.querySelector('.ai-accordion-stats');
+        if (statsEl) {
+            statsEl.innerHTML = `<span class="ai-accordion-stat-badge badge-warning">${heldItems.length} ממתינים לתשובה</span>`;
+        }
+        recalcAIStats();
+        return;
     }
 
     // Animate accordion collapse then remove
