@@ -1234,8 +1234,8 @@ async function sendReply(noteId, reportId, commentText, sendBtn, replyZone, row)
             showAIToast('תגובה נשלחה ✓', 'success');
         }
 
-        // DL-288: Prompt to mark as handled (skip if email failed — message still needs attention)
-        if (!result.email_failed) {
+        // DL-288: Prompt to mark as handled (skip if email failed or replying from AI Review)
+        if (!result.email_failed && !row.classList.contains('ai-cn-entry')) {
             showPostReplyPrompt(noteId, reportId, row);
         } else {
             loadRecentMessages();
