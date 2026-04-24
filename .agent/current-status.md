@@ -1,6 +1,6 @@
 # Annual Reports CRM - Current Status
 
-**Last Updated:** 2026-04-24 (DL-340 reviewed-status indicator on preview frame — IMPLEMENTED, need testing)
+**Last Updated:** 2026-04-24 (DL-340 reviewed-status indicator — COMPLETED, live-tested; includes preview watermark stamp, pane-2 row dim+strike+chip, and sort-by-state)
 **Last Updated:** 2026-04-24 (DL-339 AI Review move actions panel to pane 2 + bundled fixes — IMPLEMENTED — NEED TESTING)
 
 ## Open follow-up — Worker `get-preview-url` error handler crash
@@ -18,21 +18,15 @@ Scope: `api/src/routes/preview.ts` (get-preview-url handler) + `api/src/lib/erro
 **Last Updated:** 2026-04-23 (DL-336 template picker UI in also-match + reassign modals — COMPLETED)
 **Last Updated:** 2026-04-23 (DL-331 edit-documents batch 422 fix — IMPLEMENTED, deploy pending)
 
-## DL-340: Reviewed-status indicator on preview frame — IMPLEMENTED — NEED TESTING
+## DL-340: Reviewed-status indicator — COMPLETED (live 2026-04-24)
 
-Branch `DL-340-reviewed-indicator-preview`. Status badge (`✓ אושר` / `⚠ דורש תיקון` / `↻ שויך מחדש`) before filename in preview header + 3px `border-inline-start` accent on `.ai-review-detail`. Single `applyPreviewReviewState()` helper. Silent for pending/on_hold. style.css v=301, script.js v=315.
+Layered reviewed-state signal across the AI Review cockpit. All Section 7 validation items passed in live test.
 
-### Active TODOs — Test DL-340
-- [ ] Select an approved doc → green `✓ אושר` badge + green `border-inline-start` on preview frame
-- [ ] Select a rejected doc → red `⚠ דורש תיקון` badge + red border
-- [ ] Select a reassigned doc → blue `↻ שויך מחדש` badge + blue border
-- [ ] Select a pending doc → no badge, no border accent (default 1px gray border intact)
-- [ ] Select an on_hold doc → no badge, no border accent
-- [ ] Approve a pending doc while actively previewed → frame updates to green badge + border without reselection
-- [ ] Click "שנה החלטה" on an approved previewed doc → badge + border clear immediately
-- [ ] Click active card again (toggle off) → badge + border both cleared
-- [ ] Header layout: filename ellipsizes correctly; open-tab + download buttons at end (left in RTL)
-- [ ] Mobile (< 768px): no regression
+**Preview pane:** `✓/⚠/↻` badge in header + 3px colored `border-inline-start` on `.ai-preview-frame` + rubber-stamp watermark (rotated -8°, 3px border + inner ring) in top-start corner of the iframe area.
+
+**Pane-2 rows:** reviewed rows dim to `--gray-500` + state-colored strikethrough on filename; category swaps for a compact short-label chip (approved / rejected / reassigned); rows sort by state group (pending → on_hold → reviewed) with on-transition relocation in `refreshItemDom` (no full re-render, scroll preserved).
+
+Single `applyPreviewReviewState()` + `compareDocRows` drive all surfaces from one `review_status`. No new design tokens. Cache: style.css v=300→313, script.js v=314→327.
 
 Design log: `.agent/design-logs/ai-review/340-reviewed-indicator-on-preview.md`
 ## DL-339 AI Review — Move Actions Panel to Pane 2 + Bundled Fixes — IMPLEMENTED — NEED TESTING

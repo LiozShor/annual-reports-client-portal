@@ -1,5 +1,5 @@
 # Design Log 340: Reviewed-status indicator on preview frame
-**Status:** [IMPLEMENTED — NEED TESTING]
+**Status:** [COMPLETED]
 **Date:** 2026-04-24
 **Related Logs:** DL-330 (3-pane rework), DL-334 (cockpit middle + actions), DL-335 (on_hold), DL-053 (silent refresh merge-by-id)
 
@@ -198,17 +198,17 @@ if (activePreviewItemId) {
 
 ## 7. Validation Plan
 
-- [ ] Select an approved doc → green `✓ אושר` badge + green `border-inline-start` on `.ai-review-detail`
-- [ ] Select a rejected doc → red `⚠ דורש תיקון` badge + red border
-- [ ] Select a reassigned doc → blue `↻ שויך מחדש` badge + blue border
-- [ ] Select a pending doc → no badge, no border accent, default 1px `--gray-200` border intact
-- [ ] Select an on_hold doc → no badge, no border accent
-- [ ] Approve a pending doc while actively previewed → preview frame updates to green badge + border without reselection
-- [ ] Click "שנה החלטה" on an approved previewed doc → badge + border clear immediately
-- [ ] Click active card again (toggle off) → badge + border both cleared
-- [ ] Silent refresh while approved doc is selected → badge + border persist (no flicker)
-- [ ] Header layout: filename still ellipsizes when long; open-tab + download buttons still at the end side (RTL → left)
-- [ ] Mobile (< 768px): preview uses modal path, no regression
+- [x] Select an approved doc → green `✓ אושר` badge + green `border-inline-start` on `.ai-review-detail`
+- [x] Select a rejected doc → red `⚠ דורש תיקון` badge + red border
+- [x] Select a reassigned doc → blue `↻ שויך מחדש` badge + blue border
+- [x] Select a pending doc → no badge, no border accent, default 1px `--gray-200` border intact
+- [x] Select an on_hold doc → no badge, no border accent
+- [x] Approve a pending doc while actively previewed → preview frame updates to green badge + border without reselection
+- [x] Click "שנה החלטה" on an approved previewed doc → badge + border clear immediately
+- [x] Click active card again (toggle off) → badge + border both cleared
+- [x] Silent refresh while approved doc is selected → badge + border persist (no flicker)
+- [x] Header layout: filename still ellipsizes when long; open-tab + download buttons still at the end side (RTL → left)
+- [x] Mobile (< 768px): preview uses modal path, no regression
 
 ## 8. Implementation Notes (Post-Code)
 
@@ -217,3 +217,17 @@ if (activePreviewItemId) {
 - 3 call sites: `resetPreviewPanel` (null), `loadDocPreview` (item.review_status), `transitionCardToReviewed` (newReviewStatus when activePreviewItemId matches).
 - Cross-tab silent-refresh sync omitted — requires DL-334's merge-by-id; current path calls `resetPreviewPanel()` on fingerprint mismatch which already clears both badge and border cleanly.
 - Cache bumped: style.css v=300→301, script.js v=314→315.
+
+### Post-MVP enhancements (same session, same DL)
+
+After the initial implementation landed, three iterative enhancements were added based on live feedback that the signal was "not really clear":
+
+1. **Corner rubber-stamp over the preview iframe.** New `.preview-review-stamp` element in `.ai-preview-frame`, top-start corner, rotated -8°, opacity 0.78, 3px border in state color + faint inner ring via `color-mix` inset shadow, pointer-events none. Text: "אושר" / "דורש תיקון" / "שויך מחדש". Driven by the same `applyPreviewReviewState` helper. After DL-334/339 landed `.ai-preview-frame` as an actual DOM element, the border accent was retargeted from `.ai-review-detail` to `.ai-preview-frame` per the original spec intent. Cache bumped to style.css v=312, script.js v=325.
+2. **Pane-2 "done" treatment for reviewed rows.** On rows with review_status ∈ {approved, rejected, reassigned}, filename fades to `--gray-500` and gets a state-colored strikethrough (`color-mix` 55% alpha). The filing-type category swaps for a compact status chip ("אושר" / "לתיקון" / "שויך") in matching state color. Active row restores filename color so it doesn't feel faded while being viewed. Cache bumped to style.css v=313, script.js v=326.
+3. **Pane-2 sort by review state.** New `getRowSortRank` + `compareDocRows` helpers. Initial render in `buildDesktopClientDocsHtml` sorts pending (0) → on_hold (1) → reviewed (2), received_at asc within group. `refreshItemDom` relocates the row on transition by walking siblings and inserting before the first higher-rank neighbor — no full re-render, scroll preserved. Cache bumped to script.js v=327.
+
+Final stack: stripe (pane-2 row edge, DL-334) + strike+chip (row body, DL-340 post-MVP #2) + badge (preview header, DL-340 MVP) + border accent (preview frame, DL-340 MVP) + corner stamp (preview iframe, DL-340 post-MVP #1). Each operates at a different viewing distance; each is driven by the same `review_status`.
+
+### Tests
+
+All Section 7 validation items passed in live test 2026-04-24.
