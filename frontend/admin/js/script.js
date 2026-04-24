@@ -3625,29 +3625,41 @@ async function getDocPreviewUrl(itemId) {
     return { previewUrl: data.previewUrl, downloadUrl: data.downloadUrl || null };
 }
 
-// DL-340: Single source of truth for preview frame reviewed-state visuals (badge + border accent).
+// DL-340: Single source of truth for preview frame reviewed-state visuals
+// (badge in header + border accent + corner stamp over iframe area).
 // Call with review_status string or null/undefined to clear.
 function applyPreviewReviewState(reviewStatus) {
     const frame = document.querySelector('#aiReviewDetail .ai-preview-frame');
     const badge = document.getElementById('previewStatusBadge');
+    const stamp = document.getElementById('previewReviewStamp');
     if (!frame || !badge) return;
     frame.classList.remove('preview-reviewed-approved', 'preview-reviewed-rejected', 'preview-reviewed-reassigned');
     const map = {
-        approved:   { cls: 'preview-reviewed-approved',   badgeCls: 'badge-approved',   html: '✓ אושר' },
-        rejected:   { cls: 'preview-reviewed-rejected',   badgeCls: 'badge-rejected',   html: '⚠ דורש תיקון' },
-        reassigned: { cls: 'preview-reviewed-reassigned', badgeCls: 'badge-reassigned', html: '↻ שויך מחדש' },
+        approved:   { cls: 'preview-reviewed-approved',   badgeCls: 'badge-approved',   stampCls: 'stamp-approved',   badgeHtml: '✓ אושר',       stampText: 'אושר' },
+        rejected:   { cls: 'preview-reviewed-rejected',   badgeCls: 'badge-rejected',   stampCls: 'stamp-rejected',   badgeHtml: '⚠ דורש תיקון', stampText: 'דורש תיקון' },
+        reassigned: { cls: 'preview-reviewed-reassigned', badgeCls: 'badge-reassigned', stampCls: 'stamp-reassigned', badgeHtml: '↻ שויך מחדש',  stampText: 'שויך מחדש' },
     };
     const entry = map[reviewStatus];
     if (!entry) {
         badge.style.display = 'none';
         badge.className = 'preview-status-badge';
         badge.innerHTML = '';
+        if (stamp) {
+            stamp.style.display = 'none';
+            stamp.className = 'preview-review-stamp';
+            stamp.textContent = '';
+        }
         return;
     }
     frame.classList.add(entry.cls);
     badge.className = `preview-status-badge ${entry.badgeCls}`;
-    badge.innerHTML = entry.html;
+    badge.innerHTML = entry.badgeHtml;
     badge.style.display = '';
+    if (stamp) {
+        stamp.className = `preview-review-stamp ${entry.stampCls}`;
+        stamp.textContent = entry.stampText;
+        stamp.style.display = '';
+    }
 }
 
 function resetPreviewPanel() {
