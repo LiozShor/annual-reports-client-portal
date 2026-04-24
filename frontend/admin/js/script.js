@@ -4132,6 +4132,14 @@ function renderDocRow(item) {
         ? `<span class="ai-doc-row__flag-dot" title="${escapeAttr(flagLabels.join(' · '))}"></span>`
         : '';
 
+    // DL-340: On reviewed rows, show a status chip (אושר/לתיקון/שויך) instead of the filing-type category.
+    // The CSS above also dims + strikes the filename so the whole row reads as "done."
+    const CHIP_LABELS = { approved: 'אושר', rejected: 'לתיקון', reassigned: 'שויך' };
+    const isReviewedDecided = ['approved', 'rejected', 'reassigned'].includes(item.review_status);
+    const endLabelHtml = isReviewedDecided
+        ? `<span class="ai-doc-row__status-chip chip-${item.review_status}">${CHIP_LABELS[item.review_status]}</span>`
+        : `<span class="ai-doc-row__category"${cat.isOnHold ? ' style="color: var(--warning-600);"' : ''}>${escapeHtml(cat.text)}</span>`;
+
     // DL-339: CSS handles bidi isolation via `unicode-bidi: plaintext` on
     // .ai-doc-row__filename. Earlier dir="auto" flipped flex alignment on
     // pure-Latin filenames — removed.
@@ -4139,7 +4147,7 @@ function renderDocRow(item) {
         <span class="ai-doc-row__stripe"></span>
         <span class="ai-doc-row__filename">${escapeHtml(truncateKeepExtension(rawName))}</span>
         ${showQGlyph ? `<span class="ai-doc-row__question-glyph" title="${escapeAttr(qTitle)}">?</span>` : ''}
-        <span class="ai-doc-row__category"${cat.isOnHold ? ' style="color: var(--warning-600);"' : ''}>${escapeHtml(cat.text)}</span>
+        ${endLabelHtml}
         ${flagDotHtml}
     </div>`;
 }

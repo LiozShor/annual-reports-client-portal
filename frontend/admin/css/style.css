@@ -9570,6 +9570,43 @@ tr:hover .client-edit-link {
 .ai-doc-row--state-rejected  .ai-doc-row__stripe { background: var(--danger-500); }
 .ai-doc-row--state-reassigned .ai-doc-row__stripe { background: var(--info-500); }
 
+/* DL-340: To-do-list "done" treatment — dim + strikethrough filename on reviewed rows */
+.ai-doc-row--state-approved .ai-doc-row__filename,
+.ai-doc-row--state-rejected .ai-doc-row__filename,
+.ai-doc-row--state-reassigned .ai-doc-row__filename {
+    color: var(--gray-500);
+    text-decoration: line-through;
+    text-decoration-thickness: 1.5px;
+    text-underline-offset: 2px;
+}
+.ai-doc-row--state-approved   .ai-doc-row__filename { text-decoration-color: color-mix(in srgb, var(--success-500) 55%, transparent); }
+.ai-doc-row--state-rejected   .ai-doc-row__filename { text-decoration-color: color-mix(in srgb, var(--danger-500)  55%, transparent); }
+.ai-doc-row--state-reassigned .ai-doc-row__filename { text-decoration-color: color-mix(in srgb, var(--info-500)    55%, transparent); }
+
+/* Active row keeps the strikethrough (state signal) but restores filename color — the row you're looking at shouldn't feel faded */
+.ai-doc-row.active.ai-doc-row--state-approved .ai-doc-row__filename,
+.ai-doc-row.active.ai-doc-row--state-rejected .ai-doc-row__filename,
+.ai-doc-row.active.ai-doc-row--state-reassigned .ai-doc-row__filename {
+    color: var(--gray-700);
+}
+
+/* DL-340: End-side status chip on reviewed rows — replaces category (filing type) */
+.ai-doc-row__status-chip {
+    display: inline-flex;
+    align-items: center;
+    font-size: 10px;
+    font-weight: 600;
+    padding: 1px 6px;
+    border-radius: 3px;
+    line-height: 1.6;
+    white-space: nowrap;
+    flex-shrink: 0;
+    letter-spacing: 0.3px;
+}
+.ai-doc-row__status-chip.chip-approved   { background: var(--success-50); color: var(--success-700); }
+.ai-doc-row__status-chip.chip-rejected   { background: var(--danger-50);  color: var(--danger-700); }
+.ai-doc-row__status-chip.chip-reassigned { background: var(--info-50);    color: var(--info-700); }
+
 .ai-doc-row__filename {
     flex: 1 1 auto;
     min-width: 0;
