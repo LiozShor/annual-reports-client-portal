@@ -1,11 +1,40 @@
 # Annual Reports CRM - Current Status
 
-**Last Updated:** 2026-04-24 (DL-340 reviewed-status indicator — COMPLETED, live-tested; includes preview watermark stamp, pane-2 row dim+strike+chip, and sort-by-state)
+**Last Updated:** 2026-04-24 (DL-341 preview zoom 75% + completion-flow desktop fix + auto-advance — IMPLEMENTED — NEED TESTING)
 
-## Next-session TODOs (AI Review)
+## Test DL-341: preview zoom + completion flow + auto-advance
 
-1. **Default preview zoom to 75%** — when the PDF preview iframe loads (`loadDocPreview` in `script.js`, OneDrive `/items/.../preview` URL), default the viewer zoom to 75% instead of the current fit-to-width. Likely needs a `?zoom=75` or similar query param appended to `previewUrl`, or a post-load `postMessage` if the embed supports it. Start by checking what the OneDrive preview URL scheme accepts.
-2. **Last-doc-of-client completion flow is broken** — after reviewing the final doc for a client, the "all docs reviewed" prompt / transition to the next client / done-state UI does not render correctly. Repro: pick a client with 1 pending doc → approve it → observe what shows (or fails to show). Expected: `showClientReviewDonePrompt` UI or auto-advance to next client. Check `transitionCardToReviewed` → `showClientReviewDonePrompt` path (`script.js:6108-6113`) and whether the DL-340 pane-2 sort/relocation interferes with the "pendingLeft === 0" detection.
+Branch `DL-341-preview-zoom-and-completion-flow`. Bundles three AI Review cockpit fixes. Worker change requires `wrangler deploy`; frontend change requires merge to main.
+
+### Zoom
+- [ ] Hard reload admin, click any PDF row → preview iframe loads at ~75% zoom (visibly smaller than fit-to-width).
+- [ ] No Microsoft banner at top of preview.
+- [ ] Click an Office doc (.docx/.xlsx) → zoom applies or falls back gracefully, no broken preview.
+- [ ] Click an image preview → no broken preview (zoom may be ignored for images).
+- [ ] `wrangler tail` 5 min post-deploy — no new errors from `/webhook/get-preview-url`.
+
+### Completion flow — desktop (regression fix)
+- [ ] Client with 1 pending doc → approve it → done-prompt appears above pane 2 doc list with `כל המסמכים נבדקו!` + `סיום בדיקה` button. Click it → review closes, client removed from pane 1.
+- [ ] Client with 1 pending doc that has a `pending_question` → approve it → done-prompt shows both buttons (`סיום בדיקה ושליחת שאלות` + `ערוך שאלות`).
+- [ ] Client with only `on_hold` docs → done-prompt shows `on_hold` count in stats.
+
+### Completion flow — mobile (regression guard)
+- [ ] Resize to mobile width → approve last pending doc → accordion prompt behavior unchanged from DL-334 baseline.
+
+### Auto-advance — desktop
+- [ ] Client with 3 pending docs → approve doc 1 → pane 3 preview jumps to doc 2 (oldest remaining pending); pane 2 row 2 highlighted; actions panel re-renders for doc 2.
+- [ ] Reject doc 2 → doc 3 auto-selected.
+- [ ] Approve doc 3 (last) → done-prompt shown; no auto-advance.
+- [ ] `on_hold` doc mixed in → NOT auto-selected (filter to pending only).
+- [ ] Reassign action → next pending also auto-selected.
+
+### Auto-advance — mobile (regression guard)
+- [ ] Mobile fat-card transitions unchanged; no auto-advance.
+
+### Sanity
+- [ ] Hard reload admin → `?v=328` served (no stale `v=327`).
+
+Design log: `.agent/design-logs/ai-review/341-preview-zoom-and-completion-flow.md`
 
 **Last Updated:** 2026-04-24 (DL-339 AI Review move actions panel to pane 2 + bundled fixes — IMPLEMENTED — NEED TESTING)
 
