@@ -3622,6 +3622,31 @@ async function getDocPreviewUrl(itemId) {
     return { previewUrl: data.previewUrl, downloadUrl: data.downloadUrl || null };
 }
 
+// DL-340: Single source of truth for preview frame reviewed-state visuals (badge + border accent).
+// Call with review_status string or null/undefined to clear.
+function applyPreviewReviewState(reviewStatus) {
+    const frame = document.getElementById('aiReviewDetail');
+    const badge = document.getElementById('previewStatusBadge');
+    if (!frame || !badge) return;
+    frame.classList.remove('preview-reviewed-approved', 'preview-reviewed-rejected', 'preview-reviewed-reassigned');
+    const map = {
+        approved:   { cls: 'preview-reviewed-approved',   badgeCls: 'badge-approved',   html: '✓ אושר' },
+        rejected:   { cls: 'preview-reviewed-rejected',   badgeCls: 'badge-rejected',   html: '⚠ דורש תיקון' },
+        reassigned: { cls: 'preview-reviewed-reassigned', badgeCls: 'badge-reassigned', html: '↻ שויך מחדש' },
+    };
+    const entry = map[reviewStatus];
+    if (!entry) {
+        badge.style.display = 'none';
+        badge.className = 'preview-status-badge';
+        badge.innerHTML = '';
+        return;
+    }
+    frame.classList.add(entry.cls);
+    badge.className = `preview-status-badge ${entry.badgeCls}`;
+    badge.innerHTML = entry.html;
+    badge.style.display = '';
+}
+
 function resetPreviewPanel() {
     activePreviewItemId = null;
     document.querySelectorAll('.ai-review-card.preview-active').forEach(c => c.classList.remove('preview-active'));
@@ -3637,6 +3662,7 @@ function resetPreviewPanel() {
     if (iframe) { iframe.style.display = 'none'; iframe.src = 'about:blank'; }
     if (header) header.style.display = 'none';
     if (download) { download.style.display = 'none'; download.href = '#'; }
+    applyPreviewReviewState(null);
 }
 
 async function loadDocPreview(recordId) {
@@ -3695,6 +3721,7 @@ async function loadDocPreview(recordId) {
     openTab.href = item.file_url || '#';
     openTab.style.display = item.file_url ? '' : 'none';
     header.style.display = '';
+    applyPreviewReviewState(item.review_status || null);
 
     try {
         const { previewUrl, downloadUrl } = await getDocPreviewUrl(item.onedrive_item_id);
@@ -6099,6 +6126,11 @@ function transitionCardToReviewed(recordId, newReviewStatus, responseData) {
 
     recalcAIStats();
     safeCreateIcons();
+
+    // DL-340: Keep preview frame badge + border in sync when the active doc is transitioned
+    if (activePreviewItemId === recordId) {
+        applyPreviewReviewState(newReviewStatus);
+    }
 
     // DL-210: Check if all items for this client are now reviewed
     if (item) {
