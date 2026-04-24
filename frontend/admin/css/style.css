@@ -9924,18 +9924,21 @@ tr:hover .client-edit-link {
     display: none;
 }
 
-/* DL-339 v1.2: use grow ratios (6/4) instead of flex-basis percentages (60%/40%)
-   so the split is computed over the REMAINING space after the pinned siblings
-   (strip + section headers + separator). With flex-basis % of the parent, the
-   pinned siblings added on top pushed the total past 100% and the panel
-   clipped at the bottom. Grow ratios distribute only what's actually left. */
+/* DL-339 v1.3: panel sizes to its content; the doc list absorbs the scroll.
+   Panel: flex 0 0 auto — natural content height, no stretch, no shrink.
+   List: flex 1 1 0 — takes all remaining space; scrolls when row count exceeds it.
+   A max-height: 70% safeguard on the panel keeps pathological long states
+   (State D with very long reasoning, on_hold with huge question block) from
+   eating the list entirely; in those rare cases the panel falls back to its
+   own internal scroll. */
 .ai-review-docs.has-selection .ai-doc-list {
-    flex: 6 1 0;
+    flex: 1 1 0;
 }
 
 .ai-review-docs.has-selection .ai-actions-panel {
     display: flex;
-    flex: 4 1 0;
+    flex: 0 0 auto;
+    max-height: 70%;
     flex-direction: column;
     overflow-y: auto;
     min-height: 0;
