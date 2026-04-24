@@ -9924,13 +9924,18 @@ tr:hover .client-edit-link {
     display: none;
 }
 
+/* DL-339 v1.2: use grow ratios (6/4) instead of flex-basis percentages (60%/40%)
+   so the split is computed over the REMAINING space after the pinned siblings
+   (strip + section headers + separator). With flex-basis % of the parent, the
+   pinned siblings added on top pushed the total past 100% and the panel
+   clipped at the bottom. Grow ratios distribute only what's actually left. */
 .ai-review-docs.has-selection .ai-doc-list {
-    flex: 0 0 60%;
+    flex: 6 1 0;
 }
 
 .ai-review-docs.has-selection .ai-actions-panel {
     display: flex;
-    flex: 0 0 40%;
+    flex: 4 1 0;
     flex-direction: column;
     overflow-y: auto;
     min-height: 0;
