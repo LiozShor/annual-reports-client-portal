@@ -10,7 +10,7 @@
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📋</text></svg>">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" integrity="sha384-vtjasyidUo0kW94K5MXDXntzOJpQgBKXmE7e2Ga4LG0skTTLeBi97eFAXsqewJjw" crossorigin="anonymous"></script>
     <link rel="stylesheet" href="../assets/css/design-system.css">
-    <link rel="stylesheet" href="css/style.css?v=303">
+    <link rel="stylesheet" href="css/style.css?v=304">
 
 </head>
 
@@ -1031,9 +1031,9 @@
                                 <svg class="icon icon-2xl" aria-hidden="true" focusable="false" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"><use href="#icon-file-search"/></svg>
                                 <p>לחץ על כרטיס מסמך לתצוגה מקדימה</p>
                             </div>
-                            <div class="preview-loading" id="previewLoading" style="display: none;">
+                            <div class="preview-loading preview-skeleton" id="previewLoading" style="display: none;">
+                                <p class="preview-skeleton__filename" id="previewSkeletonFilename" dir="auto"></p>
                                 <div class="spinner spinner-lg"></div>
-                                <p>טוען תצוגה מקדימה...</p>
                             </div>
                             <div class="preview-error" id="previewError" style="display: none;">
                                 <svg class="icon icon-2xl" aria-hidden="true" focusable="false" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"><use href="#icon-alert-triangle"/></svg>
@@ -1518,7 +1518,7 @@
     <script src="../assets/js/client-detail-modal.js"></script>
     <script src="../shared/print-questionnaire.js"></script>
     <script src="../shared/email-preview-modal.js"></script>
-    <script src="js/script.js?v=318"></script>
+    <script src="js/script.js?v=319"></script>
     <script src="../assets/js/idle-refresh.js?v=281" defer></script>
     <script src="js/chatbot.js"></script>
     <!-- React island: Client Detail Modal (loads after shared scripts) -->

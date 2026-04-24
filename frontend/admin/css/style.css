@@ -3738,6 +3738,24 @@ tr:hover .client-view-link {
     color: var(--danger-500);
 }
 
+/* v3.2: Skeleton loading state — replaces the blank-pane moment while the iframe
+   fetches + bootstraps. Filename of the doc being loaded gives immediate
+   acknowledgment of the click; spinner signals active work. */
+.preview-skeleton {
+    background: var(--gray-50);
+    gap: 12px;
+}
+.preview-skeleton__filename {
+    font-size: 12px;
+    color: var(--gray-600);
+    max-width: 80%;
+    margin: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    unicode-bidi: isolate;
+}
+
 .ai-review-card.preview-active {
     border-color: var(--brand-500);
     box-shadow: var(--shadow-md);
@@ -9496,6 +9514,10 @@ tr:hover .client-edit-link {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: clip; /* JS middle-truncates already */
+    /* v3.2: bidi isolation — filenames mixing Hebrew + trailing ".pdf" Latin run
+       were bleeding past the cell boundary and visually colliding with the sibling
+       category cell. Isolating the flex children's text runs fixes the collision. */
+    unicode-bidi: isolate;
 }
 .ai-doc-row__question-glyph {
     width: 10px;
@@ -9511,6 +9533,7 @@ tr:hover .client-edit-link {
     white-space: nowrap;
     flex-shrink: 0;
     text-align: end;
+    unicode-bidi: isolate; /* v3.2: prevent bleed from neighboring filename's bidi run */
 }
 .ai-doc-row--state-on-hold .ai-doc-row__category {
     color: var(--warning-600);

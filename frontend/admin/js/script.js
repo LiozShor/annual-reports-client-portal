@@ -3698,6 +3698,10 @@ async function loadDocPreview(recordId) {
     iframe.style.display = 'none';
     loading.style.display = '';
     downloadBtn.style.display = 'none';
+    // v3.2: populate skeleton filename so the user sees immediate acknowledgment
+    // of their click during the 300-1700ms iframe-bootstrap window.
+    const skeletonFilename = document.getElementById('previewSkeletonFilename');
+    if (skeletonFilename) skeletonFilename.textContent = item.attachment_name || 'מסמך';
 
     // Update header
     fileName.textContent = item.attachment_name || 'מסמך';
@@ -4082,9 +4086,13 @@ function renderDocRow(item) {
         ? `<span class="ai-doc-row__flag-dot" title="${escapeAttr(flagLabels.join(' · '))}"></span>`
         : '';
 
+    // v3.2: dir="auto" on filename adopts the direction of the first strong character
+    // (Latin → LTR, Hebrew → RTL). Paired with CSS unicode-bidi: isolate on both the
+    // filename and category cells, this prevents a filename's trailing Latin run
+    // (e.g. "...2025.pdf") from bleeding into the adjacent category cell.
     return `<div class="ai-doc-row ${stripeClass}" data-id="${escapeAttr(id)}" title="${escapeAttr(rawName)}" onclick="selectDocument('${escapeAttr(id)}')">
         <span class="ai-doc-row__stripe"></span>
-        <span class="ai-doc-row__filename">${escapeHtml(truncateMiddle(rawName))}</span>
+        <span class="ai-doc-row__filename" dir="auto">${escapeHtml(truncateMiddle(rawName))}</span>
         ${showQGlyph ? `<span class="ai-doc-row__question-glyph" title="${escapeAttr(qTitle)}">?</span>` : ''}
         <span class="ai-doc-row__category"${cat.isOnHold ? ' style="color: var(--warning-600);"' : ''}>${escapeHtml(cat.text)}</span>
         ${flagDotHtml}
