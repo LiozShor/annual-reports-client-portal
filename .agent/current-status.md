@@ -1,8 +1,29 @@
 # Annual Reports CRM - Current Status
 
+**Last Updated:** 2026-04-24 (DL-340 reviewed-status indicator on preview frame — IMPLEMENTED, need testing)
 **Last Updated:** 2026-04-23 (DL-334 AI Review cockpit v2 — PLAN DRAFTED, awaiting implementation approval)
 **Last Updated:** 2026-04-23 (DL-336 template picker UI in also-match + reassign modals — COMPLETED)
 **Last Updated:** 2026-04-23 (DL-331 edit-documents batch 422 fix — IMPLEMENTED, deploy pending)
+
+## DL-340: Reviewed-status indicator on preview frame — IMPLEMENTED — NEED TESTING
+
+Branch `DL-340-reviewed-indicator-preview`. Status badge (`✓ אושר` / `⚠ דורש תיקון` / `↻ שויך מחדש`) before filename in preview header + 3px `border-inline-start` accent on `.ai-review-detail`. Single `applyPreviewReviewState()` helper. Silent for pending/on_hold. style.css v=301, script.js v=315.
+
+### Active TODOs — Test DL-340
+- [ ] Select an approved doc → green `✓ אושר` badge + green `border-inline-start` on preview frame
+- [ ] Select a rejected doc → red `⚠ דורש תיקון` badge + red border
+- [ ] Select a reassigned doc → blue `↻ שויך מחדש` badge + blue border
+- [ ] Select a pending doc → no badge, no border accent (default 1px gray border intact)
+- [ ] Select an on_hold doc → no badge, no border accent
+- [ ] Approve a pending doc while actively previewed → frame updates to green badge + border without reselection
+- [ ] Click "שנה החלטה" on an approved previewed doc → badge + border clear immediately
+- [ ] Click active card again (toggle off) → badge + border both cleared
+- [ ] Header layout: filename ellipsizes correctly; open-tab + download buttons at end (left in RTL)
+- [ ] Mobile (< 768px): no regression
+
+Design log: `.agent/design-logs/ai-review/340-reviewed-indicator-on-preview.md`
+
+---
 
 ## DL-334 AI Review Cockpit v2 — PLAN DRAFTED (awaiting approval)
 

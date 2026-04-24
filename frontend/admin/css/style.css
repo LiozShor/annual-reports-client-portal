@@ -3691,6 +3691,36 @@ tr:hover .client-view-link {
     overscroll-behavior: contain;
 }
 
+/* DL-340: Reviewed-state border accent on preview frame */
+.ai-review-detail.preview-reviewed-approved   { border-inline-start: 3px solid var(--success-500); }
+.ai-review-detail.preview-reviewed-rejected   { border-inline-start: 3px solid var(--danger-500); }
+.ai-review-detail.preview-reviewed-reassigned { border-inline-start: 3px solid var(--info-500); }
+
+/* DL-340: Start-side grouping wrapper — badge sits before filename; action buttons stay at end */
+.preview-header-start {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
+    min-width: 0;
+    flex: 1;
+}
+
+/* DL-340: Status badge */
+.preview-status-badge {
+    display: inline-flex;
+    align-items: center;
+    font-size: 11px;
+    font-weight: 500;
+    padding: 2px 8px;
+    border-radius: 3px;
+    line-height: 1.4;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+.preview-status-badge.badge-approved   { background: var(--success-50); color: var(--success-700); }
+.preview-status-badge.badge-rejected   { background: var(--danger-50);  color: var(--danger-700); }
+.preview-status-badge.badge-reassigned { background: var(--info-50);    color: var(--info-700); }
+
 .preview-header-bar {
     display: flex;
     align-items: center;
