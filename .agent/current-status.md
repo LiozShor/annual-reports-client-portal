@@ -1,6 +1,12 @@
 # Annual Reports CRM - Current Status
 
 **Last Updated:** 2026-04-24 (DL-340 reviewed-status indicator — COMPLETED, live-tested; includes preview watermark stamp, pane-2 row dim+strike+chip, and sort-by-state)
+
+## Next-session TODOs (AI Review)
+
+1. **Default preview zoom to 75%** — when the PDF preview iframe loads (`loadDocPreview` in `script.js`, OneDrive `/items/.../preview` URL), default the viewer zoom to 75% instead of the current fit-to-width. Likely needs a `?zoom=75` or similar query param appended to `previewUrl`, or a post-load `postMessage` if the embed supports it. Start by checking what the OneDrive preview URL scheme accepts.
+2. **Last-doc-of-client completion flow is broken** — after reviewing the final doc for a client, the "all docs reviewed" prompt / transition to the next client / done-state UI does not render correctly. Repro: pick a client with 1 pending doc → approve it → observe what shows (or fails to show). Expected: `showClientReviewDonePrompt` UI or auto-advance to next client. Check `transitionCardToReviewed` → `showClientReviewDonePrompt` path (`script.js:6108-6113`) and whether the DL-340 pane-2 sort/relocation interferes with the "pendingLeft === 0" detection.
+
 **Last Updated:** 2026-04-24 (DL-339 AI Review move actions panel to pane 2 + bundled fixes — IMPLEMENTED — NEED TESTING)
 
 ## Open follow-up — Worker `get-preview-url` error handler crash
