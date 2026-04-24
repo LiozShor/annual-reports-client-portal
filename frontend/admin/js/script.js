@@ -4114,6 +4114,24 @@ function getRowCategoryText(item) {
     return { text: label, isOnHold: false };
 }
 
+// DL-340: Sort rank for pane-2 rows — pending first (needs action), on_hold in the
+// middle (waiting for client), reviewed at the bottom (done). Within a group, oldest
+// received_at first so overdue items rise. Used by buildDesktopClientDocsHtml + refreshItemDom.
+function getRowSortRank(item) {
+    const rs = item && item.review_status;
+    if (rs === 'approved' || rs === 'rejected' || rs === 'reassigned') return 2;
+    if (rs === 'on_hold') return 1;
+    return 0; // pending / missing
+}
+function compareDocRows(a, b) {
+    const ra = getRowSortRank(a);
+    const rb = getRowSortRank(b);
+    if (ra !== rb) return ra - rb;
+    const ta = new Date(a.received_at || 0).getTime();
+    const tb = new Date(b.received_at || 0).getTime();
+    return ta - tb;
+}
+
 // DL-334: Render one thin pane-2 row. See DL-334 §7 "Doc rows".
 function renderDocRow(item) {
     const id = String(item.id);
@@ -4280,8 +4298,9 @@ function buildDesktopClientDocsHtml(clientName, items) {
     html += `<div class="ai-section-separator"></div>`;
 
     // --- Doc list (flat; wrapped in .ai-doc-list for DL-339 60/40 split) ---
+    // DL-340: sort by review-state group (pending → on_hold → reviewed), received_at within group
     html += '<div class="ai-doc-list" id="aiDocList">';
-    for (const item of items) {
+    for (const item of [...items].sort(compareDocRows)) {
         html += renderDocRow(item);
     }
     html += '</div>';
@@ -4377,6 +4396,26 @@ function refreshItemDom(item) {
         oldRow.replaceWith(newRow);
         if (window.activePreviewItemId && String(window.activePreviewItemId) === String(item.id)) {
             newRow.classList.add('active');
+        }
+        // DL-340: reorder row into its new state group (pending → on_hold → reviewed).
+        // Find the first sibling whose rank is higher than this item's — insert before it.
+        const list = newRow.parentElement;
+        if (list) {
+            const myRank = getRowSortRank(item);
+            let insertBefore = null;
+            for (const sibling of list.children) {
+                if (sibling === newRow) continue;
+                const sid = sibling.getAttribute('data-id');
+                if (!sid) continue;
+                const sItem = aiClassificationsData.find(i => String(i.id) === sid);
+                if (!sItem) continue;
+                if (getRowSortRank(sItem) > myRank) { insertBefore = sibling; break; }
+            }
+            if (insertBefore) {
+                if (newRow.nextElementSibling !== insertBefore) list.insertBefore(newRow, insertBefore);
+            } else if (list.lastElementChild !== newRow) {
+                list.appendChild(newRow);
+            }
         }
     }
 
