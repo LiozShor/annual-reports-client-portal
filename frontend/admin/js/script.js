@@ -7032,7 +7032,12 @@ async function confirmAIAlsoMatch(recordId) {
 }
 
 async function assignAIUnmatched(recordId, btnEl) {
-    const actionsContainer = btnEl.closest('.ai-card-actions');
+    // DL-339 v1.5: audit this desktop-or-mobile call site — the panel scope is
+    // .ai-actions-panel (DL-339 pane-2 location), the mobile fat-card scope is
+    // .ai-card-actions. Without this fallback the combobox lookup below throws
+    // on every desktop [שייך] click in State D / State B fallback.
+    const actionsContainer = btnEl.closest('.ai-card-actions') || btnEl.closest('.ai-actions-panel');
+    if (!actionsContainer) return;
     const comboboxEl = actionsContainer.querySelector('.doc-combobox');
     const templateId = comboboxEl ? comboboxEl.dataset.selectedValue : '';
     const docRecordId = comboboxEl ? comboboxEl.dataset.selectedDocId : '';
