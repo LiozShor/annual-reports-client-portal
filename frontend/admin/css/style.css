@@ -9657,16 +9657,14 @@ tr:hover .client-edit-link {
     background: var(--brand-50);
 }
 
-/* ----- State D: combobox ----- */
+/* ----- State D: combobox -----
+   DL-339 v1.8: this is the outer container .doc-combobox-container .ai-ap-combobox.
+   initAIReviewComboboxes injects the real <div class="doc-combobox"><input
+   class="doc-combobox-input">…</div> INSIDE it. Inner carries border/height/padding
+   (scoped under .ai-actions-panel below). Outer is layout-only — no border or
+   padding, else we render a visible double-box around the input. */
 .ai-ap-combobox {
     width: 100%;
-    height: 30px;
-    border: 0.5px solid var(--gray-200);
-    border-radius: 3px;
-    padding: 0 8px;
-    font-size: 12px;
-    background: var(--white, #fff);
-    color: var(--gray-800);
 }
 
 /* ----- Primary actions ----- */
