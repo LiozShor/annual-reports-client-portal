@@ -9729,16 +9729,16 @@ tr:hover .client-edit-link {
 }
 /* v3: tier-2 destructive — borderless, red text only. "Quieter" affordance. */
 .ai-ap-btn--destructive-text {
-    background: transparent;
+    /* DL-339 v1.7: pale-red fill at rest so the button reads as destructive
+       without needing the hover. Text alone (v1.6) got lost against the white
+       panel bg. Keep borderless + bolder weight for the quieter-than-approve feel. */
+    background: var(--danger-50);
     border: 0;
-    /* DL-339 v1.6: weight 400 + danger-600 at 12px read as "subtle gray-ish text"
-       against the panel bg — the red-only signal wasn't landing. Bump to 500 +
-       danger-700 so the button reads as destructive at rest, not only on hover. */
     color: var(--danger-700);
     font-weight: 500;
 }
 .ai-ap-btn--destructive-text:hover:not(:disabled) {
-    background: var(--danger-50);
+    background: var(--danger-100);
 }
 .ai-ap-btn--danger-ghost {
     background: transparent;
@@ -9970,6 +9970,36 @@ tr:hover .client-edit-link {
 .ai-review-docs > .ai-missing-docs-body,
 .ai-review-docs > .ai-section-separator {
     flex-shrink: 0;
+}
+
+/* DL-339 v1.7: densify the legacy .doc-combobox when it's rendered inside the
+   pane-2 actions panel (State D unmatched + State B fallback). The default
+   .doc-combobox-input has mobile fat-card padding + text-sm font, and the
+   dropdown is hard-pinned at 420px wide — way too big for the 33%-wide panel. */
+.ai-actions-panel .doc-combobox-input {
+    padding: 4px 8px;
+    font-size: 12px;
+    line-height: 1;
+    height: 28px;
+    border: 0.5px solid var(--gray-200);
+    border-radius: 3px;
+}
+.ai-actions-panel .doc-combobox-dropdown {
+    width: auto;
+    min-width: 240px;
+    max-width: 420px;
+    max-height: 200px;
+    font-size: 12px;
+}
+.ai-actions-panel .doc-combobox-option,
+.ai-actions-panel .doc-combobox-category,
+.ai-actions-panel .doc-combobox-create-btn,
+.ai-actions-panel .doc-combobox-empty {
+    padding: 4px 8px;
+    font-size: 12px;
+}
+.ai-actions-panel .doc-combobox-category {
+    font-size: 11px;
 }
 
 /* ============ /DL-334 ============ */
