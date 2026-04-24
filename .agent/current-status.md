@@ -1,6 +1,17 @@
 # Annual Reports CRM - Current Status
 
 **Last Updated:** 2026-04-24 (DL-339 AI Review move actions panel to pane 2 + bundled fixes — IMPLEMENTED — NEED TESTING)
+
+## Open follow-up — Worker `get-preview-url` error handler crash
+
+Observed 2026-04-24T13:25:19Z. Two UptimeRobot / error-logger alerts fired for `/webhook/get-preview-url` in the same millisecond:
+
+1. Graph 404: `POST /me/drive/items/01QU4BFLBPHRNQ32QNW5B2JPFBCLB26D5M/preview failed: The resource could not be found.` — expected when an Airtable `onedrive_item_id` points to a file moved/deleted in OneDrive. Recurring, low-priority.
+2. INTERNAL `stage is not defined` — **Worker-side ReferenceError**, fired simultaneously with the 404. Likely the error-logger (or the preview handler's catch block) references an undefined `stage` variable, so the real 404 never reaches the client and the user sees a generic 500. Low-frequency but masks the real error and fires duplicate alerts.
+
+Scope: `api/src/routes/preview.ts` (get-preview-url handler) + `api/src/lib/error-logger.ts` (if `stage` is a logger field). Fix is likely a 1–2 line add of `const stage = env.STAGE || 'unknown'` or removing a stale reference. Not in DL-339; split into its own DL when picked up.
+
+---
 **Last Updated:** 2026-04-23 (DL-334 AI Review cockpit v2 — IMPLEMENTED — NEED TESTING)
 **Last Updated:** 2026-04-23 (DL-334 AI Review cockpit v2 — PLAN DRAFTED, awaiting implementation approval)
 **Last Updated:** 2026-04-23 (DL-336 template picker UI in also-match + reassign modals — COMPLETED)
