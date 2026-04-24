@@ -4439,11 +4439,10 @@ function _renderPanelHeader(item, variant) {
 
 function _renderPanelFullOrFuzzy(item, variant, reReviewing) {
     const docName = appendContractPeriod(item.matched_short_name || item.matched_template_name || 'לא ידוע', item);
-    const rawConf = item.ai_confidence || item.confidence || 0;
-    const pct = rawConf ? Math.round(rawConf * 100) : null;
-    const pctStr = pct != null ? ` <span style="color: var(--gray-500);">(${pct}%)</span>` : '';
+    // DL-339 v1.9: confidence percentage removed from the body — users don't act
+    // on the number and it competed visually with the matched doc name.
     return `<div style="font-size: 12px; color: var(--gray-700);">
-        🤖 AI חושב שזה: <span style="font-weight: 500;">${renderDocLabel(docName)}</span>${pctStr}
+        🤖 AI חושב שזה: <span style="font-weight: 500;">${renderDocLabel(docName)}</span>
     </div>`;
 }
 
