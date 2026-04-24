@@ -3727,6 +3727,32 @@ tr:hover .client-view-link {
 .preview-status-badge.badge-rejected   { background: var(--danger-50);  color: var(--danger-700); }
 .preview-status-badge.badge-reassigned { background: var(--info-50);    color: var(--info-700); }
 
+/* DL-340: Corner stamp — classic rubber-stamp look over the preview iframe area */
+.preview-review-stamp {
+    position: absolute;
+    top: 56px;
+    inset-inline-start: 24px;
+    padding: 8px 18px;
+    font-size: 22px;
+    font-weight: 900;
+    letter-spacing: 2px;
+    line-height: 1;
+    border: 3px solid currentColor;
+    border-radius: 4px;
+    background: transparent;
+    transform: rotate(-8deg);
+    opacity: 0.78;
+    pointer-events: none;
+    user-select: none;
+    z-index: 2;
+    box-shadow: inset 0 0 0 2px color-mix(in srgb, currentColor 40%, transparent);
+    text-shadow: 0 1px 0 color-mix(in srgb, currentColor 15%, transparent);
+    white-space: nowrap;
+}
+.preview-review-stamp.stamp-approved   { color: var(--success-500); }
+.preview-review-stamp.stamp-rejected   { color: var(--danger-500); }
+.preview-review-stamp.stamp-reassigned { color: var(--info-500); }
+
 .preview-header-bar {
     display: flex;
     align-items: center;
