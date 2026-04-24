@@ -3705,8 +3705,24 @@ async function loadDocPreview(recordId) {
     openTab.style.display = item.file_url ? '' : 'none';
     header.style.display = '';
 
+    // DL-334 v3.1: preview latency instrumentation — gated on localStorage.ADMIN_PERF='1'.
+    // Logs two durations per click:
+    //   dl334:preview:urlFetch    = Worker round-trip for the SharePoint preview URL
+    //   dl334:preview:iframeOnload = Microsoft viewer bootstrap + first paint
+    // Per-click id so first-view vs repeat-view of the same doc is visible.
+    const _perfOn = (() => { try { return localStorage.ADMIN_PERF === '1'; } catch (e) { return false; } })();
+    const _perfId = _perfOn ? `${recordId}:${Date.now()}` : null;
+    const _perfStart = _perfOn ? performance.now() : 0;
+    let _perfUrlFetched = 0;
+
     try {
         const { previewUrl, downloadUrl } = await getDocPreviewUrl(item.onedrive_item_id);
+        if (_perfOn) {
+            _perfUrlFetched = performance.now();
+            const urlMs = Math.round(_perfUrlFetched - _perfStart);
+            console.log(`[dl334:preview:urlFetch] ${urlMs}ms · id=${_perfId} · itemId=${item.onedrive_item_id}`);
+            try { performance.measure(`dl334:preview:urlFetch:${_perfId}`, { start: _perfStart, duration: urlMs }); } catch (e) {}
+        }
         // Verify still the active card (user might have clicked another)
         if (activePreviewItemId !== recordId) return;
         // Keep spinner until iframe actually loads
@@ -3714,6 +3730,12 @@ async function loadDocPreview(recordId) {
             if (activePreviewItemId !== recordId) return;
             loading.style.display = 'none';
             iframe.style.display = '';
+            if (_perfOn && _perfUrlFetched) {
+                const loadMs = Math.round(performance.now() - _perfUrlFetched);
+                const totalMs = Math.round(performance.now() - _perfStart);
+                console.log(`[dl334:preview:iframeOnload] ${loadMs}ms · total=${totalMs}ms · id=${_perfId}`);
+                try { performance.measure(`dl334:preview:iframeOnload:${_perfId}`, { start: _perfUrlFetched, duration: loadMs }); } catch (e) {}
+            }
         };
         iframe.src = previewUrl;
         if (downloadUrl) {

@@ -3717,6 +3717,7 @@ tr:hover .client-view-link {
     width: 100%;
     border: none;
     display: block;
+    min-height: 0; /* v3.1: allow flex:1 to shrink below intrinsic iframe height */
 }
 
 .preview-placeholder,
@@ -9346,6 +9347,10 @@ tr:hover .client-edit-link {
 
 .ai-preview-frame {
     position: relative;
+    /* v3.1: flex column so child .preview-iframe's flex:1 actually stretches.
+       Without this the iframe falls back to its browser-default intrinsic height (~150px). */
+    display: flex;
+    flex-direction: column;
     flex: 2; /* v3: preview takes ~65-70% so the PDF is readable */
     min-height: 320px;
     background: var(--white, #fff);
