@@ -9346,8 +9346,8 @@ tr:hover .client-edit-link {
 
 .ai-preview-frame {
     position: relative;
-    flex: 1.3;
-    min-height: 240px;
+    flex: 2; /* v3: preview takes ~65-70% so the PDF is readable */
+    min-height: 320px;
     background: var(--white, #fff);
     border: 0.5px solid var(--gray-200);
     border-radius: var(--radius-md);
@@ -9357,16 +9357,16 @@ tr:hover .client-edit-link {
 
 .ai-actions-panel {
     position: relative;
-    flex: 1;
-    min-height: 260px;
+    flex: 1; /* v3: actions panel ~30-35%; long states scroll internally */
+    min-height: 240px;
     overflow-y: auto;
     background: var(--white, #fff);
     border: 0.5px solid var(--gray-200);
     border-radius: var(--radius-md);
-    padding: 10px 12px;
+    padding: 8px 10px; /* v3 densified */
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 6px; /* v3 densified (8→6) */
     border-inline-start: 3px solid var(--gray-300);
 }
 
@@ -9561,7 +9561,7 @@ tr:hover .client-edit-link {
 .ai-ap-lozenge--on-hold    { background: var(--warning-100); color: var(--warning-700); }
 
 .ai-ap-divider {
-    padding-top: 6px;
+    padding-top: 4px; /* v3 densified (6→4) */
     border-top: 0.5px solid var(--gray-200);
 }
 
@@ -9647,7 +9647,7 @@ tr:hover .client-edit-link {
 }
 
 .ai-ap-btn {
-    height: 30px;
+    height: 28px; /* v3 densified (30→28) */
     font-size: 12px;
     padding: 6px 10px;
     border-radius: 3px;
@@ -9663,13 +9663,25 @@ tr:hover .client-edit-link {
     line-height: 1;
     white-space: nowrap;
 }
+/* v3: tier-1 affirmative — success fill with subtle border. Paired with --neutral below. */
 .ai-ap-btn--primary-success {
     background: var(--success-100);
     color: var(--success-700);
+    border: 0.5px solid var(--success-200);
     font-weight: 500;
 }
 .ai-ap-btn--primary-success:hover:not(:disabled) {
     filter: brightness(0.96);
+}
+/* v3: tier-1 neutral — equal weight partner of --primary-success. Reads as "other opinion". */
+.ai-ap-btn--neutral {
+    background: var(--gray-100);
+    color: var(--gray-700);
+    border: 0.5px solid var(--gray-200);
+    font-weight: 500;
+}
+.ai-ap-btn--neutral:hover:not(:disabled) {
+    background: var(--gray-200);
 }
 .ai-ap-btn--ghost {
     background: transparent;
@@ -9678,6 +9690,16 @@ tr:hover .client-edit-link {
 }
 .ai-ap-btn--ghost:hover:not(:disabled) {
     background: var(--gray-50);
+}
+/* v3: tier-2 destructive — borderless, red text only. "Quieter" affordance. */
+.ai-ap-btn--destructive-text {
+    background: transparent;
+    border: 0;
+    color: var(--danger-600, var(--danger-700));
+    font-weight: 400;
+}
+.ai-ap-btn--destructive-text:hover:not(:disabled) {
+    background: var(--danger-50);
 }
 .ai-ap-btn--danger-ghost {
     background: transparent;
@@ -9700,9 +9722,13 @@ tr:hover .client-edit-link {
     width: 100%;
 }
 .ai-ap-btn--small {
-    height: 26px;
+    height: 24px; /* v3 densified (26→24) */
     font-size: 11px;
     padding: 4px 10px;
+}
+/* v3: vertical separation between tier-1 affirmative row and tier-2 destructive action */
+.ai-ap-primary-actions__tier2 {
+    margin-top: 8px;
 }
 .ai-ap-btn--icon-only {
     width: 40px;
@@ -9732,8 +9758,8 @@ tr:hover .client-edit-link {
 /* ----- Secondary actions row ----- */
 .ai-ap-secondary-actions {
     border-top: 0.5px solid var(--gray-200);
-    padding-top: 4px;
-    margin-top: 4px;
+    padding-top: 3px; /* v3 densified (4→3) */
+    margin-top: 3px;  /* v3 densified (4→3) */
     display: flex;
     flex-direction: row;
     gap: 4px;

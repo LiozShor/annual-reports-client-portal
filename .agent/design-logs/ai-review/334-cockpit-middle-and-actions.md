@@ -558,3 +558,14 @@ Landed 2026-04-23 via `/subagent-driven-development` (serial C → A → B → D
 - **14 `.ai-review-card[data-id]` callers audited** (Workstream B); each is either mobile-only or branch-guarded via `isAIReviewMobileLayout`.
 - **Cache-bust:** `design-system.css` versionless (shared), `style.css?v=301` (Workstream C bump, no further CSS changes in A/B/D), `script.js?v=316` (final bump to force hard-reload after A+B+D JS landed).
 - **Known follow-up:** Workstream B inlined some token-specific styles in JS where Workstream C's class contract was scaffold-only; a later pass can fold those back into CSS for consistency. Non-blocking.
+
+### v3 polish pass (2026-04-24)
+
+Reverted v2 (commit `e68d00a`), applied focused refinements, then re-shipped. Four fixes in one commit:
+
+- **Fix 0 — row category `<b>` tags:** `getRowCategoryText` was escaping upstream HTML emphasis verbatim. Moot after Fix 1 (source field no longer contains HTML).
+- **Fix 1 — row category = filing-type label only:** `getRowCategoryText` now returns `FILING_TYPE_LABELS[item.filing_type]` instead of `matched_category_short_name`. Template name is still surfaced in the actions panel when the row is selected — single source of truth. `on_hold` swap to `⏳ ממתין ללקוח` unchanged.
+- **Fix 2 — pane 3 proportions + actions panel densification:** `.ai-preview-frame` now `flex: 2` (min-height 320px); `.ai-actions-panel` stays `flex: 1` (min-height 240px) — preview claims ~65-70% so the PDF is readable. Panel densified: outer padding `10px 12px → 8px 10px`, internal gap `8 → 6px`, `.ai-ap-divider` top padding `6 → 4px`, `.ai-ap-secondary-actions` padding/margin top `4 → 3px`, `.ai-ap-btn` height `30 → 28px`, `.ai-ap-btn--small` height `26 → 24px`. Long states (State D, on_hold) scroll internally via `overflow-y: auto` — never push the preview smaller.
+- **Fix 3 — two-tier primary action buttons:** new classes `.ai-ap-btn--neutral` (gray-100 fill, gray-700 text, equal weight to `--primary-success`), `.ai-ap-btn--destructive-text` (transparent, no border, `--danger-600` text, danger-50 hover), and `.ai-ap-primary-actions__tier2` (margin-top 8px separator). `--primary-success` gained a 0.5px `--success-200` border for edge definition. State A/C: `[✓ נכון][שייך מחדש]` in tier 1 (equal weight), `✕ מסמך לא רלוונטי` in tier 2 borderless. State B: `[אישור ושיוך][לא מצאתי ברשימה]` tier 1 + tier 2 destructive. State B fallback + State D: single `שייך` tier 1 full-width + tier 2 destructive. Reviewed: `🔄 שנה החלטה` neutral full; approved also gets `📋 הקובץ תואם למסמך נוסף` neutral below with 8px top margin (affirmative secondary, NOT destructive). on_hold unchanged.
+- **Token additions:** `--success-200` (#BBF7D0) and `--danger-600` (#DC2626) added to `frontend/assets/css/design-system.css` — needed by the new button styles.
+- **Cache-bust:** `style.css?v=302`, `script.js?v=317`.

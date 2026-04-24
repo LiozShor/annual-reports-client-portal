@@ -32,6 +32,7 @@
     /* Semantic — Success */
     --success-50:  #F0FDF4;
     --success-100: #DCFCE7;
+    --success-200: #BBF7D0;
     --success-500: #22C55E;
     --success-700: #15803D;
 
@@ -48,6 +49,7 @@
     --danger-100: #FEE2E2;
     --danger-300: #fca5a5;
     --danger-500: #EF4444;
+    --danger-600: #DC2626;
     --danger-700: #B91C1C;
 
     /* Semantic — Info */

@@ -4036,11 +4036,10 @@ function getRowCategoryText(item) {
     if (item.review_status === 'on_hold') {
         return { text: '⏳ ממתין ללקוח', isOnHold: true };
     }
-    const cat = item.matched_category_short_name
-              || item.matched_short_name
-              || item.matched_template_name
-              || '';
-    return { text: cat, isOnHold: false };
+    // DL-334 v3: row shows filing-type only (broad scan), not template name.
+    // Template name is still surfaced in the actions panel when the row is selected.
+    const label = FILING_TYPE_LABELS[item.filing_type] || item.filing_type || '';
+    return { text: label, isOnHold: false };
 }
 
 // DL-334: Render one thin pane-2 row. See DL-334 §7 "Doc rows".
@@ -4537,7 +4536,15 @@ function _renderPanelAdditive(item, variant, reReviewing) {
     const idA = escapeAttr(id);
     const idJs = escapeOnclick(String(id));
 
-    // --- Primary actions ---
+    // --- Primary actions (DL-334 v3: two-tier layout) ---
+    // Tier 1: affirmative action(s), equal weight (primary-success + neutral).
+    // Tier 2: destructive action, borderless red text with margin-top separation.
+    const destructiveBtn = (extraClass = '') =>
+        `<button class="ai-ap-btn ai-ap-btn--destructive-text ai-ap-btn--full ${extraClass}" onclick="rejectAIClassification('${idA}')">✕ מסמך לא רלוונטי</button>`;
+    const cancelReReviewBtn = reReviewing
+        ? `<button class="ai-ap-btn ai-ap-btn--ghost ai-ap-btn--full" onclick="cancelReReview('${idA}')">ביטול</button>`
+        : '';
+
     let primaryHtml = '';
     if (variant === 'full' || variant === 'fuzzy') {
         const addToRequired = item.is_unrequested && !!item.matched_template_id;
@@ -4551,64 +4558,52 @@ function _renderPanelAdditive(item, variant, reReviewing) {
         const approveAttrs = approveDisabled
             ? `aria-disabled="true" title="לא ניתן לאשר מסמך שלא נדרש — יש לשייך מחדש או לדחות"`
             : `onclick="${approveHandler}"`;
-        const cancelBtn = reReviewing
-            ? `<button class="ai-ap-btn ai-ap-btn--ghost" onclick="cancelReReview('${idA}')">ביטול</button>`
-            : '';
-        primaryHtml = `<div class="ai-ap-primary-actions" style="display: flex; flex-direction: column; gap: 4px;">
-            <div style="display: flex; gap: 4px;">
+        primaryHtml = `<div class="ai-ap-primary-actions">
+            <div class="ai-ap-primary-actions__row" style="gap: 6px;">
                 <button class="ai-ap-btn ai-ap-btn--primary-success" style="flex: 1;" ${approveAttrs}>${escapeHtml(approveLabel)}</button>
-                <button class="ai-ap-btn ai-ap-btn--ghost" style="flex: 1;" onclick="showAIReassignModal('${idA}')">שייך מחדש</button>
+                <button class="ai-ap-btn ai-ap-btn--neutral" style="flex: 1;" onclick="showAIReassignModal('${idA}')">שייך מחדש</button>
             </div>
-            <button class="ai-ap-btn ai-ap-btn--danger-ghost ai-ap-btn--full" onclick="rejectAIClassification('${idA}')">✕ מסמך לא רלוונטי</button>
-            ${cancelBtn}
+            ${destructiveBtn('ai-ap-primary-actions__tier2')}
+            ${cancelReReviewBtn}
         </div>`;
     } else if (variant === 'issuer') {
         const missingDocs = item.missing_docs || [];
         const relatedIds = RELATED_TEMPLATES[item.matched_template_id] || [item.matched_template_id];
         const sameTypeDocs = missingDocs.filter(d => relatedIds.includes(d.template_id));
-        const cancelBtn = reReviewing
-            ? `<button class="ai-ap-btn ai-ap-btn--ghost" onclick="cancelReReview('${idA}')">ביטול</button>`
-            : '';
         if (sameTypeDocs.length === 0) {
-            // Fallback to unmatched-style primary
-            primaryHtml = `<div class="ai-ap-primary-actions" style="display: flex; flex-direction: column; gap: 4px;">
-                <div style="display: flex; gap: 4px;">
-                    <button class="ai-ap-btn ai-ap-btn--primary-success btn-ai-assign-confirm" style="flex: 1;" disabled onclick="assignAIUnmatched('${idA}', this)">שייך</button>
-                    <button class="ai-ap-btn ai-ap-btn--danger-ghost ai-ap-btn--icon-only" style="width: 40px;" onclick="rejectAIClassification('${idA}')">✕</button>
-                </div>
-                ${cancelBtn}
+            // Fallback to unmatched layout: single assign button (disabled until combobox picks) + destructive below.
+            primaryHtml = `<div class="ai-ap-primary-actions">
+                <button class="ai-ap-btn ai-ap-btn--primary-success ai-ap-btn--full btn-ai-assign-confirm" disabled onclick="assignAIUnmatched('${idA}', this)">שייך</button>
+                ${destructiveBtn('ai-ap-primary-actions__tier2')}
+                ${cancelReReviewBtn}
             </div>`;
         } else {
-            primaryHtml = `<div class="ai-ap-primary-actions" style="display: flex; flex-direction: column; gap: 4px;">
-                <div style="display: flex; gap: 4px;">
+            primaryHtml = `<div class="ai-ap-primary-actions">
+                <div class="ai-ap-primary-actions__row" style="gap: 6px;">
                     <button class="ai-ap-btn ai-ap-btn--primary-success btn-ai-comparison-assign" style="flex: 1;" disabled onclick="quickAssignSelected('${idA}')">אישור ושיוך</button>
-                    <button class="ai-ap-btn ai-ap-btn--danger-ghost ai-ap-btn--icon-only" style="width: 40px;" onclick="rejectAIClassification('${idA}')">✕</button>
+                    <button class="ai-ap-btn ai-ap-btn--neutral" style="flex: 1;" onclick="showAIReassignModal('${idA}')">לא מצאתי ברשימה</button>
                 </div>
-                <button class="ai-ap-btn ai-ap-btn--ghost ai-ap-btn--full" onclick="showAIReassignModal('${idA}')">לא מצאתי ברשימה</button>
-                ${cancelBtn}
+                ${destructiveBtn('ai-ap-primary-actions__tier2')}
+                ${cancelReReviewBtn}
             </div>`;
         }
     } else if (variant === 'unmatched') {
-        const cancelBtn = reReviewing
-            ? `<button class="ai-ap-btn ai-ap-btn--ghost" onclick="cancelReReview('${idA}')">ביטול</button>`
-            : '';
-        primaryHtml = `<div class="ai-ap-primary-actions" style="display: flex; flex-direction: column; gap: 4px;">
-            <div style="display: flex; gap: 4px;">
-                <button class="ai-ap-btn ai-ap-btn--primary-success btn-ai-assign-confirm" style="flex: 1;" disabled onclick="assignAIUnmatched('${idA}', this)">שייך</button>
-                <button class="ai-ap-btn ai-ap-btn--danger-ghost ai-ap-btn--icon-only" style="width: 40px;" onclick="rejectAIClassification('${idA}')">✕</button>
-            </div>
-            ${cancelBtn}
+        primaryHtml = `<div class="ai-ap-primary-actions">
+            <button class="ai-ap-btn ai-ap-btn--primary-success ai-ap-btn--full btn-ai-assign-confirm" disabled onclick="assignAIUnmatched('${idA}', this)">שייך</button>
+            ${destructiveBtn('ai-ap-primary-actions__tier2')}
+            ${cancelReReviewBtn}
         </div>`;
     } else if (variant === 'on-hold') {
         primaryHtml = `<div class="ai-ap-primary-actions">
             <button class="ai-ap-btn ai-ap-btn--warning ai-ap-btn--full" onclick="startReReview('${idA}')">סיים את ההמתנה</button>
         </div>`;
     } else if (variant === 'approved' || variant === 'rejected' || variant === 'reassigned') {
+        // Neutral "change my mind" + (approved only) neutral "also matches" — both gray, not destructive.
         const alsoMatch = variant === 'approved'
-            ? `<button class="ai-ap-btn ai-ap-btn--ghost ai-ap-btn--full" onclick="showAIAlsoMatchModal('${idA}')">📋 הקובץ תואם למסמך נוסף</button>`
+            ? `<button class="ai-ap-btn ai-ap-btn--neutral ai-ap-btn--full ai-ap-primary-actions__tier2" onclick="showAIAlsoMatchModal('${idA}')">📋 הקובץ תואם למסמך נוסף</button>`
             : '';
-        primaryHtml = `<div class="ai-ap-primary-actions" style="display: flex; flex-direction: column; gap: 4px;">
-            <button class="ai-ap-btn ai-ap-btn--ghost ai-ap-btn--full" onclick="startReReview('${idA}')">🔄 שנה החלטה</button>
+        primaryHtml = `<div class="ai-ap-primary-actions">
+            <button class="ai-ap-btn ai-ap-btn--neutral ai-ap-btn--full" onclick="startReReview('${idA}')">🔄 שנה החלטה</button>
             ${alsoMatch}
         </div>`;
     }
