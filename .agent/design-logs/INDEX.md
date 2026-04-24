@@ -2,12 +2,12 @@
 
 Active and pending logs. For completed history, see [ARCHIVE-INDEX.md](ARCHIVE-INDEX.md).
 
-**Total logs:** 215 | **Active:** 117 | **Archived:** 98
+**Total logs:** 216 | **Active:** 118 | **Archived:** 98
 
 ## Folder Structure
 
 - `admin-ui/` — Admin UI (32)
-- `ai-review/` — AI Review & Classification (35)
+- `ai-review/` — AI Review & Classification (36)
 - `capital-statements/` — Capital Statements (4)
 - `client-portal/` — Client Portal & Questionnaires (13)
 - `documents/` — Documents & OneDrive (20)
@@ -21,6 +21,7 @@ Active and pending logs. For completed history, see [ARCHIVE-INDEX.md](ARCHIVE-I
 
 | # | File | Status | Summary |
 |---|------|--------|---------|
+| 339 | [339-move-actions-to-pane2.md](ai-review/339-move-actions-to-pane2.md) | IMPLEMENTED — NEED TESTING | Move AI Review actions panel from pane 3 (below preview) into pane 2 (below doc list) — pane 3 becomes 100% preview, pane 2 becomes flex column with 60/40 list/panel split driven by `.has-selection` on `.ai-review-docs`. `flex-basis` transitions 180ms; `selectDocument` first-click scrolls active row into view 200ms post-transition (DL-278 pattern). Bundles 3 fixes: Fix A (bidi — replace `unicode-bidi: isolate` + `dir="auto"` with `unicode-bidi: plaintext; text-align: start` so Latin-starting filenames align identically to Hebrew); Fix B (truncation — new `truncateKeepExtension(name, 45)` replaces `truncateMiddle`, preserves `.pdf` extension); Fix C (missing-docs — replace legacy `.ai-missing-docs-body { max-height: 0 }` accordion with dual-selector display toggle for mobile + desktop). Cache-bust: `style.css?v=305`, `script.js?v=321` |
 | 338 | [338-ai-review-messages-hover-reply.md](ai-review/338-ai-review-messages-hover-reply.md) | IMPLEMENTED — NEED TESTING | AI Review tab client messages timeline: hover reveals reply button + 2-line clamp unclamped on hover. `showReplyInput` patched with 1-line OR-selector to also match `.ai-cn-entry[data-note-id]`. `renderEntry` adds data attrs + `.ai-cn-action-btn`. CSS: `.ai-cn-entry` gets `flex-wrap`, hover bg; `.ai-cn-summary` 2-line clamp; new `.ai-cn-action-btn` opacity-0→1 on hover. script.js v=306→307, style.css v=296→297 |
 | 337 | [337-raw-text-instead-of-ai-summary.md](ai-review/337-raw-text-instead-of-ai-summary.md) | IMPLEMENTED — NEED TESTING | AI Review tab client-notes timeline now shows raw client email text (`raw_snippet`) instead of AI summary; falls back to `summary` for legacy notes / manual notes. Matches Dashboard Recent Messages + Pending-Approval modal fallback pattern (`script.js:1083`, `:7521`). Doc-Manager exempt — still shows "סיכום AI:" labeled summary. Backend + summarizer unchanged. script.js v=305→306 |
 | 334 | [334-cockpit-middle-and-actions.md](ai-review/334-cockpit-middle-and-actions.md) | IMPLEMENTED — NEED TESTING | AI Review cockpit phase 1 (v2 plan) — pane 2 thin rows (28-30px, state-stripe including on_hold amber) + pane 3 vertical split (preview top / state-aware actions panel bottom). Filename renders ONCE in panel header, never in row. Flat-minimal (0.5px borders, sentence case, 400/500 weights, no new tokens). Full on_hold integration: row category `⏳ ממתין ללקוח`, panel lozenge, body shows question + AI guess, single `סיים את ההמתנה` button → `startReReview`. Coordinates with DL-335 (no changes to `dismissAndSendQuestions` / `dismissClientReview` / `renderReviewedCard`; DL-334 only consumes their output). Bundles DL-053 silent-refresh merge-by-id. Mobile <768px untouched via `isAIReviewMobileLayout` guards. Supersedes the reverted v1 attempt (commit `1ef907f`, reverted via `f643a79`). Status DRAFT — awaiting implementation approval |

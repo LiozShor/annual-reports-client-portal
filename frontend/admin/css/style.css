@@ -2461,15 +2461,19 @@ tr:hover .client-view-link {
     transform: rotate(90deg);
 }
 
+/* DL-339 Fix C: legacy max-height collapse was sized for the old fat-card mobile
+   path; on desktop DL-334 rows the animation timing caused "stuck-collapsed" bugs
+   where the body measured 0 during initial render. Switch to display toggle.
+   Mobile path uses `.ai-missing-docs-group.open` (toggleMissingDocs); desktop
+   reuses the same hook plus a second selector for the thin-rows section header. */
 .ai-missing-docs-body {
-    max-height: 0;
-    overflow: hidden;
-    transition: max-height var(--transition-slow);
     padding: 0 var(--sp-4);
+    display: none;
 }
 
-.ai-missing-docs-group.open .ai-missing-docs-body {
-    max-height: 2000px;
+.ai-missing-docs-group.open .ai-missing-docs-body,
+.ai-review-docs .ai-section-header.open + .ai-missing-docs-body {
+    display: block;
     padding: 0 var(--sp-4) var(--sp-3);
 }
 
@@ -9514,10 +9518,11 @@ tr:hover .client-edit-link {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: clip; /* JS middle-truncates already */
-    /* v3.2: bidi isolation — filenames mixing Hebrew + trailing ".pdf" Latin run
-       were bleeding past the cell boundary and visually colliding with the sibling
-       category cell. Isolating the flex children's text runs fixes the collision. */
-    unicode-bidi: isolate;
+    /* DL-339: v3.2 used `unicode-bidi: isolate` here paired with dir="auto" on
+       the span; that pairing caused pure-Latin filenames to flip the cell's
+       alignment in the RTL flex row. The DL-339 rule below (appended at end of
+       this section) replaces it with `unicode-bidi: plaintext` + `text-align: start`,
+       which isolates the filename text run without hijacking cell alignment. */
 }
 .ai-doc-row__question-glyph {
     width: 10px;
@@ -9533,7 +9538,8 @@ tr:hover .client-edit-link {
     white-space: nowrap;
     flex-shrink: 0;
     text-align: end;
-    unicode-bidi: isolate; /* v3.2: prevent bleed from neighboring filename's bidi run */
+    /* DL-339: removed v3.2 `unicode-bidi: isolate` — no longer paired with dir="auto"
+       on the filename span, so isolation here is unnecessary. */
 }
 .ai-doc-row--state-on-hold .ai-doc-row__category {
     color: var(--warning-600);
@@ -9889,6 +9895,57 @@ tr:hover .client-edit-link {
     .ai-actions-panel {
         display: none;
     }
+}
+
+/* ============ DL-339 v1: Move actions panel to pane 2 + bug fixes ============ */
+
+/* Pane 2 becomes flex column so list + panel split cleanly.
+   NOTE: existing `.ai-review-docs { overflow-y: auto; padding: var(--sp-3) }`
+   rules earlier in the file remain; the inner `.ai-doc-list` owns scroll now,
+   the outer container provides the flex axis + min-height:0 so children shrink. */
+.ai-review-docs {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+
+/* New doc-list wrapper. Takes full height when no selection; 60% when panel visible. */
+.ai-doc-list {
+    flex: 1;
+    overflow-y: auto;
+    min-height: 0;
+    transition: flex-basis 180ms ease-out;
+}
+
+/* DL-339: Relocate actions panel into pane 2. Hidden by default. */
+.ai-actions-panel {
+    display: none;
+}
+
+.ai-review-docs.has-selection .ai-doc-list {
+    flex: 0 0 60%;
+}
+
+.ai-review-docs.has-selection .ai-actions-panel {
+    display: flex;
+    flex: 0 0 40%;
+    flex-direction: column;
+    overflow-y: auto;
+    min-height: 0;
+    padding: 10px 12px;
+    border-top: 0.5px solid var(--gray-200);
+    /* Keep the 3px state-accent from DL-334 v2 existing .ai-actions-panel--<variant> rules. */
+}
+
+/* Fix A (bidi): isolate filename text run without flipping the cell's alignment.
+   unicode-bidi: plaintext isolates the text, text-align: start keeps the cell
+   aligned to the parent's (RTL) start edge regardless of filename's first char. */
+.ai-doc-row__filename {
+    /* DL-339: supersedes the earlier v3.2 unicode-bidi: isolate (which was coupled
+       with dir="auto" on the span — that pairing caused pure-Latin filenames to
+       flip the cell's alignment in the RTL flex row). */
+    unicode-bidi: plaintext;
+    text-align: start;
 }
 
 /* ============ /DL-334 ============ */

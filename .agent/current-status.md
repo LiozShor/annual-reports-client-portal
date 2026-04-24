@@ -1,9 +1,21 @@
 # Annual Reports CRM - Current Status
 
+**Last Updated:** 2026-04-24 (DL-339 AI Review move actions panel to pane 2 + bundled fixes — IMPLEMENTED — NEED TESTING)
 **Last Updated:** 2026-04-23 (DL-334 AI Review cockpit v2 — IMPLEMENTED — NEED TESTING)
 **Last Updated:** 2026-04-23 (DL-334 AI Review cockpit v2 — PLAN DRAFTED, awaiting implementation approval)
 **Last Updated:** 2026-04-23 (DL-336 template picker UI in also-match + reassign modals — COMPLETED)
 **Last Updated:** 2026-04-23 (DL-331 edit-documents batch 422 fix — IMPLEMENTED, deploy pending)
+
+## DL-339 AI Review — Move Actions Panel to Pane 2 + Bundled Fixes — IMPLEMENTED — NEED TESTING
+
+Branch `claude-session-20260423-174103`. Actions panel relocates from pane 3 (below preview) to pane 2 (below doc list) — pane 3 becomes 100% preview, pane 2 a flex column with 60/40 list/panel split driven by `.has-selection`. `flex-basis` transitions over 180ms; `selectDocument` first-click re-scrolls active row into view after 200ms (DL-278 pattern) so row stays visible in shrunken viewport. Bundles Fix A (bidi `unicode-bidi: plaintext`), Fix B (`truncateKeepExtension`), Fix C (missing-docs `display` toggle replaces legacy `max-height` accordion). Cache-bust `style.css?v=305` / `script.js?v=321`. `node -c` passed.
+
+### Active TODOs — Test DL-339: pane-2 actions panel + bundled fixes
+- [ ] DL-339 (panel → pane 2 + bundled fixes) end-to-end verification: empty-state → first-click animation smoothness on 900px-tall viewport, all panel state variants (A/B/C/D/on_hold/reviewed) render correctly in new 40% slot, mobile <768px untouched, Fix A (Latin-filename rows align identically to Hebrew), Fix B (end-truncation preserves extension), Fix C (missing-docs expands visibly on click). See DL §7 for full checklist.
+
+Design log: `.agent/design-logs/ai-review/339-move-actions-to-pane2.md`
+
+---
 
 ## DL-334 AI Review Cockpit v2 — IMPLEMENTED — NEED TESTING
 

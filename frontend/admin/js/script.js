@@ -3631,6 +3631,9 @@ function resetPreviewPanel() {
     document.querySelectorAll('.ai-review-card.preview-active').forEach(c => c.classList.remove('preview-active'));
     // DL-334: dual-clear — also drop .ai-doc-row.active from any thin row
     document.querySelectorAll('.ai-doc-row.active').forEach(el => el.classList.remove('active'));
+    // DL-339: drop .has-selection so CSS collapses back to full-width list.
+    const docsRoot = document.querySelector('.ai-review-docs');
+    if (docsRoot) docsRoot.classList.remove('has-selection');
     const placeholder = document.getElementById('previewPlaceholder');
     const loading = document.getElementById('previewLoading');
     const error = document.getElementById('previewError');
@@ -3901,6 +3904,9 @@ async function loadAIClassifications(silent = false, prefetchOnly = false) {
                         // Active item dismissed / removed elsewhere — clear panel.
                         window.activePreviewItemId = null;
                         if (typeof renderActionsPanel === 'function') renderActionsPanel(null);
+                        // DL-339: active item disappeared (dismissed in another tab) → clear selection wrapper too.
+                        const docsRoot = document.querySelector('.ai-review-docs');
+                        if (docsRoot) docsRoot.classList.remove('has-selection');
                     }
                 }
                 aiClassificationsEverRendered = true;
@@ -4026,17 +4032,18 @@ function friendlyAIReason(reason) {
     return reason;
 }
 
-// DL-334: Middle-truncate a filename preserving the extension.
-function truncateMiddle(name, maxLen = 42) {
-    if (!name || name.length <= maxLen) return name || '';
-    const dotIdx = name.lastIndexOf('.');
-    const ext = dotIdx > 0 && name.length - dotIdx <= 6 ? name.slice(dotIdx) : '';
-    const base = ext ? name.slice(0, -ext.length) : name;
-    const keep = maxLen - ext.length - 1; // 1 for ellipsis
-    if (keep <= 4) return name.slice(0, maxLen - 1) + '…';
-    const left = Math.ceil(keep / 2);
-    const right = keep - left;
-    return base.slice(0, left) + '…' + base.slice(-right) + ext;
+// DL-339: End-truncate filename while preserving extension.
+// Matches Gmail/Finder convention; the informative prefix + ".pdf"
+// (needed to signal PDF-splittable docs) stays visible. Supersedes
+// truncateMiddle for row rendering.
+function truncateKeepExtension(filename, maxChars = 45) {
+    if (!filename || filename.length <= maxChars) return filename || '';
+    const dotIdx = filename.lastIndexOf('.');
+    const ext = dotIdx > 0 && filename.length - dotIdx <= 6 ? filename.slice(dotIdx) : '';
+    const stem = ext ? filename.slice(0, -ext.length) : filename;
+    const budget = maxChars - ext.length - 1; // 1 char for the ellipsis
+    if (budget <= 4) return filename.slice(0, maxChars - 1) + '…';
+    return stem.slice(0, budget) + '…' + ext;
 }
 
 // DL-334: Resolve the stripe modifier class for a doc row.
@@ -4086,13 +4093,12 @@ function renderDocRow(item) {
         ? `<span class="ai-doc-row__flag-dot" title="${escapeAttr(flagLabels.join(' · '))}"></span>`
         : '';
 
-    // v3.2: dir="auto" on filename adopts the direction of the first strong character
-    // (Latin → LTR, Hebrew → RTL). Paired with CSS unicode-bidi: isolate on both the
-    // filename and category cells, this prevents a filename's trailing Latin run
-    // (e.g. "...2025.pdf") from bleeding into the adjacent category cell.
+    // DL-339: CSS handles bidi isolation via `unicode-bidi: plaintext` on
+    // .ai-doc-row__filename. Earlier dir="auto" flipped flex alignment on
+    // pure-Latin filenames — removed.
     return `<div class="ai-doc-row ${stripeClass}" data-id="${escapeAttr(id)}" title="${escapeAttr(rawName)}" onclick="selectDocument('${escapeAttr(id)}')">
         <span class="ai-doc-row__stripe"></span>
-        <span class="ai-doc-row__filename" dir="auto">${escapeHtml(truncateMiddle(rawName))}</span>
+        <span class="ai-doc-row__filename">${escapeHtml(truncateKeepExtension(rawName))}</span>
         ${showQGlyph ? `<span class="ai-doc-row__question-glyph" title="${escapeAttr(qTitle)}">?</span>` : ''}
         <span class="ai-doc-row__category"${cat.isOnHold ? ' style="color: var(--warning-600);"' : ''}>${escapeHtml(cat.text)}</span>
         ${flagDotHtml}
@@ -4226,10 +4232,14 @@ function buildDesktopClientDocsHtml(clientName, items) {
     // --- Separator before doc list ---
     html += `<div class="ai-section-separator"></div>`;
 
-    // --- Doc list (flat; keep same order as buildClientAccordionHtml) ---
+    // --- Doc list (flat; wrapped in .ai-doc-list for DL-339 60/40 split) ---
+    html += '<div class="ai-doc-list" id="aiDocList">';
     for (const item of items) {
         html += renderDocRow(item);
     }
+    html += '</div>';
+    // DL-339: actions panel placeholder, hidden by CSS until .has-selection on parent.
+    html += '<div class="ai-actions-panel" id="aiActionsPanel"></div>';
 
     return html;
 }
@@ -4242,6 +4252,13 @@ window.selectDocument = function(id) {
     }
     const item = aiClassificationsData.find(i => String(i.id) === String(id));
     if (!item) return;
+    // DL-339: mark parent as having a selection → CSS flips to 60/40 split (list + actions).
+    const docs = document.querySelector('.ai-review-docs');
+    // DL-339: capture transition FROM no-selection (first click) before toggling the class.
+    // Subsequent clicks within an already-split layout don't change list height, so the
+    // post-transition scrollIntoView isn't needed there (and would jitter unnecessarily).
+    const wasFirstSelection = !!(docs && !docs.classList.contains('has-selection'));
+    if (docs) docs.classList.add('has-selection');
     document.querySelectorAll('.ai-doc-row.active').forEach(el => el.classList.remove('active'));
     const row = document.querySelector(`.ai-doc-row[data-id="${CSS.escape(String(id))}"]`);
     if (row) {
@@ -4252,6 +4269,19 @@ window.selectDocument = function(id) {
     window.activePreviewItemId = id;
     loadDocPreview(id);
     if (typeof renderActionsPanel === 'function') renderActionsPanel(item);
+    // DL-339: on first-click (empty → has-selection), the list's flex-basis animates
+    // from 100% → 60% over 180ms. The immediate scrollIntoView above runs against the
+    // pre-transition 100% viewport; the active row can end up scrolled out in the new
+    // 60% viewport. Re-scroll 200ms later (180ms transition + small buffer) so the
+    // active row stays visible. block:'nearest' is a no-op when already in view.
+    if (wasFirstSelection) {
+        setTimeout(() => {
+            const r2 = document.querySelector(`.ai-doc-row[data-id="${CSS.escape(String(id))}"]`);
+            if (r2) {
+                try { r2.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); } catch (e) {}
+            }
+        }, 200);
+    }
 };
 
 // DL-334: Locate the desktop actions panel iff it is currently rendering the given item id.
