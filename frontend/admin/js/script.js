@@ -4735,21 +4735,49 @@ function _renderPanelAdditive(item, variant, reReviewing) {
 }
 
 // DL-334: Overflow menu toggles + document-click close handler (bound once).
+// DL-339 v1.4: menu promoted to position:fixed on open, coordinates computed from the
+// button's viewport rect, so it escapes the .ai-actions-panel overflow:auto clip.
 function _togglePanelOverflow(btn, event) {
     if (event) event.stopPropagation();
     const wrap = btn.closest('.ai-ap-overflow');
     if (!wrap) return;
     const wasOpen = wrap.classList.contains('open');
     _closePanelOverflow();
-    if (!wasOpen) wrap.classList.add('open');
+    if (!wasOpen) {
+        const menu = wrap.querySelector('.ai-ap-overflow__menu');
+        if (menu) {
+            const r = btn.getBoundingClientRect();
+            menu.style.position = 'fixed';
+            menu.style.top = `${Math.round(r.bottom + 4)}px`;
+            // Align menu's inline-end to the button's inline-end (right edge in RTL).
+            menu.style.right = `${Math.round(window.innerWidth - r.right)}px`;
+            menu.style.left = 'auto';
+            menu.style.insetInlineEnd = 'auto';
+            menu.style.zIndex = '10000';
+        }
+        wrap.classList.add('open');
+    }
 }
 function _closePanelOverflow() {
-    document.querySelectorAll('.ai-ap-overflow.open').forEach(el => el.classList.remove('open'));
+    document.querySelectorAll('.ai-ap-overflow.open').forEach(el => {
+        el.classList.remove('open');
+        const menu = el.querySelector('.ai-ap-overflow__menu');
+        if (menu) {
+            menu.style.position = '';
+            menu.style.top = '';
+            menu.style.right = '';
+            menu.style.left = '';
+            menu.style.insetInlineEnd = '';
+            menu.style.zIndex = '';
+        }
+    });
 }
 if (!window._aiPanelOverflowHandlerInstalled) {
     document.addEventListener('click', (e) => {
         if (!e.target.closest('.ai-ap-overflow')) _closePanelOverflow();
     });
+    // Close on any scroll so the fixed menu doesn't detach from its trigger.
+    document.addEventListener('scroll', () => _closePanelOverflow(), true);
     window._aiPanelOverflowHandlerInstalled = true;
 }
 
