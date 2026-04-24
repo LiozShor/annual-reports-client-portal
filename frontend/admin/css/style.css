@@ -3529,7 +3529,9 @@ tr:hover .client-view-link {
 }
 
 .ai-review-docs {
-    overflow-y: auto;
+    /* DL-339 v1.1: inner .ai-doc-list owns the vertical scroll.
+       Outer clips so we don't get a second scrollbar on top of the list's own. */
+    overflow: hidden;
     overscroll-behavior: contain;
 }
 
@@ -9946,6 +9948,17 @@ tr:hover .client-edit-link {
        flip the cell's alignment in the RTL flex row). */
     unicode-bidi: plaintext;
     text-align: start;
+}
+
+/* DL-339 v1.1: pin the non-list flex siblings above the doc list so they stay at
+   their natural height. Without this, flex column can compress them to make room
+   for the list's content, producing layout jitter during the 60/40 transition. */
+.ai-review-docs > .ai-pane2-top,
+.ai-review-docs > .ai-section-header,
+.ai-review-docs > .ai-cn-section,
+.ai-review-docs > .ai-missing-docs-body,
+.ai-review-docs > .ai-section-separator {
+    flex-shrink: 0;
 }
 
 /* ============ /DL-334 ============ */
