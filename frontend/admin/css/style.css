@@ -9731,8 +9731,11 @@ tr:hover .client-edit-link {
 .ai-ap-btn--destructive-text {
     background: transparent;
     border: 0;
-    color: var(--danger-600, var(--danger-700));
-    font-weight: 400;
+    /* DL-339 v1.6: weight 400 + danger-600 at 12px read as "subtle gray-ish text"
+       against the panel bg — the red-only signal wasn't landing. Bump to 500 +
+       danger-700 so the button reads as destructive at rest, not only on hover. */
+    color: var(--danger-700);
+    font-weight: 500;
 }
 .ai-ap-btn--destructive-text:hover:not(:disabled) {
     background: var(--danger-50);
