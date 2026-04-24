@@ -2461,15 +2461,19 @@ tr:hover .client-view-link {
     transform: rotate(90deg);
 }
 
+/* DL-339 Fix C: legacy max-height collapse was sized for the old fat-card mobile
+   path; on desktop DL-334 rows the animation timing caused "stuck-collapsed" bugs
+   where the body measured 0 during initial render. Switch to display toggle.
+   Mobile path uses `.ai-missing-docs-group.open` (toggleMissingDocs); desktop
+   reuses the same hook plus a second selector for the thin-rows section header. */
 .ai-missing-docs-body {
-    max-height: 0;
-    overflow: hidden;
-    transition: max-height var(--transition-slow);
     padding: 0 var(--sp-4);
+    display: none;
 }
 
-.ai-missing-docs-group.open .ai-missing-docs-body {
-    max-height: 2000px;
+.ai-missing-docs-group.open .ai-missing-docs-body,
+.ai-review-docs .ai-section-header.open + .ai-missing-docs-body {
+    display: block;
     padding: 0 var(--sp-4) var(--sp-3);
 }
 
@@ -3525,7 +3529,9 @@ tr:hover .client-view-link {
 }
 
 .ai-review-docs {
-    overflow-y: auto;
+    /* DL-339 v1.1: inner .ai-doc-list owns the vertical scroll.
+       Outer clips so we don't get a second scrollbar on top of the list's own. */
+    overflow: hidden;
     overscroll-behavior: contain;
 }
 
@@ -3692,9 +3698,9 @@ tr:hover .client-view-link {
 }
 
 /* DL-340: Reviewed-state border accent on preview frame */
-.ai-review-detail.preview-reviewed-approved   { border-inline-start: 3px solid var(--success-500); }
-.ai-review-detail.preview-reviewed-rejected   { border-inline-start: 3px solid var(--danger-500); }
-.ai-review-detail.preview-reviewed-reassigned { border-inline-start: 3px solid var(--info-500); }
+.ai-preview-frame.preview-reviewed-approved   { border-inline-start: 3px solid var(--success-500); }
+.ai-preview-frame.preview-reviewed-rejected   { border-inline-start: 3px solid var(--danger-500); }
+.ai-preview-frame.preview-reviewed-reassigned { border-inline-start: 3px solid var(--info-500); }
 
 /* DL-340: Start-side grouping wrapper — badge sits before filename; action buttons stay at end */
 .preview-header-start {
@@ -3747,6 +3753,7 @@ tr:hover .client-view-link {
     width: 100%;
     border: none;
     display: block;
+    min-height: 0; /* v3.1: allow flex:1 to shrink below intrinsic iframe height */
 }
 
 .preview-placeholder,
@@ -3765,6 +3772,24 @@ tr:hover .client-view-link {
 
 .preview-error {
     color: var(--danger-500);
+}
+
+/* v3.2: Skeleton loading state — replaces the blank-pane moment while the iframe
+   fetches + bootstraps. Filename of the doc being loaded gives immediate
+   acknowledgment of the click; spinner signals active work. */
+.preview-skeleton {
+    background: var(--gray-50);
+    gap: 12px;
+}
+.preview-skeleton__filename {
+    font-size: 12px;
+    color: var(--gray-600);
+    max-width: 80%;
+    margin: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    unicode-bidi: isolate;
 }
 
 .ai-review-card.preview-active {
@@ -9362,4 +9387,648 @@ tr:hover .client-edit-link {
     padding: 12px 16px;
     border-top: 1px solid var(--border-subtle, #E2E8F0);
 }
+
+/* ============ DL-334 AI Review Cockpit v2 ============ */
+
+/* Pane 3 vertical split: preview (top) + actions panel (bottom).
+   Parent `.ai-review-detail` is a grid column in the 3-pane layout (DL-330);
+   here we make it a vertical flex column of [preview-frame, actions-panel]. */
+.ai-review-detail {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.ai-preview-frame {
+    position: relative;
+    /* v3.1: flex column so child .preview-iframe's flex:1 actually stretches.
+       Without this the iframe falls back to its browser-default intrinsic height (~150px). */
+    display: flex;
+    flex-direction: column;
+    flex: 2; /* v3: preview takes ~65-70% so the PDF is readable */
+    min-height: 320px;
+    background: var(--white, #fff);
+    border: 0.5px solid var(--gray-200);
+    border-radius: var(--radius-md);
+    padding: 10px;
+    overflow: hidden;
+}
+
+.ai-actions-panel {
+    position: relative;
+    flex: 1; /* v3: actions panel ~30-35%; long states scroll internally */
+    min-height: 240px;
+    overflow-y: auto;
+    background: var(--white, #fff);
+    border: 0.5px solid var(--gray-200);
+    border-radius: var(--radius-md);
+    padding: 8px 10px; /* v3 densified */
+    display: flex;
+    flex-direction: column;
+    gap: 6px; /* v3 densified (8→6) */
+    border-inline-start: 3px solid var(--gray-300);
+}
+
+.ai-actions-panel--empty      { border-inline-start-color: var(--gray-300); }
+.ai-actions-panel--full       { border-inline-start-color: var(--success-500); }
+.ai-actions-panel--fuzzy      { border-inline-start-color: var(--success-500); }
+.ai-actions-panel--issuer     { border-inline-start-color: var(--warning-500); }
+.ai-actions-panel--unmatched  { border-inline-start-color: var(--warning-500); }
+.ai-actions-panel--on-hold    { border-inline-start-color: var(--warning-500); }
+.ai-actions-panel--approved   { border-inline-start-color: var(--success-500); }
+.ai-actions-panel--rejected   { border-inline-start-color: var(--danger-500); }
+.ai-actions-panel--reassigned { border-inline-start-color: var(--info-500); }
+
+/* ----- Pane 2 sticky top strip ----- */
+.ai-pane2-top {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    height: 30px;
+    padding: 4px 8px;
+    background: var(--white, #fff);
+    border-bottom: 0.5px solid var(--gray-200);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+.ai-pane2-top__counter {
+    font-size: 11px;
+    color: var(--gray-500);
+    font-variant-numeric: tabular-nums;
+}
+.ai-pane2-top__folder {
+    width: 14px;
+    height: 14px;
+    color: var(--brand-500);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    background: transparent;
+    border: 0;
+    padding: 0;
+}
+
+/* ----- Collapsed section headers (client notes + missing docs) ----- */
+.ai-section-header {
+    height: 28px;
+    padding: 5px 8px;
+    font-size: 12px;
+    color: var(--gray-600);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    background: transparent;
+    border: 0;
+    width: 100%;
+    text-align: start;
+}
+.ai-section-header__arrow {
+    width: 9px;
+    height: 9px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.15s ease;
+    flex-shrink: 0;
+}
+.ai-section-header.open .ai-section-header__arrow {
+    transform: rotate(90deg);
+}
+.ai-section-separator {
+    border-bottom: 0.5px solid var(--gray-100);
+    margin-bottom: 2px;
+}
+
+/* ----- Thin doc rows ----- */
+.ai-doc-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    height: 30px;
+    padding: 5px 6px;
+    font-size: 12px;
+    color: var(--gray-700);
+    cursor: pointer;
+    transition: background 0.12s ease;
+    background: transparent;
+    border: 0;
+    width: 100%;
+    text-align: start;
+    user-select: none;
+}
+.ai-doc-row:hover:not(.active) {
+    background: var(--gray-50);
+}
+.ai-doc-row.active {
+    background: var(--brand-50);
+}
+.ai-doc-row.active .ai-doc-row__filename {
+    font-weight: 500;
+}
+.ai-doc-row__stripe {
+    width: 3px;
+    height: 16px;
+    border-radius: 2px;
+    flex-shrink: 0;
+    background: var(--gray-300);
+}
+.ai-doc-row--state-full      .ai-doc-row__stripe { background: var(--success-500); }
+.ai-doc-row--state-fuzzy     .ai-doc-row__stripe { background: var(--success-500); }
+.ai-doc-row--state-issuer    .ai-doc-row__stripe { background: var(--warning-500); }
+.ai-doc-row--state-unmatched .ai-doc-row__stripe { background: var(--warning-500); }
+.ai-doc-row--state-on-hold   .ai-doc-row__stripe { background: var(--warning-500); }
+.ai-doc-row--state-approved  .ai-doc-row__stripe { background: var(--success-500); }
+.ai-doc-row--state-rejected  .ai-doc-row__stripe { background: var(--danger-500); }
+.ai-doc-row--state-reassigned .ai-doc-row__stripe { background: var(--info-500); }
+
+.ai-doc-row__filename {
+    flex: 1 1 auto;
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: clip; /* JS middle-truncates already */
+    /* DL-339: v3.2 used `unicode-bidi: isolate` here paired with dir="auto" on
+       the span; that pairing caused pure-Latin filenames to flip the cell's
+       alignment in the RTL flex row. The DL-339 rule below (appended at end of
+       this section) replaces it with `unicode-bidi: plaintext` + `text-align: start`,
+       which isolates the filename text run without hijacking cell alignment. */
+}
+.ai-doc-row__question-glyph {
+    width: 10px;
+    font-size: 10px;
+    line-height: 1;
+    color: var(--info-500);
+    cursor: help;
+    flex-shrink: 0;
+}
+.ai-doc-row__category {
+    font-size: 11px;
+    color: var(--gray-500);
+    white-space: nowrap;
+    flex-shrink: 0;
+    text-align: end;
+    /* DL-339: removed v3.2 `unicode-bidi: isolate` — no longer paired with dir="auto"
+       on the filename span, so isolation here is unnecessary. */
+}
+.ai-doc-row--state-on-hold .ai-doc-row__category {
+    color: var(--warning-600);
+}
+.ai-doc-row__flag-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--warning-500);
+    flex-shrink: 0;
+}
+
+/* ----- Actions panel: header ----- */
+.ai-ap-header {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+.ai-ap-header__line1 {
+    display: flex;
+    flex-direction: row;
+    gap: 6px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+.ai-ap-header__line2 {
+    font-size: 11px;
+    color: var(--gray-500);
+}
+.ai-ap-filename {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--gray-800);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex: 1 1 auto;
+    min-width: 0;
+}
+.ai-ap-lozenge {
+    padding: 1px 6px;
+    border-radius: 3px;
+    font-size: 11px;
+    font-weight: 500;
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    flex-shrink: 0;
+}
+.ai-ap-lozenge--approved   { background: var(--success-100); color: var(--success-700); }
+.ai-ap-lozenge--rejected   { background: var(--warning-100); color: var(--warning-700); }
+.ai-ap-lozenge--reassigned { background: var(--info-100);    color: var(--info-700); }
+.ai-ap-lozenge--on-hold    { background: var(--warning-100); color: var(--warning-700); }
+
+.ai-ap-divider {
+    padding-top: 4px; /* v3 densified (6→4) */
+    border-top: 0.5px solid var(--gray-200);
+}
+
+/* ----- Actions panel: body ----- */
+.ai-ap-body {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+.ai-ap-reasoning-block {
+    background: var(--gray-50);
+    border-radius: 4px;
+    padding: 8px 10px;
+    font-size: 11px;
+    color: var(--gray-700);
+    line-height: 1.5;
+}
+.ai-ap-question-block {
+    background: var(--warning-50);
+    border-radius: 4px;
+    padding: 8px 10px;
+    font-size: 12px;
+    color: var(--warning-800);
+    line-height: 1.5;
+}
+.ai-ap-reply-block {
+    background: var(--info-50);
+    border-radius: 4px;
+    padding: 8px 10px;
+    font-size: 12px;
+    color: var(--gray-700);
+    line-height: 1.5;
+    white-space: pre-wrap;
+}
+
+/* ----- State B: radio list ----- */
+.ai-ap-radio-list {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+.ai-ap-radio-item {
+    padding: 4px 6px;
+    font-size: 11px;
+    border-radius: 3px;
+    display: flex;
+    flex-direction: row;
+    gap: 6px;
+    align-items: center;
+    cursor: pointer;
+}
+.ai-ap-radio-item:hover {
+    background: var(--gray-50);
+}
+.ai-ap-radio-item.selected {
+    color: var(--brand-700);
+    background: var(--brand-50);
+}
+
+/* ----- State D: combobox -----
+   DL-339 v1.8: this is the outer container .doc-combobox-container .ai-ap-combobox.
+   initAIReviewComboboxes injects the real <div class="doc-combobox"><input
+   class="doc-combobox-input">…</div> INSIDE it. Inner carries border/height/padding
+   (scoped under .ai-actions-panel below). Outer is layout-only — no border or
+   padding, else we render a visible double-box around the input. */
+.ai-ap-combobox {
+    width: 100%;
+}
+
+/* ----- Primary actions ----- */
+.ai-ap-primary-actions {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+.ai-ap-primary-actions__row {
+    display: flex;
+    flex-direction: row;
+    gap: 4px;
+}
+
+.ai-ap-btn {
+    height: 28px; /* v3 densified (30→28) */
+    font-size: 12px;
+    padding: 6px 10px;
+    border-radius: 3px;
+    transition: background 0.12s ease, border-color 0.12s ease, color 0.12s ease;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    border: 0;
+    background: transparent;
+    color: var(--gray-700);
+    line-height: 1;
+    white-space: nowrap;
+}
+/* v3: tier-1 affirmative — success fill with subtle border. Paired with --neutral below. */
+.ai-ap-btn--primary-success {
+    background: var(--success-100);
+    color: var(--success-700);
+    border: 0.5px solid var(--success-200);
+    font-weight: 500;
+}
+.ai-ap-btn--primary-success:hover:not(:disabled) {
+    filter: brightness(0.96);
+}
+/* v3: tier-1 neutral — equal weight partner of --primary-success. Reads as "other opinion". */
+.ai-ap-btn--neutral {
+    background: var(--gray-100);
+    color: var(--gray-700);
+    border: 0.5px solid var(--gray-200);
+    font-weight: 500;
+}
+.ai-ap-btn--neutral:hover:not(:disabled) {
+    background: var(--gray-200);
+}
+.ai-ap-btn--ghost {
+    background: transparent;
+    border: 0.5px solid var(--gray-300);
+    color: var(--gray-700);
+}
+.ai-ap-btn--ghost:hover:not(:disabled) {
+    background: var(--gray-50);
+}
+/* v3: tier-2 destructive — borderless, red text only. "Quieter" affordance. */
+.ai-ap-btn--destructive-text {
+    /* DL-339 v1.7: pale-red fill at rest so the button reads as destructive
+       without needing the hover. Text alone (v1.6) got lost against the white
+       panel bg. Keep borderless + bolder weight for the quieter-than-approve feel. */
+    background: var(--danger-50);
+    border: 0;
+    color: var(--danger-700);
+    font-weight: 500;
+}
+.ai-ap-btn--destructive-text:hover:not(:disabled) {
+    background: var(--danger-100);
+}
+.ai-ap-btn--danger-ghost {
+    background: transparent;
+    border: 0.5px solid var(--danger-300);
+    color: var(--danger-700);
+}
+.ai-ap-btn--danger-ghost:hover:not(:disabled) {
+    background: var(--danger-50);
+}
+.ai-ap-btn--warning {
+    background: transparent;
+    border: 0.5px solid var(--warning-500);
+    color: var(--warning-700);
+    font-weight: 500;
+}
+.ai-ap-btn--warning:hover:not(:disabled) {
+    background: var(--warning-50);
+}
+.ai-ap-btn--full {
+    width: 100%;
+}
+.ai-ap-btn--small {
+    height: 24px; /* v3 densified (26→24) */
+    font-size: 11px;
+    padding: 4px 10px;
+}
+/* v3: vertical separation between tier-1 affirmative row and tier-2 destructive action */
+.ai-ap-primary-actions__tier2 {
+    margin-top: 8px;
+}
+.ai-ap-btn--icon-only {
+    width: 40px;
+    padding: 0;
+}
+.ai-ap-btn--icon-only.ai-ap-btn--small {
+    width: 26px;
+}
+.ai-ap-btn:disabled,
+.ai-ap-btn[aria-disabled="true"] {
+    background: var(--gray-100);
+    color: var(--gray-500);
+    cursor: not-allowed;
+    border-color: var(--gray-200);
+}
+
+/* ----- Pending-question secondary block (non-on_hold pending states) ----- */
+.ai-ap-pending-question {
+    background: var(--info-50);
+    border-radius: 4px;
+    padding: 6px 8px;
+    font-size: 11px;
+    color: var(--info-700);
+    line-height: 1.4;
+}
+
+/* ----- Secondary actions row ----- */
+.ai-ap-secondary-actions {
+    border-top: 0.5px solid var(--gray-200);
+    padding-top: 3px; /* v3 densified (4→3) */
+    margin-top: 3px;  /* v3 densified (4→3) */
+    display: flex;
+    flex-direction: row;
+    gap: 4px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+/* ----- Overflow (⋮) menu ----- */
+.ai-ap-overflow {
+    position: relative;
+    margin-inline-start: auto; /* push to end */
+}
+.ai-ap-overflow__btn {
+    width: 26px;
+    height: 26px;
+    background: transparent;
+    border: 0.5px solid var(--gray-200);
+    color: var(--gray-500);
+    border-radius: 3px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+}
+.ai-ap-overflow__btn:hover {
+    background: var(--gray-50);
+}
+.ai-ap-overflow__menu {
+    position: absolute;
+    inset-inline-end: 0;
+    top: calc(100% + 4px);
+    background: var(--white, #fff);
+    border: 0.5px solid var(--gray-200);
+    border-radius: 4px;
+    box-shadow: var(--shadow-sm);
+    padding: 4px;
+    font-size: 12px;
+    z-index: 50;
+    min-width: 180px;
+    display: none;
+}
+.ai-ap-overflow.open .ai-ap-overflow__menu {
+    display: block;
+}
+.ai-ap-overflow__item {
+    padding: 6px 8px;
+    border-radius: 3px;
+    cursor: pointer;
+    color: var(--gray-700);
+    white-space: nowrap;
+    display: block;
+    background: transparent;
+    border: 0;
+    width: 100%;
+    text-align: start;
+}
+.ai-ap-overflow__item:hover {
+    background: var(--gray-50);
+}
+
+/* ----- Empty state ----- */
+.ai-ap-empty {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    color: var(--gray-500);
+    font-size: 12px;
+}
+.ai-ap-empty__icon {
+    font-size: 24px;
+    color: var(--gray-300);
+    line-height: 1;
+}
+
+/* ----- Transient loading overlay (primary actions area only) ----- */
+.ai-ap-transient-loading {
+    position: absolute;
+    inset: 0;
+    background: rgba(255, 255, 255, 0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    font-size: 12px;
+    color: var(--gray-700);
+    border-radius: 3px;
+    z-index: 2;
+}
+
+/* ----- Mobile: hide the cockpit DOM; accordion fat-cards take over
+   (existing `.ai-review-docs` / `.ai-review-detail` mobile rules from prior DLs
+    untouched). */
+@media (max-width: 768px) {
+    .ai-preview-frame,
+    .ai-actions-panel {
+        display: none;
+    }
+}
+
+/* ============ DL-339 v1: Move actions panel to pane 2 + bug fixes ============ */
+
+/* Pane 2 becomes flex column so list + panel split cleanly.
+   NOTE: existing `.ai-review-docs { overflow-y: auto; padding: var(--sp-3) }`
+   rules earlier in the file remain; the inner `.ai-doc-list` owns scroll now,
+   the outer container provides the flex axis + min-height:0 so children shrink. */
+.ai-review-docs {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+
+/* New doc-list wrapper. Takes full height when no selection; 60% when panel visible. */
+.ai-doc-list {
+    flex: 1;
+    overflow-y: auto;
+    min-height: 0;
+    transition: flex-basis 180ms ease-out;
+}
+
+/* DL-339: Relocate actions panel into pane 2. Hidden by default. */
+.ai-actions-panel {
+    display: none;
+}
+
+/* DL-339 v1.3: panel sizes to its content; the doc list absorbs the scroll.
+   Panel: flex 0 0 auto — natural content height, no stretch, no shrink.
+   List: flex 1 1 0 — takes all remaining space; scrolls when row count exceeds it.
+   A max-height: 70% safeguard on the panel keeps pathological long states
+   (State D with very long reasoning, on_hold with huge question block) from
+   eating the list entirely; in those rare cases the panel falls back to its
+   own internal scroll. */
+.ai-review-docs.has-selection .ai-doc-list {
+    flex: 1 1 0;
+}
+
+.ai-review-docs.has-selection .ai-actions-panel {
+    display: flex;
+    flex: 0 0 auto;
+    max-height: 70%;
+    flex-direction: column;
+    overflow-y: auto;
+    min-height: 0;
+    padding: 10px 12px;
+    border-top: 0.5px solid var(--gray-200);
+    /* Keep the 3px state-accent from DL-334 v2 existing .ai-actions-panel--<variant> rules. */
+}
+
+/* Fix A (bidi): isolate filename text run without flipping the cell's alignment.
+   unicode-bidi: plaintext isolates the text, text-align: start keeps the cell
+   aligned to the parent's (RTL) start edge regardless of filename's first char. */
+.ai-doc-row__filename {
+    /* DL-339: supersedes the earlier v3.2 unicode-bidi: isolate (which was coupled
+       with dir="auto" on the span — that pairing caused pure-Latin filenames to
+       flip the cell's alignment in the RTL flex row). */
+    unicode-bidi: plaintext;
+    text-align: start;
+}
+
+/* DL-339 v1.1: pin the non-list flex siblings above the doc list so they stay at
+   their natural height. Without this, flex column can compress them to make room
+   for the list's content, producing layout jitter during the 60/40 transition. */
+.ai-review-docs > .ai-pane2-top,
+.ai-review-docs > .ai-section-header,
+.ai-review-docs > .ai-cn-section,
+.ai-review-docs > .ai-missing-docs-body,
+.ai-review-docs > .ai-section-separator {
+    flex-shrink: 0;
+}
+
+/* DL-339 v1.7: densify the legacy .doc-combobox when it's rendered inside the
+   pane-2 actions panel (State D unmatched + State B fallback). The default
+   .doc-combobox-input has mobile fat-card padding + text-sm font, and the
+   dropdown is hard-pinned at 420px wide — way too big for the 33%-wide panel. */
+.ai-actions-panel .doc-combobox-input {
+    padding: 4px 8px;
+    font-size: 12px;
+    line-height: 1;
+    height: 28px;
+    border: 0.5px solid var(--gray-200);
+    border-radius: 3px;
+}
+.ai-actions-panel .doc-combobox-dropdown {
+    width: auto;
+    min-width: 240px;
+    max-width: 420px;
+    max-height: 200px;
+    font-size: 12px;
+}
+.ai-actions-panel .doc-combobox-option,
+.ai-actions-panel .doc-combobox-category,
+.ai-actions-panel .doc-combobox-create-btn,
+.ai-actions-panel .doc-combobox-empty {
+    padding: 4px 8px;
+    font-size: 12px;
+}
+.ai-actions-panel .doc-combobox-category {
+    font-size: 11px;
+}
+
+/* ============ /DL-334 ============ */
 
