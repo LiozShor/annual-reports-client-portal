@@ -11989,9 +11989,18 @@ function escapeHtml(text) {
     return div.innerHTML;
 }
 
-/** Escape HTML but preserve <b></b> tags for SSOT doc name formatting */
+/** Escape HTML but preserve <b></b> tags for SSOT doc name formatting.
+ *  Balances unclosed <b> tags — an unbalanced tag inside innerHTML triggers the
+ *  HTML parser's adoption agency algorithm and reconstructs <b> into subsequent
+ *  sibling block elements (e.g. .ai-doc-row children), breaking their layout.
+ *  Seen when backend labels were truncated mid-tag. */
 function renderDocLabel(name) {
-    return escapeHtml(name).replace(/&lt;b&gt;/g, '<b>').replace(/&lt;\/b&gt;/g, '</b>');
+    let html = escapeHtml(name).replace(/&lt;b&gt;/g, '<b>').replace(/&lt;\/b&gt;/g, '</b>');
+    const opens = (html.match(/<b>/g) || []).length;
+    const closes = (html.match(/<\/b>/g) || []).length;
+    if (opens > closes) html += '</b>'.repeat(opens - closes);
+    else if (closes > opens) html = '<b>'.repeat(closes - opens) + html;
+    return html;
 }
 
 function isValidEmail(email) {
