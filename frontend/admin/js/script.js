@@ -7261,9 +7261,15 @@ function _showClientReviewDonePromptDesktop(clientName, userInitiated) {
     const pane2 = document.querySelector('.ai-review-docs');
     if (!pane2) return;
 
-    // Remove existing prompt if any
+    // Always strip any stale prompt (e.g. from a previously-selected client).
     const existing = pane2.querySelector(':scope > .ai-review-done-prompt');
     if (existing) existing.remove();
+
+    // Only render for the client whose docs are currently visible. The render loop
+    // calls this for every 0-pending client, but pane 2 only ever shows ONE client.
+    if (typeof selectedClientName !== 'undefined' && selectedClientName && clientName !== selectedClientName) {
+        return;
+    }
 
     const prompt = _buildClientReviewDonePromptEl(clientName);
     const docList = pane2.querySelector('.ai-doc-list');
