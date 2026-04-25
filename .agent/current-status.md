@@ -3,6 +3,26 @@
 **Last Updated:** 2026-04-25 (DL-341 — COMPLETED, all live tests passed; preview zoom 75% + desktop done-prompt fix + auto-advance + 100% client chip + dismissClientReview desktop path)
 **Last Updated:** 2026-04-25 (DL-343 WF[06] Airtable update hardening for 422-reminder burst — IMPLEMENTED in n8n cloud)
 **Last Updated:** 2026-04-25 (DL-345 AI-review done-prompt: doc-collection chip + send-missing-docs button — IMPLEMENTED, NEED TESTING)
+**Last Updated:** 2026-04-25 (DL-346 AI-review banner restructured into two-flow sub-sections — IMPLEMENTED, NEED TESTING; supersedes DL-345 chip presentation)
+
+## Test DL-346: AI-review completion banner two-flow layout
+
+`_buildClientReviewDonePromptEl` rebuilt: header + up to two white inner cards (questions / missing-docs) + dismiss-only when neither. Plural-aware Hebrew context lines. DL-345 chip + bottom action row removed; same handlers + same DL-345 wording flips preserved. Cache-bust `style.css?v=315`, `script.js?v=336`. Design log: `.agent/design-logs/ai-review/346-completion-banner-two-flows.md`.
+
+### Active TODOs — Test DL-346
+
+- [ ] State 1 (questions only, no missing): single white card — primary `סיים בדיקה ושלח שאלות` + ghost `תצוגה מקדימה של השאלות` + ghost `ערוך שאלות`. No missing card. No footer dismiss.
+- [ ] State 2 (missing only, no questions): single white card — primary `שלח רשימת מסמכים חסרים` + ghost `תצוגה מקדימה של רשימת החסרים`. No questions card. No footer dismiss.
+- [ ] State 3 (both): two stacked white cards with 8-10px gap; each self-contained.
+- [ ] State 4 (neither): header + single green `סיום בדיקה` button; no cards.
+- [ ] DL-345 wording flip: `docs_first_sent_at` set → primary reads `שלח שוב`; confirm dialog reads `נשלח כבר ב-<date>...`.
+- [ ] Plural Hebrew: `1 ממתין לתשובה` (n=1) vs `3 ממתינים לתשובה` (n=3); `נותר 1 מסמך שלא התקבל` vs `נותרו 4 מסמכים שלא התקבלו`.
+- [ ] Live email smoke (`gws`): questions email + missing-docs email both still arrive at liozshor1@gmail.com with the same recipient + body as DL-333 / DL-345.
+- [ ] DL-335 held-questions filter still kicks in when neither-flow dismiss fires (`on_hold` items stay in queue).
+- [ ] No regression in DL-323 user-initiated scroll, DL-341 desktop pane-2 placement, `recalcAIStats`-driven re-render.
+- [ ] Console clean across all four states.
+- [ ] Mobile (≤768px) visual smoke — untouched per spec.
+
 
 ## Test DL-345: AI-review done-prompt doc-status + send-missing
 
