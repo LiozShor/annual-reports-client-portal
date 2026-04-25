@@ -7234,19 +7234,40 @@ function _buildClientReviewDonePromptEl(clientName) {
 
     // DL-345: client doc-collection state surfaced inline. Source = Airtable rollups
     // already on every aiClassificationsData item (docs_received_count / docs_total_count).
+    // AI items use `report_record_id`, not `report_id` (which exists only on PA queue rows).
     const rep = clientItems[0] || {};
     const docsReceived = rep.docs_received_count || 0;
     const docsTotal    = rep.docs_total_count    || 0;
     const docsMissing  = Math.max(0, docsTotal - docsReceived);
-    const reportId     = rep.report_id || '';
+    const reportId     = rep.report_record_id || '';
     const allReceived  = docsTotal > 0 && docsMissing === 0;
     const hasDocsInfo  = docsTotal > 0;
 
+    // Missing-doc tags — already rendered elsewhere via `renderDocTag`. Reuse that
+    // so a clicked chip expands to the same visual list users see on AI cards.
+    const missingDocsList = (rep.all_docs || rep.missing_docs || [])
+        .filter(d => (d.status || 'Required_Missing') === 'Required_Missing');
+    const missingDocsTagsHtml = missingDocsList.map(renderDocTag).join('');
+
     let docStatusHtml = '';
     if (hasDocsInfo) {
-        docStatusHtml = allReceived
-            ? `<div class="ai-review-done-status is-complete">${icon('check-circle-2', 'icon-xs')} כל המסמכים התקבלו (${docsReceived}/${docsTotal}) — מוכן לבדיקה</div>`
-            : `<div class="ai-review-done-status is-pending">${icon('clock', 'icon-xs')} ${docsReceived}/${docsTotal} התקבלו · נותרו ${docsMissing} מסמכים</div>`;
+        if (allReceived) {
+            docStatusHtml = `<div class="ai-review-done-status is-complete">${icon('check-circle-2', 'icon-xs')} כל המסמכים התקבלו — מוכן לבדיקה</div>`;
+        } else {
+            // Clickable summary expands to show which docs are missing.
+            docStatusHtml = `
+                <details class="ai-review-done-missing">
+                    <summary class="ai-review-done-status is-pending">
+                        ${icon('clock', 'icon-xs')}
+                        נותרו ${docsMissing} מסמכים
+                        ${icon('chevron-down', 'icon-xs ai-review-done-missing-chev')}
+                    </summary>
+                    <div class="ai-review-done-missing-list">
+                        ${missingDocsTagsHtml || '<span class="ai-review-done-missing-empty">אין פרטי מסמכים זמינים</span>'}
+                    </div>
+                </details>
+            `;
+        }
     }
 
     const sendMissingHtml = (docsMissing > 0 && reportId) ? `

@@ -2417,6 +2417,34 @@ tr:hover .client-view-link {
     color: var(--warning-700);
     background: var(--warning-100);
 }
+.ai-review-done-missing {
+    margin-top: 2px;
+}
+.ai-review-done-missing > summary {
+    cursor: pointer;
+    list-style: none;
+    user-select: none;
+}
+.ai-review-done-missing > summary::-webkit-details-marker { display: none; }
+.ai-review-done-missing-chev {
+    transition: transform 150ms ease;
+    margin-inline-start: 2px;
+    opacity: 0.7;
+}
+.ai-review-done-missing[open] .ai-review-done-missing-chev {
+    transform: rotate(180deg);
+}
+.ai-review-done-missing-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    padding: var(--sp-2) 0 0;
+    direction: rtl;
+}
+.ai-review-done-missing-empty {
+    font-size: var(--text-xs);
+    color: var(--gray-500);
+}
 .ai-review-done-actions-row {
     display: flex;
     gap: var(--sp-2);
