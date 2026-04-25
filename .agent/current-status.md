@@ -18,6 +18,25 @@ Design log: `.agent/design-logs/ai-review/344-reject-clears-unrelated-approval.m
 **Last Updated:** 2026-04-25 (DL-343 WF[06] Airtable update hardening for 422-reminder burst — IMPLEMENTED in n8n cloud)
 **Last Updated:** 2026-04-25 (DL-345 AI-review done-prompt: doc-collection chip + send-missing-docs button — IMPLEMENTED, NEED TESTING)
 **Last Updated:** 2026-04-25 (DL-346 AI-review banner restructured into two-flow sub-sections — IMPLEMENTED, NEED TESTING; supersedes DL-345 chip presentation)
+**Last Updated:** 2026-04-25 (DL-347 AI-review banner hierarchy inverted: filled/outlined/text triad — IMPLEMENTED, NEED TESTING; supersedes DL-346 button styling)
+
+## Test DL-347: AI-review banner hierarchy invert (filled / outlined / text)
+
+`_buildClientReviewDonePromptEl` re-painted: single solid-green `סיים בדיקה` primary at the bottom; card send buttons (`שלח שאלות ללקוח`, `שלח רשימת חסרים ללקוח`) outlined ghost; `תצוגה מקדימה` + `ערוך` demoted to text-links; header inline dismiss removed. Same handlers + same flags as DL-346. Cache-bust `style.css?v=316`, `script.js?v=338`. Design log: `.agent/design-logs/ai-review/347-banner-hierarchy-invert.md`.
+
+### Active TODOs — Test DL-347
+
+- [ ] State 1 (both flows): header → questions card with outlined send + 2 text-links → missing-docs card with outlined send + 1 text-link → bottom solid green `סיים בדיקה`. **Exactly one solid-green button visible.**
+- [ ] State 2 (questions only): header → questions card → bottom primary. No missing card.
+- [ ] State 3 (missing only): header → missing card → bottom primary. No questions card.
+- [ ] State 4 (neither): header → bottom primary. No cards.
+- [ ] DL-345 wording flip: `docs_first_sent_at` set → confirm dialog reads "נשלח כבר ב-<date>"; idle button label is "שלח רשימת חסרים ללקוח" (outlined); the "שלח שוב" wording shows up in the confirm dialog only.
+- [ ] Plural Hebrew: `1 ממתין לתשובה` vs `N ממתינים לתשובה`; `נותר 1 מסמך שלא התקבל מהלקוח` vs `נותרו N מסמכים שלא התקבלו מהלקוח`.
+- [ ] Live email smoke (`gws`): both outlined sends still trigger their respective emails to liozshor1@gmail.com (DL-333 questions path, DL-345 missing-docs path).
+- [ ] DL-335 held-questions: clicking bottom primary `סיים בדיקה` keeps `on_hold` items in the queue.
+- [ ] No regression in DL-308 preview modal, DL-323 user-initiated scroll, DL-341 desktop pane-2 placement.
+- [ ] Console clean across all four states.
+- [ ] Mobile (≤768px) smoke: rows wrap cleanly, bottom primary remains tap-target sized, no horizontal overflow.
 
 ## Test DL-346: AI-review completion banner two-flow layout
 
