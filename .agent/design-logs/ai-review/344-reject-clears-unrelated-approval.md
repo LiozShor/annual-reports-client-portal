@@ -1,5 +1,5 @@
 # Design Log 344: Reject Clears Unrelated Approval on Same Source Doc
-**Status:** [IMPLEMENTED — NEED TESTING]
+**Status:** [COMPLETED]
 **Date:** 2026-04-25
 **Related Logs:** DL-248 (same pattern fixed for reassign), DL-205 (clear file fields on status revert), DL-210 (review bugfixes), DL-319 (approve creates required doc)
 
@@ -148,7 +148,9 @@ Implemented 2026-04-25 on branch `DL-344-ai-review-approve-not-clearing` (worktr
 - Step 6 OneDrive ops untouched — `isLastReference()` already protects the file from being archived if other docs reference it.
 - `wrangler deploy --dry-run` from `api/` clean. `tsc --noEmit` reports only pre-existing unrelated errors (backfill.ts, edit-documents.ts, preview.ts) — no new errors in the touched region.
 
-**Manual repair (CPA-XXX):** Pending — to be done post-deploy by PATCHing `recpvynrLkdhO1Aiz` with IMG_0557 file data still preserved on classification `recNqeHbaEGIjfW3Y`. See Section 7.
+**Manual repair (CPA-XXX):** Done post-deploy. PATCHed `recpvynrLkdhO1Aiz` to status=Received with IMG_0557 file data preserved on classification `recNqeHbaEGIjfW3Y`.
+
+**Live verification (test-client-Y, 2026-04-25 06:00 UTC):** Created 3 dummy classifications all pre-linked to T002 doc `recxDsSK5TUsTOSLE` with distinct `onedrive_item_id`s. Approve A → reject B → reject C. Final doc state: `status=Received`, `onedrive_item_id=DL344_TEST_ITEM_A`, `source_attachment_name=DL344_TEST_A.pdf` — guard correctly skipped doc clear on both rejects. Classifications: A=approved, B=rejected, C=rejected. Dummies cleaned up after verification. Pre-fix this same sequence wiped doc back to Required_Missing (production CPA-XXX repro).
 
 **Research principles applied:**
 - DL-248 ownership-predicate guard pattern, copied verbatim to reject. Two-site-mirror chosen over helper extraction — readability over premature abstraction.
