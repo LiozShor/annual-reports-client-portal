@@ -7229,58 +7229,78 @@ function _buildClientReviewDonePromptEl(clientName) {
     if (onHold) statParts.push(`${onHold} ממתינים לתשובת`);
 
     // DL-335: only show send-questions button if there are questions NOT yet on_hold
-    const hasPendingQuestions = !_batchQuestionsSentClients.has(clientName) &&
-        clientItems.some(i => i.pending_question && i.review_status !== 'on_hold');
+    const pendingQuestionItems = clientItems.filter(i => i.pending_question && i.review_status !== 'on_hold');
+    const pendingQuestionsCount = pendingQuestionItems.length;
+    const hasPendingQuestions = !_batchQuestionsSentClients.has(clientName) && pendingQuestionsCount > 0;
 
-    // DL-345: client doc-collection state surfaced inline. Source = Airtable rollups
-    // already on every aiClassificationsData item (docs_received_count / docs_total_count).
-    // AI items use `report_record_id`, not `report_id` (which exists only on PA queue rows).
+    // DL-345: doc-collection state from Airtable rollups already on every AI item.
+    // AI items use `report_record_id` (not `report_id`, which exists only on PA queue rows).
     const rep = clientItems[0] || {};
     const docsReceived = rep.docs_received_count || 0;
     const docsTotal    = rep.docs_total_count    || 0;
     const docsMissing  = Math.max(0, docsTotal - docsReceived);
     const reportId     = rep.report_record_id || '';
-    const allReceived  = docsTotal > 0 && docsMissing === 0;
-    const hasDocsInfo  = docsTotal > 0;
+    const hasMissingFlow = docsMissing > 0 && reportId;
 
-    // Missing-doc tags — already rendered elsewhere via `renderDocTag`. Reuse that
-    // so a clicked chip expands to the same visual list users see on AI cards.
-    const missingDocsList = (rep.all_docs || rep.missing_docs || [])
-        .filter(d => (d.status || 'Required_Missing') === 'Required_Missing');
-    const missingDocsTagsHtml = missingDocsList.map(renderDocTag).join('');
+    // DL-346: two-flow layout. Build sub-section A (questions) and sub-section B
+    // (missing docs) independently; show single dismiss button only when neither.
+    const escClient = escapeOnclick(clientName);
+    const escReport = escapeOnclick(reportId);
 
-    let docStatusHtml = '';
-    if (hasDocsInfo) {
-        if (allReceived) {
-            docStatusHtml = `<div class="ai-review-done-status is-complete">${icon('check-circle-2', 'icon-xs')} כל המסמכים התקבלו — מוכן לבדיקה</div>`;
-        } else {
-            // Clickable summary expands to show which docs are missing.
-            docStatusHtml = `
-                <details class="ai-review-done-missing">
-                    <summary class="ai-review-done-status is-pending">
-                        ${icon('clock', 'icon-xs')}
-                        נותרו ${docsMissing} מסמכים
-                        ${icon('chevron-down', 'icon-xs ai-review-done-missing-chev')}
-                    </summary>
-                    <div class="ai-review-done-missing-list">
-                        ${missingDocsTagsHtml || '<span class="ai-review-done-missing-empty">אין פרטי מסמכים זמינים</span>'}
-                    </div>
-                </details>
-            `;
-        }
-    }
+    const questionsContext = pendingQuestionsCount === 1
+        ? '1 ממתין לתשובה'
+        : `${pendingQuestionsCount} ממתינים לתשובה`;
+    const questionsCardHtml = hasPendingQuestions ? `
+        <section class="ai-review-flow-card">
+            <div class="ai-review-flow-card__context">${questionsContext}</div>
+            <div class="ai-review-flow-card__actions">
+                <button class="btn btn-success btn-sm" onclick="dismissAndSendQuestions('${escClient}')">
+                    ${icon('send', 'icon-xs')}
+                    סיים בדיקה ושלח שאלות
+                </button>
+                <button class="btn btn-ghost btn-sm" onclick="previewBatchQuestions('${escClient}')">
+                    ${icon('eye', 'icon-xs')}
+                    תצוגה מקדימה של השאלות
+                </button>
+                <button class="btn btn-ghost btn-sm" onclick="openBatchQuestionsModal('${escClient}')">
+                    ${icon('pencil', 'icon-xs')}
+                    ערוך שאלות
+                </button>
+            </div>
+        </section>
+    ` : '';
 
-    const sendMissingHtml = (docsMissing > 0 && reportId) ? `
-        <div class="ai-review-done-actions-row">
-            <button class="btn btn-secondary btn-sm" onclick="previewApproveEmail('${escapeOnclick(reportId)}', '${escapeOnclick(clientName)}')">
-                ${icon('eye', 'icon-xs')}
-                תצוגה מקדימה
-            </button>
-            <button class="btn btn-success btn-sm" onclick="approveAndSendFromAIReview('${escapeOnclick(reportId)}', '${escapeOnclick(clientName)}')">
-                ${icon('send', 'icon-xs')}
-                שלח רשימת מסמכים חסרים
-            </button>
+    const missingContext = docsMissing === 1
+        ? 'נותר 1 מסמך שלא התקבל'
+        : `נותרו ${docsMissing} מסמכים שלא התקבלו`;
+    const missingCardHtml = hasMissingFlow ? `
+        <section class="ai-review-flow-card">
+            <div class="ai-review-flow-card__context">${missingContext}</div>
+            <div class="ai-review-flow-card__actions">
+                <button class="btn btn-success btn-sm" onclick="approveAndSendFromAIReview('${escReport}', '${escClient}')">
+                    ${icon('send', 'icon-xs')}
+                    שלח רשימת מסמכים חסרים
+                </button>
+                <button class="btn btn-ghost btn-sm" onclick="previewApproveEmail('${escReport}', '${escClient}')">
+                    ${icon('eye', 'icon-xs')}
+                    תצוגה מקדימה של רשימת החסרים
+                </button>
+            </div>
+        </section>
+    ` : '';
+
+    const flowsStackHtml = (hasPendingQuestions || hasMissingFlow) ? `
+        <div class="ai-review-flows-stack">
+            ${questionsCardHtml}
+            ${missingCardHtml}
         </div>
+    ` : '';
+
+    const dismissOnlyHtml = (!hasPendingQuestions && !hasMissingFlow) ? `
+        <button class="btn btn-success btn-sm ai-review-done-btn" onclick="dismissClientReview('${escClient}')">
+            ${icon('check', 'icon-xs')}
+            סיום בדיקה
+        </button>
     ` : '';
 
     const prompt = document.createElement('div');
@@ -7291,31 +7311,10 @@ function _buildClientReviewDonePromptEl(clientName) {
             <div class="ai-review-done-text">
                 <strong>כל המסמכים נבדקו!</strong>
                 <span class="ai-review-done-stats">${statParts.join(' · ')}</span>
-                ${docStatusHtml}
             </div>
-            ${hasPendingQuestions ? `
-            <div class="ai-review-send-stack" style="display:flex;flex-direction:column;gap:6px;align-items:stretch;">
-                <button class="btn btn-success btn-sm ai-review-done-btn" onclick="dismissAndSendQuestions('${escapeOnclick(clientName)}')">
-                    ${icon('send', 'icon-xs')}
-                    סיום בדיקה ושליחת שאלות
-                </button>
-                <button class="btn btn-link btn-sm" style="font-size:12px;padding:2px 4px;" onclick="previewBatchQuestions('${escapeOnclick(clientName)}')">
-                    ${icon('eye', 'icon-xs')}
-                    תצוגה מקדימה של השליחה
-                </button>
-            </div>
-            <button class="btn btn-ghost btn-sm" onclick="openBatchQuestionsModal('${escapeOnclick(clientName)}')">
-                ${icon('pencil', 'icon-xs')}
-                ערוך שאלות
-            </button>
-            ` : `
-            <button class="btn btn-success btn-sm ai-review-done-btn" onclick="dismissClientReview('${escapeOnclick(clientName)}')">
-                ${icon('check', 'icon-xs')}
-                סיום בדיקה
-            </button>
-            `}
+            ${dismissOnlyHtml}
         </div>
-        ${sendMissingHtml}
+        ${flowsStackHtml}
     `;
     return prompt;
 }
