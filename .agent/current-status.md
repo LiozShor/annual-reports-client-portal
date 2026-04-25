@@ -26,6 +26,9 @@ Two node-level patches applied to WF[06] (`FjisCdmWc4ef0qSV`) via n8n-mcp: `Upda
 ### End of week
 - [ ] Total sent ≈ 422 (±5%). Wider gap → follow-up DL.
 
+### Final review checkpoint — 2026-05-01
+- [ ] **2026-05-01:** Full burst-week post-mortem. Pull WF[06] execution log for the week, count successful sends, count Airtable retry events, confirm zero duplicate-day re-sends. Mark DL-342 + DL-343 as `[COMPLETED]` if all green.
+
 Design log: `.agent/design-logs/reminders/343-burst-stagger-and-update-hardening.md`
 
 ---
