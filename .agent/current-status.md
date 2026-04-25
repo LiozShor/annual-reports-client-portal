@@ -1,6 +1,33 @@
 # Annual Reports CRM - Current Status
 
-**Last Updated:** 2026-04-25 (DL-342 reminder burst readiness audit — 422 reminders this week — GO with manual monitoring)
+**Last Updated:** 2026-04-25 (DL-343 WF[06] Airtable update hardening for 422-reminder burst — IMPLEMENTED in n8n cloud)
+
+## Test DL-343: burst stagger + Airtable update hardening (LIVE in WF[06])
+
+Two node-level patches applied to WF[06] (`FjisCdmWc4ef0qSV`) via n8n-mcp: `Update Reminder Fields` + `Update Skipped Airtable` now have `retryOnFail:true, maxTries:3, waitBetweenTries:1500, onError:'continueRegularOutput'`. Send Email's existing 2.5s stagger (`batchInterval:2500`) was kept as-is. Schedule unchanged (08:00 IL daily).
+
+### Pre-burst sanity (UI check)
+- [ ] Open WF[06] in n8n UI → click `Update Reminder Fields` → Settings panel shows "Continue (using error output)" or equivalent + Retry On Fail toggle on with 3 tries / 1500ms wait
+- [ ] Same on `Update Skipped Airtable`
+- [ ] Workflow Settings → "Available in MCP" toggle still ON (per project memory: REST PUT can clobber it; MCP path shouldn't)
+
+### Day 1 of burst (08:00–08:30 IL)
+- [ ] n8n executions tab: WF[06] run green, processed expected cohort
+- [ ] Wall-time 5–18 min (consistent with 2.5s × cohort size)
+- [ ] Gmail "Sent" folder count for `reports@moshe-atsits.co.il` matches cohort
+- [ ] Airtable `reminder_count` rollups increment
+- [ ] Airtable `last_reminder_sent_at` populated for every sent record (open a few reminded reports, check the field)
+
+### Day 2 of burst
+- [ ] Yesterday's cohort does NOT reappear in today's run (proves the hardened write landed)
+- [ ] If any yesterday-reminded client gets re-sent → DL-154 24h-window bug surfaced → promote that DL from `[DRAFT]` to hot-fix
+
+### End of week
+- [ ] Total sent ≈ 422 (±5%). Wider gap → follow-up DL.
+
+Design log: `.agent/design-logs/reminders/343-burst-stagger-and-update-hardening.md`
+
+---
 
 ## Test DL-342: reminder burst readiness (422 this week)
 
