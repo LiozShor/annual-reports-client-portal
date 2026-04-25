@@ -2,6 +2,23 @@
 
 **Last Updated:** 2026-04-25 (DL-341 — COMPLETED, all live tests passed; preview zoom 75% + desktop done-prompt fix + auto-advance + 100% client chip + dismissClientReview desktop path)
 **Last Updated:** 2026-04-25 (DL-343 WF[06] Airtable update hardening for 422-reminder burst — IMPLEMENTED in n8n cloud)
+**Last Updated:** 2026-04-25 (DL-345 AI-review done-prompt: doc-collection chip + send-missing-docs button — IMPLEMENTED, NEED TESTING)
+
+## Test DL-345: AI-review done-prompt doc-status + send-missing
+
+Inline X/Y chip + preview/`שלח רשימת מסמכים חסרים` action row added to `_buildClientReviewDonePromptEl`; new `approveAndSendFromAIReview` reuses `ENDPOINTS.APPROVE_AND_SEND` with no stage-bump. Pure frontend; cache-bust `script.js?v=334`. Design log: `.agent/design-logs/ai-review/345-aireview-done-prompt-doc-status.md`.
+
+### Active TODOs — Test DL-345
+
+- [ ] AI-review tab, client with `X<Y` docs received: review all classified → prompt shows amber "X/Y התקבלו · נותרו N מסמכים" chip.
+- [ ] `תצוגה מקדימה` button opens DL-308 email-preview modal with the missing-docs HTML + subject.
+- [ ] `שלח רשימת מסמכים חסרים` → confirm dialog → success toast → email arrives at liozshor1@gmail.com (verify via `gws`); subject + body match the preview.
+- [ ] Client with `docs_first_sent_at` set: confirm dialog reads "נשלח כבר ב-...", primary button reads "שלח שוב".
+- [ ] Client with `X==Y` (all received): green "כל המסמכים התקבלו (X/Y) — מוכן לבדיקה" chip; preview/send buttons NOT rendered; existing `סיום בדיקה` still dismisses.
+- [ ] Client with pending questions AND missing docs: both action sets render together without overlap.
+- [ ] Mobile (≤768px) layout: chip + buttons wrap inside the prompt's flex-wrap, no overflow.
+- [ ] Browser console clean on both flows.
+- [ ] No regression in `dismissClientReview`, `dismissAndSendQuestions`, `previewBatchQuestions`, `openBatchQuestionsModal`, doc-manager `previewApproveEmail`.
 
 ## Test DL-343: burst stagger + Airtable update hardening (LIVE in WF[06])
 

@@ -7232,6 +7232,36 @@ function _buildClientReviewDonePromptEl(clientName) {
     const hasPendingQuestions = !_batchQuestionsSentClients.has(clientName) &&
         clientItems.some(i => i.pending_question && i.review_status !== 'on_hold');
 
+    // DL-345: client doc-collection state surfaced inline. Source = Airtable rollups
+    // already on every aiClassificationsData item (docs_received_count / docs_total_count).
+    const rep = clientItems[0] || {};
+    const docsReceived = rep.docs_received_count || 0;
+    const docsTotal    = rep.docs_total_count    || 0;
+    const docsMissing  = Math.max(0, docsTotal - docsReceived);
+    const reportId     = rep.report_id || '';
+    const allReceived  = docsTotal > 0 && docsMissing === 0;
+    const hasDocsInfo  = docsTotal > 0;
+
+    let docStatusHtml = '';
+    if (hasDocsInfo) {
+        docStatusHtml = allReceived
+            ? `<div class="ai-review-done-status is-complete">${icon('check-circle-2', 'icon-xs')} כל המסמכים התקבלו (${docsReceived}/${docsTotal}) — מוכן לבדיקה</div>`
+            : `<div class="ai-review-done-status is-pending">${icon('clock', 'icon-xs')} ${docsReceived}/${docsTotal} התקבלו · נותרו ${docsMissing} מסמכים</div>`;
+    }
+
+    const sendMissingHtml = (docsMissing > 0 && reportId) ? `
+        <div class="ai-review-done-actions-row">
+            <button class="btn btn-secondary btn-sm" onclick="previewApproveEmail('${escapeOnclick(reportId)}', '${escapeOnclick(clientName)}')">
+                ${icon('eye', 'icon-xs')}
+                תצוגה מקדימה
+            </button>
+            <button class="btn btn-success btn-sm" onclick="approveAndSendFromAIReview('${escapeOnclick(reportId)}', '${escapeOnclick(clientName)}')">
+                ${icon('send', 'icon-xs')}
+                שלח רשימת מסמכים חסרים
+            </button>
+        </div>
+    ` : '';
+
     const prompt = document.createElement('div');
     prompt.className = 'ai-review-done-prompt';
     prompt.innerHTML = `
@@ -7240,6 +7270,7 @@ function _buildClientReviewDonePromptEl(clientName) {
             <div class="ai-review-done-text">
                 <strong>כל המסמכים נבדקו!</strong>
                 <span class="ai-review-done-stats">${statParts.join(' · ')}</span>
+                ${docStatusHtml}
             </div>
             ${hasPendingQuestions ? `
             <div class="ai-review-send-stack" style="display:flex;flex-direction:column;gap:6px;align-items:stretch;">
@@ -7263,6 +7294,7 @@ function _buildClientReviewDonePromptEl(clientName) {
             </button>
             `}
         </div>
+        ${sendMissingHtml}
     `;
     return prompt;
 }
@@ -10081,6 +10113,40 @@ async function approveAndSendFromQueue(reportId, clientName) {
         } catch (err) {
             if (card) { card.classList.remove('pa-card--sending'); card.style.maxHeight = ''; }
             console.error('[pa-queue] approve failed', err);
+            showAIToast('שגיאה בשליחה', 'danger');
+        }
+    }, sentDate ? 'שלח שוב' : 'אשר ושלח', false);
+}
+
+// DL-345: Send missing-docs reminder from the AI-review "all reviewed" prompt.
+// Mirrors approveAndSendFromQueue but skips the Pending-Approval card cleanup —
+// the AI-review tab is not the queue, so there's no pa-card to slide out and
+// no stage 3→4 transition to fake (client is typically already in stage 4/5).
+async function approveAndSendFromAIReview(reportId, clientName) {
+    const items = aiClassificationsData.filter(i => i.client_name === clientName);
+    const rep = items[0] || {};
+    const sentDate = rep.docs_first_sent_at
+        ? new Date(rep.docs_first_sent_at).toLocaleDateString('he-IL')
+        : null;
+    const msg = sentDate
+        ? `נשלח כבר ב-${sentDate}. לשלוח שוב ל-${clientName}?`
+        : `לשלוח רשימת מסמכים חסרים ל-${clientName}?`;
+
+    showConfirmDialog(msg, async () => {
+        try {
+            const resp = await fetchWithTimeout(
+                `${ENDPOINTS.APPROVE_AND_SEND}?report_id=${encodeURIComponent(reportId)}&confirm=1&respond=json`,
+                { headers: { 'Authorization': `Bearer ${authToken}` } },
+                FETCH_TIMEOUTS.mutate
+            );
+            const data = await resp.json();
+            if (data.ok) {
+                showAIToast('נשלח ל' + clientName, 'success');
+            } else {
+                showAIToast(data.error || 'שגיאה בשליחה', 'danger');
+            }
+        } catch (err) {
+            console.error('[DL-345] approveAndSendFromAIReview failed', err);
             showAIToast('שגיאה בשליחה', 'danger');
         }
     }, sentDate ? 'שלח שוב' : 'אשר ושלח', false);
