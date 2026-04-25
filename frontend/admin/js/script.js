@@ -5228,8 +5228,11 @@ function selectClient(clientName) {
     resetPreviewPanel();
 
     // DL-334: Auto-select first pending/on_hold doc into the cockpit.
+    // DL-341: sort the same way pane 2 does so the auto-selected doc matches the topmost visible row.
     if (clientItems.length > 0) {
-        const firstPending = clientItems.find(i => !i.review_status || i.review_status === 'pending' || i.review_status === 'on_hold');
+        const firstPending = [...clientItems]
+            .sort(compareDocRows)
+            .find(i => !i.review_status || i.review_status === 'pending' || i.review_status === 'on_hold');
         if (firstPending) {
             selectDocument(firstPending.id);
         } else {
