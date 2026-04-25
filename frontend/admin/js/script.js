@@ -7721,8 +7721,11 @@ function previewBatchQuestions(clientName) {
 // DL-210: Remove all reviewed cards for this client from the UI + delete from Airtable
 // DL-335: keepOnHold=true skips on_hold rows so they stay in the queue after questions are sent
 async function dismissClientReview(clientName, { keepOnHold = false } = {}) {
+    // DL-341: desktop has no accordion (DL-334 removed it). Route to a desktop-aware path
+    // that operates on pane 1 row + pane 2 contents instead of the legacy accordion DOM.
     const accordion = document.querySelector(`.ai-accordion[data-client="${CSS.escape(clientName)}"]`);
-    if (!accordion) return;
+    const isDesktop = !accordion && !isAIReviewMobileLayout();
+    if (!accordion && !isDesktop) return;
 
     const clientItems = aiClassificationsData.filter(i => i.client_name === clientName);
 
@@ -7743,43 +7746,79 @@ async function dismissClientReview(clientName, { keepOnHold = false } = {}) {
         });
     }
 
-    // DL-335: if some items are kept on hold, re-render the accordion instead of collapsing it
+    // DL-335: if some items are kept on hold, re-render in place instead of collapsing
     const heldItems = keepOnHold ? clientItems.filter(i => i.review_status === 'on_hold') : [];
     if (heldItems.length > 0) {
-        // Remove dismissed items from data; held items stay
         aiClassificationsData = aiClassificationsData.filter(i => i.client_name !== clientName || i.review_status === 'on_hold');
-        // Re-render the client's accordion in-place so held cards show
-        const docsPane = accordion.querySelector('.ai-accordion-cards') || accordion;
-        docsPane.querySelectorAll('.ai-review-card:not([data-review-status="on_hold"])').forEach(el => el.remove());
-        // Remove the done-prompt — held state replaces it
-        accordion.querySelector('.ai-review-done-prompt')?.remove();
-        // Update the accordion stats badge
-        const statsEl = accordion.querySelector('.ai-accordion-stats');
-        if (statsEl) {
-            statsEl.innerHTML = `<span class="ai-accordion-stat-badge badge-warning">${heldItems.length} ממתינים לתשובה</span>`;
+        if (isDesktop) {
+            // Re-render pane 2 with only on_hold items; remove done-prompt
+            const docsPane = document.getElementById('aiDocsPane');
+            if (docsPane) {
+                const remaining = aiClassificationsData.filter(i => i.client_name === clientName);
+                docsPane.innerHTML = remaining.length ? buildDesktopClientDocsHtml(clientName, remaining) : '';
+                initAIReviewComboboxes(docsPane);
+                safeCreateIcons(docsPane);
+            }
+            // Update pane 1 row count
+            const row = document.querySelector(`.ai-client-row[data-client="${CSS.escape(clientName)}"]`);
+            if (row) {
+                const newRow = document.createElement('div');
+                newRow.innerHTML = buildClientListRowHtml(clientName, aiClassificationsData.filter(i => i.client_name === clientName), true).trim();
+                if (newRow.firstElementChild) row.replaceWith(newRow.firstElementChild);
+            }
+        } else {
+            const docsPane = accordion.querySelector('.ai-accordion-cards') || accordion;
+            docsPane.querySelectorAll('.ai-review-card:not([data-review-status="on_hold"])').forEach(el => el.remove());
+            accordion.querySelector('.ai-review-done-prompt')?.remove();
+            const statsEl = accordion.querySelector('.ai-accordion-stats');
+            if (statsEl) {
+                statsEl.innerHTML = `<span class="ai-accordion-stat-badge badge-warning">${heldItems.length} ממתינים לתשובה</span>`;
+            }
         }
         recalcAIStats();
         return;
     }
 
-    // Animate accordion collapse then remove
+    if (isDesktop) {
+        // Desktop: remove pane 1 row, clear pane 2, drop data, advance to next client
+        const row = document.querySelector(`.ai-client-row[data-client="${CSS.escape(clientName)}"]`);
+        if (row) row.remove();
+        aiClassificationsData = aiClassificationsData.filter(i => i.client_name !== clientName);
+        if (typeof selectedClientName !== 'undefined' && selectedClientName === clientName) {
+            selectedClientName = null;
+        }
+        const docsPane = document.getElementById('aiDocsPane');
+        if (docsPane) docsPane.innerHTML = '';
+        resetPreviewPanel();
+
+        // Auto-pick next client with pending docs
+        const nextClient = aiClassificationsData.find(i => (i.review_status || 'pending') === 'pending')?.client_name;
+        if (nextClient) {
+            selectClient(nextClient);
+        } else if (aiClassificationsData.length === 0) {
+            const cp = document.getElementById('aiClientsPane'); if (cp) cp.style.display = 'none';
+            const dp = document.getElementById('aiDocsPane'); if (dp) dp.style.display = 'none';
+            const empty = document.getElementById('aiEmptyState'); if (empty) empty.style.display = 'block';
+            safeCreateIcons();
+        }
+
+        recalcAIStats();
+        return;
+    }
+
+    // Mobile: animate accordion collapse then remove
     accordion.style.maxHeight = accordion.offsetHeight + 'px';
     accordion.offsetHeight; // force reflow
     accordion.classList.add('removing');
     setTimeout(() => {
         accordion.remove();
-
-        // Remove client items from data
         aiClassificationsData = aiClassificationsData.filter(i => i.client_name !== clientName);
-
-        // Check if everything is empty
         if (aiClassificationsData.length === 0) {
             const cp = document.getElementById('aiClientsPane'); if (cp) cp.style.display = 'none';
             const dp = document.getElementById('aiDocsPane'); if (dp) dp.style.display = 'none';
             document.getElementById('aiEmptyState').style.display = 'block';
             safeCreateIcons();
         }
-
         recalcAIStats();
     }, 350);
 }
