@@ -2398,6 +2398,35 @@ tr:hover .client-view-link {
     flex-shrink: 0;
 }
 
+/* DL-345: doc-collection status row + missing-docs send action */
+.ai-review-done-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: var(--text-xs);
+    margin-top: 2px;
+    padding: 2px 8px;
+    border-radius: var(--radius-sm);
+    width: fit-content;
+}
+.ai-review-done-status.is-complete {
+    color: var(--success-700);
+    background: var(--success-100);
+}
+.ai-review-done-status.is-pending {
+    color: var(--warning-700);
+    background: var(--warning-100);
+}
+.ai-review-done-actions-row {
+    display: flex;
+    gap: var(--sp-2);
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    margin-top: var(--sp-2);
+    direction: rtl;
+}
+
 /* Accordion removing animation */
 .ai-accordion.removing {
     opacity: 0;
