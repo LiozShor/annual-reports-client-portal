@@ -1,5 +1,19 @@
 # Annual Reports CRM - Current Status
 
+**Last Updated:** 2026-04-25 (DL-344 — COMPLETED, live test passed; reject no longer wipes a sibling cls's approve on shared source doc)
+
+## DL-344: Reject wipes a different file's approve on shared source doc — COMPLETED (live 2026-04-25)
+
+3-cls-1-doc bug: WF05 pre-linked multiple classifications to one DOCUMENTS row. Approve A then reject B+C; reject branch unconditionally null-cleared the doc, wiping A's file. Same DL-248 anti-pattern, never patched on reject.
+
+**Fix:** `api/src/routes/classifications.ts` reject branch (~L1511-1535) — guard the doc PATCH on `srcDoc.onedrive_item_id !== cls.onedrive_item_id`, mirror of DL-248 guard.
+
+**Live verified:** Worker version `4737b484` deployed; UI test on synthetic 3-cls fixture passed (doc retained A's file through both rejects). Production data repaired via direct Airtable PATCH.
+
+Design log: `.agent/design-logs/ai-review/344-reject-clears-unrelated-approval.md`
+
+---
+
 **Last Updated:** 2026-04-25 (DL-341 — COMPLETED, all live tests passed; preview zoom 75% + desktop done-prompt fix + auto-advance + 100% client chip + dismissClientReview desktop path)
 **Last Updated:** 2026-04-25 (DL-343 WF[06] Airtable update hardening for 422-reminder burst — IMPLEMENTED in n8n cloud)
 
