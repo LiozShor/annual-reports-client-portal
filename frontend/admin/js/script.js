@@ -5211,6 +5211,11 @@ function selectClient(clientName) {
         docsPane.innerHTML = buildDesktopClientDocsHtml(clientName, clientItems);
         initAIReviewComboboxes(docsPane);
         safeCreateIcons(docsPane);
+        // DL-341: surface done-prompt when the just-selected client is already fully reviewed.
+        const pendingLeft = clientItems.filter(i => (i.review_status || 'pending') === 'pending').length;
+        if (pendingLeft === 0) {
+            showClientReviewDonePrompt(clientName);
+        }
     } else {
         docsPane.innerHTML = '';
     }
