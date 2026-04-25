@@ -4576,15 +4576,12 @@ function _renderPanelIssuerMismatch(item, reReviewing) {
 }
 
 function _renderPanelUnmatched(item, reReviewing) {
-    const reason = item.ai_reason ? friendlyAIReason(item.ai_reason) : '';
-    const reasonBlock = reason
-        ? `<div class="ai-ap-reasoning-block" style="background: var(--gray-50); border-radius: 4px; padding: 8px 10px; font-size: 11px; color: var(--gray-700); line-height: 1.5; margin-top: 6px;">${escapeHtml(reason)}</div>`
-        : '';
+    // DL-348 follow-up: AI category-explanation block hidden in the unmatched
+    // ("לא זוהה") state — irrelevant to manual classification, just noise.
     return `<div style="font-size: 12px;">
             <span style="color: var(--gray-500);">🤖</span>
             <span style="font-weight: 500; color: var(--gray-800);">לא זוהה</span>
         </div>
-        ${reasonBlock}
         <div style="font-size: 11px; color: var(--gray-600); margin-top: 8px;">שייך ל:</div>
         <div class="ai-inline-ft-toggle" data-record-id="${escapeAttr(item.id)}" style="display:none"></div>
         <div class="doc-combobox-container ai-ap-combobox" data-record-id="${escapeAttr(item.id)}"></div>`;
@@ -7247,72 +7244,73 @@ function _buildClientReviewDonePromptEl(clientName) {
     const escClient = escapeOnclick(clientName);
     const escReport = escapeOnclick(reportId);
 
-    // DL-347: visual hierarchy inverted from DL-346. Send buttons (irreversible)
-    // are outlined ghost; preview/edit are text-links; dismiss is the single solid
-    // green primary at the bottom of the banner.
+    // DL-348: compact layout. Inline rows (no nested white card), single-line
+    // header, conditional primary placement (header-inline when no flows /
+    // footer-row when any flow). Hierarchy from DL-347 preserved.
+    const hasAnyFlow = hasPendingQuestions || hasMissingFlow;
+
     const questionsContext = pendingQuestionsCount === 1
         ? '1 ממתין לתשובה'
         : `${pendingQuestionsCount} ממתינים לתשובה`;
-    const questionsCardHtml = hasPendingQuestions ? `
-        <section class="ai-review-flow-card">
-            <div class="ai-review-flow-card__context">${questionsContext}</div>
-            <div class="ai-review-flow-card__actions">
-                <button class="ai-review-flow-card__send-btn" onclick="dismissAndSendQuestions('${escClient}')">
-                    ${icon('send', 'icon-xs')}
-                    שלח שאלות ללקוח
-                </button>
-                <button class="ai-review-flow-card__link" onclick="previewBatchQuestions('${escClient}')">
-                    תצוגה מקדימה
-                </button>
-                <button class="ai-review-flow-card__link" onclick="openBatchQuestionsModal('${escClient}')">
-                    ערוך
-                </button>
-            </div>
-        </section>
+    const questionsRowHtml = hasPendingQuestions ? `
+        <div class="ai-review-flow-row">
+            <span class="ai-review-flow-row__context">${questionsContext}</span>
+            <button class="ai-review-flow-row__send-btn" onclick="dismissAndSendQuestions('${escClient}')">
+                ${icon('send', 'icon-xs')}
+                שלח שאלות ללקוח
+            </button>
+            <button class="ai-review-flow-row__link" onclick="previewBatchQuestions('${escClient}')">
+                תצוגה מקדימה
+            </button>
+            <button class="ai-review-flow-row__link" onclick="openBatchQuestionsModal('${escClient}')">
+                ערוך
+            </button>
+        </div>
     ` : '';
 
     const missingContext = docsMissing === 1
         ? 'נותר 1 מסמך שלא התקבל מהלקוח'
         : `נותרו ${docsMissing} מסמכים שלא התקבלו מהלקוח`;
-    const missingCardHtml = hasMissingFlow ? `
-        <section class="ai-review-flow-card">
-            <div class="ai-review-flow-card__context">${missingContext}</div>
-            <div class="ai-review-flow-card__actions">
-                <button class="ai-review-flow-card__send-btn" onclick="approveAndSendFromAIReview('${escReport}', '${escClient}')">
-                    ${icon('send', 'icon-xs')}
-                    שלח רשימת חסרים ללקוח
-                </button>
-                <button class="ai-review-flow-card__link" onclick="previewApproveEmail('${escReport}', '${escClient}')">
-                    תצוגה מקדימה
-                </button>
-            </div>
-        </section>
-    ` : '';
-
-    const flowsStackHtml = (hasPendingQuestions || hasMissingFlow) ? `
-        <div class="ai-review-flows-stack">
-            ${questionsCardHtml}
-            ${missingCardHtml}
+    const missingRowHtml = hasMissingFlow ? `
+        <div class="ai-review-flow-row">
+            <span class="ai-review-flow-row__context">${missingContext}</span>
+            <button class="ai-review-flow-row__send-btn" onclick="approveAndSendFromAIReview('${escReport}', '${escClient}')">
+                ${icon('send', 'icon-xs')}
+                שלח רשימת חסרים ללקוח
+            </button>
+            <button class="ai-review-flow-row__link" onclick="previewApproveEmail('${escReport}', '${escClient}')">
+                תצוגה מקדימה
+            </button>
         </div>
     ` : '';
+
+    const flowsStackHtml = hasAnyFlow ? `
+        <div class="ai-review-flows-stack">
+            ${questionsRowHtml}
+            ${missingRowHtml}
+        </div>
+    ` : '';
+
+    const primaryBtnHtml = `
+        <button class="ai-review-done-primary" onclick="dismissClientReview('${escClient}')">
+            ${icon('check', 'icon-xs')}
+            סיים בדיקה
+        </button>
+    `;
 
     const prompt = document.createElement('div');
     prompt.className = 'ai-review-done-prompt';
     prompt.innerHTML = `
         <div class="ai-review-done-content">
-            ${icon('check-circle-2', 'icon-md ai-review-done-icon')}
-            <div class="ai-review-done-text">
+            ${icon('check-circle-2', 'icon-sm ai-review-done-icon')}
+            <span class="ai-review-done-text">
                 <strong>כל המסמכים נבדקו!</strong>
-                <span class="ai-review-done-stats">${statParts.join(' · ')}</span>
-            </div>
+                <span class="ai-review-done-stats"> · ${statParts.join(' · ')}</span>
+            </span>
+            ${hasAnyFlow ? '' : primaryBtnHtml}
         </div>
         ${flowsStackHtml}
-        <div class="ai-review-done-primary-row">
-            <button class="ai-review-done-primary" onclick="dismissClientReview('${escClient}')">
-                ${icon('check', 'icon-xs')}
-                סיים בדיקה
-            </button>
-        </div>
+        ${hasAnyFlow ? `<div class="ai-review-done-footer">${primaryBtnHtml}</div>` : ''}
     `;
     return prompt;
 }
