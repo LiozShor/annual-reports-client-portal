@@ -41,10 +41,14 @@ const previewHandler = async (c: any) => {
 
   try {
     const [previewResponse, itemResponse] = await Promise.all([
-      msGraph.post(`/me/drive/items/${itemId}/preview`, {}),
+      msGraph.post(`/me/drive/items/${itemId}/preview`, { viewer: 'onedrive', zoom: 0.75 }),
       msGraph.get(`/me/drive/items/${itemId}?$select=@microsoft.graph.downloadUrl`),
     ]);
-    const previewUrl: string = previewResponse?.getUrl ?? '';
+    const rawGetUrl: string = previewResponse?.getUrl ?? '';
+    // DL-341: append &nb=true to hide the Microsoft banner in the embedded viewer
+    const previewUrl: string = rawGetUrl
+      ? `${rawGetUrl}${rawGetUrl.includes('?') ? '&' : '?'}nb=true`
+      : '';
     const downloadUrl: string = itemResponse?.['@microsoft.graph.downloadUrl'] ?? '';
     const totalMs = Date.now() - t0;
     const logFn = totalMs > 2000 ? console.warn : console.log;

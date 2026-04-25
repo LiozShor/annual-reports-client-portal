@@ -7184,10 +7184,17 @@ function transitionCardToReviewed(recordId, newReviewStatus, responseData) {
     if (item) {
         const clientName = item.client_name;
         const clientItems = aiClassificationsData.filter(i => i.client_name === clientName);
-        const pendingLeft = clientItems.filter(i => (i.review_status || 'pending') === 'pending').length;
-        if (pendingLeft === 0 && clientItems.length > 0) {
+        const pendingItems = clientItems.filter(i => (i.review_status || 'pending') === 'pending');
+        if (pendingItems.length === 0 && clientItems.length > 0) {
             // DL-323: user just took an action on this client → scroll to confirm
             showClientReviewDonePrompt(clientName, true);
+        } else if (!isAIReviewMobileLayout() && pendingItems.length > 0) {
+            // DL-341: auto-advance to next pending doc in same client (desktop only;
+            // mobile keeps the fat-card in-place swap metaphor).
+            const nextPending = pendingItems.slice().sort(compareDocRows)[0];
+            if (nextPending && String(nextPending.id) !== String(recordId)) {
+                selectDocument(nextPending.id);
+            }
         }
     }
 }
@@ -7196,20 +7203,7 @@ function transitionCardToReviewed(recordId, newReviewStatus, responseData) {
 // DL-323: userInitiated=true only when called from a user action (approve/reject/reassign).
 // Render path (renderAICards) passes false so the page doesn't auto-scroll on every refresh
 // to whichever already-completed client happens to be last in the list.
-function showClientReviewDonePrompt(clientName, userInitiated = false) {
-    const accordion = document.querySelector(`.ai-accordion[data-client="${CSS.escape(clientName)}"]`);
-    if (!accordion) return;
-
-    // Scroll to accordion header — only when the user just acted on this client
-    if (userInitiated) {
-        accordion.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
-
-    // Remove existing prompt if any
-    const existing = accordion.querySelector('.ai-review-done-prompt');
-    if (existing) existing.remove();
-
-    // Count approved/rejected/reassigned/on_hold
+function _buildClientReviewDonePromptEl(clientName) {
     const clientItems = aiClassificationsData.filter(i => i.client_name === clientName);
     const approved = clientItems.filter(i => i.review_status === 'approved').length;
     const rejected = clientItems.filter(i => i.review_status === 'rejected').length;
@@ -7223,7 +7217,6 @@ function showClientReviewDonePrompt(clientName, userInitiated = false) {
     if (onHold) statParts.push(`${onHold} ממתינים לתשובת`);
 
     // DL-335: only show send-questions button if there are questions NOT yet on_hold
-    // (on_hold items already had their questions sent; don't re-send)
     const hasPendingQuestions = !_batchQuestionsSentClients.has(clientName) &&
         clientItems.some(i => i.pending_question && i.review_status !== 'on_hold');
 
@@ -7259,18 +7252,62 @@ function showClientReviewDonePrompt(clientName, userInitiated = false) {
             `}
         </div>
     `;
+    return prompt;
+}
 
-    // Insert after accordion header
+// DL-341: Desktop path — inject prompt into pane 2 above the doc list.
+// DL-334 removed the accordion on desktop, so the old accordion-scoped render no-oped silently.
+function _showClientReviewDonePromptDesktop(clientName, userInitiated) {
+    const pane2 = document.querySelector('.ai-review-docs');
+    if (!pane2) return;
+
+    // Remove existing prompt if any
+    const existing = pane2.querySelector(':scope > .ai-review-done-prompt');
+    if (existing) existing.remove();
+
+    const prompt = _buildClientReviewDonePromptEl(clientName);
+    const docList = pane2.querySelector('.ai-doc-list');
+    if (docList) {
+        pane2.insertBefore(prompt, docList);
+    } else {
+        pane2.prepend(prompt);
+    }
+
+    if (userInitiated) {
+        try { pane2.scrollTo({ top: 0, behavior: 'smooth' }); } catch (e) { pane2.scrollTop = 0; }
+    }
+
+    safeCreateIcons();
+}
+
+function _showClientReviewDonePromptMobile(clientName, userInitiated) {
+    const accordion = document.querySelector(`.ai-accordion[data-client="${CSS.escape(clientName)}"]`);
+    if (!accordion) return;
+
+    if (userInitiated) {
+        accordion.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    const existing = accordion.querySelector('.ai-review-done-prompt');
+    if (existing) existing.remove();
+
+    const prompt = _buildClientReviewDonePromptEl(clientName);
     const header = accordion.querySelector('.ai-accordion-header');
-    header.after(prompt);
+    if (header) header.after(prompt);
 
-    // Update badge to show done state
     const statsEl = accordion.querySelector('.ai-accordion-stats');
     if (statsEl) {
         statsEl.innerHTML = `<span class="ai-accordion-stat-badge badge-success">✓ הושלם</span>`;
     }
 
     safeCreateIcons();
+}
+
+function showClientReviewDonePrompt(clientName, userInitiated = false) {
+    if (isAIReviewMobileLayout()) {
+        return _showClientReviewDonePromptMobile(clientName, userInitiated);
+    }
+    return _showClientReviewDonePromptDesktop(clientName, userInitiated);
 }
 
 // DL-328: Compose batch clarification questions for a client's AI Review batch
