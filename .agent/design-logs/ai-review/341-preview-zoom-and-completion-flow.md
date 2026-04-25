@@ -1,6 +1,6 @@
 # Design Log 341: AI Review Preview Zoom + Completion Flow + Auto-Advance
-**Status:** [IMPLEMENTED — NEED TESTING]
-**Date:** 2026-04-24
+**Status:** [COMPLETED]
+**Date:** 2026-04-24 → 2026-04-25 (live tests passed)
 **Related Logs:** DL-340 (reviewed-indicator + pane-2 sort), DL-334 (cockpit v2 — silently broke desktop done-prompt), DL-339 (actions panel → pane 2), DL-246 (split-modal zoom — different code path)
 
 ## 1. Context & Problem
@@ -131,3 +131,15 @@ CSS: unchanged. `.ai-review-done-prompt` styling works in pane 2 context without
 - Skipped fixing the unrelated `stage is not defined` ReferenceError at `api/src/routes/preview.ts:63` — explicitly out of scope per plan; tracked in `current-status.md` follow-up.
 - `&nb=true` append uses `includes('?')` check for robustness — Graph's `getUrl` typically already has query params but this guards against future shape change.
 - Research principle applied: "Graph body-param at source, not render-time transform." Pattern: server-side preview config.
+
+## Post-merge follow-ups (live testing 2026-04-25)
+
+Five regressions surfaced during live testing — all from the same DL-334 silent-regression class (functions querying `.ai-accordion[data-client=...]` which desktop no longer has). Patched and verified live:
+
+1. **Stale done-prompt after switching clients** (`DL-341-hotfix-stale-prompt`, script.js v=329) — render loop calls `showClientReviewDonePrompt` for every 0-pending client; on desktop pane 2 shows ONE client. Added `selectedClientName` early-return in `_showClientReviewDonePromptDesktop`.
+2. **Done-prompt missing on click of already-100% client** (`DL-341-hotfix-selectclient`, v=330) — `selectClient` rebuilt pane 2 but never called `showClientReviewDonePrompt`. Added invocation when `pendingLeft === 0` after rebuild.
+3. **100% client indicator in pane 1** (`DL-341-complete-chip`, v=331 / style.css v=314) — added `.is-complete` row class + green check chip + dimmed text so completed clients are visually deprioritised.
+4. **Auto-select used unsorted data** (`DL-341-auto-select-sort`, v=332) — `selectClient`'s `clientItems.find(pending)` returned API-order, not pane-2 visual-order. Now sorts via `compareDocRows` first.
+5. **`סיום בדיקה` button silently no-op'd** (`DL-341-dismiss-desktop`, v=333) — `dismissClientReview` early-returned on missing accordion. Added desktop branch: removes pane 1 row, clears pane 2, drops data, auto-jumps to next client with pending. `keepOnHold` path also forked. Verified live: 3 dummy test records actually deleted from Airtable after click.
+
+Final cache: `script.js?v=333`, `style.css?v=314`. All Section 7 items verified live.

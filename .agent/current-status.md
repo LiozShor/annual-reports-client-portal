@@ -1,38 +1,22 @@
 # Annual Reports CRM - Current Status
 
-**Last Updated:** 2026-04-24 (DL-341 preview zoom 75% + completion-flow desktop fix + auto-advance — IMPLEMENTED — NEED TESTING)
+**Last Updated:** 2026-04-25 (DL-341 — COMPLETED, all live tests passed; preview zoom 75% + desktop done-prompt fix + auto-advance + 100% client chip + dismissClientReview desktop path)
 
-## Test DL-341: preview zoom + completion flow + auto-advance
+## DL-341: preview zoom + completion flow + auto-advance — COMPLETED
 
-Branch `DL-341-preview-zoom-and-completion-flow`. Bundles three AI Review cockpit fixes. Worker change requires `wrangler deploy`; frontend change requires merge to main.
+Bundle of AI Review cockpit fixes plus 5 follow-up patches surfacing the same DL-334 silent-regression class (functions querying `.ai-accordion[data-client=...]` no longer present on desktop).
 
-### Zoom
-- [ ] Hard reload admin, click any PDF row → preview iframe loads at ~75% zoom (visibly smaller than fit-to-width).
-- [ ] No Microsoft banner at top of preview.
-- [ ] Click an Office doc (.docx/.xlsx) → zoom applies or falls back gracefully, no broken preview.
-- [ ] Click an image preview → no broken preview (zoom may be ignored for images).
-- [ ] `wrangler tail` 5 min post-deploy — no new errors from `/webhook/get-preview-url`.
+**Live cache:** `script.js?v=333`, `style.css?v=314`. Worker version `7af46522` deployed (zoom 0.75 + `&nb=true` banner-hide).
 
-### Completion flow — desktop (regression fix)
-- [ ] Client with 1 pending doc → approve it → done-prompt appears above pane 2 doc list with `כל המסמכים נבדקו!` + `סיום בדיקה` button. Click it → review closes, client removed from pane 1.
-- [ ] Client with 1 pending doc that has a `pending_question` → approve it → done-prompt shows both buttons (`סיום בדיקה ושליחת שאלות` + `ערוך שאלות`).
-- [ ] Client with only `on_hold` docs → done-prompt shows `on_hold` count in stats.
+**Shipped behaviors:**
+- OneDrive preview defaults to 75% zoom, no Microsoft banner
+- Desktop done-prompt renders above pane 2 (`.ai-review-docs`) — was silently broken since DL-334
+- Auto-advance: review action → pane 3 jumps to next pending in same client (sorted by `compareDocRows`)
+- `selectClient` auto-selects topmost pending in sorted order (was unsorted `.find`)
+- 100% client gets dimmed row + green ✓ chip in pane 1
+- `dismissClientReview` desktop path: removes pane 1 row, clears pane 2, drops data, auto-advances to next client with pending docs. Verified Airtable delete fired (test dummies actually deleted).
 
-### Completion flow — mobile (regression guard)
-- [ ] Resize to mobile width → approve last pending doc → accordion prompt behavior unchanged from DL-334 baseline.
-
-### Auto-advance — desktop
-- [ ] Client with 3 pending docs → approve doc 1 → pane 3 preview jumps to doc 2 (oldest remaining pending); pane 2 row 2 highlighted; actions panel re-renders for doc 2.
-- [ ] Reject doc 2 → doc 3 auto-selected.
-- [ ] Approve doc 3 (last) → done-prompt shown; no auto-advance.
-- [ ] `on_hold` doc mixed in → NOT auto-selected (filter to pending only).
-- [ ] Reassign action → next pending also auto-selected.
-
-### Auto-advance — mobile (regression guard)
-- [ ] Mobile fat-card transitions unchanged; no auto-advance.
-
-### Sanity
-- [ ] Hard reload admin → `?v=328` served (no stale `v=327`).
+Design log: `.agent/design-logs/ai-review/341-preview-zoom-and-completion-flow.md`
 
 Design log: `.agent/design-logs/ai-review/341-preview-zoom-and-completion-flow.md`
 
