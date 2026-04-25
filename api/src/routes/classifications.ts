@@ -1508,12 +1508,29 @@ classifications.post('/review-classification', async (c) => {
         uploaded_at: null,
         fix_reason_client: fixReasonClient,
       };
-      // Use direct Airtable API PATCH (not the client's updateRecord which may drop nulls)
-      await fetch(`https://api.airtable.com/v0/${env.AIRTABLE_BASE_ID}/${TABLES.DOCUMENTS}/${docId}`, {
-        method: 'PATCH',
-        headers: { Authorization: `Bearer ${env.AIRTABLE_PAT}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ fields: rejectFields }),
-      });
+      // DL-344: Guard — don't clear if a different file was already approved to this doc
+      // (mirror of DL-248 reassign guard at L1582-1612). Multiple AI classifications often
+      // pre-link to the same source doc; rejecting one must not wipe the file another
+      // approve put there.
+      let rejectSkipClear = false;
+      if (docId) {
+        const srcDocForGuard = sourceDoc || await airtable.getRecord(TABLES.DOCUMENTS, docId);
+        const srcItemId = (srcDocForGuard.fields as any).onedrive_item_id as string;
+        const clsItemId = clsFields.onedrive_item_id as string;
+        if (srcItemId && srcItemId !== clsItemId) {
+          rejectSkipClear = true;
+          console.log('[review-classification] reject: skip clear — source doc has different file',
+            JSON.stringify({ docId, srcItemId, clsItemId }));
+        }
+      }
+      if (!rejectSkipClear) {
+        // Use direct Airtable API PATCH (not the client's updateRecord which may drop nulls)
+        await fetch(`https://api.airtable.com/v0/${env.AIRTABLE_BASE_ID}/${TABLES.DOCUMENTS}/${docId}`, {
+          method: 'PATCH',
+          headers: { Authorization: `Bearer ${env.AIRTABLE_PAT}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ fields: rejectFields }),
+        });
+      }
       docTitle = sourceDoc ? (sourceDoc.fields as any).issuer_name || '' : '';
 
       // DL-244: Append to report's rejected_uploads_log (fail-soft)

@@ -1,5 +1,26 @@
 # Annual Reports CRM - Current Status
 
+**Last Updated:** 2026-04-25 (DL-344 reject-clears-unrelated-approval — IMPLEMENTED — NEED TESTING; bug repro on CPA-XXX ID appendix)
+
+## DL-344: Reject wipes a different file's approve on shared source doc — IMPLEMENTED — NEED TESTING
+
+CPA-XXX reproduced: WF05 pre-linked 3 classifications (IMG_0557/0558/0559) to one T002 doc. Approve A then reject B+C; reject branch unconditionally null-cleared the doc, wiping IMG_0557's file. Root cause = same anti-pattern DL-248 fixed for reassign, never patched on reject.
+
+**Fix:** `api/src/routes/classifications.ts` reject branch (~L1495-1535) — guard the doc PATCH on `srcDoc.onedrive_item_id !== cls.onedrive_item_id`, mirror of DL-248 guard at L1582-1592. Step 5 cls→`rejected` and `rejected_uploads_log` append still run unconditionally.
+
+**Test todos for DL-344:**
+- [ ] `wrangler deploy` from `api/` on feature branch + brief `wrangler tail` — no boot errors
+- [ ] Live curl: 3-cls-1-doc trace → approve A, reject B, reject C → doc stays Received with A's file
+- [ ] Live curl regression: reject A (only cls on doc) → doc clears as before
+- [ ] Live curl edge: reject when cls has no `onedrive_item_id` → doc clears (guard short-circuits)
+- [ ] Manual repair `recpvynrLkdhO1Aiz` post-deploy: PATCH status=Received with IMG_0557 file data preserved on `recNqeHbaEGIjfW3Y`. Verify admin panel + client portal show ID appendix as Received.
+- [ ] Regression: typical reject (single cls, wrong file) still clears doc + adds rejected_uploads_log
+- [ ] Regression: DL-248 reassign guard untouched, still works
+
+Design log: `.agent/design-logs/ai-review/344-reject-clears-unrelated-approval.md`
+
+---
+
 **Last Updated:** 2026-04-25 (DL-341 — COMPLETED, all live tests passed; preview zoom 75% + desktop done-prompt fix + auto-advance + 100% client chip + dismissClientReview desktop path)
 
 ## DL-341: preview zoom + completion flow + auto-advance — COMPLETED
