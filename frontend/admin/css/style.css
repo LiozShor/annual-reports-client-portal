@@ -3267,9 +3267,15 @@ tr:hover .client-view-link {
 /* ==================== DL-288: Recent Messages Enhancements ==================== */
 
 /* DL-288: Mark-as-handled button (replaces danger trash) */
-.msg-action-btn--success:hover {
+/* DL-348 follow-up: small CTA nudge — green at rest with a faint tinted bg
+   so the primary "mark as handled" action reads as such without dominating. */
+.msg-action-btn--success {
     color: var(--green-600, #16a34a);
     background: var(--green-50, #f0fdf4);
+}
+.msg-action-btn--success:hover {
+    color: var(--green-700, #15803d);
+    background: var(--green-100, #dcfce7);
 }
 
 /* DL-288: Thread wrapper for 2+ stacked office replies */
