@@ -1,5 +1,33 @@
 # Annual Reports CRM - Current Status
 
+**Last Updated:** 2026-04-25 (DL-342 reminder burst readiness audit — 422 reminders this week — GO with manual monitoring)
+
+## Test DL-342: reminder burst readiness (422 this week)
+
+Audit-only DL — no code changed. Three monitoring tasks for the burst week (WF[06] cron @08:00 IL, ~85–150/day):
+
+### Pre-Monday (15 min)
+- [ ] Open WF[06] (`FjisCdmWc4ef0qSV`) in n8n. Confirm `continueOnFail: true` on Gmail Send + Airtable Update nodes (so a single failed client doesn't drop the rest of the day's cohort).
+- [ ] Confirm node order — Airtable Update (writing `last_reminder_sent_at`) runs ahead of, or atomically with, Gmail Send. If Gmail-then-Update, a retry could double-send.
+- [ ] Confirm cron schedule still 08:00 Asia/Jerusalem (DL-271 baseline).
+
+### Day 1, 08:00–08:15 (15 min)
+- [ ] n8n executions tab: run is green, processed expected count.
+- [ ] `wrangler tail --format pretty` against `annual-reports-api` — no callback errors.
+- [ ] Cross-check Gmail "Sent" folder count for reports@moshe-atsits.co.il.
+
+### Day 2, 08:00–08:15 (15 min)
+- [ ] Repeat Day-1 checks.
+- [ ] Sanity: clients reminded yesterday who are NOT due again don't get re-sent.
+- [ ] If a yesterday-reminded client gets dropped today (DL-154 24h-window bug surfaced) → promote DL-154 from `[DRAFT]` to hot-fix.
+
+### End of week
+- [ ] Total sent count vs. 422 expected. Discrepancy > 5% triggers a follow-up DL.
+
+Design log: `.agent/design-logs/reminders/342-reminder-burst-readiness.md`
+
+---
+
 **Last Updated:** 2026-04-24 (DL-341 preview zoom 75% + completion-flow desktop fix + auto-advance — IMPLEMENTED — NEED TESTING)
 
 ## Test DL-341: preview zoom + completion flow + auto-advance
