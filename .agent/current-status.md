@@ -19,6 +19,32 @@ Design log: `.agent/design-logs/ai-review/344-reject-clears-unrelated-approval.m
 **Last Updated:** 2026-04-25 (DL-345 AI-review done-prompt: doc-collection chip + send-missing-docs button — IMPLEMENTED, NEED TESTING)
 **Last Updated:** 2026-04-25 (DL-346 AI-review banner restructured into two-flow sub-sections — IMPLEMENTED, NEED TESTING; supersedes DL-345 chip presentation)
 **Last Updated:** 2026-04-25 (DL-347 AI-review banner hierarchy inverted: filled/outlined/text triad — IMPLEMENTED, NEED TESTING; supersedes DL-346 button styling)
+**Last Updated:** 2026-04-25 (DL-348 AI-review banner compacted: inline rows + conditional primary placement — IMPLEMENTED, NEED TESTING; supersedes DL-347 sizing)
+
+## Test DL-348: AI-review banner compact layout
+
+`_buildClientReviewDonePromptEl` rebuilt: single-line header, inline `.ai-review-flow-row` (no white card), primary inlined into header when no flows or in `.ai-review-done-footer` row otherwise. Stats 11px; `flex-wrap: wrap` + `text-overflow: clip` over ellipsis. Outer padding `10px 12px`. Cache-bust `style.css?v=317`, `script.js?v=339`. Design log: `.agent/design-logs/ai-review/348-banner-compact.md`.
+
+### Active TODOs — Test DL-348
+
+**Banner height (open dev tools → select `.ai-review-done-prompt` → record `getBoundingClientRect().height`):**
+- [ ] State 1 (both flows): ≤95px (target ~80). Single-line header. Two flow rows. Footer with primary, content-hug width, right-aligned in RTL.
+- [ ] State 2 (questions only): ≤75px (target ~60).
+- [ ] State 3 (missing only): ≤75px (target ~60).
+- [ ] State 4 (neither): ≤50px (target ~40). Header + primary on single horizontal row.
+
+**Other checks:**
+- [ ] Header title + stats stay on one line in the common ≤3-counter case.
+- [ ] Pathological 4×2-digit stats (`10 אושרו · 5 שויכו · 3 נדחו · 4 ממתינים לתשובת`) wraps below title rather than truncating — verify NO ellipsis/clip cuts off digits.
+- [ ] Pane 2 content not pushed off-screen: pick a client with notes timeline + missing-docs section + ≥10 doc rows + visible banner → confirm everything below stays accessible.
+- [ ] Plural edges: 1 vs N for both flows; layout aligned in both cases.
+- [ ] DL-345 idle button label `שלח רשימת חסרים ללקוח` doesn't break the flow row at narrow pane widths.
+- [ ] DL-345 confirm-dialog wording flip when `docs_first_sent_at` set (`שלח שוב` / `נשלח כבר ב-<date>`).
+- [ ] Live email smoke (`gws`): both outlined sends still trigger their respective emails to liozshor1@gmail.com.
+- [ ] DL-335 held-questions: clicking primary `סיים בדיקה` preserves `on_hold` items in queue.
+- [ ] No regression in DL-308 preview modal, DL-323 user-initiated scroll, DL-341 desktop pane-2 placement.
+- [ ] Console clean across all four states.
+- [ ] Mobile (≤768px) smoke: rows wrap or stack without horizontal overflow.
 
 ## Test DL-347: AI-review banner hierarchy invert (filled / outlined / text)
 

@@ -2348,13 +2348,14 @@ tr:hover .client-view-link {
     color: var(--warning-700);
 }
 
-/* DL-210: Review done prompt */
+/* DL-210 + DL-348: Review done prompt — compact single-line header,
+   inline flow rows, header-inline OR footer-row primary placement. */
 .ai-review-done-prompt {
     background: var(--success-50);
     border: 1px solid var(--success-200);
     border-radius: var(--radius-lg);
     margin: var(--sp-3) var(--sp-4);
-    padding: var(--sp-3) var(--sp-4);
+    padding: 10px 12px;
     animation: slideDown 300ms ease-out;
 }
 
@@ -2366,8 +2367,10 @@ tr:hover .client-view-link {
 .ai-review-done-content {
     display: flex;
     align-items: center;
-    gap: var(--sp-3);
+    gap: 8px;
     direction: rtl;
+    /* DL-348: nowrap is the intent — but allow wrap as a hard fallback so the
+       stats string never gets ellipsised (per user: data > 1-line guarantee). */
     flex-wrap: wrap;
 }
 
@@ -2377,107 +2380,102 @@ tr:hover .client-view-link {
 }
 
 .ai-review-done-text {
-    flex: 1;
-    min-width: 160px;
-    display: flex;
-    flex-direction: column;
+    flex: 1 1 auto;
+    min-width: 0;
+    display: inline-flex;
+    align-items: baseline;
     gap: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: clip; /* clip rather than ellipsis — wrap is preferred fallback */
 }
 
 .ai-review-done-text strong {
-    font-size: var(--text-sm);
+    font-size: 13px;
+    font-weight: 500;
     color: var(--success-800);
 }
 
 .ai-review-done-stats {
-    font-size: var(--text-xs);
-    color: var(--success-600);
+    font-size: 11px;
+    color: var(--text-secondary, var(--gray-600));
+    /* Wrap underneath title (rather than ellipsis) when the row is too narrow. */
+    white-space: normal;
 }
 
-.ai-review-done-btn {
-    flex-shrink: 0;
-}
-
-/* DL-346: two-flow layout — questions card + missing-docs card stacked inside
-   the green completion banner. Replaces DL-345 chip + bottom action row. */
+/* DL-348: inline flow rows — direct children of .ai-review-done-prompt, no
+   nested white card. */
 .ai-review-flows-stack {
     display: flex;
     flex-direction: column;
-    gap: var(--sp-2);
-    margin-top: var(--sp-2);
+    gap: 0;
+    margin-top: 6px;
     direction: rtl;
 }
-.ai-review-flow-card {
-    background: var(--white, #fff);
-    border: 1px solid var(--gray-200);
-    border-radius: var(--radius-md);
-    padding: var(--sp-3);
+.ai-review-flow-row {
     display: flex;
-    flex-direction: column;
-    gap: var(--sp-2);
-}
-.ai-review-flow-card__context {
-    font-size: var(--text-xs);
-    color: var(--gray-700);
-}
-.ai-review-flow-card__actions {
-    display: flex;
-    gap: var(--sp-2);
-    flex-wrap: wrap;
     align-items: center;
-    justify-content: flex-end;
+    gap: 8px;
+    padding: 4px 0;
+    flex-wrap: wrap;
 }
-
-/* DL-347: filled / outlined / text triad. Outlined send button on the cards;
-   text-link preview/edit; the only solid green is the bottom primary. */
-.ai-review-flow-card__send-btn {
+.ai-review-flow-row__context {
+    flex: 1 1 auto;
+    min-width: 0;
+    font-size: 12px;
+    color: var(--text-primary, var(--gray-800));
+}
+.ai-review-flow-row__send-btn {
     display: inline-flex;
     align-items: center;
     gap: 6px;
     background: #fff;
     color: var(--success-700);
     border: 1px solid var(--success-500);
-    border-radius: var(--radius-sm);
-    padding: 5px 12px;
-    font-size: 13px;
+    border-radius: var(--radius-md);
+    padding: 3px 10px;
+    font-size: 11px;
     font-weight: 500;
     cursor: pointer;
     transition: background 120ms ease, border-color 120ms ease;
+    white-space: nowrap;
+    flex-shrink: 0;
 }
-.ai-review-flow-card__send-btn:hover {
-    background: var(--success-50);
-}
-.ai-review-flow-card__send-btn:active {
-    background: var(--success-100);
-}
-.ai-review-flow-card__send-btn:focus-visible {
+.ai-review-flow-row__send-btn:hover { background: var(--success-50); }
+.ai-review-flow-row__send-btn:active { background: var(--success-100); }
+.ai-review-flow-row__send-btn:focus-visible {
     outline: 2px solid var(--success-500);
     outline-offset: 2px;
 }
 
-.ai-review-flow-card__link {
+.ai-review-flow-row__link {
     background: transparent;
     border: none;
-    padding: 2px 4px;
-    font-size: 12px;
+    padding: 0 2px;
+    font-size: 11px;
     font-weight: 400;
     color: var(--text-secondary, var(--gray-600));
     cursor: pointer;
+    white-space: nowrap;
+    flex-shrink: 0;
 }
-.ai-review-flow-card__link:hover {
+.ai-review-flow-row__link:hover {
     text-decoration: underline;
     color: var(--gray-800);
 }
-.ai-review-flow-card__link:focus-visible {
+.ai-review-flow-row__link:focus-visible {
     outline: 2px solid var(--gray-400);
     outline-offset: 2px;
     border-radius: 2px;
 }
 
-.ai-review-done-primary-row {
+/* DL-348: footer row holds the primary when any flow row is rendered above.
+   When no flow rows render, the primary is inlined into .ai-review-done-content
+   instead, collapsing the banner to a single ~40px row. */
+.ai-review-done-footer {
     display: flex;
-    justify-content: center;
-    margin-top: var(--sp-3);
+    margin-top: 6px;
+    direction: rtl;
 }
 .ai-review-done-primary {
     display: inline-flex;
@@ -2487,23 +2485,24 @@ tr:hover .client-view-link {
     color: #fff;
     border: none;
     border-radius: var(--radius-md);
-    padding: 10px var(--sp-4);
-    font-size: 14px;
+    padding: 6px 16px;
+    font-size: 12px;
     font-weight: 500;
     cursor: pointer;
     transition: background 120ms ease;
-    min-width: 160px;
-    justify-content: center;
+    flex-shrink: 0;
+    white-space: nowrap;
 }
-.ai-review-done-primary:hover {
-    background: var(--success-600);
-}
-.ai-review-done-primary:active {
-    background: var(--success-700);
-}
+.ai-review-done-primary:hover { background: var(--success-600); }
+.ai-review-done-primary:active { background: var(--success-700); }
 .ai-review-done-primary:focus-visible {
     outline: 2px solid var(--success-700);
     outline-offset: 2px;
+}
+/* When the primary is inlined into .ai-review-done-content (neither-flow case),
+   push it to the end of the row so header reads [icon][text … flex:1][primary]. */
+.ai-review-done-content > .ai-review-done-primary {
+    margin-inline-start: auto;
 }
 
 /* Accordion removing animation */
