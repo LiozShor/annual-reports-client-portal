@@ -1,5 +1,5 @@
 # Design Log 346: Completion banner — separate questions flow from missing-docs flow
-**Status:** [IMPLEMENTED — NEED TESTING]
+**Status:** [COMPLETED]
 **Date:** 2026-04-25
 **Related Logs:** DL-210 (banner origin), DL-308 (`previewApproveEmail`), DL-323 (user-initiated scroll), DL-333 (off-hours batch questions), DL-335 (on_hold + held questions), DL-341 (desktop banner host), DL-345 (missing-docs send action just shipped)
 

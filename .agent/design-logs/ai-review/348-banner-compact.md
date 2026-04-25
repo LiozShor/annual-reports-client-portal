@@ -1,5 +1,5 @@
 # Design Log 348: Completion banner — compact layout (reclaim vertical space)
-**Status:** [IMPLEMENTED — NEED TESTING]
+**Status:** [COMPLETED]
 **Date:** 2026-04-25
 **Related Logs:** DL-210 (banner origin), DL-308 (email preview), DL-323 (user-initiated scroll), DL-333 (off-hours batch questions), DL-335 (held questions / on_hold), DL-341 (desktop banner host), DL-345 (missing-docs send action), DL-346 (two-flow split), DL-347 (filled/outlined/text triad — direct predecessor)
 

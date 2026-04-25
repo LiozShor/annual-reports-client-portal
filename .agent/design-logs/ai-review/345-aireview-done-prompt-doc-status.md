@@ -1,5 +1,5 @@
 # Design Log 345: AI-review "all reviewed" prompt — doc-collection status + send-missing
-**Status:** [IMPLEMENTED — NEED TESTING]
+**Status:** [COMPLETED]
 **Date:** 2026-04-25
 **Related Logs:** DL-210 (review-done prompt), DL-308 (email preview modal + approve-and-send), DL-323 (user-initiated scroll), DL-335 (held questions), DL-341 (auto-advance), DL-314 (icon sprite)
 

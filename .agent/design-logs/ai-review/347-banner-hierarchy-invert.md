@@ -1,5 +1,5 @@
 # Design Log 347: Completion banner — invert action hierarchy (finish primary, send-list secondary)
-**Status:** [IMPLEMENTED — NEED TESTING]
+**Status:** [COMPLETED]
 **Date:** 2026-04-25
 **Related Logs:** DL-210 (banner origin), DL-308 (email preview), DL-323 (user-initiated scroll), DL-333 (off-hours batch questions), DL-335 (held questions / on_hold), DL-341 (desktop banner host), DL-345 (missing-docs send action — now superseded in presentation), DL-346 (two-flow split — direct predecessor)
 

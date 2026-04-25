@@ -16,88 +16,26 @@ Design log: `.agent/design-logs/ai-review/344-reject-clears-unrelated-approval.m
 
 **Last Updated:** 2026-04-25 (DL-341 — COMPLETED, all live tests passed; preview zoom 75% + desktop done-prompt fix + auto-advance + 100% client chip + dismissClientReview desktop path)
 **Last Updated:** 2026-04-25 (DL-343 WF[06] Airtable update hardening for 422-reminder burst — IMPLEMENTED in n8n cloud)
-**Last Updated:** 2026-04-25 (DL-345 AI-review done-prompt: doc-collection chip + send-missing-docs button — IMPLEMENTED, NEED TESTING)
-**Last Updated:** 2026-04-25 (DL-346 AI-review banner restructured into two-flow sub-sections — IMPLEMENTED, NEED TESTING; supersedes DL-345 chip presentation)
-**Last Updated:** 2026-04-25 (DL-347 AI-review banner hierarchy inverted: filled/outlined/text triad — IMPLEMENTED, NEED TESTING; supersedes DL-346 button styling)
-**Last Updated:** 2026-04-25 (DL-348 AI-review banner compacted: inline rows + conditional primary placement — IMPLEMENTED, NEED TESTING; supersedes DL-347 sizing)
+**Last Updated:** 2026-04-25 (DL-345/346/347/348 AI-review completion-banner sequence — all COMPLETED; live tests passed across all four states + recent-messages CTA tint)
 
-## Test DL-348: AI-review banner compact layout
+## DL-345 → DL-348: AI-review completion banner — sequence COMPLETED (2026-04-25)
 
-`_buildClientReviewDonePromptEl` rebuilt: single-line header, inline `.ai-review-flow-row` (no white card), primary inlined into header when no flows or in `.ai-review-done-footer` row otherwise. Stats 11px; `flex-wrap: wrap` + `text-overflow: clip` over ellipsis. Outer padding `10px 12px`. Cache-bust `style.css?v=317`, `script.js?v=339`. Design log: `.agent/design-logs/ai-review/348-banner-compact.md`.
+Iterative redesign of `_buildClientReviewDonePromptEl` shipped in four DLs:
 
-### Active TODOs — Test DL-348
+- **DL-345** added inline doc-collection chip + send-missing-docs action (reused DL-308 `previewApproveEmail` + `ENDPOINTS.APPROVE_AND_SEND`; new `approveAndSendFromAIReview` clones `approveAndSendFromQueue` minus stage-bump).
+- **DL-346** restructured into two-flow sub-sections (questions card + missing-docs card, plural-aware Hebrew). Superseded the DL-345 chip presentation.
+- **DL-347** inverted visual hierarchy (filled/outlined/text triad — single solid green primary `סיים בדיקה`; sends outlined; previews text-links). Reasoning: the irreversible "send email" action should not be the loudest control.
+- **DL-348** compacted the layout (single-line header, inline `.ai-review-flow-row` replacing `.ai-review-flow-card`, conditional primary placement; height targets ~40/60/80px hit). Plus drive-by: hide `.ai-ap-reasoning-block` AI category-explanation block on `_renderPanelUnmatched` ("לא זוהה" panels — irrelevant noise) + recent-messages "mark handled" check button now has subtle green tint at rest (CTA nudge).
 
-**Banner height (open dev tools → select `.ai-review-done-prompt` → record `getBoundingClientRect().height`):**
-- [ ] State 1 (both flows): ≤95px (target ~80). Single-line header. Two flow rows. Footer with primary, content-hug width, right-aligned in RTL.
-- [ ] State 2 (questions only): ≤75px (target ~60).
-- [ ] State 3 (missing only): ≤75px (target ~60).
-- [ ] State 4 (neither): ≤50px (target ~40). Header + primary on single horizontal row.
+**All Section-7 tests passed** across all four DLs (per user 2026-04-25). Final cache: `style.css?v=318`, `script.js?v=339`. Design logs:
+- `.agent/design-logs/ai-review/345-aireview-done-prompt-doc-status.md`
+- `.agent/design-logs/ai-review/346-completion-banner-two-flows.md`
+- `.agent/design-logs/ai-review/347-banner-hierarchy-invert.md`
+- `.agent/design-logs/ai-review/348-banner-compact.md`
 
-**Other checks:**
-- [ ] Header title + stats stay on one line in the common ≤3-counter case.
-- [ ] Pathological 4×2-digit stats (`10 אושרו · 5 שויכו · 3 נדחו · 4 ממתינים לתשובת`) wraps below title rather than truncating — verify NO ellipsis/clip cuts off digits.
-- [ ] Pane 2 content not pushed off-screen: pick a client with notes timeline + missing-docs section + ≥10 doc rows + visible banner → confirm everything below stays accessible.
-- [ ] Plural edges: 1 vs N for both flows; layout aligned in both cases.
-- [ ] DL-345 idle button label `שלח רשימת חסרים ללקוח` doesn't break the flow row at narrow pane widths.
-- [ ] DL-345 confirm-dialog wording flip when `docs_first_sent_at` set (`שלח שוב` / `נשלח כבר ב-<date>`).
-- [ ] Live email smoke (`gws`): both outlined sends still trigger their respective emails to liozshor1@gmail.com.
-- [ ] DL-335 held-questions: clicking primary `סיים בדיקה` preserves `on_hold` items in queue.
-- [ ] No regression in DL-308 preview modal, DL-323 user-initiated scroll, DL-341 desktop pane-2 placement.
-- [ ] Console clean across all four states.
-- [ ] Mobile (≤768px) smoke: rows wrap or stack without horizontal overflow.
+Follow-up cleanup queued (out of scope for this session): the legacy `document.querySelector('.ai-review-done-btn')` at `script.js:7704` (in `dismissAndSendQuestions`) has been dead since DL-347 deleted the class. Silent no-op via the `if (btn)` guard. Worth deleting or repointing to `.ai-review-done-primary` in a future trivial DL.
 
-## Test DL-347: AI-review banner hierarchy invert (filled / outlined / text)
-
-`_buildClientReviewDonePromptEl` re-painted: single solid-green `סיים בדיקה` primary at the bottom; card send buttons (`שלח שאלות ללקוח`, `שלח רשימת חסרים ללקוח`) outlined ghost; `תצוגה מקדימה` + `ערוך` demoted to text-links; header inline dismiss removed. Same handlers + same flags as DL-346. Cache-bust `style.css?v=316`, `script.js?v=338`. Design log: `.agent/design-logs/ai-review/347-banner-hierarchy-invert.md`.
-
-### Active TODOs — Test DL-347
-
-- [ ] State 1 (both flows): header → questions card with outlined send + 2 text-links → missing-docs card with outlined send + 1 text-link → bottom solid green `סיים בדיקה`. **Exactly one solid-green button visible.**
-- [ ] State 2 (questions only): header → questions card → bottom primary. No missing card.
-- [ ] State 3 (missing only): header → missing card → bottom primary. No questions card.
-- [ ] State 4 (neither): header → bottom primary. No cards.
-- [ ] DL-345 wording flip: `docs_first_sent_at` set → confirm dialog reads "נשלח כבר ב-<date>"; idle button label is "שלח רשימת חסרים ללקוח" (outlined); the "שלח שוב" wording shows up in the confirm dialog only.
-- [ ] Plural Hebrew: `1 ממתין לתשובה` vs `N ממתינים לתשובה`; `נותר 1 מסמך שלא התקבל מהלקוח` vs `נותרו N מסמכים שלא התקבלו מהלקוח`.
-- [ ] Live email smoke (`gws`): both outlined sends still trigger their respective emails to liozshor1@gmail.com (DL-333 questions path, DL-345 missing-docs path).
-- [ ] DL-335 held-questions: clicking bottom primary `סיים בדיקה` keeps `on_hold` items in the queue.
-- [ ] No regression in DL-308 preview modal, DL-323 user-initiated scroll, DL-341 desktop pane-2 placement.
-- [ ] Console clean across all four states.
-- [ ] Mobile (≤768px) smoke: rows wrap cleanly, bottom primary remains tap-target sized, no horizontal overflow.
-
-## Test DL-346: AI-review completion banner two-flow layout
-
-`_buildClientReviewDonePromptEl` rebuilt: header + up to two white inner cards (questions / missing-docs) + dismiss-only when neither. Plural-aware Hebrew context lines. DL-345 chip + bottom action row removed; same handlers + same DL-345 wording flips preserved. Cache-bust `style.css?v=315`, `script.js?v=336`. Design log: `.agent/design-logs/ai-review/346-completion-banner-two-flows.md`.
-
-### Active TODOs — Test DL-346
-
-- [ ] State 1 (questions only, no missing): single white card — primary `סיים בדיקה ושלח שאלות` + ghost `תצוגה מקדימה של השאלות` + ghost `ערוך שאלות`. No missing card. No footer dismiss.
-- [ ] State 2 (missing only, no questions): single white card — primary `שלח רשימת מסמכים חסרים` + ghost `תצוגה מקדימה של רשימת החסרים`. No questions card. No footer dismiss.
-- [ ] State 3 (both): two stacked white cards with 8-10px gap; each self-contained.
-- [ ] State 4 (neither): header + single green `סיום בדיקה` button; no cards.
-- [ ] DL-345 wording flip: `docs_first_sent_at` set → primary reads `שלח שוב`; confirm dialog reads `נשלח כבר ב-<date>...`.
-- [ ] Plural Hebrew: `1 ממתין לתשובה` (n=1) vs `3 ממתינים לתשובה` (n=3); `נותר 1 מסמך שלא התקבל` vs `נותרו 4 מסמכים שלא התקבלו`.
-- [ ] Live email smoke (`gws`): questions email + missing-docs email both still arrive at liozshor1@gmail.com with the same recipient + body as DL-333 / DL-345.
-- [ ] DL-335 held-questions filter still kicks in when neither-flow dismiss fires (`on_hold` items stay in queue).
-- [ ] No regression in DL-323 user-initiated scroll, DL-341 desktop pane-2 placement, `recalcAIStats`-driven re-render.
-- [ ] Console clean across all four states.
-- [ ] Mobile (≤768px) visual smoke — untouched per spec.
-
-
-## Test DL-345: AI-review done-prompt doc-status + send-missing
-
-Inline X/Y chip + preview/`שלח רשימת מסמכים חסרים` action row added to `_buildClientReviewDonePromptEl`; new `approveAndSendFromAIReview` reuses `ENDPOINTS.APPROVE_AND_SEND` with no stage-bump. Pure frontend; cache-bust `script.js?v=334`. Design log: `.agent/design-logs/ai-review/345-aireview-done-prompt-doc-status.md`.
-
-### Active TODOs — Test DL-345
-
-- [ ] AI-review tab, client with `X<Y` docs received: review all classified → prompt shows amber "X/Y התקבלו · נותרו N מסמכים" chip.
-- [ ] `תצוגה מקדימה` button opens DL-308 email-preview modal with the missing-docs HTML + subject.
-- [ ] `שלח רשימת מסמכים חסרים` → confirm dialog → success toast → email arrives at liozshor1@gmail.com (verify via `gws`); subject + body match the preview.
-- [ ] Client with `docs_first_sent_at` set: confirm dialog reads "נשלח כבר ב-...", primary button reads "שלח שוב".
-- [ ] Client with `X==Y` (all received): green "כל המסמכים התקבלו (X/Y) — מוכן לבדיקה" chip; preview/send buttons NOT rendered; existing `סיום בדיקה` still dismisses.
-- [ ] Client with pending questions AND missing docs: both action sets render together without overlap.
-- [ ] Mobile (≤768px) layout: chip + buttons wrap inside the prompt's flex-wrap, no overflow.
-- [ ] Browser console clean on both flows.
-- [ ] No regression in `dismissClientReview`, `dismissAndSendQuestions`, `previewBatchQuestions`, `openBatchQuestionsModal`, doc-manager `previewApproveEmail`.
+---
 
 ## Test DL-343: burst stagger + Airtable update hardening (LIVE in WF[06])
 
