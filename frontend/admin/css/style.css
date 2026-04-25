@@ -2428,6 +2428,84 @@ tr:hover .client-view-link {
     justify-content: flex-end;
 }
 
+/* DL-347: filled / outlined / text triad. Outlined send button on the cards;
+   text-link preview/edit; the only solid green is the bottom primary. */
+.ai-review-flow-card__send-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: #fff;
+    color: var(--success-700);
+    border: 1px solid var(--success-500);
+    border-radius: var(--radius-sm);
+    padding: 5px 12px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 120ms ease, border-color 120ms ease;
+}
+.ai-review-flow-card__send-btn:hover {
+    background: var(--success-50);
+}
+.ai-review-flow-card__send-btn:active {
+    background: var(--success-100);
+}
+.ai-review-flow-card__send-btn:focus-visible {
+    outline: 2px solid var(--success-500);
+    outline-offset: 2px;
+}
+
+.ai-review-flow-card__link {
+    background: transparent;
+    border: none;
+    padding: 2px 4px;
+    font-size: 12px;
+    font-weight: 400;
+    color: var(--text-secondary, var(--gray-600));
+    cursor: pointer;
+}
+.ai-review-flow-card__link:hover {
+    text-decoration: underline;
+    color: var(--gray-800);
+}
+.ai-review-flow-card__link:focus-visible {
+    outline: 2px solid var(--gray-400);
+    outline-offset: 2px;
+    border-radius: 2px;
+}
+
+.ai-review-done-primary-row {
+    display: flex;
+    justify-content: center;
+    margin-top: var(--sp-3);
+}
+.ai-review-done-primary {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--success-500);
+    color: #fff;
+    border: none;
+    border-radius: var(--radius-md);
+    padding: 10px var(--sp-4);
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 120ms ease;
+    min-width: 160px;
+    justify-content: center;
+}
+.ai-review-done-primary:hover {
+    background: var(--success-600);
+}
+.ai-review-done-primary:active {
+    background: var(--success-700);
+}
+.ai-review-done-primary:focus-visible {
+    outline: 2px solid var(--success-700);
+    outline-offset: 2px;
+}
+
 /* Accordion removing animation */
 .ai-accordion.removing {
     opacity: 0;

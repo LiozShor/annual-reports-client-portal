@@ -7247,6 +7247,9 @@ function _buildClientReviewDonePromptEl(clientName) {
     const escClient = escapeOnclick(clientName);
     const escReport = escapeOnclick(reportId);
 
+    // DL-347: visual hierarchy inverted from DL-346. Send buttons (irreversible)
+    // are outlined ghost; preview/edit are text-links; dismiss is the single solid
+    // green primary at the bottom of the banner.
     const questionsContext = pendingQuestionsCount === 1
         ? '1 ממתין לתשובה'
         : `${pendingQuestionsCount} ממתינים לתשובה`;
@@ -7254,36 +7257,33 @@ function _buildClientReviewDonePromptEl(clientName) {
         <section class="ai-review-flow-card">
             <div class="ai-review-flow-card__context">${questionsContext}</div>
             <div class="ai-review-flow-card__actions">
-                <button class="btn btn-success btn-sm" onclick="dismissAndSendQuestions('${escClient}')">
+                <button class="ai-review-flow-card__send-btn" onclick="dismissAndSendQuestions('${escClient}')">
                     ${icon('send', 'icon-xs')}
-                    סיים בדיקה ושלח שאלות
+                    שלח שאלות ללקוח
                 </button>
-                <button class="btn btn-ghost btn-sm" onclick="previewBatchQuestions('${escClient}')">
-                    ${icon('eye', 'icon-xs')}
-                    תצוגה מקדימה של השאלות
+                <button class="ai-review-flow-card__link" onclick="previewBatchQuestions('${escClient}')">
+                    תצוגה מקדימה
                 </button>
-                <button class="btn btn-ghost btn-sm" onclick="openBatchQuestionsModal('${escClient}')">
-                    ${icon('pencil', 'icon-xs')}
-                    ערוך שאלות
+                <button class="ai-review-flow-card__link" onclick="openBatchQuestionsModal('${escClient}')">
+                    ערוך
                 </button>
             </div>
         </section>
     ` : '';
 
     const missingContext = docsMissing === 1
-        ? 'נותר 1 מסמך שלא התקבל'
-        : `נותרו ${docsMissing} מסמכים שלא התקבלו`;
+        ? 'נותר 1 מסמך שלא התקבל מהלקוח'
+        : `נותרו ${docsMissing} מסמכים שלא התקבלו מהלקוח`;
     const missingCardHtml = hasMissingFlow ? `
         <section class="ai-review-flow-card">
             <div class="ai-review-flow-card__context">${missingContext}</div>
             <div class="ai-review-flow-card__actions">
-                <button class="btn btn-success btn-sm" onclick="approveAndSendFromAIReview('${escReport}', '${escClient}')">
+                <button class="ai-review-flow-card__send-btn" onclick="approveAndSendFromAIReview('${escReport}', '${escClient}')">
                     ${icon('send', 'icon-xs')}
-                    שלח רשימת מסמכים חסרים
+                    שלח רשימת חסרים ללקוח
                 </button>
-                <button class="btn btn-ghost btn-sm" onclick="previewApproveEmail('${escReport}', '${escClient}')">
-                    ${icon('eye', 'icon-xs')}
-                    תצוגה מקדימה של רשימת החסרים
+                <button class="ai-review-flow-card__link" onclick="previewApproveEmail('${escReport}', '${escClient}')">
+                    תצוגה מקדימה
                 </button>
             </div>
         </section>
@@ -7296,18 +7296,6 @@ function _buildClientReviewDonePromptEl(clientName) {
         </div>
     ` : '';
 
-    // DL-346 follow-up: dismiss must always be available — sending an email is optional.
-    // Style: solid green when no flows (it's the only action), ghost when flows are present
-    // (so it doesn't compete with the primary card actions).
-    const hasAnyFlow = hasPendingQuestions || hasMissingFlow;
-    const dismissBtnClass = hasAnyFlow ? 'btn btn-ghost btn-sm' : 'btn btn-success btn-sm ai-review-done-btn';
-    const dismissBtnHtml = `
-        <button class="${dismissBtnClass}" onclick="dismissClientReview('${escClient}')">
-            ${icon('check', 'icon-xs')}
-            סיום בדיקה
-        </button>
-    `;
-
     const prompt = document.createElement('div');
     prompt.className = 'ai-review-done-prompt';
     prompt.innerHTML = `
@@ -7317,9 +7305,14 @@ function _buildClientReviewDonePromptEl(clientName) {
                 <strong>כל המסמכים נבדקו!</strong>
                 <span class="ai-review-done-stats">${statParts.join(' · ')}</span>
             </div>
-            ${dismissBtnHtml}
         </div>
         ${flowsStackHtml}
+        <div class="ai-review-done-primary-row">
+            <button class="ai-review-done-primary" onclick="dismissClientReview('${escClient}')">
+                ${icon('check', 'icon-xs')}
+                סיים בדיקה
+            </button>
+        </div>
     `;
     return prompt;
 }
