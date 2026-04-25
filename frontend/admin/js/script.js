@@ -5143,12 +5143,16 @@ function buildClientListRowHtml(clientName, clientItems, isActive) {
         : '';
 
     // DL-332: zero-pending clients render nothing in the pending slot
-    const pendingHtml = pendingCount > 0
-        ? `<span class="ai-client-pending-num" title="${pendingCount} ממתינים">${pendingCount}</span>`
-        : '';
+    // DL-341: 100%-reviewed clients show a green check chip instead of a pending count
+    const isComplete = total > 0 && pendingCount === 0;
+    const pendingHtml = isComplete
+        ? `<span class="ai-client-complete-chip" title="כל המסמכים נבדקו">${icon('check', 'icon-xs')}</span>`
+        : (pendingCount > 0
+            ? `<span class="ai-client-pending-num" title="${pendingCount} ממתינים">${pendingCount}</span>`
+            : '');
 
     return `
-        <div class="ai-client-row ai-accordion-header${isActive ? ' active' : ''}"
+        <div class="ai-client-row ai-accordion-header${isActive ? ' active' : ''}${isComplete ? ' is-complete' : ''}"
              data-client="${escapeHtml(clientName)}"
              data-client-id="${escapeAttr(clientId || '')}"
              onclick="selectClient(this.dataset.client)">
