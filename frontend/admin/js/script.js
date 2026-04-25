@@ -7296,12 +7296,17 @@ function _buildClientReviewDonePromptEl(clientName) {
         </div>
     ` : '';
 
-    const dismissOnlyHtml = (!hasPendingQuestions && !hasMissingFlow) ? `
-        <button class="btn btn-success btn-sm ai-review-done-btn" onclick="dismissClientReview('${escClient}')">
+    // DL-346 follow-up: dismiss must always be available — sending an email is optional.
+    // Style: solid green when no flows (it's the only action), ghost when flows are present
+    // (so it doesn't compete with the primary card actions).
+    const hasAnyFlow = hasPendingQuestions || hasMissingFlow;
+    const dismissBtnClass = hasAnyFlow ? 'btn btn-ghost btn-sm' : 'btn btn-success btn-sm ai-review-done-btn';
+    const dismissBtnHtml = `
+        <button class="${dismissBtnClass}" onclick="dismissClientReview('${escClient}')">
             ${icon('check', 'icon-xs')}
             סיום בדיקה
         </button>
-    ` : '';
+    `;
 
     const prompt = document.createElement('div');
     prompt.className = 'ai-review-done-prompt';
@@ -7312,7 +7317,7 @@ function _buildClientReviewDonePromptEl(clientName) {
                 <strong>כל המסמכים נבדקו!</strong>
                 <span class="ai-review-done-stats">${statParts.join(' · ')}</span>
             </div>
-            ${dismissOnlyHtml}
+            ${dismissBtnHtml}
         </div>
         ${flowsStackHtml}
     `;
