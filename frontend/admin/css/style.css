@@ -3639,6 +3639,31 @@ tr:hover .client-view-link {
     color: var(--gray-700);
 }
 
+/* DL-341: 100%-reviewed client visual treatment */
+.ai-client-row.is-complete .ai-accordion-title > div > div:first-child,
+.ai-client-row.is-complete .ai-client-progress {
+    color: var(--gray-500);
+}
+.ai-client-complete-chip {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    border-radius: 999px;
+    background: var(--success-100, #d1fae5);
+    color: var(--success-600, #059669);
+    flex-shrink: 0;
+}
+.ai-client-complete-chip svg {
+    width: 14px;
+    height: 14px;
+    stroke-width: 2.5;
+}
+.ai-client-row.active .ai-client-complete-chip {
+    background: var(--success-200, #a7f3d0);
+}
+
 .ai-docs-placeholder {
     min-height: 100%;
     display: flex;
