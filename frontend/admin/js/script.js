@@ -8002,6 +8002,8 @@ function renderDocTag(d) {
 
 function openDocTagMenu(event, tagEl) {
     event.stopPropagation();
+    // DL-351: don't reopen the menu while inline-rename is active on this tag.
+    if (tagEl.dataset.editing === '1') return;
     closeDocTagMenu();
 
     const currentStatus = tagEl.dataset.status || 'Required_Missing';
@@ -8016,11 +8018,22 @@ function openDocTagMenu(event, tagEl) {
 
     const menu = document.createElement('div');
     menu.className = 'ai-doc-tag-menu';
-    menu.innerHTML = options.map(o =>
+    const statusItemsHtml = options.map(o =>
         `<button class="ai-doc-tag-menu-item" data-new-status="${o.status}" onclick="selectDocTagStatus(event, this)">
             <span class="ai-doc-tag-menu-icon">${o.icon}</span> ${o.label}
         </button>`
     ).join('');
+    // DL-351: Edit + Delete actions below status options, separated by divider
+    const editDeleteHtml = `
+        <div class="ai-doc-tag-menu-divider"></div>
+        <button class="ai-doc-tag-menu-item" data-action="edit" onclick="selectDocTagEdit(event, this)">
+            <span class="ai-doc-tag-menu-icon">✏️</span> ערוך שם
+        </button>
+        <button class="ai-doc-tag-menu-item ai-doc-tag-menu-item--danger" data-action="delete" onclick="selectDocTagDelete(event, this)">
+            <span class="ai-doc-tag-menu-icon">🗑</span> מחק
+        </button>
+    `;
+    menu.innerHTML = statusItemsHtml + editDeleteHtml;
 
     // Position relative to tag
     const rect = tagEl.getBoundingClientRect();
@@ -8068,6 +8081,183 @@ function closeDocTagMenu() {
     if (document._docTagMenuClose) {
         document.removeEventListener('click', document._docTagMenuClose, { capture: true });
         document._docTagMenuClose = null;
+    }
+}
+
+// DL-351: Delete = waive with confirmation. Reuses the existing waive flow.
+function selectDocTagDelete(event, btnEl) {
+    event.stopPropagation();
+    const menu = btnEl.closest('.ai-doc-tag-menu');
+    const docRecordId = menu.dataset.docRecordId;
+    closeDocTagMenu();
+
+    const tagEl = document.querySelector(`[data-doc-record-id="${CSS.escape(docRecordId)}"].ai-missing-doc-tag, [data-doc-record-id="${CSS.escape(docRecordId)}"].ai-doc-tag-received, [data-doc-record-id="${CSS.escape(docRecordId)}"].ai-doc-tag-waived, [data-doc-record-id="${CSS.escape(docRecordId)}"].ai-doc-tag-requires-fix`);
+    if (!tagEl) return;
+    const accordion = tagEl.closest('.ai-accordion');
+    const clientName = accordion ? accordion.dataset.client : null;
+    if (!clientName) return;
+
+    showConfirmDialog('להסיר את המסמך מהרשימה?', () => {
+        updateDocStatusInline(clientName, docRecordId, 'Waived');
+    }, 'מחק', true);
+}
+
+// DL-351: Edit = inline rename. Replaces tag inner with an <input>; Enter commits, Esc/blur cancels.
+function selectDocTagEdit(event, btnEl) {
+    event.stopPropagation();
+    const menu = btnEl.closest('.ai-doc-tag-menu');
+    const docRecordId = menu.dataset.docRecordId;
+    closeDocTagMenu();
+
+    const tagEl = document.querySelector(`[data-doc-record-id="${CSS.escape(docRecordId)}"].ai-missing-doc-tag, [data-doc-record-id="${CSS.escape(docRecordId)}"].ai-doc-tag-received, [data-doc-record-id="${CSS.escape(docRecordId)}"].ai-doc-tag-waived, [data-doc-record-id="${CSS.escape(docRecordId)}"].ai-doc-tag-requires-fix`);
+    if (!tagEl) return;
+    openDocTagInlineRename(docRecordId, tagEl);
+}
+
+function openDocTagInlineRename(docRecordId, tagEl) {
+    const accordion = tagEl.closest('.ai-accordion');
+    const clientName = accordion ? accordion.dataset.client : null;
+    if (!clientName) return;
+
+    const representative = aiClassificationsData.find(i => i.client_name === clientName);
+    if (!representative) return;
+    const allDocs = representative.all_docs || representative.missing_docs || [];
+    const doc = allDocs.find(d => d.doc_record_id === docRecordId);
+    if (!doc) return;
+
+    const currentName = doc.name_short || doc.name || doc.template_id || '';
+    const originalHtml = tagEl.innerHTML;
+
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.className = 'ai-doc-tag-rename-input';
+    input.value = currentName;
+    input.setAttribute('dir', 'rtl');
+
+    tagEl.innerHTML = '';
+    tagEl.appendChild(input);
+    // Suppress the tag's own click handler while editing.
+    tagEl.dataset.editing = '1';
+    input.focus();
+    input.select();
+
+    let committed = false;
+    const restore = () => {
+        if (committed) return;
+        committed = true;
+        delete tagEl.dataset.editing;
+        tagEl.innerHTML = originalHtml;
+    };
+    const commit = () => {
+        if (committed) return;
+        const newValue = input.value.trim();
+        if (!newValue || newValue === currentName) { restore(); return; }
+        committed = true;
+        delete tagEl.dataset.editing;
+        commitDocTagRename(clientName, docRecordId, currentName, newValue);
+    };
+
+    input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') { e.preventDefault(); commit(); }
+        else if (e.key === 'Escape') { e.preventDefault(); restore(); }
+    });
+    input.addEventListener('blur', () => {
+        // Defer slightly so Enter-keydown commit wins the race.
+        setTimeout(() => { if (!committed) restore(); }, 50);
+    });
+    // Block clicks inside the input from re-triggering the tag's onclick.
+    input.addEventListener('click', (e) => e.stopPropagation());
+}
+
+function applyDocNameChange(clientName, docRecordId, newName) {
+    for (const item of aiClassificationsData) {
+        if (item.client_name !== clientName) continue;
+        for (const arr of [item.all_docs, item.missing_docs]) {
+            if (!Array.isArray(arr)) continue;
+            const d = arr.find(x => x.doc_record_id === docRecordId);
+            if (d) {
+                d.name_short = newName;
+                d.name = newName;
+            }
+        }
+    }
+}
+
+async function commitDocTagRename(clientName, docRecordId, previousName, newName) {
+    const representative = aiClassificationsData.find(i => i.client_name === clientName);
+    if (!representative) return;
+    const reportRecordId = representative.report_record_id;
+    if (!reportRecordId) {
+        showAIToast('שגיאה: report_record_id חסר', 'danger');
+        return;
+    }
+
+    // Optimistic update
+    applyDocNameChange(clientName, docRecordId, newName);
+    refreshClientDocTags(clientName);
+
+    const payload = {
+        data: {
+            fields: [{ type: 'HIDDEN_FIELDS', value: { report_record_id: reportRecordId } }],
+            extensions: {
+                name_updates: [{ id: docRecordId, issuer_name: newName, old_name: previousName }],
+                send_email: false
+            }
+        }
+    };
+
+    try {
+        const response = await fetchWithTimeout(ENDPOINTS.EDIT_DOCUMENTS, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${authToken}`
+            },
+            body: JSON.stringify(payload)
+        }, FETCH_TIMEOUTS.mutate);
+
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+        showAIToast('השם עודכן', 'success', {
+            label: 'ביטול',
+            onClick: () => undoDocNameChange(clientName, docRecordId, newName, previousName, reportRecordId)
+        });
+    } catch (err) {
+        applyDocNameChange(clientName, docRecordId, previousName);
+        refreshClientDocTags(clientName);
+        showAIToast('שגיאה בעדכון שם המסמך', 'danger');
+        console.error('DL-351: rename failed', err);
+    }
+}
+
+async function undoDocNameChange(clientName, docRecordId, currentName, revertName, reportRecordId) {
+    applyDocNameChange(clientName, docRecordId, revertName);
+    refreshClientDocTags(clientName);
+
+    const payload = {
+        data: {
+            fields: [{ type: 'HIDDEN_FIELDS', value: { report_record_id: reportRecordId } }],
+            extensions: {
+                name_updates: [{ id: docRecordId, issuer_name: revertName, old_name: currentName }],
+                send_email: false
+            }
+        }
+    };
+
+    try {
+        const response = await fetchWithTimeout(ENDPOINTS.EDIT_DOCUMENTS, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${authToken}`
+            },
+            body: JSON.stringify(payload)
+        }, FETCH_TIMEOUTS.mutate);
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        showAIToast('הפעולה בוטלה', 'success');
+    } catch (err) {
+        showAIToast('שגיאה בביטול — רענן את הדף', 'danger');
+        console.error('DL-351: rename undo failed', err);
     }
 }
 

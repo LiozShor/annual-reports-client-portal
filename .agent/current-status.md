@@ -31,6 +31,30 @@ Design log: `.agent/design-logs/ai-review/350-reassign-locked-button-and-404.md`
 ---
 
 **Last Updated:** 2026-04-25 (DL-344 — COMPLETED, live test passed; reject no longer wipes a sibling cls's approve on shared source doc)
+**Last Updated:** 2026-04-26 (DL-351 — IMPLEMENTED, NEED TESTING; Edit + Delete added to AI Review doc-tag menu)
+
+## Test DL-351: Doc-tag menu Edit + Delete actions — NEEDS LIVE VERIFICATION
+Branch `DL-351-doc-tag-menu-regression` — pushed, NOT yet merged to main. Frontend-only change (Cloudflare Pages), so live testing requires merge to main. Re-framed mid-discovery: not a regression — a feature add (Edit + Delete had never been on this menu per DL-227 git history).
+
+- [ ] Click any doc tag in pane-2 cockpit banner → menu shows 3 status options (current excluded), divider, "✏️ ערוך שם", "🗑 מחק"
+- [ ] Click the Edit menu item -> tag becomes editable input pre-filled with current name; cursor + selection ready
+- [ ] Type new name + Enter -> tag updates immediately, success toast with undo button. Verify Airtable `Issuer_Name` updated
+- [ ] Esc during rename → tag reverts, no API call
+- [ ] Empty input + Enter → tag reverts (no destructive empty-name save)
+- [ ] Blur without change → tag reverts (no API call)
+- [ ] Click the Delete menu item -> confirmation modal (Hebrew "remove doc from list?") with red destructive button
+- [ ] Confirm delete -> tag becomes Waived (dim + strikethrough + "-" prefix); identical to existing waive option
+- [ ] Cancel delete → no change
+- [ ] Undo on Edit reverts the rename (server-side too)
+- [ ] Undo on Delete reverts to Required_Missing
+- [ ] Existing 3 status options still work — no regression
+- [ ] Received tags open the menu and offer the same 5 actions
+- [ ] Mobile accordion: menu still opens, inline rename input fits or wraps
+- [ ] Hard-refresh shows new build (`script.js?v=340`)
+
+Design log: `.agent/design-logs/ai-review/351-doc-tag-menu-edit-delete.md`
+
+---
 
 ## DL-344: Reject wipes a different file's approve on shared source doc — COMPLETED (live 2026-04-25)
 
