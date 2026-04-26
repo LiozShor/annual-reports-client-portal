@@ -7199,9 +7199,14 @@ async function assignAIUnmatched(recordId, btnEl) {
             await submitAIReassign(recordId, 'general_doc', '', 'יוצר ומשייך...', newDocName.trim(), false, targetReportId);
         }, { confirmText: 'צור ושייך' });
     } else {
-        showInlineConfirm(recordId, 'לשייך?', async () => {
-            await submitAIReassign(recordId, templateId, docRecordId, 'משייך...');
-        }, { confirmText: 'שייך' });
+        // DL-350: also forward newDocName for the picker (DL-336) custom + var
+        // paths. Picker emits template_id='general_doc' (custom) or a real
+        // T-id (var-filled) plus a resolved new_doc_name; without forwarding
+        // it the backend creates a doc with the type literal as its name.
+        const promptLabel = newDocName ? `ליצור מסמך "${newDocName}"?` : 'לשייך?';
+        showInlineConfirm(recordId, promptLabel, async () => {
+            await submitAIReassign(recordId, templateId, docRecordId, 'משייך...', newDocName, false, targetReportId);
+        }, { confirmText: newDocName ? 'צור ושייך' : 'שייך' });
     }
 }
 

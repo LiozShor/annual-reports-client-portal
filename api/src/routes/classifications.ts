@@ -1683,8 +1683,14 @@ classifications.post('/review-classification', async (c) => {
             || (tplFields.name_he as string)
             || (tplFields.name as string)
             || (tplFields.name_en as string)
-            || reassign_template_id;
-          const derivedName = stripPlaceholders(candidate) || reassign_template_id;
+            || '';
+          const derivedName = stripPlaceholders(candidate);
+          if (!derivedName) {
+            return c.json({
+              ok: false,
+              error: 'Cannot create doc: no name supplied and template has no resolved name. Please re-pick the template and fill any required fields.',
+            }, 400);
+          }
           const issuerKey = derivedName.toLowerCase().replace(/[^a-zA-Zא-ת0-9\s]/g, '').replace(/\s+/g, '_');
           const docUid = `${reportId}_${reassign_template_id}_${issuerKey}`;
           const created = await airtable.createRecords(TABLES.DOCUMENTS, [{
