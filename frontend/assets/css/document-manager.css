@@ -2614,3 +2614,36 @@ body {
 }
 .dm-shared-ref-chip .icon-xs { width: 11px; height: 11px; }
 
+/* DL-352: owner tabs above add-doc combobox (replaces sticky checkbox from DL-162).
+   Mirrors pa-add-doc-person-* in admin/css/style.css for cross-surface uniformity. */
+.add-doc-person {
+    display: flex;
+    gap: 6px;
+    margin-bottom: var(--sp-3);
+    padding-bottom: var(--sp-2);
+    border-bottom: 1px solid var(--gray-100);
+}
+.add-doc-person-btn {
+    flex: 1;
+    padding: 8px 12px;
+    font-size: var(--text-sm);
+    border: 1px solid var(--gray-200);
+    background: white;
+    color: var(--gray-600);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    transition: background 0.12s, color 0.12s, border-color 0.12s;
+}
+.add-doc-person-btn:hover {
+    background: var(--gray-50, #f9fafb);
+}
+.add-doc-person-btn.active {
+    background: var(--primary-50, #eef2ff);
+    color: var(--primary-700, #4338ca);
+    border-color: var(--primary-300, #a5b4fc);
+    font-weight: 500;
+}
+

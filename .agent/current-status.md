@@ -93,6 +93,7 @@ Frontend live: requires merge to main (CloudFlare Pages).
 ---
 
 **Previous Last Updated:** 2026-04-25 (DL-344 — COMPLETED, live test passed; reject no longer wipes a sibling cls's approve on shared source doc)
+**Last Updated:** 2026-04-26 (DL-352 — IMPLEMENTED, NEED TESTING; doc-manager add-doc owner tabs replace sticky checkbox; cross-surface uniform with PA popover)
 
 ## DL-344: Reject wipes a different file's approve on shared source doc — COMPLETED (live 2026-04-25)
 
@@ -414,6 +415,18 @@ Design log: `.agent/design-logs/ai-review/335-ai-review-on-hold-docs.md`
 ## Active TODOs
 
 ### Needs browser testing
+- [ ] **Test DL-352: Add-doc owner tabs** — verify segmented control replaces the sticky checkbox in doc-manager and behaves uniformly with the PA popover.
+   - [ ] Doc-manager (client with spouse): tabs visible above combobox, default = client name highlighted
+   - [ ] Switch to spouse tab → combobox re-renders without CLIENT-only templates; PERSON / GLOBAL_SINGLE / empty remain
+   - [ ] Search input value preserved across tab switch
+   - [ ] Pick template under spouse tab → chip shows `(בן/בת זוג)`
+   - [ ] Add custom doc under spouse tab → chip shows `(בן/בת זוג)`
+   - [ ] Reload page → default reverts to client tab (no sticky state)
+   - [ ] Doc-manager (no spouse) → tabs hidden, behavior unchanged
+   - [ ] PA popover regression check — tabs still work when spouse exists, hidden otherwise
+   - [ ] Save flow: API receives correct `person` per doc on both surfaces
+   - [ ] Hebrew RTL rendering + keyboard a11y (Tab/Enter on each tab)
+   Design log: `.agent/design-logs/admin-ui/352-add-doc-owner-tabs.md`
 - [ ] **DL-299** — PA card issuer edit + note popover + print (`admin-ui/299`)
 - [ ] **DL-298** — PA queue stacked cards (`admin-ui/298`)
 - [ ] **DL-297** — Doc-manager sticky header + editable stage (`admin-ui/297`)

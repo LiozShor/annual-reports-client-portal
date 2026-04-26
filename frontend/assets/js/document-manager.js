@@ -22,6 +22,9 @@ let QUEUED_SEND_AT = null;
 // DL-306: resolved CPA client_id for linking to AI Review (works for both client_id and report_id URL flows)
 let RESOLVED_CLIENT_ID = CLIENT_ID || '';
 
+// DL-352: active owner tab for add-doc surface ('client' | 'spouse'). Resets on each page load.
+let _addDocActivePerson = 'client';
+
 // DL-281: queued_send_at on Airtable doesn't auto-clear after 08:00 delivery
 // (Exchange has no callback). Treat the field as live only while the next
 // 08:00 Israel after the approval is still in the future. DST-safe via the
@@ -782,6 +785,9 @@ function initDocumentDropdown() {
     // Reset wizard state on re-init (report switch)
     resetAddDocWizard();
 
+    // DL-352: render person tabs (hidden when no spouse). Default = client.
+    renderAddDocPersonTabs();
+
     // Render full dropdown
     renderAddDocDropdown(comboEntries, '');
 
@@ -852,6 +858,8 @@ function renderAddDocDropdown(entries, filter) {
     for (const { cat, items } of entries) {
         let groupHtml = '';
         for (const { tpl, displayName } of items) {
+            // DL-352: filter by active person's template scope
+            if (!_addDocTemplateMatchesPerson(tpl, _addDocActivePerson)) continue;
             if (normalizedFilter && !displayName.toLowerCase().includes(normalizedFilter)) continue;
             groupHtml += `<div class="add-doc-combobox-option" data-template-id="${tpl.template_id}"
                 onclick="onAddDocTemplateSelected('${tpl.template_id}')">${escapeHtml(displayName)}</div>`;
@@ -1765,10 +1773,60 @@ function markdownToHtml(str) {
     return (str || '').replace(/\*\*(.+?)\*\*/g, '<b>$1</b>');
 }
 
-// Check if the spouse-doc checkbox is checked
+// DL-352: read active owner tab. Replaces the sticky checkbox from DL-162.
 function isSpouseDocMode() {
-    const cb = document.getElementById('spouseDocCheckbox');
-    return cb && cb.checked;
+    return _addDocActivePerson === 'spouse';
+}
+
+// DL-352: scope predicate ported from PA popover (script.js _paTemplateMatchesPerson).
+// Airtable scope values: CLIENT, SPOUSE, PERSON, GLOBAL_SINGLE, empty.
+function _addDocTemplateMatchesPerson(tpl, person) {
+    const scope = (tpl && tpl.scope ? String(tpl.scope) : '').trim().toUpperCase();
+    if (scope === 'CLIENT') return person === 'client';
+    if (scope === 'SPOUSE') return person === 'spouse';
+    return true;
+}
+
+// DL-352: tab click handler. Re-renders combobox with new scope filter, preserves search input.
+function setAddDocPerson(person) {
+    if (person !== 'client' && person !== 'spouse') return;
+    if (_addDocActivePerson === person) return;
+    _addDocActivePerson = person;
+    const tabs = document.getElementById('addDocPersonTabs');
+    if (tabs) {
+        tabs.querySelectorAll('.add-doc-person-btn').forEach(btn => {
+            const isActive = btn.dataset.person === person;
+            btn.classList.toggle('active', isActive);
+            btn.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+        });
+    }
+    const container = document.getElementById('addDocCombobox');
+    const input = document.getElementById('addDocComboInput');
+    if (container && container._entries) {
+        renderAddDocDropdown(container._entries, input ? input.value.trim() : '');
+    }
+}
+
+// DL-352: render person tabs above combobox. Hidden when no spouse.
+function renderAddDocPersonTabs() {
+    const tabs = document.getElementById('addDocPersonTabs');
+    if (!tabs) return;
+    if (!SPOUSE_NAME) {
+        tabs.style.display = 'none';
+        tabs.innerHTML = '';
+        _addDocActivePerson = 'client';
+        return;
+    }
+    tabs.style.display = '';
+    const clientLabel = CLIENT_NAME || 'לקוח';
+    tabs.innerHTML = `
+        <button type="button" class="add-doc-person-btn ${_addDocActivePerson === 'client' ? 'active' : ''}"
+            data-person="client" aria-pressed="${_addDocActivePerson === 'client'}"
+            onclick="setAddDocPerson('client')">👤 ${escapeHtml(clientLabel)}</button>
+        <button type="button" class="add-doc-person-btn ${_addDocActivePerson === 'spouse' ? 'active' : ''}"
+            data-person="spouse" aria-pressed="${_addDocActivePerson === 'spouse'}"
+            onclick="setAddDocPerson('spouse')">👥 ${escapeHtml(SPOUSE_NAME)}</button>
+    `;
 }
 
 // Build metadata object for a template with collected variable values
