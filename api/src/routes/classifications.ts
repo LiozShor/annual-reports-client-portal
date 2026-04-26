@@ -1662,6 +1662,34 @@ classifications.post('/review-classification', async (c) => {
           maxRecords: 1,
         });
         targetDoc = found[0];
+
+        // DL-350: When picker (DL-336) returns a real template_id + resolved
+        // new_doc_name for a doc that doesn't yet exist on this report, create
+        // it on the fly. Mirrors Path 2 but preserves the chosen template type.
+        if (!targetDoc && reassign_template_id && new_doc_name) {
+          const tpl = await airtable.listAllRecords(TABLES.TEMPLATES, {
+            filterByFormula: `{template_id} = '${reassign_template_id}'`,
+            maxRecords: 1,
+          });
+          const tplFields = (tpl[0]?.fields || {}) as Record<string, unknown>;
+          const issuerKey = new_doc_name.toLowerCase().replace(/[^a-zA-Zא-ת0-9\s]/g, '').replace(/\s+/g, '_');
+          const docUid = `${reportId}_${reassign_template_id}_${issuerKey}`;
+          const created = await airtable.createRecords(TABLES.DOCUMENTS, [{
+            fields: {
+              type: reassign_template_id,
+              issuer_name: new_doc_name,
+              issuer_name_en: new_doc_name,
+              issuer_key: new_doc_name,
+              category: (tplFields.category as string) || 'general',
+              person: (tplFields.person as string) || 'client',
+              status: 'Required_Missing',
+              report: [reportId],
+              document_uid: docUid,
+              document_key: docUid,
+            }
+          }]);
+          targetDoc = created[0];
+        }
       }
 
       if (!targetDoc) {
