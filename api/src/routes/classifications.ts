@@ -5,7 +5,7 @@ import { MSGraphClient } from '../lib/ms-graph';
 import { logSecurity, getClientIp } from '../lib/security-log';
 import { buildTemplateMap, buildCategoryMap } from '../lib/doc-builder';
 import type { TemplateInfo } from '../lib/doc-builder';
-import { buildShortName, REJECTION_REASONS, DRIVE_ID, sanitizeFilename, HE_TITLE } from '../lib/classification-helpers';
+import { buildShortName, REJECTION_REASONS, DRIVE_ID, sanitizeFilename, HE_TITLE, resolveOneDriveFilename } from '../lib/classification-helpers';
 import { mergePdfs } from '../lib/pdf-merge';
 import { splitPdf } from '../lib/pdf-split';
 import { computeSha256 } from '../lib/inbound/attachment-utils';
@@ -867,16 +867,20 @@ classifications.post('/review-classification', async (c) => {
         console.error(`[split] Classification failed for ${segment.filename}:`, (err as Error).message);
       }
 
-      // Rename file on OneDrive based on classification (matches WF05 inbound behavior)
+      // Rename file on OneDrive based on classification (DL-355: via resolveOneDriveFilename)
       const origName = (clsFields.attachment_name as string) || 'document.pdf';
       let finalFilename = segment.filename as string;
       let finalWebUrl = segment.web_url as string;
       if (classification?.templateId) {
-        const sanitizeOD = (s: string) => s.replace(/[\\/*<>?:|#"~&{}%]/g, '').replace(/\.+$/, '').trim();
-        const heTitle = HE_TITLE[classification.templateId] || 'מסמך';
-        let base = sanitizeOD(heTitle);
-        if (classification.issuerName) base += ' - ' + sanitizeOD(classification.issuerName);
-        const expectedName = `${base}.pdf`;
+        const splitTemplateRecords = await getCachedOrFetch(c.env.CACHE_KV, 'cache:templates', 3600,
+          () => airtable.listAllRecords(TABLES.TEMPLATES));
+        const splitTemplateMap = buildTemplateMap(splitTemplateRecords);
+        const expectedName = resolveOneDriveFilename({
+          templateId: classification.templateId,
+          issuerName: classification.issuerName,
+          attachmentName: segment.filename as string,
+          templateMap: splitTemplateMap,
+        });
         try {
           const renamed = await msGraph.patch(
             `/drives/${DRIVE_ID}/items/${segment.onedrive_item_id}`,
@@ -1847,38 +1851,23 @@ classifications.post('/review-classification', async (c) => {
         let moveToArchive = false;
 
         if (action === 'approve') {
-          // Rename to short name (unless exact match)
-          const matchQuality = clsFields.issuer_match_quality as string;
-          if (matchQuality !== 'exact' && matchQuality !== 'single') {
-            const templateId = clsFields.matched_template_id as string;
-            const docName =
-              (clsFields.matched_doc_name as string) ||
-              (clsFields.issuer_name as string) ||
-              ((sourceDoc?.fields as any)?.issuer_name as string) ||
-              '';
-            const shortName = buildShortName(templateId, docName, templateMap);
-            const fallback = HE_TITLE[templateId];
-            if (shortName) {
-              newFilename = sanitizeFilename(shortName) + '.pdf';
-            } else if (fallback) {
-              // Extract issuer from bold tags (or use the whole docName if no bold tags)
-              const boldMatch = docName.match(/<b>(.*?)<\/b>/i);
-              const issuer = boldMatch ? boldMatch[1] : docName;
-              newFilename = sanitizeFilename(fallback + (issuer ? ' \u2013 ' + issuer : '')) + '.pdf';
-            }
-          }
-          // DL-271: Always rename T901/T902 with period suffix, even for exact/single match
-          const periodForFile = getRentalPeriodLabel();
-          if (periodForFile) {
-            if (newFilename) {
-              newFilename = newFilename.replace('.pdf', ` ${periodForFile.filename}.pdf`);
-            } else {
-              // No rename was planned (exact/single match) — build from HE_TITLE + period
-              const templateId = clsFields.matched_template_id as string;
-              const fallback = HE_TITLE[templateId] || 'חוזה שכירות';
-              newFilename = sanitizeFilename(`${fallback} ${periodForFile.filename}`) + '.pdf';
-            }
-          }
+          // DL-355: ALWAYS rename via resolveOneDriveFilename (canonical short_name_he).
+          // Previously skipped for exact/single match — that left files with their
+          // original attachment_name. Now every approve normalizes the filename.
+          const _approveTemplateId = clsFields.matched_template_id as string;
+          const _approveDocName =
+            (clsFields.matched_doc_name as string) ||
+            (clsFields.issuer_name as string) ||
+            ((sourceDoc?.fields as any)?.issuer_name as string) ||
+            '';
+          const _approvePeriod = getRentalPeriodLabel();
+          newFilename = resolveOneDriveFilename({
+            templateId: _approveTemplateId,
+            issuerName: _approveDocName,
+            attachmentName: clsFields.attachment_name as string,
+            templateMap,
+            suffix: _approvePeriod?.filename ?? null,
+          });
         } else if (action === 'reject') {
           // DL-314: Only archive if no OTHER doc record holds this file
           moveToArchive = await isLastReference(airtable, itemId, docId);
@@ -1893,21 +1882,15 @@ classifications.post('/review-classification', async (c) => {
             const tf = targetDoc.fields as Record<string, unknown>;
             const targetTemplateId = (tf.type as string) || 'general_doc';
             const targetIssuer = (tf.issuer_name as string) || new_doc_name || '';
-            const shortName = buildShortName(targetTemplateId, targetIssuer, templateMap);
-            const fallback = HE_TITLE[targetTemplateId];
-            if (shortName) {
-              newFilename = sanitizeFilename(shortName) + '.pdf';
-            } else if (fallback) {
-              newFilename = sanitizeFilename(fallback) + '.pdf';
-            } else if (targetTemplateId === 'general_doc' && targetIssuer) {
-              // DL-210 Bug 3: general_doc has no HE_TITLE entry — use issuer name directly
-              newFilename = sanitizeFilename(targetIssuer) + '.pdf';
-            }
-            // DL-271: Append period for T901/T902 reassign
             const periodForReassign = getRentalPeriodLabel();
-            if (periodForReassign && newFilename) {
-              newFilename = newFilename.replace('.pdf', ` ${periodForReassign.filename}.pdf`);
-            }
+            // DL-355: route through canonical resolveOneDriveFilename
+            newFilename = resolveOneDriveFilename({
+              templateId: targetTemplateId,
+              issuerName: targetIssuer,
+              attachmentName: clsFields.attachment_name as string,
+              templateMap,
+              suffix: periodForReassign?.filename ?? null,
+            });
           }
         }
 
@@ -1953,14 +1936,23 @@ classifications.post('/review-classification', async (c) => {
                   patchBody
                 );
 
-                // 5. Update Airtable doc record with new file URL (skip for reject — doc fields already cleared)
+                // 5. Update Airtable doc record with new file URL + issuer info (skip for reject — doc fields already cleared)
+                // DL-355: also propagate issuer_name + expected_filename so the Documents
+                // record carries the same identity the OneDrive file does. Previously
+                // these were left empty on Documents, leaving admin views with blank columns.
                 if (moveResult?.webUrl && action !== 'reject') {
                   const updateDocId = action === 'reassign' && targetDoc ? targetDoc.id : (approveDocId || docId);
                   if (updateDocId) {
-                    await airtable.updateRecord(TABLES.DOCUMENTS, updateDocId, {
+                    const docPatch: Record<string, unknown> = {
                       file_url: moveResult.webUrl,
                       onedrive_item_id: moveResult.id || itemId,
-                    });
+                    };
+                    const clsIssuer = (clsFields.issuer_name as string) || '';
+                    const clsMatched = (clsFields.matched_doc_name as string) || '';
+                    if (clsIssuer && action !== 'reassign') docPatch.issuer_name = clsIssuer;
+                    if (clsMatched) docPatch.matched_doc_name = clsMatched;
+                    if (newFilename) docPatch.expected_filename = newFilename;
+                    await airtable.updateRecord(TABLES.DOCUMENTS, updateDocId, docPatch);
                   }
                 }
               } catch (moveErr) {

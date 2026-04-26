@@ -92,8 +92,20 @@ export function buildShortName(
     hasBolds = true;
     boldSegments.push(bm[1]);
   }
+  // DL-355: Only fall through to whole-string-as-issuer when the input is meaningfully
+  // different from the template's own title. Otherwise we'd substitute "טופס 106" into
+  // a "טופס 106 – {issuer}" pattern and get "טופס 106 – טופס 106".
   if (!hasBolds && issuerName && issuerName.trim()) {
-    boldSegments.push(issuerName.trim());
+    const trimmed = issuerName.trim().replace(/<[^>]+>/g, '').trim();
+    const heTitle = (HE_TITLE[templateId] || '').trim();
+    const nameHePlain = (template.name_he || '').replace(/\*\*/g, '').trim();
+    const isTemplateTitleEcho =
+      trimmed === heTitle ||
+      trimmed === nameHePlain ||
+      trimmed === pattern.replace(/<[^>]+>/g, '').replace(/\{\w+\}/g, '').replace(/\s+/g, ' ').trim();
+    if (!isTemplateTitleEcho) {
+      boldSegments.push(trimmed);
+    }
   }
 
   // Step 4 — identify literal bolds in the template (not variable placeholders)
@@ -156,8 +168,69 @@ export function buildShortName(
     .replace(/\s*-\s*$/, '')   // trailing ' - '
     .replace(/–\s*$/, '')
     .replace(/-\s*$/, '')
+    // DL-355: also clean up double separators / parens left when {issuer} stripped mid-pattern
+    .replace(/\s*–\s*–\s*/g, ' – ')
+    .replace(/\(\s*\)/g, '')
+    .replace(/\s{2,}/g, ' ')
     .trim();
 
   // Step 10 — return null if empty
   return result.length > 0 ? result : null;
+}
+
+// ---------------------------------------------------------------------------
+// resolveOneDriveFilename — DL-355 single source of truth for OneDrive renames
+// ---------------------------------------------------------------------------
+
+/**
+ * Resolves the canonical OneDrive filename for a document. Used by every
+ * write/rename path (admin upload, inbound classification, approve, reassign,
+ * PDF split). Always returns a `.pdf` filename (per DL-115 conversion rule).
+ *
+ * Resolution order:
+ *   1. buildShortName(templateId, issuerName, templateMap) — preferred
+ *   2. HE_TITLE[templateId] (+ optional issuer suffix)
+ *   3. sanitized stem of attachmentName
+ *   4. literal fallback "מסמך.pdf"
+ */
+export function resolveOneDriveFilename(opts: {
+  templateId: string | null | undefined;
+  issuerName: string | null | undefined;
+  attachmentName?: string | null;
+  templateMap: Map<string, TemplateInfo>;
+  /** Optional suffix appended before .pdf (e.g. T901/T902 rental period). */
+  suffix?: string | null;
+}): string {
+  const { templateId, issuerName, attachmentName, templateMap, suffix } = opts;
+  const issuerStr = (issuerName ?? '').toString();
+  const issuerPlain = issuerStr.replace(/<[^>]+>/g, '').trim();
+
+  let base: string | null = null;
+
+  // 1. buildShortName
+  if (templateId) {
+    const short = buildShortName(templateId, issuerStr, templateMap);
+    if (short) base = sanitizeFilename(short);
+  }
+
+  // 2. HE_TITLE fallback (only append issuer if it's not an echo of the title)
+  if (!base && templateId && HE_TITLE[templateId]) {
+    const title = HE_TITLE[templateId];
+    const issuerForFallback = issuerPlain && issuerPlain !== title ? ' – ' + issuerPlain : '';
+    base = sanitizeFilename(title + issuerForFallback);
+  }
+
+  // 3. attachment_name stem
+  if (!base && attachmentName) {
+    const stem = attachmentName.replace(/\.[a-z0-9]+$/i, '');
+    base = sanitizeFilename(stem);
+  }
+
+  // 4. last-resort literal
+  if (!base) base = 'מסמך';
+
+  // Optional suffix (e.g. rental period)
+  if (suffix && suffix.trim()) base += ' ' + suffix.trim();
+
+  return base + '.pdf';
 }
