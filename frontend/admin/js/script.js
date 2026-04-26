@@ -8023,17 +8023,14 @@ function openDocTagMenu(event, tagEl) {
             <span class="ai-doc-tag-menu-icon">${o.icon}</span> ${o.label}
         </button>`
     ).join('');
-    // DL-351: Edit + Delete actions below status options, separated by divider
-    const editDeleteHtml = `
+    // DL-351: Edit action below status options, separated by divider (Delete removed — same as Waive)
+    const editHtml = `
         <div class="ai-doc-tag-menu-divider"></div>
         <button class="ai-doc-tag-menu-item" data-action="edit" onclick="selectDocTagEdit(event, this)">
             <span class="ai-doc-tag-menu-icon">✏️</span> ערוך שם
         </button>
-        <button class="ai-doc-tag-menu-item ai-doc-tag-menu-item--danger" data-action="delete" onclick="selectDocTagDelete(event, this)">
-            <span class="ai-doc-tag-menu-icon">🗑</span> מחק
-        </button>
     `;
-    menu.innerHTML = statusItemsHtml + editDeleteHtml;
+    menu.innerHTML = statusItemsHtml + editHtml;
 
     // Position relative to tag
     const rect = tagEl.getBoundingClientRect();
@@ -8084,24 +8081,6 @@ function closeDocTagMenu() {
     }
 }
 
-// DL-351: Delete = waive with confirmation. Reuses the existing waive flow.
-function selectDocTagDelete(event, btnEl) {
-    event.stopPropagation();
-    const menu = btnEl.closest('.ai-doc-tag-menu');
-    const docRecordId = menu.dataset.docRecordId;
-    closeDocTagMenu();
-
-    const tagEl = document.querySelector(`[data-doc-record-id="${CSS.escape(docRecordId)}"].ai-missing-doc-tag, [data-doc-record-id="${CSS.escape(docRecordId)}"].ai-doc-tag-received, [data-doc-record-id="${CSS.escape(docRecordId)}"].ai-doc-tag-waived, [data-doc-record-id="${CSS.escape(docRecordId)}"].ai-doc-tag-requires-fix`);
-    if (!tagEl) return;
-    const accordion = tagEl.closest('.ai-accordion');
-    const clientName = accordion ? accordion.dataset.client : null;
-    if (!clientName) return;
-
-    showConfirmDialog('להסיר את המסמך מהרשימה?', () => {
-        updateDocStatusInline(clientName, docRecordId, 'Waived');
-    }, 'מחק', true);
-}
-
 // DL-351: Edit = inline rename. Replaces tag inner with an <input>; Enter commits, Esc/blur cancels.
 function selectDocTagEdit(event, btnEl) {
     event.stopPropagation();
@@ -8109,14 +8088,21 @@ function selectDocTagEdit(event, btnEl) {
     const docRecordId = menu.dataset.docRecordId;
     closeDocTagMenu();
 
-    const tagEl = document.querySelector(`[data-doc-record-id="${CSS.escape(docRecordId)}"].ai-missing-doc-tag, [data-doc-record-id="${CSS.escape(docRecordId)}"].ai-doc-tag-received, [data-doc-record-id="${CSS.escape(docRecordId)}"].ai-doc-tag-waived, [data-doc-record-id="${CSS.escape(docRecordId)}"].ai-doc-tag-requires-fix`);
+    // Find the tag — prefer the desktop pane-2 cockpit (#aiDocsPane) when present,
+    // fall back to anywhere in the document (mobile accordion / legacy surfaces).
+    const sel = `[data-doc-record-id="${CSS.escape(docRecordId)}"].ai-missing-doc-tag, [data-doc-record-id="${CSS.escape(docRecordId)}"].ai-doc-tag-received, [data-doc-record-id="${CSS.escape(docRecordId)}"].ai-doc-tag-waived, [data-doc-record-id="${CSS.escape(docRecordId)}"].ai-doc-tag-requires-fix`;
+    const tagEl = (document.querySelector('#aiDocsPane') && document.querySelector(`#aiDocsPane ${sel}`))
+        || document.querySelector(sel);
     if (!tagEl) return;
     openDocTagInlineRename(docRecordId, tagEl);
 }
 
 function openDocTagInlineRename(docRecordId, tagEl) {
+    // DL-351 fix: pane-2 cockpit tags are NOT inside `.ai-accordion[data-client]`
+    // (DL-330/DL-349 layout). Fall back to the global `selectedClientName` when
+    // the accordion lookup fails — same pattern as DL-349's layout-aware refresher.
     const accordion = tagEl.closest('.ai-accordion');
-    const clientName = accordion ? accordion.dataset.client : null;
+    const clientName = (accordion && accordion.dataset.client) || selectedClientName;
     if (!clientName) return;
 
     const representative = aiClassificationsData.find(i => i.client_name === clientName);
