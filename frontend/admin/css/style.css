@@ -2582,6 +2582,10 @@ tr:hover .client-view-link {
 .ai-review-docs .ai-section-header.open + .ai-missing-docs-body {
     display: block;
     padding: 0 var(--sp-4) var(--sp-3);
+    /* DL-350: cap height so 50+ chip lists don't push the doc list off-screen */
+    max-height: 240px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
 }
 
 /* Category sub-header */
