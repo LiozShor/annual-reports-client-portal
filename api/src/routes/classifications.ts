@@ -1663,23 +1663,30 @@ classifications.post('/review-classification', async (c) => {
         });
         targetDoc = found[0];
 
-        // DL-350: When picker (DL-336) returns a real template_id + resolved
-        // new_doc_name for a doc that doesn't yet exist on this report, create
-        // it on the fly. Mirrors Path 2 but preserves the chosen template type.
-        if (!targetDoc && reassign_template_id && new_doc_name) {
+        // DL-350: When picker (DL-336) returns a real template_id for a doc
+        // that doesn't yet exist on this report, create it on the fly. Mirrors
+        // Path 2 but preserves the chosen template type. Falls back to the
+        // template's own name fields when the frontend didn't supply
+        // new_doc_name (which can happen for var-less templates).
+        if (!targetDoc && reassign_template_id) {
           const tpl = await airtable.listAllRecords(TABLES.TEMPLATES, {
             filterByFormula: `{template_id} = '${reassign_template_id}'`,
             maxRecords: 1,
           });
           const tplFields = (tpl[0]?.fields || {}) as Record<string, unknown>;
-          const issuerKey = new_doc_name.toLowerCase().replace(/[^a-zA-Zא-ת0-9\s]/g, '').replace(/\s+/g, '_');
+          const derivedName = new_doc_name
+            || (tplFields.name_he as string)
+            || (tplFields.name as string)
+            || (tplFields.name_en as string)
+            || reassign_template_id;
+          const issuerKey = derivedName.toLowerCase().replace(/[^a-zA-Zא-ת0-9\s]/g, '').replace(/\s+/g, '_');
           const docUid = `${reportId}_${reassign_template_id}_${issuerKey}`;
           const created = await airtable.createRecords(TABLES.DOCUMENTS, [{
             fields: {
               type: reassign_template_id,
-              issuer_name: new_doc_name,
-              issuer_name_en: new_doc_name,
-              issuer_key: new_doc_name,
+              issuer_name: derivedName,
+              issuer_name_en: derivedName,
+              issuer_key: derivedName,
               category: (tplFields.category as string) || 'general',
               person: (tplFields.person as string) || 'client',
               status: 'Required_Missing',

@@ -6942,7 +6942,8 @@ function _buildDocTemplatePicker(container, item, opts) {
             });
             if (missing) { missing.style.borderColor = 'var(--danger-500)'; missing.focus(); return; }
             const { nameHe } = _paResolveTemplateName(tpl, collected, item);
-            showChip(nameHe || _paFormatTemplateTitle(tpl, item, collected), { template_id: tpl.template_id, new_doc_name: nameHe });
+            const resolvedLabel = nameHe || _paFormatTemplateTitle(tpl, item, collected);
+            showChip(resolvedLabel, { template_id: tpl.template_id, new_doc_name: resolvedLabel });
         }
     }
 
