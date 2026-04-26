@@ -2699,14 +2699,6 @@ tr:hover .client-view-link {
     margin: var(--sp-1) 0;
 }
 
-.ai-doc-tag-menu-item--danger {
-    color: var(--danger-600, #DC2626);
-}
-
-.ai-doc-tag-menu-item--danger:hover {
-    background: var(--danger-50, #FEF2F2);
-}
-
 /* DL-351: inline-rename input that replaces tag inner content */
 .ai-doc-tag-rename-input {
     font: inherit;
