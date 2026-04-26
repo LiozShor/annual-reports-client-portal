@@ -1,5 +1,17 @@
 # Annual Reports CRM - Current Status
 
+**Last Updated:** 2026-04-26 (DL-350 — COMPLETED, all live tests passed; AI Review reassign bundle — modal-driven flow, picker UX, in-place tag refresh)
+
+## DL-350: AI Review reassign bundle — COMPLETED (live 2026-04-26)
+
+Started as a 1-line scope fix (combobox `onSelect` button-lookup missing `.ai-actions-panel` ancestor after DL-334/339), grew during live testing to a flow rework. Backend Path 3 fallback creates DOCUMENTS rows for picker-added templates; rejects empty derived names. Picker derives userVars from `name_he` placeholders too. Frontend forwards `newDocName` for any `template_id`. Modal hides combobox while picker open; combobox reopens on second click. Doc-tag refresh anchored on `.ai-missing-docs-body` previous sibling (no longer overwrites messages header). In-place refresh for picker-created docs via `data.doc_id`. Missing-docs body capped at 240px scroll. "שייך"/"אישור" auto-commit typed custom name. Inline unmatched + issuer-mismatch-fallback states drop the inline combobox → "שייך מסמך" button opens the modal.
+
+Cache: `script.js?v=339→362`, `style.css?v=318→319`. Worker `8da9e5c9 → 10157460`. Test data tagged `DL350-r3-*` cleaned up.
+
+Design log: `.agent/design-logs/ai-review/350-reassign-locked-button-and-404.md`
+
+---
+
 **Last Updated:** 2026-04-26 (DL-349 — COMPLETED, all live tests passed; AI-review pane-2 doc-tag header + pane-1 stats refresh on every mutation across desktop 3-pane and mobile)
 
 ## DL-349: AI Review doc-tag header + pane-1 stats live across mutations — COMPLETED (live 2026-04-26)
@@ -9,27 +21,6 @@ Fixed DL-330 regression: desktop pane-2 `.ai-missing-docs-body` was a silent no-
 Design log: `.agent/design-logs/ai-review/349-doc-tags-header-refresh.md`
 
 **Cleanup pending:** Test data tagged `DL349-` in `document_uid` / `classification_key` on Airtable (5 docs + 4 classifications on the test client's active report). Bulk-delete when test client no longer needs them.
-**Last Updated:** 2026-04-26 (DL-350 — IMPLEMENTED, awaiting merge + live test; AI Review reassign locked-button fix + 404 deferred)
-
-## DL-350: AI Review reassign — locked "שייך" button + console 404s — IMPLEMENTED (awaiting merge)
-
-After DL-345→DL-348 merges, two AI Review reassign regressions surfaced:
-
-**Bug 1 (fixed):** `initAIReviewComboboxes` `onSelect` (script.js:5180) used `closest('.ai-card-actions')` to find the assign button. In the desktop actions-panel layout (DL-334/DL-339) the button lives in `.ai-actions-panel`/`.ai-ap-primary-actions` — no `.ai-card-actions` ancestor — so the button never enabled after picking a doc. Applied DL-339 v1.5 multi-scope fallback. Cache-bust `script.js?v=339→340`.
-
-**Bug 2 (deferred):** Console showed three 404s on `…ew-classification`. Live `/webhook/review-classification` returns 400/401, not 404. Source-tree grep returns no candidate path. Most-likely cause: stale cached `endpoints.js`/`constants.js` (neither is `?v=`-busted in `frontend/admin/index.html:1519-1520`). Need user to expand the truncated URL in DevTools Network tab to confirm.
-
-### Test DL-350: AI Review reassign locked-button fix
-- [ ] Production after merge — AI Review tab → CPA-XXX → unmatched/issuer-mismatch card → open combobox → select doc → "שייך" button enables immediately
-- [ ] Click "שייך" → confirmation prompt → reassign succeeds → card transitions to "שויך מחדש"
-- [ ] Mobile viewport (<768px): same flow on fat-card layout — button still enables
-- [ ] No regression on `.btn-ai-comparison-assign` issuer-mismatch quick-assign
-- [ ] **Bug 2:** capture full 404 URL from Network tab → if real, file follow-up; if stale-cache only, close out
-
-Design log: `.agent/design-logs/ai-review/350-reassign-locked-button-and-404.md`
-
----
-
 **Last Updated:** 2026-04-25 (DL-344 — COMPLETED, live test passed; reject no longer wipes a sibling cls's approve on shared source doc)
 **Last Updated:** 2026-04-26 (DL-351 — IMPLEMENTED, NEED TESTING; Edit + Delete added to AI Review doc-tag menu)
 

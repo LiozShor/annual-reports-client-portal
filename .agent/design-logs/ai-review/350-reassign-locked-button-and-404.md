@@ -1,5 +1,5 @@
 # Design Log 350: AI Review reassign — locked "שייך" button + 404 console errors
-**Status:** [IMPLEMENTED — NEED TESTING]
+**Status:** [COMPLETED]
 **Date:** 2026-04-26
 **Related Logs:** DL-334 (3-pane rework), DL-339 (move actions to pane2), DL-330 (inline comboboxes)
 
@@ -87,13 +87,39 @@ On both desktop and mobile, selecting a doc in the AI Review reassign combobox i
 
 ## 7. Validation Plan
 
-* [ ] On production (after merge), AI Review tab → CPA-XXX → unmatched/issuer-mismatch card → open combobox → select a doc → "שייך" button enables immediately.
-* [ ] Click "שייך" → confirmation prompt → reassign succeeds → card transitions to "שויך מחדש".
-* [ ] Mobile viewport (<768px): same flow on the fat-card layout — button still enables.
-* [ ] Issuer-mismatch quick-assign path ("אישור ושיוך", `.btn-ai-comparison-assign`) still works — untouched by this fix, regression check only.
-* [ ] **Bug 2:** capture full 404 URL from Network tab; if real, file follow-up; if stale-cache only, close out.
+* [x] Unmatched/issuer-mismatch card → "שייך מסמך" button → reassign modal opens with picker
+* [x] Reassign to existing doc via combobox dropdown succeeds
+* [x] Reassign with custom doc name (picker → "מסמך מותאם אישית") succeeds with the typed name (no "general_doc" literal)
+* [x] Reassign with var-less template (e.g. T002) succeeds with resolved Hebrew name
+* [x] Reassign with var-filled template (e.g. T001 → city_name) succeeds with placeholders fully substituted
+* [x] Issuer-mismatch quick-assign ("אישור ושיוך") still works
+* [x] Modal expand picker hides combobox (only one search bar visible)
+* [x] Combobox reopens on second click after a pick
+* [x] In-place doc-tag header refresh after reassign (new doc appears immediately, no F5)
+* [x] Doc-tag refresh anchored on `.ai-missing-docs-body` previous sibling (no longer clobbers messages header)
+* [x] Missing-docs body capped at 240px max-height with overflow-y:auto when chip count is large
+* [x] Custom-input typed name commits on "שייך"/"אישור" without requiring "הוסף" first
+* [x] No 404s in DevTools Network during normal AI Review browsing or reassign flows
+* [x] Mobile fat-card layout: unmatched card opens reassign modal via "שייך מסמך"
 
 ## 8. Implementation Notes (Post-Code)
 
-* Applied the DL-339 v1.5 multi-scope fallback pattern verbatim.
-* Bug 2 (404) is **deferred** pending full URL capture from the user's DevTools Network tab. Source-tree grep returned no candidate path; the deployed `/webhook/review-classification` route returns 400/401 (not 404) under direct probe with empty/fake payloads. Most-likely root cause is a stale cached `endpoints.js`/`constants.js` (neither file is cache-busted in `frontend/admin/index.html:1519-1520`) — hardening to add `?v=` query strings to those scripts is out of scope for this log unless the user opts in.
+Bundle scope grew during live testing. Final shape:
+
+**Bug 1 (original):** combobox `onSelect` scope mismatch — fixed via DL-339 v1.5 multi-scope fallback (`closest('.ai-card-actions') || closest('.ai-actions-panel')`).
+
+**Bug 2 (original 404):** Resolved as a side effect — the deployed `/webhook/review-classification` always returned 400/401, so the original 404 turned out to be from an in-flight request to a code path that didn't exist yet (picker creating a new doc on the report). Backend Path 3 fallback added.
+
+**Follow-up bugs surfaced during live testing & fixed in same DL:**
+
+1. **Picker `var-less` mistreatment:** `tpl.variables` could be empty while `name_he` had `{placeholder}` tokens. Picker now derives userVars from BOTH `tpl.variables` AND any `{token}` matched in `name_he`/`short_name_he`/`name_en`.
+2. **Backend creates doc with type literal as name:** `assignAIUnmatched` only forwarded `newDocName` for the legacy `__NEW__` sentinel — picker emits `template_id='general_doc'` for custom-input. Fixed by always forwarding `newDocName` from combobox dataset. Backend hardened to reject empty derived names (400) instead of persisting type literals.
+3. **Modal renders two search bars:** `onExpand` didn't hide the combobox while picker was open. Now hides on expand, restores on close.
+4. **Combobox couldn't reopen after pick:** `mousedown` handler missed the "closed but already focused" branch (option mousedown's preventDefault keeps input focus, so the next click never refires the focus event). Added that branch.
+5. **Doc-tag header refresh clobbered messages header:** `refreshClientDocTags` used `docsPane.querySelector('.ai-section-header')` which returned the first section ("הודעות הלקוח"). Anchored on `.ai-missing-docs-body.previousElementSibling` instead.
+6. **In-place refresh missing for picker-created docs:** `updateClientDocState` was guarded on the original `docRecordId` arg (empty for picker-created). Now uses `data.doc_id` from the server response as fallback.
+7. **Long chip lists:** `.ai-missing-docs-body` capped at `max-height: 240px; overflow-y: auto`.
+8. **One-click commit:** clicking "שייך"/"אישור" with text in `.ai-tpl-custom-input` but no chip yet auto-commits the typed name.
+9. **Inline UX too cramped:** unmatched + issuer-mismatch-fallback states drop the inline combobox entirely and route to the full reassign modal via `showAIReassignModal`. Quick-assign comparison radios for issuer-mismatch with siblings remain.
+
+**Deploys:** worker `8da9e5c9` → `c3c9b2c6` → `c38847c9` → `10157460`. Frontend cache-bust `script.js?v=339 → v=362`, `style.css?v=318 → v=319`. Live tested on CPA-XXX with seeded test data tagged `DL350-r3-*` (since cleaned up).
