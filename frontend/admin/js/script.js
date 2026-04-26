@@ -4269,19 +4269,8 @@ function buildDesktopClientDocsHtml(clientName, items) {
     const docsTotalCount = items[0].docs_total_count || displayDocs.length;
     const hasStatusVariation = allDocs.length > 0 && docsReceivedCount > 0;
     if (displayDocs.length > 0) {
-        const catGroups = [];
-        let currentCat = null;
-        for (const d of displayDocs) {
-            const cat = d.category || 'other';
-            if (cat !== currentCat) {
-                currentCat = cat;
-                catGroups.push({ category: cat, name: d.category_name || cat, emoji: d.category_emoji || '', docs: [] });
-            }
-            catGroups[catGroups.length - 1].docs.push(d);
-        }
-        let categoriesHtml = '<div class="ai-missing-category-tags">';
-        for (const group of catGroups) categoriesHtml += group.docs.map(d => renderDocTag(d)).join('');
-        categoriesHtml += '</div>';
+        // DL-349: shared helper keeps initial render and refresher in lock-step
+        const categoriesHtml = buildDocCategoryTagsHtml(displayDocs);
         const label = hasStatusVariation
             ? `📄 מסמכים נדרשים (${docsReceivedCount}/${docsTotalCount} התקבלו)`
             : `📄 מסמכים חסרים (${groupMissingDocs.length})`;
@@ -5083,19 +5072,8 @@ function buildClientAccordionHtml(clientName, clientItems, open) {
     const hasStatusVariation = allDocs.length > 0 && docsReceivedCount > 0;
 
     if (displayDocs.length > 0) {
-        const catGroups = [];
-        let currentCat = null;
-        for (const d of displayDocs) {
-            const cat = d.category || 'other';
-            if (cat !== currentCat) {
-                currentCat = cat;
-                catGroups.push({ category: cat, name: d.category_name || cat, emoji: d.category_emoji || '', docs: [] });
-            }
-            catGroups[catGroups.length - 1].docs.push(d);
-        }
-        let categoriesHtml = '<div class="ai-missing-category-tags">';
-        for (const group of catGroups) categoriesHtml += group.docs.map(d => renderDocTag(d)).join('');
-        categoriesHtml += '</div>';
+        // DL-349: shared helper keeps initial render and refresher in lock-step
+        const categoriesHtml = buildDocCategoryTagsHtml(displayDocs);
 
         const toggleLabel = hasStatusVariation
             ? `מסמכים נדרשים (${docsReceivedCount}/${docsTotalCount} התקבלו)`
@@ -7184,6 +7162,10 @@ function transitionCardToReviewed(recordId, newReviewStatus, responseData) {
     recalcAIStats();
     safeCreateIcons();
 
+    // DL-349: keep pane-1 row stats ("X/Y נבדקו" + pending chip) in sync after every
+    // approve/reject — covers both paths since both transition the card to reviewed.
+    if (item) refreshClientRowStats(item.client_name);
+
     // DL-340: Keep preview frame badge + border in sync when the active doc is transitioned
     if (activePreviewItemId === recordId) {
         applyPreviewReviewState(newReviewStatus);
@@ -7930,6 +7912,8 @@ function updateClientDocState(clientName, docRecordId) {
     // DL-227: Delegate to shared functions
     applyDocStatusChange(clientName, docRecordId, 'Received');
     refreshClientDocTags(clientName);
+    // DL-349: keep pane-1 stats badge in sync (docs_received_count may have moved)
+    refreshClientRowStats(clientName);
 }
 
 function recalcAIStats() {
@@ -8170,46 +8154,74 @@ function applyDocStatusChange(clientName, docRecordId, newStatus) {
     }
 }
 
-function refreshClientDocTags(clientName) {
-    const accordion = document.querySelector(`.ai-accordion[data-client="${CSS.escape(clientName)}"]`);
-    if (!accordion) return;
+// DL-349: shared category-tag HTML builder. Used by initial render paths
+// (buildDesktopClientDocsHtml, buildClientAccordionHtml) and by the refresher.
+function buildDocCategoryTagsHtml(displayDocs) {
+    const catGroups = [];
+    let currentCat = null;
+    for (const d of (displayDocs || [])) {
+        const cat = d.category || 'other';
+        if (cat !== currentCat) {
+            currentCat = cat;
+            catGroups.push({ docs: [] });
+        }
+        catGroups[catGroups.length - 1].docs.push(d);
+    }
+    let html = '<div class="ai-missing-category-tags">';
+    for (const g of catGroups) html += g.docs.map(d => renderDocTag(d)).join('');
+    html += '</div>';
+    return html;
+}
 
+// DL-349: layout-aware doc-tag header refresher.
+// - Mobile/legacy: header lives inside `.ai-accordion[data-client="..."]` (existing).
+// - Desktop 3-pane (DL-330): header lives inside `#aiDocsPane`, NOT in any accordion.
+//   Pre-DL-349 this was a silent no-op on desktop.
+function refreshClientDocTags(clientName) {
+    if (!clientName) return;
     const representative = aiClassificationsData.find(i => i.client_name === clientName);
     if (!representative) return;
 
     const allDocs = representative.all_docs || [];
     const groupMissingDocs = representative.missing_docs || [];
     const displayDocs = allDocs.length > 0 ? allDocs : groupMissingDocs;
+    if (displayDocs.length === 0) return;
+
     const docsReceivedCount = representative.docs_received_count || 0;
     const docsTotalCount = representative.docs_total_count || displayDocs.length;
     const hasStatusVariation = allDocs.length > 0 && docsReceivedCount > 0;
+    const tagsHtml = buildDocCategoryTagsHtml(displayDocs);
+
+    // --- Desktop 3-pane (DL-330) ---
+    const docsPane = document.getElementById('aiDocsPane');
+    if (docsPane && selectedClientName === clientName && docsPane.offsetParent !== null) {
+        const body = docsPane.querySelector('.ai-missing-docs-body');
+        if (body) body.innerHTML = tagsHtml;
+        const headerEl = docsPane.querySelector('.ai-section-header');
+        if (headerEl) {
+            const arrowHtml = headerEl.querySelector('.ai-section-header__arrow')?.outerHTML
+                || '<span class="ai-section-header__arrow">▸</span>';
+            const desktopLabel = hasStatusVariation
+                ? `📄 מסמכים נדרשים (${docsReceivedCount}/${docsTotalCount} התקבלו)`
+                : `📄 מסמכים חסרים (${groupMissingDocs.length})`;
+            headerEl.innerHTML = `${arrowHtml} ${desktopLabel}`;
+        }
+    }
+
+    // --- Mobile/legacy accordion ---
+    const accordion = document.querySelector(`.ai-accordion[data-client="${CSS.escape(clientName)}"]`);
+    if (!accordion) return;
 
     const docsGroup = accordion.querySelector('.ai-missing-docs-group');
-    if (docsGroup && displayDocs.length > 0) {
-        let categoriesHtml = '<div class="ai-missing-category-tags">';
-        const catGroups = [];
-        let currentCat = null;
-        for (const d of displayDocs) {
-            const cat = d.category || 'other';
-            if (cat !== currentCat) {
-                currentCat = cat;
-                catGroups.push({ category: cat, name: d.category_name || cat, emoji: d.category_emoji || '', docs: [] });
-            }
-            catGroups[catGroups.length - 1].docs.push(d);
-        }
-        for (const group of catGroups) {
-            categoriesHtml += group.docs.map(d => renderDocTag(d)).join('');
-        }
-        categoriesHtml += '</div>';
-
+    if (docsGroup) {
         const toggleLabel = hasStatusVariation
             ? `מסמכים נדרשים (${docsReceivedCount}/${docsTotalCount} התקבלו)`
             : `מסמכים חסרים (${groupMissingDocs.length})`;
-
         const wasOpen = docsGroup.classList.contains('open');
-        docsGroup.querySelector('.ai-missing-docs-toggle').innerHTML =
-            `<span class="toggle-arrow">${wasOpen ? '▾' : '▸'}</span> ${toggleLabel}`;
-        docsGroup.querySelector('.ai-missing-docs-body').innerHTML = categoriesHtml;
+        const toggleEl = docsGroup.querySelector('.ai-missing-docs-toggle');
+        if (toggleEl) toggleEl.innerHTML = `<span class="toggle-arrow">${wasOpen ? '▾' : '▸'}</span> ${toggleLabel}`;
+        const bodyEl = docsGroup.querySelector('.ai-missing-docs-body');
+        if (bodyEl) bodyEl.innerHTML = tagsHtml;
     }
 
     // Re-initialize inline comboboxes with updated missing_docs
@@ -8265,6 +8277,29 @@ function refreshClientDocTags(clientName) {
             `;
         }
     });
+}
+
+// DL-349: Surgically refresh one pane-1 client row's stats badge ("X/Y נבדקו" + pending chip).
+// Pre-DL-349 the row was rebuilt only on full re-render or full-client dismissal.
+function refreshClientRowStats(clientName) {
+    if (!clientName) return;
+    const clientsList = document.getElementById('aiClientsList');
+    if (!clientsList) return;
+    const row = clientsList.querySelector(`.ai-client-row[data-client="${CSS.escape(clientName)}"]`);
+    if (!row) return;
+    const clientItems = aiClassificationsData.filter(i => (i.client_name || 'לא ידוע') === clientName);
+    if (clientItems.length === 0) {
+        row.remove();
+        return;
+    }
+    const wasActive = row.classList.contains('active');
+    const tmp = document.createElement('div');
+    tmp.innerHTML = buildClientListRowHtml(clientName, clientItems, wasActive);
+    const newRow = tmp.firstElementChild;
+    if (newRow) {
+        row.replaceWith(newRow);
+        safeCreateIcons(newRow);
+    }
 }
 
 // AI helper functions

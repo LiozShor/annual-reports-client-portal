@@ -1,5 +1,26 @@
 # Annual Reports CRM - Current Status
 
+**Last Updated:** 2026-04-26 (DL-349 — IMPLEMENTED, NEED TESTING; AI-review pane-2 doc-tag header + pane-1 stats now refresh on every mutation across desktop 3-pane and mobile)
+
+## Test DL-349: AI Review doc-tag header + pane-1 stats live across mutations
+
+DL-330 regression: desktop pane-2 `.ai-missing-docs-body` was a silent no-op because `refreshClientDocTags` only knew the legacy `.ai-accordion[data-client]` selector. Fix: layout-aware refresher (desktop branch queries `#aiDocsPane` gated by `selectedClientName`) + new `refreshClientRowStats` for pane-1 row badges + wiring into `transitionCardToReviewed` and `updateClientDocState`. Reject deliberately stays silent on the doc-tag header (per user; pane-1 counter still updates).
+
+- [ ] Desktop — approve a missing doc → tag flips ✗→✓ in `.ai-missing-docs-body` immediately; header label X/Y updates
+- [ ] Desktop — reject a card → doc-tag header UNCHANGED (intentional); pane-1 row "X/Y נבדקו" + pending chip update
+- [ ] Desktop — reassign a card → both old/new tags update; header X/Y + pane-1 row update
+- [ ] Desktop — click a tag → menu → waive/receive/restore → tag re-renders + header counter + pane-1 update
+- [ ] Desktop — pane-1 row updates without a tab switch on every mutation
+- [ ] Mobile/legacy accordion (regression check) — same flows still work
+- [ ] Cross-client safety — mutating client B while pane-2 shows client A does not corrupt A's header
+- [ ] Last-item dismissal — pane-1 row removed cleanly when client has no more items
+- [ ] No console errors during any flow
+- [ ] Live test on production data with a real client
+
+Design log: `.agent/design-logs/ai-review/349-doc-tags-header-refresh.md`
+
+---
+
 **Last Updated:** 2026-04-25 (DL-344 — COMPLETED, live test passed; reject no longer wipes a sibling cls's approve on shared source doc)
 
 ## DL-344: Reject wipes a different file's approve on shared source doc — COMPLETED (live 2026-04-25)
