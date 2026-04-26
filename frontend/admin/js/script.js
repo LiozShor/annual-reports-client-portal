@@ -3525,11 +3525,19 @@ function createDocCombobox(container, docs, { currentMatchId = null, onSelect = 
 
     input.addEventListener('focus', open);
     // DL-239: Click already-focused input to toggle close
+    // DL-350: After picking an option, the option's mousedown preventDefault keeps
+    // input focus, so the next click won't refire `focus` → `open()` never runs and
+    // the picker can't reopen. Handle the "closed but already focused" case here too.
     input.addEventListener('mousedown', (e) => {
-        if (combobox.classList.contains('open') && document.activeElement === input) {
+        const isOpen = combobox.classList.contains('open');
+        const isFocused = document.activeElement === input;
+        if (isOpen && isFocused) {
             e.preventDefault();
             close();
             input.blur();
+        } else if (!isOpen && isFocused) {
+            e.preventDefault();
+            open();
         }
     });
     input.addEventListener('input', () => {
@@ -5152,14 +5160,46 @@ function initAIReviewComboboxes(container) {
         const ownDocs = itemData ? (itemData.all_docs || itemData.missing_docs || []) : [];
         const otherDocsArr = itemData?.other_report_docs || [];
         const hasBothTypes = otherDocsArr.length > 0;
+        // DL-350: desktop actions-panel (DL-334/339) has no .ai-card-actions ancestor;
+        // fall back to .ai-actions-panel so the assign button enables on selection.
+        const findBtn = () => {
+            const scope = el.closest('.ai-card-actions') || el.closest('.ai-actions-panel');
+            return scope?.querySelector('.btn-ai-assign-confirm');
+        };
+        // DL-350: replace the legacy free-text "create-mode" with the DL-336 template
+        // picker (search + categories + variable wizard + chip), matching the reassign
+        // modal flow. The picker renders into a sibling div placed right after `el`.
+        let pickerHost = el.nextElementSibling;
+        if (!pickerHost || !pickerHost.classList.contains('ai-inline-expanded-picker')) {
+            pickerHost = document.createElement('div');
+            pickerHost.className = 'ai-inline-expanded-picker';
+            pickerHost.style.display = 'none';
+            el.insertAdjacentElement('afterend', pickerHost);
+        }
         createDocCombobox(el, ownDocs, {
             allowCreate: true,
             onSelect: (templateId) => {
-                // DL-350: desktop actions-panel (DL-334/339) has no .ai-card-actions ancestor;
-                // fall back to .ai-actions-panel so the assign button enables on selection.
-                const scope = el.closest('.ai-card-actions') || el.closest('.ai-actions-panel');
-                const btn = scope?.querySelector('.btn-ai-assign-confirm');
+                pickerHost.style.display = 'none';
+                pickerHost.innerHTML = '';
+                const btn = findBtn();
                 if (btn) btn.disabled = !templateId;
+            },
+            onExpand: () => {
+                if (!itemData) return;
+                el.style.display = 'none';
+                pickerHost.style.display = '';
+                _buildDocTemplatePicker(pickerHost, itemData, {
+                    onPick: (target) => {
+                        const cb = el.querySelector('.doc-combobox');
+                        if (cb) {
+                            cb.dataset.selectedValue = target?.template_id || '';
+                            cb.dataset.selectedDocId = '';
+                            cb.dataset.newDocName = target?.new_doc_name || '';
+                        }
+                        const btn = findBtn();
+                        if (btn) btn.disabled = !target;
+                    },
+                });
             },
             ...(hasBothTypes ? {
                 otherDocs: otherDocsArr,
