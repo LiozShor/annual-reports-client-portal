@@ -9,6 +9,9 @@ import { AirtableClient } from '../lib/airtable';
 import { MSGraphClient } from '../lib/ms-graph';
 import { resolveOneDriveRoot, uploadToOneDrive } from '../lib/inbound/attachment-utils';
 import { logError } from '../lib/error-logger';
+import { resolveOneDriveFilename } from '../lib/classification-helpers';
+import { buildTemplateMap } from '../lib/doc-builder';
+import { getCachedOrFetch } from '../lib/cache';
 import type { Env } from '../lib/types';
 
 const uploadDocument = new Hono<{ Bindings: Env }>();
@@ -16,6 +19,7 @@ const uploadDocument = new Hono<{ Bindings: Env }>();
 const TABLES = {
   REPORTS: 'tbls7m3hmHC4hhQVy',
   DOCUMENTS: 'tblcwptR63skeODPn',
+  TEMPLATES: 'tblQTsbhC6ZBrhspc',
 };
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
@@ -65,11 +69,22 @@ uploadDocument.post('/upload-document', async (c) => {
     const year = (report.fields.year as string) || 'Unknown';
     const filingType = (report.fields.filing_type as string) || 'annual_report';
 
-    // Fetch doc record for display name (issuer_name has HTML bold tags, sanitizeFilename strips them)
+    // DL-355: route admin upload through resolveOneDriveFilename so the file lands
+    // with the same canonical short-name format as approve/reassign/inbound paths.
     const docRecord = await airtable.getRecord(TABLES.DOCUMENTS, docId);
-    const docName = (docRecord.fields.issuer_name as string)
-      || (docRecord.fields.expected_filename as string)
-      || 'document';
+    const templateId = (docRecord.fields.type as string) || '';
+    const issuerName = (docRecord.fields.issuer_name as string) || '';
+
+    const templateRecords = await getCachedOrFetch(c.env.CACHE_KV, 'cache:templates', 3600,
+      () => airtable.listAllRecords(TABLES.TEMPLATES));
+    const templateMap = buildTemplateMap(templateRecords);
+
+    const uploadName = resolveOneDriveFilename({
+      templateId,
+      issuerName,
+      attachmentName: file.name,
+      templateMap,
+    });
 
     let fileUrl: string | null = null;
     let downloadUrl: string | null = null;
@@ -81,7 +96,7 @@ uploadDocument.post('/upload-document', async (c) => {
       const fileBuffer = await file.arrayBuffer();
       const result = await uploadToOneDrive(
         graph, root, clientName, String(year),
-        `${docName}.${ext}`, fileBuffer, filingType,
+        uploadName, fileBuffer, filingType,
       );
 
       fileUrl = result.webUrl;

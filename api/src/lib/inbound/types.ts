@@ -41,6 +41,10 @@ export interface ProcessingContext {
   graph: MSGraphClient;
   airtable: AirtableClient;
   messageId: string;
+  // DL-355: optional template map so per-attachment code can resolve filenames
+  // via short_name_he. Populated lazily — keeping it optional avoids breaking
+  // existing callers (split/reclassify in classifications.ts).
+  templateMap?: Map<string, import('../doc-builder').TemplateInfo>;
 }
 
 // ---------------------------------------------------------------------------

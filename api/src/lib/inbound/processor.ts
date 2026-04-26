@@ -25,6 +25,9 @@ import {
 import { fetchAttachments, uploadToOneDrive, resolveOneDriveRoot, getFileExtension, type OneDriveRoot } from './attachment-utils';
 import { identifyClient } from './client-identifier';
 import { classifyAttachment, checkFileHashDuplicate, TEMPLATE_TITLES } from './document-classifier';
+import { resolveOneDriveFilename } from '../classification-helpers';
+import { buildTemplateMap } from '../doc-builder';
+import { getCachedOrFetch } from '../cache';
 import { getPdfPageCount } from '../pdf-split';
 import { imageToPdf } from './image-to-pdf';
 import { expandArchiveAttachments } from './archive-expander';
@@ -441,13 +444,31 @@ function sanitizeForOneDrive(name: string): string {
   return name.replace(/[\\/*<>?:|#"~&{}%]/g, '').replace(/\.+$/, '').trim();
 }
 
-/** Build expected filename from classification (matches n8n logic) */
+/**
+ * Build expected filename from classification.
+ *
+ * DL-355: when a templateMap is available (set on pCtx by processInboundEmail),
+ * route through the canonical resolveOneDriveFilename so inbound files use the
+ * same `short_name_he` shape as approve/reassign/admin-upload paths. Falls back
+ * to the legacy HE_TITLE-based naming when no templateMap is available
+ * (defensive — happens for callers that haven't populated it).
+ */
 function buildExpectedFilename(
   templateId: string | null,
   issuerName: string,
   originalName: string,
+  templateMap?: Map<string, import('../doc-builder').TemplateInfo>,
 ): string | null {
   if (!templateId) return null;
+  if (templateMap) {
+    return resolveOneDriveFilename({
+      templateId,
+      issuerName,
+      attachmentName: originalName,
+      templateMap,
+    });
+  }
+  // Legacy fallback (no templateMap)
   const heTitle = HE_TITLE[templateId] || 'מסמך';
   const ext = originalName.split('.').pop() || 'pdf';
   let base = sanitizeForOneDrive(heTitle);
@@ -500,11 +521,12 @@ async function processAttachmentWithClassification(
 
   // Step 3: All docs go directly to filing type folder root (DL-240)
 
-  // Step 4: Build expected filename (matches n8n logic: heTitle + issuer + extension)
+  // Step 4: Build expected filename (DL-355: uses short_name_he via pCtx.templateMap)
   let expectedFilename = buildExpectedFilename(
     classification?.templateId ?? null,
     classification?.issuerName ?? '',
     attachment.name,
+    pCtx.templateMap,
   );
   const uploadName = expectedFilename || attachment.name;
 
@@ -690,7 +712,16 @@ export async function processInboundEmail(
 ): Promise<void> {
   const graph = new MSGraphClient(env, ctx);
   const airtable = new AirtableClient(env.AIRTABLE_BASE_ID, env.AIRTABLE_PAT);
-  const pCtx: ProcessingContext = { env, ctx, graph, airtable, messageId };
+  // DL-355: pre-fetch template map so per-attachment filename resolution can use short_name_he
+  let templateMap: Map<string, import('../doc-builder').TemplateInfo> | undefined;
+  try {
+    const templateRecords = await getCachedOrFetch(env.CACHE_KV, 'cache:templates', 3600,
+      () => airtable.listAllRecords('tblQTsbhC6ZBrhspc'));
+    templateMap = buildTemplateMap(templateRecords);
+  } catch (e) {
+    console.warn('[inbound] template map fetch failed; falling back to HE_TITLE naming:', (e as Error).message);
+  }
+  const pCtx: ProcessingContext = { env, ctx, graph, airtable, messageId, templateMap };
 
   let emailEventId = '';
 
