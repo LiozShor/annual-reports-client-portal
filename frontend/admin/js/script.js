@@ -8071,13 +8071,16 @@ function selectDocTagStatus(event, btnEl) {
     const newStatus = btnEl.dataset.newStatus;
     closeDocTagMenu();
 
-    // Find the tag's client
+    // Find the tag's client. DL-351 hotfix: pane-2 cockpit tags are NOT inside
+    // `.ai-accordion[data-client]` (DL-330/349 layout) — fall back to the global
+    // `selectedClientName` when the accordion lookup fails. Same pattern as
+    // openDocTagInlineRename and DL-349's layout-aware refresher.
     const tagEl = document.querySelector(`[data-doc-record-id="${CSS.escape(docRecordId)}"].ai-doc-tag-active`)
         || document.querySelector(`[data-doc-record-id="${CSS.escape(docRecordId)}"]`);
     if (!tagEl) return;
 
     const accordion = tagEl.closest('.ai-accordion');
-    const clientName = accordion ? accordion.dataset.client : null;
+    const clientName = (accordion && accordion.dataset.client) || selectedClientName;
     if (!clientName) return;
 
     updateDocStatusInline(clientName, docRecordId, newStatus);
