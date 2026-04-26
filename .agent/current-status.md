@@ -1,5 +1,34 @@
 # Annual Reports CRM - Current Status
 
+**Last Updated:** 2026-04-26 (DL-356 — IMPLEMENTED, NEED TESTING; preview-url stale-itemId self-heal + centralized Required_Missing invariant + audit sweep route)
+
+## DL-356: Preview URL stale-itemId self-heal — IMPLEMENTED, NEED TESTING
+
+Triggered by an MS Graph 404 alert on `/webhook/get-preview-url` for a `Required_Missing` Documents row that still carried `onedrive_item_id`. Fix is three-layered: (1) **Root cause** — new `api/src/lib/doc-invariants.ts` `applyMissingStatusInvariant` enforces "status=Required_Missing ⇒ 16 file/source/AI/review fields are null" at the data-write layer; replaces inline lists in `edit-documents.ts`, `classifications.ts` (reject, reassign, revert_cascade — the last was clearing only 7/16 fields). (2) **Band-aid** — `preview.ts` detects HTTP 404 + `itemNotFound`, PATCHes the originating row by `recordId`, returns `{ ok:false, code:'FILE_GONE', message }`; `console.warn` only (no alert email — recoverable). (3) **Sweep** — new admin-only `GET /webhook/audit-stale-itemids?dryRun=1` (with optional `?verify=1` HEAD-check) finds and clears residual rows. Frontend (`script.js`) — `getDocPreviewUrl(itemId, recordId)`, both call sites pass `item.id`, `FILE_GONE` toasts in Hebrew + mirrors null in local item + re-renders. Cache-bust `script.js?v=362→363`. Cross-report duplicate (DL-230) intentionally accepted as design.
+
+Branch: `DL-356-preview-url-stale-itemid` — committed locally, **awaiting explicit approval before push + deploy + live sweep**.
+
+### Test DL-356: Preview URL stale-itemId self-heal — NEEDS LIVE VERIFICATION
+Branch `DL-356-preview-url-stale-itemid` — pushed pending approval; backend (Worker) goes live on `wrangler deploy`, frontend goes live only after merge to main.
+
+- [ ] `tsc --noEmit` clean for new files (3 pre-existing errors unrelated)
+- [ ] `wrangler deploy` succeeds; `wrangler tail` shows clean startup
+- [ ] Smoke: `/webhook/get-preview-url` on a healthy doc → 200 + previewUrl
+- [ ] Stale itemId reconcile (live): call with the alert's `itemId` + originating `recordId` → `{ok:false, code:'FILE_GONE'}`. Re-fetch the Airtable record → `onedrive_item_id` + `file_url` empty, `status` still `Required_Missing`
+- [ ] No collateral damage: sibling tofes_106 (Received, same itemId via DL-230) still has file fields populated and previews successfully
+- [ ] Audit dry-run: `GET /webhook/audit-stale-itemids?dryRun=1` returns `{matched, eligibleToClear, samples[]}`
+- [ ] Audit verify-mode: `?dryRun=1&verify=1` distinguishes `verifiedMissing` vs `verifiedExisting`
+- [ ] Audit purge: `?dryRun=0` clears stale rows; re-run dry-run → 0 matches
+- [ ] Admin UI: clicking Preview on a stale itemId → red Hebrew toast (`הקובץ אינו זמין יותר ב-OneDrive – הקישור הוסר`), doc card refreshes without preview button, no console error spam, no alert email
+- [ ] Regression: AI Review reject + reassign flows still null all 16 fields after helper rewire (verify on a fresh dummy classification)
+- [ ] Regression: edit-documents Received → Missing toggle still clears fields, Cancel restores
+- [ ] Hard-refresh shows new build (`script.js?v=363`)
+- [ ] No new pages over 24h alert window
+
+Design log: `.agent/design-logs/infrastructure/356-preview-url-stale-itemid-self-heal.md`
+
+---
+
 **Last Updated:** 2026-04-26 (DL-351 — COMPLETED, live tests passed; AI Review doc-tag menu now has Edit/inline-rename — Delete dropped as redundant with Waive; pane-2 no-op fixed via `selectedClientName` fallback)
 
 ## DL-351: AI Review doc-tag menu Edit/inline-rename — COMPLETED (live 2026-04-26)
