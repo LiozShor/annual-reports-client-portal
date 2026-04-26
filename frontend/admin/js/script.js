@@ -4653,14 +4653,16 @@ function _renderPanelReviewed(item, variant) {
     if (variant === 'rejected' && item.notes) {
         try {
             const notesData = typeof item.notes === 'string' ? JSON.parse(item.notes) : item.notes;
-            const reasonLabel = REJECTION_REASONS[notesData.reason] || notesData.reason || '';
+            const reasonLabel = REJECTION_REASONS[notesData.reason] || notesData.reason || 'נדחה ע"י המשרד';
             const notesText = notesData.text || '';
-            if (reasonLabel || notesText) {
-                rejectionBlock = `<div class="ai-ap-reasoning-block" style="background: var(--gray-50); border-radius: 4px; padding: 8px 10px; font-size: 11px; color: var(--gray-700); line-height: 1.5; margin-top: 6px;">
-                    ${reasonLabel ? `<strong>${escapeHtml(reasonLabel)}</strong>` : ''}${reasonLabel && notesText ? ': ' : ''}${escapeHtml(notesText)}
-                </div>`;
-            }
+            rejectionBlock = `<div class="ai-ap-reasoning-block" style="background: var(--gray-50); border-radius: 4px; padding: 8px 10px; font-size: 11px; color: var(--gray-700); line-height: 1.5; margin-top: 6px;">
+                <strong>${escapeHtml(reasonLabel)}</strong>${notesText ? `: ${escapeHtml(notesText)}` : ''}
+            </div>`;
         } catch (e) {}
+    } else if (variant === 'rejected') {
+        rejectionBlock = `<div class="ai-ap-reasoning-block" style="background: var(--gray-50); border-radius: 4px; padding: 8px 10px; font-size: 11px; color: var(--gray-700); line-height: 1.5; margin-top: 6px;">
+            <strong>נדחה ע"י המשרד</strong>
+        </div>`;
     }
 
     return `<div style="font-size: 12px;">
@@ -4871,12 +4873,12 @@ function showPanelRejectNotes(recordId) {
     actionsDiv.innerHTML = `
         <div class="ai-ap-reject-notes">
             <select class="ai-reject-reason-select" style="width: 100%; height: 30px; border: 0.5px solid var(--gray-200); border-radius: 3px; font-size: 12px; padding: 0 8px;">
-                <option value="">בחר סיבה...</option>
+                <option value="">בחר סיבה (אופציונלי)...</option>
                 ${Object.entries(REJECTION_REASONS).map(([k, v]) => `<option value="${k}">${escapeHtml(v)}</option>`).join('')}
             </select>
             <textarea class="ai-reject-notes-text" placeholder="הערות נוספות (אופציונלי)" rows="2" style="width: 100%; margin-top: 6px; border: 0.5px solid var(--gray-200); border-radius: 3px; font-size: 12px; padding: 6px 8px; min-height: 60px;"></textarea>
             <div style="display: flex; gap: 6px; margin-top: 6px;">
-                <button class="ai-ap-btn ai-ap-btn--danger-ghost ai-reject-confirm-btn" style="flex: 1;" disabled>מסמך לא רלוונטי</button>
+                <button class="ai-ap-btn ai-ap-btn--danger-ghost ai-reject-confirm-btn" style="flex: 1;">מסמך לא רלוונטי</button>
                 <button class="ai-ap-btn ai-ap-btn--ghost ai-reject-cancel-btn" style="width: 60px;">ביטול</button>
             </div>
         </div>`;
@@ -4895,7 +4897,6 @@ function showPanelRejectNotes(recordId) {
     function escHandler(e) { if (e.key === 'Escape') restore(); }
     document.addEventListener('keydown', escHandler);
 
-    select.addEventListener('change', () => { confirmBtn.disabled = !select.value; });
     cancelBtn.addEventListener('click', restore);
     confirmBtn.addEventListener('click', async () => {
         const reason = select.value;
@@ -5807,16 +5808,17 @@ function renderReviewedCard(item, reviewStatus) {
 
     // Rejection details
     let rejectionHtml = '';
-    if (reviewStatus === 'rejected' && item.notes) {
-        try {
-            const notesData = typeof item.notes === 'string' ? JSON.parse(item.notes) : item.notes;
-            const reasonLabel = REJECTION_REASONS[notesData.reason] || notesData.reason || '';
-            const notesText = notesData.text || '';
-            rejectionHtml = `<div class="ai-reviewed-rejection-info">`;
-            if (reasonLabel) rejectionHtml += `<strong>${escapeHtml(reasonLabel)}</strong>`;
-            if (notesText) rejectionHtml += `${reasonLabel ? ' — ' : ''}${escapeHtml(notesText)}`;
-            rejectionHtml += `</div>`;
-        } catch { /* ignore parse errors */ }
+    if (reviewStatus === 'rejected') {
+        let reasonLabel = 'נדחה ע"י המשרד';
+        let notesText = '';
+        if (item.notes) {
+            try {
+                const notesData = typeof item.notes === 'string' ? JSON.parse(item.notes) : item.notes;
+                reasonLabel = REJECTION_REASONS[notesData.reason] || notesData.reason || 'נדחה ע"י המשרד';
+                notesText = notesData.text || '';
+            } catch { /* ignore parse errors */ }
+        }
+        rejectionHtml = `<div class="ai-reviewed-rejection-info"><strong>${escapeHtml(reasonLabel)}</strong>${notesText ? ` — ${escapeHtml(notesText)}` : ''}</div>`;
     }
 
     // Classification info — use API-resolved short name + period.

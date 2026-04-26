@@ -247,7 +247,7 @@ export function buildRejectedUploadsCallout(
     : 'Files we received from you previously';
 
   // Group entries by reason
-  const fallbackReason = isHe ? 'אחר' : 'Other';
+  const fallbackReason = isHe ? 'נדחה ע"י המשרד' : 'Rejected by office';
   const groups = new Map<string, RejectedUpload[]>();
   for (const entry of entries) {
     const reason = isHe

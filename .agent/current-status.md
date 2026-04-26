@@ -50,11 +50,31 @@ Branch `DL-351-doc-tag-menu-regression` — pushed, NOT yet merged to main. Fron
 - [ ] Existing 3 status options still work — no regression
 - [ ] Received tags open the menu and offer the same 5 actions
 - [ ] Mobile accordion: menu still opens, inline rename input fits or wraps
-- [ ] Hard-refresh shows new build (`script.js?v=340`)
+- [ ] Hard-refresh shows new build (`script.js?v=353`)
 
 Design log: `.agent/design-logs/ai-review/351-doc-tag-menu-edit-delete.md`
 
 ---
+**Last Updated:** 2026-04-26 (DL-353 — IMPLEMENTED — NEED TESTING; AI-Review reject reason is now optional, one-click reject)
+
+## Test DL-353: AI-Review reject reason optional — verify one-click reject + fallback label
+
+Drop the `disabled` gate on the inline reject confirm button (`script.js` `showPanelRejectNotes` L4882). Empty reason now displays the generic label `נדחה ע"י המשרד` (HE) / `Rejected by office` (EN) in both the admin reviewed-card and the client email rejected-uploads callout.
+
+- [ ] Frontend smoke: AI-Review tab → click reject on a pending classification → confirm button is **already enabled** → click confirm with no reason → success toast, card transitions to rejected.
+- [ ] Reviewed card display: the rejected card shows `נדחה ע"י המשרד` instead of empty block.
+- [ ] Live email check: trigger a Type B reminder for a client with a no-reason rejected upload; HE callout shows under `נדחה ע"י המשרד` group; EN client sees `Rejected by office`.
+- [ ] Regression — picked-reason path: open reject → pick a reason → confirm → existing label flows through unchanged in email + reviewed card.
+- [ ] Regression — batch/persistent-review modal (`script.js` L6548) still requires a reason (disabled gate intact).
+- [ ] No console errors; cache-bust loads `script.js?v=353`.
+
+Design log: `.agent/design-logs/ai-review/353-reject-reason-optional.md`
+Worker deploy: required (touches `api/src/lib/email-html.ts` fallback constants).
+Frontend live: requires merge to main (CloudFlare Pages).
+
+---
+
+**Previous Last Updated:** 2026-04-25 (DL-344 — COMPLETED, live test passed; reject no longer wipes a sibling cls's approve on shared source doc)
 
 ## DL-344: Reject wipes a different file's approve on shared source doc — COMPLETED (live 2026-04-25)
 
