@@ -16,6 +16,7 @@ import { checkAutoAdvanceToReview } from '../lib/auto-advance';
 import { isLastReference } from '../lib/file-refcount';
 import { DRIVE_ID } from '../lib/classification-helpers';
 import { sanitizeBatchUpdates } from '../lib/batch-sanitize.mjs';
+import { applyMissingStatusInvariant } from '../lib/doc-invariants';
 import type { Env } from '../lib/types';
 
 const editDocuments = new Hono<{ Bindings: Env }>();
@@ -24,14 +25,6 @@ const TABLES = {
   REPORTS: 'tbls7m3hmHC4hhQVy',
   DOCUMENTS: 'tblcwptR63skeODPn',
 };
-
-/** Fields to null-out when a doc reverts to Required_Missing (DL-205) */
-const FILE_FIELDS_TO_CLEAR = [
-  'file_url', 'onedrive_item_id', 'expected_filename', 'file_hash',
-  'uploaded_at', 'source_attachment_name', 'source_message_id',
-  'source_internet_message_id', 'source_sender_email',
-  'ai_confidence', 'ai_reason', 'review_status',
-];
 
 /** Fire n8n internal webhook asynchronously */
 function fireN8n(
@@ -278,13 +271,10 @@ function buildUpdateMap(data: ExtractedData): Map<string, Record<string, unknown
     updateMap.get(nameUpd.id)!.issuer_name_suggested = '';
   }
 
-  // DL-205: Clear file fields for any doc reverting to Missing
+  // DL-205 / DL-356: Clear file fields for any doc reverting to Missing.
+  // Centralized invariant — see api/src/lib/doc-invariants.ts.
   for (const entry of updateMap.values()) {
-    if (entry.status === 'Required_Missing') {
-      for (const field of FILE_FIELDS_TO_CLEAR) {
-        entry[field] = null;
-      }
-    }
+    applyMissingStatusInvariant(entry);
   }
 
   return updateMap;

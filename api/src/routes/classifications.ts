@@ -15,6 +15,7 @@ import { getCachedOrFetch, invalidateCache } from '../lib/cache';
 import { logError } from '../lib/error-logger';
 import { checkAutoAdvanceToReview } from '../lib/auto-advance';
 import { isLastReference, buildSharedRefMap } from '../lib/file-refcount';
+import { applyMissingStatusInvariant } from '../lib/doc-invariants';
 import type { Env } from '../lib/types';
 
 const classifications = new Hono<{ Bindings: Env }>();
@@ -1055,15 +1056,12 @@ classifications.post('/review-classification', async (c) => {
       const clearedDocIds: string[] = [];
       for (const sd of sharedDocs) {
         try {
-          await airtable.updateRecord(TABLES.DOCUMENTS, sd.id, {
-            status: 'Required_Missing',
-            file_url: null,
-            onedrive_item_id: null,
-            file_hash: null,
-            attachment_name: null,
-            source_attachment_name: null,
-            document_uid: null,
-          } as any);
+          // DL-356: centralized Required_Missing invariant clears all file/source/AI/review fields.
+          await airtable.updateRecord(
+            TABLES.DOCUMENTS,
+            sd.id,
+            applyMissingStatusInvariant({ status: 'Required_Missing' }) as any,
+          );
           clearedDocIds.push(sd.id);
         } catch (err) {
           console.error('[revert_cascade] Failed to clear doc', sd.id, (err as Error).message);
@@ -1492,22 +1490,11 @@ classifications.post('/review-classification', async (c) => {
         }
       }
 
-      // Inline PATCH to ensure null fields are cleared
-      const rejectFields: Record<string, unknown> = {
+      // DL-356: centralized Required_Missing invariant — see lib/doc-invariants.ts.
+      const rejectFields: Record<string, unknown> = applyMissingStatusInvariant({
         status: 'Required_Missing',
-        review_status: null,
-        reviewed_by: null,
-        reviewed_at: null,
-        ai_confidence: null,
-        ai_reason: null,
-        file_url: null,
-        onedrive_item_id: null,
-        file_hash: null,
-        source_attachment_name: null,
-        source_sender_email: null,
-        uploaded_at: null,
         fix_reason_client: fixReasonClient,
-      };
+      });
       // DL-344: Guard — don't clear if a different file was already approved to this doc
       // (mirror of DL-248 reassign guard at L1582-1612). Multiple AI classifications often
       // pre-link to the same source doc; rejecting one must not wipe the file another
@@ -1607,20 +1594,10 @@ classifications.post('/review-classification', async (c) => {
           console.log('[review-classification] reassign: skip clear — source doc has different file',
             JSON.stringify({ docId, srcItemId, clsItemId }));
         } else {
-          const clearFields: Record<string, unknown> = {
+          // DL-356: centralized Required_Missing invariant — see lib/doc-invariants.ts.
+          const clearFields: Record<string, unknown> = applyMissingStatusInvariant({
             status: 'Required_Missing',
-            review_status: null,
-            reviewed_by: null,
-            reviewed_at: null,
-            ai_confidence: null,
-            ai_reason: null,
-            file_url: null,
-            onedrive_item_id: null,
-            file_hash: null,
-            source_attachment_name: null,
-            source_sender_email: null,
-            uploaded_at: null,
-          };
+          });
           await fetch(`https://api.airtable.com/v0/${env.AIRTABLE_BASE_ID}/${TABLES.DOCUMENTS}/${docId}`, {
             method: 'PATCH',
             headers: { Authorization: `Bearer ${env.AIRTABLE_PAT}`, 'Content-Type': 'application/json' },

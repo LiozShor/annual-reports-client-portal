@@ -2,7 +2,21 @@ import { Hono } from 'hono';
 import { verifyToken } from '../lib/token';
 import { MSGraphClient } from '../lib/ms-graph';
 import { logError } from '../lib/error-logger';
+import { AirtableClient } from '../lib/airtable';
 import type { Env } from '../lib/types';
+
+const DOCUMENTS_TABLE = 'tblcwptR63skeODPn';
+
+/**
+ * DL-356: detect MS Graph "permanent 404" — file removed from OneDrive,
+ * not a transient network error. Only this case triggers self-heal.
+ */
+function isItemNotFoundError(err: any): boolean {
+  const msg = String(err?.message ?? '').toLowerCase();
+  if (!msg) return false;
+  if (!msg.includes('404') && !msg.includes('itemnotfound')) return false;
+  return msg.includes('itemnotfound') || msg.includes('could not be found') || msg.includes('not found');
+}
 
 const preview = new Hono<{ Bindings: Env }>();
 
@@ -17,17 +31,20 @@ const previewHandler = async (c: any) => {
   const tokenResult = await verifyToken(token, c.env.SECRET_KEY);
   if (!tokenResult.valid) return c.json({ ok: false, error: 'unauthorized' }, 401);
 
-  // Extract itemId from body or query param
+  // Extract itemId + recordId from body or query param.
+  // DL-356: recordId is the Airtable Documents row whose `onedrive_item_id`
+  // we received — used for self-heal on 404 from MS Graph.
   let itemId: string | undefined;
+  let recordId: string | undefined;
   try {
-    const body = await c.req.json() as { itemId?: string };
+    const body = await c.req.json() as { itemId?: string; recordId?: string };
     itemId = body.itemId;
+    recordId = body.recordId;
   } catch {
-    // body parse failed — fall through to query param
+    // body parse failed — fall through to query params
   }
-  if (!itemId) {
-    itemId = c.req.query('itemId');
-  }
+  if (!itemId) itemId = c.req.query('itemId');
+  if (!recordId) recordId = c.req.query('recordId');
 
   if (!itemId) {
     return c.json({ ok: false, error: 'Missing itemId' });
@@ -58,6 +75,44 @@ const previewHandler = async (c: any) => {
   } catch (err: any) {
     const totalMs = Date.now() - t0;
     const message = err?.message ?? 'MS Graph request failed';
+
+    // DL-356: self-heal on permanent 404 — the OneDrive file is gone.
+    // PATCH the originating Airtable row to null its file fields so
+    // (a) the next preview attempt is impossible (button hides),
+    // (b) the 404 alert noise stops, and
+    // (c) admin sees the doc as Required_Missing and re-collects.
+    // Match by recordId only — DL-230 lets two records share an itemId,
+    // so we MUST NOT clear by itemId.
+    if (isItemNotFoundError(err)) {
+      // FILE_GONE is recoverable — do NOT call logError (which sends alert email).
+      // Self-heal + console.warn is sufficient.
+      console.warn('[get-preview-url] FILE_GONE', {
+        itemId,
+        recordId: recordId ?? '(none)',
+        total_ms: totalMs,
+        selfHeal: recordId ? 'attempted' : 'skipped',
+      });
+      if (recordId) {
+        try {
+          const airtable = new AirtableClient(c.env.AIRTABLE_BASE_ID, c.env.AIRTABLE_PAT);
+          await airtable.updateRecord(DOCUMENTS_TABLE, recordId, {
+            file_url: null,
+            onedrive_item_id: null,
+            expected_filename: null,
+            file_hash: null,
+            uploaded_at: null,
+          } as any);
+        } catch (patchErr: any) {
+          console.error('[get-preview-url] self-heal PATCH failed', { recordId, err: patchErr?.message });
+        }
+      }
+      return c.json({
+        ok: false,
+        code: 'FILE_GONE',
+        message: 'הקובץ אינו זמין יותר ב-OneDrive',
+      });
+    }
+
     console.error('[get-preview-url] failed', { itemId, total_ms: totalMs, message });
     logError(c.executionCtx, c.env, {
       endpoint: '/webhook/get-preview-url',

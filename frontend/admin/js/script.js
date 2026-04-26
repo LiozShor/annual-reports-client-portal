@@ -621,7 +621,7 @@ function loadMobileDocPreview(recordId) {
     // Show loading
     loading.style.display = '';
 
-    getDocPreviewUrl(item.onedrive_item_id).then(({ previewUrl, downloadUrl }) => {
+    getDocPreviewUrl(item.onedrive_item_id, item.id).then(({ previewUrl, downloadUrl }) => {
         // Keep spinner until iframe actually loads
         iframe.onload = () => {
             loading.style.display = 'none';
@@ -635,6 +635,12 @@ function loadMobileDocPreview(recordId) {
     }).catch(err => {
         loading.style.display = 'none';
         error.style.display = '';
+        // DL-356: server self-healed a stale itemId — toast + clear local state.
+        if (err?.code === 'FILE_GONE') {
+            handleFileGoneSelfHeal(item, err);
+            errorMsg.textContent = err.message || 'הקובץ אינו זמין יותר ב-OneDrive';
+            return;
+        }
         errorMsg.textContent = humanizeError(err);
         const retryBtn = document.getElementById('mobilePreviewRetryBtn');
         if (retryBtn) {
@@ -643,6 +649,27 @@ function loadMobileDocPreview(recordId) {
             retryBtn.onclick = () => loadMobileDocPreview(item.id);
         }
     });
+}
+
+// DL-356: shared handler — invoked from both desktop + mobile preview paths
+// when /webhook/get-preview-url returns code:'FILE_GONE'. The Worker has
+// already nulled the row's file fields in Airtable, so we just mirror that
+// in the in-memory item and re-render the surfaces that show preview state.
+function handleFileGoneSelfHeal(item, err) {
+    if (!item) return;
+    item.onedrive_item_id = '';
+    item.file_url = '';
+    item.expected_filename = '';
+    item.file_hash = '';
+    item.uploaded_at = '';
+    try {
+        if (typeof showAIToast === 'function') {
+            showAIToast(err?.message || 'הקובץ אינו זמין יותר ב-OneDrive – הקישור הוסר', 'error');
+        }
+    } catch { /* toast helper unavailable in some surfaces */ }
+    // Best-effort surface refresh — different surfaces use different render fns.
+    try { if (typeof refreshItemDom === 'function' && item.id) refreshItemDom(item.id); } catch {}
+    try { if (typeof renderDocList === 'function') renderDocList(); } catch {}
 }
 
 function buildMobilePreviewFooter(item, footer) {
@@ -3623,13 +3650,27 @@ function humanizeError(err) {
     return err?.message || 'שגיאה לא ידועה';
 }
 
-async function getDocPreviewUrl(itemId) {
+// DL-356: also accept (itemId, recordId) so the Worker can self-heal a stale
+// onedrive_item_id (FILE_GONE) by PATCHing the originating Airtable row.
+// Old single-arg signature still supported for legacy call sites.
+async function getDocPreviewUrl(itemId, recordId) {
+    const params = new URLSearchParams({ itemId });
+    if (recordId) params.set('recordId', recordId);
     const response = await fetchWithTimeout(
-        `${ENDPOINTS.GET_PREVIEW_URL}?itemId=${encodeURIComponent(itemId)}`,
+        `${ENDPOINTS.GET_PREVIEW_URL}?${params.toString()}`,
         { headers: { 'Authorization': `Bearer ${authToken}` } }, FETCH_TIMEOUTS.slow
     );
     const data = await response.json();
-    if (!data.ok) throw new Error(data.error || 'Failed to get preview URL');
+    if (!data.ok) {
+        // DL-356: surface FILE_GONE as a typed error so callers can self-heal
+        // the local doc card (drop the preview button) and toast in Hebrew.
+        if (data.code === 'FILE_GONE') {
+            const err = new Error(data.message || 'הקובץ אינו זמין יותר ב-OneDrive');
+            err.code = 'FILE_GONE';
+            throw err;
+        }
+        throw new Error(data.error || 'Failed to get preview URL');
+    }
     return { previewUrl: data.previewUrl, downloadUrl: data.downloadUrl || null };
 }
 
@@ -3770,7 +3811,7 @@ async function loadDocPreview(recordId) {
     let _perfUrlFetched = 0;
 
     try {
-        const { previewUrl, downloadUrl } = await getDocPreviewUrl(item.onedrive_item_id);
+        const { previewUrl, downloadUrl } = await getDocPreviewUrl(item.onedrive_item_id, item.id);
         if (_perfOn) {
             _perfUrlFetched = performance.now();
             const urlMs = Math.round(_perfUrlFetched - _perfStart);
@@ -3802,6 +3843,12 @@ async function loadDocPreview(recordId) {
         loading.style.display = 'none';
         iframe.style.display = 'none';
         error.style.display = '';
+        // DL-356: server self-healed a stale itemId — toast + clear local state.
+        if (err?.code === 'FILE_GONE') {
+            handleFileGoneSelfHeal(item, err);
+            errorMsg.textContent = err.message || 'הקובץ אינו זמין יותר ב-OneDrive';
+            return;
+        }
         errorMsg.textContent = humanizeError(err);
         const retryBtn = document.getElementById('previewRetryBtn');
         if (retryBtn) {
