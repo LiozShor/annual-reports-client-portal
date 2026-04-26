@@ -64,7 +64,7 @@ const previewHandler = async (c: any) => {
       error: err as Error,
       details: `itemId=${itemId} total_ms=${totalMs}`,
     });
-    return c.json({ ok: false, error: message, stage });
+    return c.json({ ok: false, error: message });
   }
 };
 
