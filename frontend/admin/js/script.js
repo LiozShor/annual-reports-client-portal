@@ -8462,7 +8462,15 @@ function refreshClientDocTags(clientName) {
     if (docsPane && selectedClientName === clientName && docsPane.offsetParent !== null) {
         const body = docsPane.querySelector('.ai-missing-docs-body');
         if (body) body.innerHTML = tagsHtml;
-        const headerEl = docsPane.querySelector('.ai-section-header');
+        // DL-350: anchor on the missing-docs body's previous sibling — using
+        // querySelector('.ai-section-header') hit the first section header in
+        // the pane (currently "📋 הודעות הלקוח"), causing the messages header
+        // to be overwritten with the docs label and the real docs header to
+        // go stale (visible bug: two "מסמכים נדרשים" headers, no messages one).
+        const headerEl = body && body.previousElementSibling
+            && body.previousElementSibling.classList.contains('ai-section-header')
+            ? body.previousElementSibling
+            : null;
         if (headerEl) {
             const arrowHtml = headerEl.querySelector('.ai-section-header__arrow')?.outerHTML
                 || '<span class="ai-section-header__arrow">▸</span>';
