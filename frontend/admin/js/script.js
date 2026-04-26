@@ -6795,8 +6795,11 @@ async function submitAIReassign(recordId, templateId, docRecordId, loadingText, 
             reassignedItem.matched_short_name = data.matched_short_name || (matchedDoc && matchedDoc.name_short) || data.doc_title || '';
             reassignedItem.matched_template_name = reassignedItem.matched_short_name;
         }
-        if (docRecordId) {
-            updateClientDocState(reassignedItem?.client_name, docRecordId);
+        // DL-350: refresh the missing-docs/pane-1 surfaces for picker-created
+        // docs too — server returns data.doc_id for the freshly-created row.
+        const refreshDocId = docRecordId || data.doc_id;
+        if (refreshDocId) {
+            updateClientDocState(reassignedItem?.client_name, refreshDocId);
         }
         // DL-086: Transition to reviewed state instead of removing
         transitionCardToReviewed(recordId, 'reassigned', data);
@@ -6887,13 +6890,25 @@ function _buildDocTemplatePicker(container, item, opts) {
         const tpl = cached.apiTemplates.find(t => t.template_id === templateId);
         if (!tpl) return;
         const autoVars = ['year', 'spouse_name'];
-        const userVars = (tpl.variables || []).filter(v => !autoVars.includes(v));
+        // DL-350: derive vars from `tpl.variables` AND from any {placeholder}
+        // tokens in `name_he`/`short_name_he` — some templates list placeholders
+        // in name_he without populating `variables`, which previously slipped
+        // through as a "var-less" pick and saved a doc with raw {bank_name} etc.
+        const declared = (tpl.variables || []).filter(v => !autoVars.includes(v));
+        const placeholderRe = /\{([a-zA-Z_][a-zA-Z0-9_]*)\}/g;
+        const fromName = new Set();
+        for (const src of [tpl.name_he, tpl.short_name_he, tpl.name_en]) {
+            if (!src) continue;
+            let m;
+            while ((m = placeholderRe.exec(String(src)))) {
+                if (!autoVars.includes(m[1])) fromName.add(m[1]);
+            }
+        }
+        const userVars = Array.from(new Set([...declared, ...fromName]));
         if (userVars.length > 0) {
             renderVars(tpl, userVars, cached);
         } else {
             const display = _paFormatTemplateTitle(tpl, item, {});
-            // DL-350: include new_doc_name even for var-less templates so backend
-            // can auto-create the DOCUMENTS row when none exists yet on the report.
             showChip(display, { template_id: tpl.template_id, new_doc_name: display });
         }
     }
