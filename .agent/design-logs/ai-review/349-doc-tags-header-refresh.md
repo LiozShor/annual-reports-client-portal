@@ -1,5 +1,5 @@
 # Design Log 349: AI Review — Live Doc-Tag Header + Pane-1 Stats Across All Mutations
-**Status:** [IMPLEMENTED — NEED TESTING]
+**Status:** [COMPLETED]
 **Date:** 2026-04-26
 **Related Logs:** DL-074 (live doc state), DL-227 (inline waive/receive on tags), DL-330 (3-pane rework), DL-344 (reject clears unrelated approval)
 
