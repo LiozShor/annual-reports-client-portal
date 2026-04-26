@@ -6678,6 +6678,10 @@ function showAIReassignModal(recordId) {
             _aiReassignExpandedTarget = null;
             const picker = document.getElementById('aiReassignExpandedPicker');
             if (!picker) return;
+            // DL-350: hide the combobox while the picker is open — they target
+            // the same selection slot, rendering both at once is confusing.
+            const cbContainer = document.getElementById('aiReassignComboboxContainer');
+            if (cbContainer) cbContainer.style.display = 'none';
             picker.style.display = '';
             _buildDocTemplatePicker(picker, item, {
                 onPick: (target) => {
@@ -6702,6 +6706,9 @@ function closeAIReassignModal() {
     document.getElementById('aiReassignModal').classList.remove('show');
     const expandedPicker = document.getElementById('aiReassignExpandedPicker');
     if (expandedPicker) { expandedPicker.style.display = 'none'; expandedPicker.innerHTML = ''; }
+    // DL-350: restore combobox visibility for next open
+    const cbContainer = document.getElementById('aiReassignComboboxContainer');
+    if (cbContainer) cbContainer.style.display = '';
     _aiReassignExpandedTarget = null;
     aiCurrentReassignId = null;
 }
@@ -6885,7 +6892,9 @@ function _buildDocTemplatePicker(container, item, opts) {
             renderVars(tpl, userVars, cached);
         } else {
             const display = _paFormatTemplateTitle(tpl, item, {});
-            showChip(display, { template_id: tpl.template_id });
+            // DL-350: include new_doc_name even for var-less templates so backend
+            // can auto-create the DOCUMENTS row when none exists yet on the report.
+            showChip(display, { template_id: tpl.template_id, new_doc_name: display });
         }
     }
 
