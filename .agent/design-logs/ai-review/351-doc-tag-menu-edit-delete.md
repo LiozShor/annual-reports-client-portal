@@ -1,5 +1,5 @@
 # Design Log 351: Add Edit + Delete to AI Review doc tag menu
-**Status:** [IMPLEMENTED — NEED TESTING]
+**Status:** [COMPLETED]
 **Date:** 2026-04-26
 **Related Logs:** DL-227 (original `openDocTagMenu` design), DL-080 / DL-107 / DL-299 (Document Manager inline-rename patterns), DL-205 (clear file fields on status revert)
 
