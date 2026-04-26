@@ -6726,6 +6726,19 @@ async function confirmAIReassign() {
         return;
     }
 
+    // DL-350: in the expanded picker, if user typed a custom name but didn't
+    // click "הוסף", treat "אישור" as commit-then-submit.
+    const expandedPicker = document.getElementById('aiReassignExpandedPicker');
+    if (expandedPicker && expandedPicker.style.display !== 'none') {
+        const typedEl = expandedPicker.querySelector('.ai-tpl-custom-input');
+        const typed = typedEl ? typedEl.value.trim() : '';
+        if (typed) {
+            closeAIReassignModal();
+            await submitAIReassign(recordId, 'general_doc', '', null, typed, false, null);
+            return;
+        }
+    }
+
     const combobox = document.querySelector('#aiReassignComboboxContainer .doc-combobox');
     const templateId = combobox ? combobox.dataset.selectedValue : '';
     const docRecordId = combobox ? combobox.dataset.selectedDocId : '';
@@ -7181,9 +7194,23 @@ async function assignAIUnmatched(recordId, btnEl) {
     const actionsContainer = btnEl.closest('.ai-card-actions') || btnEl.closest('.ai-actions-panel');
     if (!actionsContainer) return;
     const comboboxEl = actionsContainer.querySelector('.doc-combobox');
-    const templateId = comboboxEl ? comboboxEl.dataset.selectedValue : '';
+    let templateId = comboboxEl ? comboboxEl.dataset.selectedValue : '';
     const docRecordId = comboboxEl ? comboboxEl.dataset.selectedDocId : '';
-    const newDocName = comboboxEl ? (comboboxEl.dataset.newDocName || '') : '';
+    let newDocName = comboboxEl ? (comboboxEl.dataset.newDocName || '') : '';
+    // DL-350: if the picker's custom-input has a typed name but the user
+    // hasn't clicked "הוסף" yet, treat the click on "שייך" as commit-then-assign.
+    if (!templateId) {
+        const customInput = actionsContainer.querySelector('.ai-tpl-custom-input');
+        const typed = customInput ? customInput.value.trim() : '';
+        if (typed) {
+            templateId = 'general_doc';
+            newDocName = typed;
+            if (comboboxEl) {
+                comboboxEl.dataset.selectedValue = templateId;
+                comboboxEl.dataset.newDocName = typed;
+            }
+        }
+    }
     if (!templateId) return;
 
     // DL-239: Detect cross-type toggle for "create new doc" path
