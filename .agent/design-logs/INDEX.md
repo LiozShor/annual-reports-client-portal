@@ -2,12 +2,12 @@
 
 Active and pending logs. For completed history, see [ARCHIVE-INDEX.md](ARCHIVE-INDEX.md).
 
-**Total logs:** 216 | **Active:** 118 | **Archived:** 98
+**Total logs:** 217 | **Active:** 119 | **Archived:** 98
 
 ## Folder Structure
 
 - `admin-ui/` — Admin UI (32)
-- `ai-review/` — AI Review & Classification (40)
+- `ai-review/` — AI Review & Classification (41)
 - `capital-statements/` — Capital Statements (4)
 - `client-portal/` — Client Portal & Questionnaires (13)
 - `documents/` — Documents & OneDrive (20)

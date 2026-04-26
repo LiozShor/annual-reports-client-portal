@@ -9,6 +9,24 @@ Fixed DL-330 regression: desktop pane-2 `.ai-missing-docs-body` was a silent no-
 Design log: `.agent/design-logs/ai-review/349-doc-tags-header-refresh.md`
 
 **Cleanup pending:** Test data tagged `DL349-` in `document_uid` / `classification_key` on Airtable (5 docs + 4 classifications on the test client's active report). Bulk-delete when test client no longer needs them.
+**Last Updated:** 2026-04-26 (DL-350 — IMPLEMENTED, awaiting merge + live test; AI Review reassign locked-button fix + 404 deferred)
+
+## DL-350: AI Review reassign — locked "שייך" button + console 404s — IMPLEMENTED (awaiting merge)
+
+After DL-345→DL-348 merges, two AI Review reassign regressions surfaced:
+
+**Bug 1 (fixed):** `initAIReviewComboboxes` `onSelect` (script.js:5180) used `closest('.ai-card-actions')` to find the assign button. In the desktop actions-panel layout (DL-334/DL-339) the button lives in `.ai-actions-panel`/`.ai-ap-primary-actions` — no `.ai-card-actions` ancestor — so the button never enabled after picking a doc. Applied DL-339 v1.5 multi-scope fallback. Cache-bust `script.js?v=339→340`.
+
+**Bug 2 (deferred):** Console showed three 404s on `…ew-classification`. Live `/webhook/review-classification` returns 400/401, not 404. Source-tree grep returns no candidate path. Most-likely cause: stale cached `endpoints.js`/`constants.js` (neither is `?v=`-busted in `frontend/admin/index.html:1519-1520`). Need user to expand the truncated URL in DevTools Network tab to confirm.
+
+### Test DL-350: AI Review reassign locked-button fix
+- [ ] Production after merge — AI Review tab → CPA-XXX → unmatched/issuer-mismatch card → open combobox → select doc → "שייך" button enables immediately
+- [ ] Click "שייך" → confirmation prompt → reassign succeeds → card transitions to "שויך מחדש"
+- [ ] Mobile viewport (<768px): same flow on fat-card layout — button still enables
+- [ ] No regression on `.btn-ai-comparison-assign` issuer-mismatch quick-assign
+- [ ] **Bug 2:** capture full 404 URL from Network tab → if real, file follow-up; if stale-cache only, close out
+
+Design log: `.agent/design-logs/ai-review/350-reassign-locked-button-and-404.md`
 
 ---
 
