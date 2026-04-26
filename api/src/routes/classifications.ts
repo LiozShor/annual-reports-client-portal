@@ -1674,11 +1674,17 @@ classifications.post('/review-classification', async (c) => {
             maxRecords: 1,
           });
           const tplFields = (tpl[0]?.fields || {}) as Record<string, unknown>;
-          const derivedName = new_doc_name
+          // DL-350: reject names that still contain {placeholder} tokens —
+          // the picker should have filled them, but if a slip-through ever
+          // sneaks in we strip them to avoid persisting "*{bank_name}*" etc.
+          const stripPlaceholders = (s: string) =>
+            s.replace(/\*?\*?\{[a-zA-Z_][a-zA-Z0-9_]*\}\*?\*?/g, '').replace(/\s+/g, ' ').replace(/\s*[–—-]\s*$/, '').trim();
+          const candidate = new_doc_name
             || (tplFields.name_he as string)
             || (tplFields.name as string)
             || (tplFields.name_en as string)
             || reassign_template_id;
+          const derivedName = stripPlaceholders(candidate) || reassign_template_id;
           const issuerKey = derivedName.toLowerCase().replace(/[^a-zA-Zא-ת0-9\s]/g, '').replace(/\s+/g, '_');
           const docUid = `${reportId}_${reassign_template_id}_${issuerKey}`;
           const created = await airtable.createRecords(TABLES.DOCUMENTS, [{
