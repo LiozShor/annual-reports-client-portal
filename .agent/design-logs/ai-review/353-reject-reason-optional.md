@@ -1,5 +1,5 @@
 # Design Log 353: AI-Review — Make Reject Reason Optional
-**Status:** [IMPLEMENTED — NEED TESTING]
+**Status:** [COMPLETED]
 **Date:** 2026-04-26
 **Related Logs:** DL-244 (rejected uploads visibility), DL-253 (group by reason), DL-334 (cockpit middle + actions), DL-344 (reject clears unrelated approval)
 
