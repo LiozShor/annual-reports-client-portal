@@ -4537,7 +4537,7 @@ function _renderPanelIssuerMismatch(item, reReviewing) {
     const sameTypeDocs = missingDocs.filter(d => relatedIds.includes(d.template_id));
 
     if (sameTypeDocs.length === 0) {
-        // Fall through to unmatched-style combobox
+        // DL-350: same as unmatched fallback — point the user at the modal.
         return `<div style="font-size: 12px; color: var(--gray-700);">
                 🤖 AI חושב שזה: <span style="font-weight: 500;">${renderDocLabel(templateName)}</span>
             </div>
@@ -4547,9 +4547,7 @@ function _renderPanelIssuerMismatch(item, reReviewing) {
             <div style="font-size: 11px; color: var(--warning-700); margin-top: 6px;">
                 ⚠️ כל מסמכי ${renderDocLabel(templateName)} כבר התקבלו
             </div>
-            <div style="font-size: 11px; color: var(--gray-600); margin-top: 8px;">שייך ל:</div>
-            <div class="ai-inline-ft-toggle" data-record-id="${escapeAttr(item.id)}" style="display:none"></div>
-            <div class="doc-combobox-container ai-ap-combobox" data-record-id="${escapeAttr(item.id)}"></div>`;
+            <div style="font-size: 11px; color: var(--gray-600); margin-top: 8px;">לחץ <b>שייך מסמך</b> לבחירת מסמך מתאים.</div>`;
     }
 
     const radiosHtml = sameTypeDocs.map(d => {
@@ -4573,15 +4571,14 @@ function _renderPanelIssuerMismatch(item, reReviewing) {
 }
 
 function _renderPanelUnmatched(item, reReviewing) {
-    // DL-348 follow-up: AI category-explanation block hidden in the unmatched
-    // ("לא זוהה") state — irrelevant to manual classification, just noise.
+    // DL-350: replace the inline combobox with a description-only body. The
+    // "שייך מסמך" button in the primary-actions area opens the full reassign
+    // modal — the inline combobox was too cramped for the picker UX.
     return `<div style="font-size: 12px;">
             <span style="color: var(--gray-500);">🤖</span>
             <span style="font-weight: 500; color: var(--gray-800);">לא זוהה</span>
         </div>
-        <div style="font-size: 11px; color: var(--gray-600); margin-top: 8px;">שייך ל:</div>
-        <div class="ai-inline-ft-toggle" data-record-id="${escapeAttr(item.id)}" style="display:none"></div>
-        <div class="doc-combobox-container ai-ap-combobox" data-record-id="${escapeAttr(item.id)}"></div>`;
+        <div style="font-size: 11px; color: var(--gray-600); margin-top: 8px;">לחץ <b>שייך מסמך</b> לבחירת מסמך מתאים.</div>`;
 }
 
 function _renderPanelOnHold(item) {
@@ -4712,9 +4709,9 @@ function _renderPanelAdditive(item, variant, reReviewing) {
         const relatedIds = RELATED_TEMPLATES[item.matched_template_id] || [item.matched_template_id];
         const sameTypeDocs = missingDocs.filter(d => relatedIds.includes(d.template_id));
         if (sameTypeDocs.length === 0) {
-            // Fallback to unmatched layout: single assign button (disabled until combobox picks) + destructive below.
+            // DL-350: open the full modal — inline combobox was too cramped.
             primaryHtml = `<div class="ai-ap-primary-actions">
-                <button class="ai-ap-btn ai-ap-btn--primary-success ai-ap-btn--full btn-ai-assign-confirm" disabled onclick="assignAIUnmatched('${idA}', this)">שייך</button>
+                <button class="ai-ap-btn ai-ap-btn--primary-success ai-ap-btn--full" onclick="showAIReassignModal('${idA}')">שייך מסמך</button>
                 ${destructiveBtn('ai-ap-primary-actions__tier2')}
                 ${cancelReReviewBtn}
             </div>`;
@@ -4729,8 +4726,9 @@ function _renderPanelAdditive(item, variant, reReviewing) {
             </div>`;
         }
     } else if (variant === 'unmatched') {
+        // DL-350: open modal — inline combobox replaced.
         primaryHtml = `<div class="ai-ap-primary-actions">
-            <button class="ai-ap-btn ai-ap-btn--primary-success ai-ap-btn--full btn-ai-assign-confirm" disabled onclick="assignAIUnmatched('${idA}', this)">שייך</button>
+            <button class="ai-ap-btn ai-ap-btn--primary-success ai-ap-btn--full" onclick="showAIReassignModal('${idA}')">שייך מסמך</button>
             ${destructiveBtn('ai-ap-primary-actions__tier2')}
             ${cancelReReviewBtn}
         </div>`;
@@ -5581,21 +5579,16 @@ function renderAICard(item) {
                 </button>
             `;
         } else {
-            // Edge case: no same-type docs in missing — fall back to full combobox
+            // Edge case: no same-type docs in missing — open full modal.
             comparisonHtml = `
                 <div class="ai-validation-area">
                     <div class="ai-validation-title">⚠️ כל מסמכי ${renderDocLabel(templateName)} כבר התקבלו</div>
                 </div>
             `;
             actionsHtml = `
-                <div class="ai-assign-section">
-                    <span class="ai-assign-label">שייך ל:</span>
-                    <div class="doc-combobox-container" data-record-id="${escapeAttr(item.id)}"></div>
-                    <button class="btn btn-success btn-sm btn-ai-assign-confirm" disabled
-                        onclick="assignAIUnmatched('${escapeAttr(item.id)}', this)">
-                        ${icon('check', 'icon-sm')} שייך
-                    </button>
-                </div>
+                <button class="btn btn-success btn-sm" onclick="showAIReassignModal('${escapeAttr(item.id)}')">
+                    ${icon('check', 'icon-sm')} שייך מסמך
+                </button>
                 <button class="btn btn-outline-danger btn-sm" onclick="rejectAIClassification('${escapeAttr(item.id)}')">
                     ${icon('x', 'icon-sm')} מסמך לא רלוונטי
                 </button>
@@ -5647,16 +5640,11 @@ function renderAICard(item) {
             <span class="ai-template-unmatched">🤖 לא זוהה</span>
             ${reasonHtml}
         `;
+        // DL-350: open the full reassign modal — inline combobox replaced.
         actionsHtml = `
-            <div class="ai-assign-section">
-                <span class="ai-assign-label">שייך ל:</span>
-                <div class="ai-inline-ft-toggle" data-record-id="${escapeAttr(item.id)}" style="display:none"></div>
-                <div class="doc-combobox-container" data-record-id="${escapeAttr(item.id)}"></div>
-                <button class="btn btn-success btn-sm btn-ai-assign-confirm" disabled
-                    onclick="assignAIUnmatched('${escapeAttr(item.id)}', this)">
-                    ${icon('check', 'icon-sm')} שייך
-                </button>
-            </div>
+            <button class="btn btn-success btn-sm" onclick="showAIReassignModal('${escapeAttr(item.id)}')">
+                ${icon('check', 'icon-sm')} שייך מסמך
+            </button>
             <button class="btn btn-outline-danger btn-sm" onclick="rejectAIClassification('${escapeAttr(item.id)}')">
                 ${icon('x', 'icon-sm')} מסמך לא רלוונטי
             </button>
