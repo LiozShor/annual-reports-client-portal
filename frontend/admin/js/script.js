@@ -5177,7 +5177,10 @@ function initAIReviewComboboxes(container) {
         createDocCombobox(el, ownDocs, {
             allowCreate: true,
             onSelect: (templateId) => {
-                const btn = el.closest('.ai-card-actions')?.querySelector('.btn-ai-assign-confirm');
+                // DL-350: desktop actions-panel (DL-334/339) has no .ai-card-actions ancestor;
+                // fall back to .ai-actions-panel so the assign button enables on selection.
+                const scope = el.closest('.ai-card-actions') || el.closest('.ai-actions-panel');
+                const btn = scope?.querySelector('.btn-ai-assign-confirm');
                 if (btn) btn.disabled = !templateId;
             },
             ...(hasBothTypes ? {
