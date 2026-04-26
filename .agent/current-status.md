@@ -1,5 +1,7 @@
 # Annual Reports CRM - Current Status
 
+**Last Updated:** 2026-04-26 (DL-354 — IDEA / BACKLOG logged; approve-and-send duplicate email — no idempotency guard between sendMail and Airtable write)
+
 **Last Updated:** 2026-04-26 (DL-351 — COMPLETED, live tests passed; AI Review doc-tag menu now has Edit/inline-rename — Delete dropped as redundant with Waive; pane-2 no-op fixed via `selectedClientName` fallback)
 
 ## DL-351: AI Review doc-tag menu Edit/inline-rename — COMPLETED (live 2026-04-26)
