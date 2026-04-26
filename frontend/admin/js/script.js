@@ -4546,8 +4546,7 @@ function _renderPanelIssuerMismatch(item, reReviewing) {
             </div>
             <div style="font-size: 11px; color: var(--warning-700); margin-top: 6px;">
                 ⚠️ כל מסמכי ${renderDocLabel(templateName)} כבר התקבלו
-            </div>
-            <div style="font-size: 11px; color: var(--gray-600); margin-top: 8px;">לחץ <b>שייך מסמך</b> לבחירת מסמך מתאים.</div>`;
+            </div>`;
     }
 
     const radiosHtml = sameTypeDocs.map(d => {
@@ -4571,14 +4570,12 @@ function _renderPanelIssuerMismatch(item, reReviewing) {
 }
 
 function _renderPanelUnmatched(item, reReviewing) {
-    // DL-350: replace the inline combobox with a description-only body. The
-    // "שייך מסמך" button in the primary-actions area opens the full reassign
-    // modal — the inline combobox was too cramped for the picker UX.
+    // DL-350: inline combobox removed — the primary-actions "שייך מסמך"
+    // button opens the full reassign modal.
     return `<div style="font-size: 12px;">
             <span style="color: var(--gray-500);">🤖</span>
             <span style="font-weight: 500; color: var(--gray-800);">לא זוהה</span>
-        </div>
-        <div style="font-size: 11px; color: var(--gray-600); margin-top: 8px;">לחץ <b>שייך מסמך</b> לבחירת מסמך מתאים.</div>`;
+        </div>`;
 }
 
 function _renderPanelOnHold(item) {
