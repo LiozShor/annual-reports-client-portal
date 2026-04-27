@@ -6975,11 +6975,30 @@ function showAssignUnidentifiedModal(emailEventId) {
     setTimeout(() => searchEl.focus(), 50);
 }
 
+function _dl361ShowProgressOverlay(message) {
+    _dl361HideProgressOverlay();
+    const ov = document.createElement('div');
+    ov.id = 'dl361ProgressOverlay';
+    ov.style.cssText = 'position:fixed; inset:0; background:rgba(0,0,0,0.45); z-index:10000; display:flex; align-items:center; justify-content:center;';
+    ov.innerHTML = `
+        <div style="background:#fff; border-radius:12px; padding:28px 32px; min-width:300px; max-width:420px; box-shadow:0 12px 40px rgba(0,0,0,0.25); text-align:center;">
+            <div class="dl361-spinner" style="width:40px; height:40px; margin:0 auto 16px; border:3px solid var(--gray-200); border-top-color:var(--primary-500, #4f46e5); border-radius:50%; animation:dl361spin 0.8s linear infinite;"></div>
+            <div style="font-weight:500; font-size:14px; margin-bottom:6px;">${escapeHtml(message)}</div>
+            <div style="font-size:12px; color:var(--gray-600);">הפעולה עשויה להימשך כ-30 שניות</div>
+        </div>
+        <style>@keyframes dl361spin { to { transform: rotate(360deg); } }</style>
+    `;
+    document.body.appendChild(ov);
+}
+
+function _dl361HideProgressOverlay() {
+    const ov = document.getElementById('dl361ProgressOverlay');
+    if (ov) ov.remove();
+}
+
 async function _dl361DoAssign(emailEventId, targetClientId, clientName) {
     _dl361CloseAssignModal();
-    if (typeof showAIToast === 'function') {
-        showAIToast(`שויך ל-${clientName} · מסווג מחדש…`, 'info');
-    }
+    _dl361ShowProgressOverlay(`משייך ל-${clientName} ומסווג מחדש…`);
     try {
         const response = await fetchWithTimeout(ENDPOINTS.ASSIGN_UNIDENTIFIED, {
             method: 'POST',
@@ -6992,20 +7011,34 @@ async function _dl361DoAssign(emailEventId, targetClientId, clientName) {
                 action: 'assign',
                 target_client_id: targetClientId,
             }),
-        }, 60000); // re-classify can take time
+        }, 90000); // re-classify can take time
         const data = await response.json();
         if (!data.ok) {
+            _dl361HideProgressOverlay();
             if (typeof showAIToast === 'function') showAIToast(data.error || 'שיוך נכשל', 'error');
             return;
         }
-        if (typeof showAIToast === 'function') {
-            showAIToast(`שויכו ${data.attachments_processed} קבצים ל-${clientName}`, 'success');
-        }
-        // Reload AI Review tab to surface the moved rows under the chosen client
+        // Refresh AI Review then auto-select the assigned client so the user
+        // sees their docs land — beats a vanishing toast.
         if (typeof loadAIClassifications === 'function') {
             await loadAIClassifications(false, true);
         }
+        _dl361HideProgressOverlay();
+        // selectedClientName is keyed by client_name, not client_id; match the
+        // first row that came back with this CPA id.
+        const newRow = (aiClassificationsData || []).find(i => i.client_id && i.client_name === clientName);
+        if (newRow && typeof selectClient === 'function') {
+            try { selectClient(clientName); } catch {}
+        }
+        if (typeof showAIToast === 'function') {
+            const failed = data.attachments_failed || 0;
+            const msg = failed > 0
+                ? `שויכו ${data.attachments_processed} קבצים ל-${clientName} (${failed} נכשלו)`
+                : `שויכו ${data.attachments_processed} קבצים ל-${clientName}`;
+            showAIToast(msg, failed > 0 ? 'warning' : 'success');
+        }
     } catch (err) {
+        _dl361HideProgressOverlay();
         if (typeof showAIToast === 'function') showAIToast('שיוך נכשל: ' + (err.message || ''), 'error');
     }
 }
@@ -7015,6 +7048,7 @@ function discardUnidentified(emailEventId) {
     showConfirmDialog(
         'להשליך את כל הקבצים מהאימייל הזה? הפעולה תעביר את הקבצים לארכיון בתיקיית "לקוח לא מזוהה".',
         async () => {
+            _dl361ShowProgressOverlay('משליך לארכיון…');
             try {
                 const response = await fetchWithTimeout(ENDPOINTS.ASSIGN_UNIDENTIFIED, {
                     method: 'POST',
@@ -7026,17 +7060,20 @@ function discardUnidentified(emailEventId) {
                         email_event_id: emailEventId,
                         action: 'discard',
                     }),
-                }, 30000);
+                }, 60000);
                 const data = await response.json();
                 if (!data.ok) {
+                    _dl361HideProgressOverlay();
                     if (typeof showAIToast === 'function') showAIToast(data.error || 'השלכה נכשלה', 'error');
                     return;
                 }
-                if (typeof showAIToast === 'function') showAIToast('הושלך', 'success');
                 if (typeof loadAIClassifications === 'function') {
                     await loadAIClassifications(false, true);
                 }
+                _dl361HideProgressOverlay();
+                if (typeof showAIToast === 'function') showAIToast('הושלך', 'success');
             } catch (err) {
+                _dl361HideProgressOverlay();
                 if (typeof showAIToast === 'function') showAIToast('השלכה נכשלה: ' + (err.message || ''), 'error');
             }
         },
