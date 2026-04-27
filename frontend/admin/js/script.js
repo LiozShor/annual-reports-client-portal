@@ -4806,29 +4806,9 @@ function _renderPanelAdditive(item, variant, reReviewing) {
         const rid = idA;
         const year = item.year || new Date().getFullYear();
         if (cp && cp.coversFullYear) {
-            secondaryBtns.push(`<span class="ai-ap-contract-full" style="background: var(--success-50); color: var(--success-700); padding: 4px 8px; border-radius: 3px; font-size: 11px;">📅 חוזה שנתי מלא ✓</span>`);
+            secondaryBtns.push(renderFullYearBadge(rid, year));
         } else {
-            const hasStart = cp && cp.startDate;
-            const hasEnd = cp && cp.endDate;
-            const startMonth = hasStart ? new Date(cp.startDate).getMonth() + 1 : null;
-            const endMonth = hasEnd ? new Date(cp.endDate).getMonth() + 1 : null;
-            const startVal = hasStart ? cp.startDate.substring(0, 7) : '';
-            const endVal = hasEnd ? cp.endDate.substring(0, 7) : '';
-            const startLabel = startMonth ? `${String(startMonth).padStart(2, '0')}.${year}` : '__.__';
-            const endLabel = endMonth ? `${String(endMonth).padStart(2, '0')}.${year}` : '__.__';
-            const statusText = cp ? 'חוזה חלקי' : 'לא זוהו תאריכים';
-            let reqBtns = '';
-            if (startMonth && startMonth > 1) {
-                reqBtns += `<button class="ai-ap-btn ai-ap-btn--ghost ai-ap-btn--small btn-request-period" data-record-id="${rid}" data-gap="before" onclick="event.stopPropagation(); requestMissingPeriod('${rid}', 1, ${startMonth - 1}, this)">+ בקש חוזה ${formatPeriodLabel(1, startMonth - 1, year)}</button>`;
-            }
-            if (endMonth && endMonth < 12) {
-                reqBtns += `<button class="ai-ap-btn ai-ap-btn--ghost ai-ap-btn--small btn-request-period" data-record-id="${rid}" data-gap="after" onclick="event.stopPropagation(); requestMissingPeriod('${rid}', ${endMonth + 1}, 12, this)">+ בקש חוזה ${formatPeriodLabel(endMonth + 1, 12, year)}</button>`;
-            }
-            secondaryBtns.push(`<span class="ai-ap-contract-partial ai-contract-period-banner" data-record-id="${rid}" style="font-size: 11px;">📅 ${statusText}:
-                מ <span class="contract-date-editable" data-field="start" data-value="${escapeAttr(startVal)}" onclick="event.stopPropagation(); editContractDate('${rid}', 'start', this)" title="לחץ לעריכה">${startLabel}</span>
-                עד <span class="contract-date-editable" data-field="end" data-value="${escapeAttr(endVal)}" onclick="event.stopPropagation(); editContractDate('${rid}', 'end', this)" title="לחץ לעריכה">${endLabel}</span>
-                ${reqBtns}
-            </span>`);
+            secondaryBtns.push(renderContractPeriodBanner(rid, cp, year));
         }
     }
 
@@ -6348,6 +6328,51 @@ async function approveAIClassificationAddRequired(recordId, templateId) {
     }, { confirmText: 'נכון - הוסף', btnClass: 'btn-success' });
 }
 
+// DL-359: Render full-year contract badge (clickable to edit)
+function renderFullYearBadge(rid, year) {
+    return `<span class="ai-ap-contract-full" data-record-id="${rid}" data-year="${year}" onclick="event.stopPropagation(); expandFullYearBadgeToEdit('${rid}', this)" style="background: var(--success-50); color: var(--success-700); padding: 4px 8px; border-radius: 3px; font-size: 11px; cursor: pointer;" title="לחץ לעריכה — תאריכי החוזה לא נכונים?">📅 חוזה שנתי מלא ✓ <span style="opacity: 0.6; font-size: 10px;">✏️</span></span>`;
+}
+
+// DL-359: Render partial-mode contract-period banner (extracted from inline render)
+function renderContractPeriodBanner(rid, cp, year) {
+    const hasStart = cp && cp.startDate;
+    const hasEnd = cp && cp.endDate;
+    const startMonth = hasStart ? new Date(cp.startDate).getMonth() + 1 : null;
+    const endMonth = hasEnd ? new Date(cp.endDate).getMonth() + 1 : null;
+    const startVal = hasStart ? cp.startDate.substring(0, 7) : '';
+    const endVal = hasEnd ? cp.endDate.substring(0, 7) : '';
+    const startLabel = startMonth ? `${String(startMonth).padStart(2, '0')}.${year}` : '__.__';
+    const endLabel = endMonth ? `${String(endMonth).padStart(2, '0')}.${year}` : '__.__';
+    const statusText = cp ? 'חוזה חלקי' : 'לא זוהו תאריכים';
+    let reqBtns = '';
+    if (startMonth && startMonth > 1) {
+        reqBtns += `<button class="ai-ap-btn ai-ap-btn--ghost ai-ap-btn--small btn-request-period" data-record-id="${rid}" data-gap="before" onclick="event.stopPropagation(); requestMissingPeriod('${rid}', 1, ${startMonth - 1}, this)">+ בקש חוזה ${formatPeriodLabel(1, startMonth - 1, year)}</button>`;
+    }
+    if (endMonth && endMonth < 12) {
+        reqBtns += `<button class="ai-ap-btn ai-ap-btn--ghost ai-ap-btn--small btn-request-period" data-record-id="${rid}" data-gap="after" onclick="event.stopPropagation(); requestMissingPeriod('${rid}', ${endMonth + 1}, 12, this)">+ בקש חוזה ${formatPeriodLabel(endMonth + 1, 12, year)}</button>`;
+    }
+    return `<span class="ai-ap-contract-partial ai-contract-period-banner" data-record-id="${rid}" data-year="${year}" style="font-size: 11px;">📅 ${statusText}:
+                מ <span class="contract-date-editable" data-field="start" data-value="${escapeAttr(startVal)}" onclick="event.stopPropagation(); editContractDate('${rid}', 'start', this)" title="לחץ לעריכה">${startLabel}</span>
+                עד <span class="contract-date-editable" data-field="end" data-value="${escapeAttr(endVal)}" onclick="event.stopPropagation(); editContractDate('${rid}', 'end', this)" title="לחץ לעריכה">${endLabel}</span>
+                ${reqBtns}
+            </span>`;
+}
+
+// DL-359: Swap full-year badge for partial-mode editor (override AI verdict)
+function expandFullYearBadgeToEdit(rid, badgeEl) {
+    const item = aiClassificationsData.find(i => i.id === rid);
+    const dsYear = badgeEl && badgeEl.dataset && parseInt(badgeEl.dataset.year);
+    const year = (item && item.year) || (dsYear && !isNaN(dsYear) ? dsYear : new Date().getFullYear());
+    let cp = item && item.contract_period;
+    if (!cp || !cp.startDate || !cp.endDate) {
+        cp = { startDate: `${year}-01-01`, endDate: `${year}-12-31`, coversFullYear: false };
+    } else {
+        cp = { ...cp, coversFullYear: false };
+    }
+    badgeEl.outerHTML = renderContractPeriodBanner(rid, cp, year);
+    safeCreateIcons();
+}
+
 // DL-270: Inline click-to-edit contract period dates
 function editContractDate(recordId, field, el) {
     if (el.querySelector('input')) return; // already editing
@@ -6420,39 +6445,20 @@ async function saveContractPeriod(recordId, startDate, endDate) {
         const item = aiClassificationsData.find(i => i.id === recordId);
         if (item) item.contract_period = data.contract_period;
 
-        // Recalculate request button
-        const banner = document.querySelector(`.ai-contract-period-banner[data-record-id="${recordId}"]`);
-        if (banner && data.contract_period) {
-            const cp = data.contract_period;
-            const endMonth = new Date(cp.endDate).getMonth() + 1;
-            const year = item?.year || new Date(cp.endDate).getFullYear();
-            const existingBtn = banner.querySelector('.btn-request-period');
-
+        // DL-359: Bidirectional swap — re-render via shared helpers based on
+        // server-recomputed coversFullYear. Locate either partial banner or full-year badge.
+        const cp = data.contract_period;
+        const existing = document.querySelector(
+            `.ai-contract-period-banner[data-record-id="${recordId}"], .ai-ap-contract-full[data-record-id="${recordId}"]`
+        );
+        if (existing && cp) {
+            const year = item?.year || (cp.endDate ? new Date(cp.endDate).getFullYear() : new Date().getFullYear());
             if (cp.coversFullYear) {
-                // Switch to full-year style
-                banner.style.background = '#f0fdf4';
-                banner.style.borderColor = '#22c55e33';
-                banner.style.color = '#166534';
-                banner.querySelector('.period-label').textContent = '📅 חוזה שנתי מלא ✓';
-                if (existingBtn) existingBtn.remove();
-            } else if (endMonth < 12) {
-                const missingLabel = `${endMonth + 1}-12/${year}`;
-                if (existingBtn) {
-                    existingBtn.innerHTML = `${icon('plus', 'icon-sm')} בקש חוזה ${missingLabel}`;
-                    existingBtn.disabled = false;
-                    safeCreateIcons();
-                } else {
-                    const btn = document.createElement('button');
-                    btn.className = 'btn btn-outline btn-sm btn-request-period';
-                    btn.dataset.recordId = recordId;
-                    btn.onclick = (e) => { e.stopPropagation(); requestRemainingContract(recordId, btn); };
-                    btn.innerHTML = `${icon('plus', 'icon-sm')} בקש חוזה ${missingLabel}`;
-                    banner.appendChild(btn);
-                    safeCreateIcons();
-                }
-            } else if (existingBtn) {
-                existingBtn.remove();
+                existing.outerHTML = renderFullYearBadge(recordId, year);
+            } else {
+                existing.outerHTML = renderContractPeriodBanner(recordId, cp, year);
             }
+            safeCreateIcons();
         }
 
         showAIToast('תאריכי חוזה עודכנו', 'success');
