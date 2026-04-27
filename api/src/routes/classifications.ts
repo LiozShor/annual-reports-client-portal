@@ -8,7 +8,7 @@ import type { TemplateInfo } from '../lib/doc-builder';
 import { buildShortName, REJECTION_REASONS, DRIVE_ID, sanitizeFilename, HE_TITLE, resolveOneDriveFilename } from '../lib/classification-helpers';
 import { mergePdfs } from '../lib/pdf-merge';
 import { splitPdf } from '../lib/pdf-split';
-import { computeSha256 } from '../lib/inbound/attachment-utils';
+import { computeSha256, resolveOneDriveRoot, uploadToOneDrive, getFileExtension } from '../lib/inbound/attachment-utils';
 import { classifyAttachment } from '../lib/inbound/document-classifier';
 import type { ProcessingContext, AttachmentInfo, ClassificationResult } from '../lib/inbound/types';
 import { getCachedOrFetch, invalidateCache } from '../lib/cache';
@@ -224,6 +224,41 @@ classifications.get('/get-pending-classifications', async (c) => {
     }
     mark('step3.clientReports', { nChunks: clientChunkPromises.length, nReports: clientBatches.flat().length, nDocIds: docIdsToFetch.size });
 
+    // ---- Step 3.5 (DL-361): For unidentified rows (client_id=''), fetch the
+    // linked email_events records to surface email subject in pane 1 accordion.
+    // Sender + received_at are already on the classification row.
+    const emailEventIdSet = new Set<string>();
+    for (const rec of deduped) {
+      const f = rec.fields as Record<string, unknown>;
+      const cid = (Array.isArray(f.client_id) ? f.client_id[0] : f.client_id) as string;
+      if (cid) continue; // only need event lookups for unidentified rows
+      const evField = f.email_event;
+      const evId = Array.isArray(evField) ? evField[0] : evField;
+      if (evId) emailEventIdSet.add(evId as string);
+    }
+    const emailEventSubjectMap = new Map<string, string>();
+    if (emailEventIdSet.size > 0) {
+      const evIdList = Array.from(emailEventIdSet);
+      const evChunkPromises: Promise<any[]>[] = [];
+      for (let i = 0; i < evIdList.length; i += 50) {
+        const chunk = evIdList.slice(i, i + 50);
+        const formula = `OR(${chunk.map(id => `RECORD_ID()='${id}'`).join(',')})`;
+        evChunkPromises.push(
+          airtable.listAllRecords('tblJAPEcSJpzdEBcW', {
+            filterByFormula: formula,
+            fields: ['subject'],
+          }),
+        );
+      }
+      const evBatches = await Promise.all(evChunkPromises);
+      for (const batch of evBatches) {
+        for (const ev of batch) {
+          emailEventSubjectMap.set(ev.id, (ev.fields.subject as string) || '');
+        }
+      }
+      mark('step3.5.emailEvents', { n: emailEventIdSet.size });
+    }
+
     // ---- Step 4: Fetch documents + templates + categories (parallel) ----
     // DL-322: scope DOCUMENTS fetch by RECORD_ID() of the linked `documents` field on REPORTS
     // (collected above). RECORD_ID() lookup is indexed in Airtable — same fast pattern used
@@ -433,6 +468,17 @@ classifications.get('/get-pending-classifications', async (c) => {
         })(),
         // DL-328: office-saved question for this classification (cleared after batch send)
         pending_question: (f.pending_question as string) || '',
+        // DL-361: surface email_event link + subject so frontend can group
+        // unidentified rows (client_id='') by email into per-email accordions.
+        email_event_id: (() => {
+          const ev = f.email_event;
+          return (Array.isArray(ev) ? ev[0] : ev) as string || '';
+        })(),
+        email_subject: (() => {
+          const ev = f.email_event;
+          const evId = (Array.isArray(ev) ? ev[0] : ev) as string;
+          return evId ? (emailEventSubjectMap.get(evId) || '') : '';
+        })(),
       };
     });
 
@@ -2066,6 +2112,338 @@ classifications.post('/save-classification-question', async (c) => {
     pending_question: question || null,
   });
   return c.json({ ok: true });
+});
+
+// =====================================================================
+// DL-361: POST /webhook/assign-unidentified
+// =====================================================================
+// Assign an unidentified inbound email (and all its attachments) to a
+// chosen client, OR discard it as junk. The endpoint operates on every
+// pending_classifications row whose `email_event` link matches the
+// supplied id AND whose client_id is empty (sentinel for unidentified).
+//
+// action='assign'
+//   1. Re-fetch each attachment's bytes from OneDrive.
+//   2. Re-classify against the chosen client's Required_Missing docs.
+//   3. Upload to the client's OneDrive folder (with DL-355 short_name_he).
+//   4. Delete the original file in לקוח לא מזוהה/{year}/.
+//   5. PATCH the classification row with new client_id, client_name,
+//      report link, matched_template_id, ai_*, file_url, expected_filename.
+//   6. Mark email_event Completed + match_method='manual_assignment'.
+//
+// action='discard'
+//   1. Move OneDrive items to לקוח לא מזוהה/ארכיון/.
+//   2. PATCH classification rows: review_status=rejected,
+//      notification_status=discarded.
+//   3. Mark email_event Discarded.
+classifications.post('/assign-unidentified', async (c) => {
+  const env = c.env;
+  const airtable = new AirtableClient(env.AIRTABLE_BASE_ID, env.AIRTABLE_PAT);
+  const clientIp = getClientIp(c.req.raw.headers);
+
+  // ---- Auth ----
+  const authHeader = c.req.header('Authorization') || '';
+  const bearer = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : '';
+  const tokenResult = await verifyToken(bearer, env.SECRET_KEY);
+  if (!tokenResult.valid) {
+    logSecurity(c.executionCtx, airtable, {
+      timestamp: new Date().toISOString(),
+      event_type: tokenResult.reason === 'TOKEN_EXPIRED' ? 'TOKEN_EXPIRED' : 'TOKEN_INVALID',
+      severity: 'WARNING',
+      actor: 'admin-token',
+      actor_ip: clientIp,
+      endpoint: '/webhook/assign-unidentified',
+      http_status: 401,
+      error_message: tokenResult.reason || '',
+    });
+    return c.json({ ok: false, error: 'Unauthorized' }, 401);
+  }
+
+  // ---- Parse body ----
+  let body: { email_event_id?: string; action?: string; target_client_id?: string };
+  try { body = await c.req.json(); } catch { return c.json({ ok: false, error: 'Invalid JSON' }, 400); }
+
+  const { email_event_id, action, target_client_id } = body;
+  if (!email_event_id) return c.json({ ok: false, error: 'Missing email_event_id' }, 400);
+  if (action !== 'assign' && action !== 'discard') {
+    return c.json({ ok: false, error: 'action must be "assign" or "discard"' }, 400);
+  }
+  if (action === 'assign' && !target_client_id) {
+    return c.json({ ok: false, error: 'target_client_id required when action=assign' }, 400);
+  }
+
+  try {
+    // ---- Fetch unidentified classifications for this email_event ----
+    // Using FIND() against the email_event lookup (link field flatten to comma list)
+    const escapedEvId = email_event_id.replace(/'/g, "\\'");
+    const allRows = await airtable.listAllRecords(TABLES.CLASSIFICATIONS, {
+      filterByFormula: `AND(FIND('${escapedEvId}', ARRAYJOIN({email_event})) > 0, {client_id} = '')`,
+    });
+
+    if (allRows.length === 0) {
+      return c.json({ ok: false, error: 'No unidentified rows for this email_event_id' }, 404);
+    }
+
+    const msGraph = new MSGraphClient(env, c.executionCtx);
+
+    if (action === 'discard') {
+      // ---- Move OneDrive items to ארכיון ----
+      let archived = 0;
+      for (const row of allRows) {
+        const itemId = (row.fields as any).onedrive_item_id as string | undefined;
+        if (itemId) {
+          await moveFileToArchive(msGraph, itemId);
+          archived++;
+        }
+      }
+      // ---- PATCH rows ----
+      for (const row of allRows) {
+        try {
+          await airtable.updateRecord(TABLES.CLASSIFICATIONS, row.id, {
+            review_status: 'rejected',
+            notification_status: 'discarded',
+            ai_reason: 'discarded by office — unidentified email',
+          });
+        } catch (e) {
+          console.error('[assign-unidentified] discard PATCH failed', row.id, (e as Error).message);
+        }
+      }
+      // ---- Update email_event ----
+      try {
+        await airtable.updateRecord('tblJAPEcSJpzdEBcW', email_event_id, {
+          processing_status: 'Discarded',
+        });
+      } catch (e) {
+        console.error('[assign-unidentified] email_event PATCH failed', (e as Error).message);
+      }
+      // ---- Invalidate KV cache (DL-318) ----
+      invalidateCache(
+        env.CACHE_KV,
+        'pending-classifications:annual_report',
+        'pending-classifications:capital_statements',
+        'pending-classifications:all',
+      );
+
+      logSecurity(c.executionCtx, airtable, {
+        timestamp: new Date().toISOString(),
+        event_type: 'INBOUND_DISCARDED',
+        severity: 'INFO',
+        actor: 'admin-token',
+        actor_ip: clientIp,
+        endpoint: '/webhook/assign-unidentified',
+        http_status: 200,
+        details: JSON.stringify({ email_event_id, attachment_count: allRows.length }),
+      });
+
+      return c.json({ ok: true, action: 'discarded', attachments_processed: allRows.length, archived });
+    }
+
+    // ===== action === 'assign' =====
+
+    // ---- Resolve target client ----
+    // target_client_id may be either an Airtable record id (rec...) or a CPA-id (CPA-XXX).
+    // Frontend uses CPA-id since that's what dashboard `clientsData` carries.
+    let clientRec: { id: string; fields: { name?: string; client_id?: string } } | null = null;
+    if (target_client_id!.startsWith('rec')) {
+      clientRec = await airtable.getRecord<{ name?: string; client_id?: string }>('tblFFttFScDRZ7Ah5', target_client_id!);
+    } else {
+      const lookups = await airtable.listAllRecords<{ name?: string; client_id?: string }>('tblFFttFScDRZ7Ah5', {
+        filterByFormula: `{client_id} = '${target_client_id!.replace(/'/g, "\\'")}'`,
+        fields: ['name', 'client_id'],
+        maxRecords: 1,
+      } as any);
+      if (lookups.length > 0) clientRec = lookups[0];
+    }
+    if (!clientRec) {
+      return c.json({ ok: false, error: 'Client not found' }, 400);
+    }
+    const clientName = clientRec.fields.name || '';
+    const clientId = clientRec.fields.client_id || '';
+    if (!clientName || !clientId) {
+      return c.json({ ok: false, error: 'Client missing name or client_id' }, 400);
+    }
+
+    // ---- Find active report (stages 1-4) ----
+    const reports = await airtable.listAllRecords(TABLES.REPORTS, {
+      filterByFormula: `AND({client_id} = '${clientId.replace(/'/g, "\\'")}', OR({stage} = 'Send_Questionnaire', {stage} = 'Waiting_For_Answers', {stage} = 'Pending_Approval', {stage} = 'Collecting_Docs', {stage} = 'Review'))`,
+      fields: ['report_key', 'year', 'stage', 'client_name', 'filing_type'],
+    });
+    if (reports.length === 0) {
+      return c.json({ ok: false, error: 'Target client has no active report (stages 1-5)' }, 400);
+    }
+    // Prefer highest year + non-CS by default; CS rows route below
+    reports.sort((a, b) => ((b.fields as any).year ?? 0) - ((a.fields as any).year ?? 0));
+    const primaryReport = reports[0];
+    const primaryReportId = primaryReport.id;
+    const primaryYear = String((primaryReport.fields as any).year ?? new Date().getFullYear());
+    const primaryFilingType = ((primaryReport.fields as any).filing_type as string) || 'annual_report';
+    const primaryReportKey = ((primaryReport.fields as any).report_key as string) || '';
+
+    // ---- Fetch required docs for the report ----
+    const requiredDocs = await airtable.listAllRecords(TABLES.DOCUMENTS, {
+      filterByFormula: `AND({report_key_lookup} = '${primaryReportKey.replace(/'/g, "\\'")}', {status} = 'Required_Missing')`,
+      fields: ['type', 'issuer_name', 'issuer_key', 'person', 'status', 'report_key_lookup', 'expected_filename', 'category'],
+    });
+
+    // ---- Build template map for resolveOneDriveFilename + ProcessingContext ----
+    const templateRecords = await getCachedOrFetch(env.CACHE_KV, 'cache:templates', 3600,
+      () => airtable.listAllRecords(TABLES.TEMPLATES));
+    const templateMap = buildTemplateMap(templateRecords);
+
+    const oneDriveRoot = await resolveOneDriveRoot(msGraph);
+    const pCtx: ProcessingContext = {
+      env,
+      ctx: c.executionCtx,
+      graph: msGraph,
+      airtable,
+      messageId: '',
+      templateMap,
+    };
+
+    let processed = 0;
+    let failed = 0;
+    const errors: { row_id: string; reason: string }[] = [];
+
+    for (const row of allRows) {
+      const f = row.fields as Record<string, any>;
+      const oldItemId = f.onedrive_item_id as string;
+      const attachmentName = f.attachment_name as string;
+      const contentType = (f.attachment_content_type as string) || 'application/octet-stream';
+      const size = (f.attachment_size as number) || 0;
+      const fileHash = (f.file_hash as string) || '';
+
+      try {
+        if (!oldItemId) { errors.push({ row_id: row.id, reason: 'no onedrive_item_id' }); failed++; continue; }
+
+        // ---- Re-download bytes ----
+        const fileBytes = await msGraph.getBinary(`/drives/${oneDriveRoot.driveId}/items/${oldItemId}/content`);
+        if (!fileBytes || fileBytes.byteLength === 0) {
+          errors.push({ row_id: row.id, reason: 'empty file bytes' });
+          failed++;
+          continue;
+        }
+
+        // ---- Build AttachmentInfo ----
+        const sha256 = fileHash || await computeSha256(fileBytes);
+        const att: AttachmentInfo = {
+          id: oldItemId,
+          name: attachmentName,
+          contentType,
+          size,
+          content: fileBytes,
+          sha256,
+        };
+
+        // ---- Re-classify ----
+        let classification: ClassificationResult | null = null;
+        try {
+          classification = await classifyAttachment(pCtx, att, requiredDocs, clientName, {
+            subject: (f.email_body_text as string) || '',
+            bodyPreview: (f.email_body_text as string) || '',
+            senderName: (f.sender_name as string) || '',
+            senderEmail: (f.sender_email as string) || '',
+            fallbackMode: requiredDocs.length === 0,
+            filingType: primaryFilingType,
+          });
+        } catch (e) {
+          console.warn('[assign-unidentified] classify failed', attachmentName, (e as Error).message);
+        }
+
+        // ---- Resolve filename via DL-355 ----
+        const expected = classification?.templateId
+          ? resolveOneDriveFilename({
+              templateId: classification.templateId,
+              issuerName: classification.issuerName,
+              attachmentName,
+              templateMap,
+            })
+          : attachmentName;
+        const finalName = expected || attachmentName;
+
+        // ---- Upload to client folder ----
+        const upload = await uploadToOneDrive(
+          msGraph,
+          oneDriveRoot,
+          clientName,
+          primaryYear,
+          finalName,
+          fileBytes,
+          primaryFilingType,
+        );
+
+        // ---- Delete original ----
+        try {
+          await msGraph.delete(`/drives/${oneDriveRoot.driveId}/items/${oldItemId}`);
+        } catch (e) {
+          console.warn('[assign-unidentified] delete original failed', oldItemId, (e as Error).message);
+        }
+
+        // ---- PATCH classification row ----
+        const updateFields: Record<string, unknown> = {
+          report: [primaryReportId],
+          client_name: clientName,
+          client_id: clientId,
+          year: parseInt(primaryYear, 10),
+          file_url: upload.webUrl,
+          onedrive_item_id: upload.itemId,
+          expected_filename: finalName,
+          matched_template_id: classification?.templateId ?? null,
+          ai_confidence: classification?.confidence ?? 0,
+          ai_reason: classification?.reason ?? 'manually assigned by office',
+          issuer_name: classification?.issuerName ?? '',
+          issuer_match_quality: classification?.matchQuality ?? null,
+          matched_doc_name: classification?.matchedDocName ?? null,
+          document: classification?.matchedDocRecordId ? [classification.matchedDocRecordId] : [],
+        };
+        await airtable.updateRecord(TABLES.CLASSIFICATIONS, row.id, updateFields);
+
+        processed++;
+      } catch (e) {
+        console.error('[assign-unidentified] row failed', row.id, (e as Error).message);
+        errors.push({ row_id: row.id, reason: (e as Error).message });
+        failed++;
+      }
+    }
+
+    // ---- Update email_event ----
+    try {
+      await airtable.updateRecord('tblJAPEcSJpzdEBcW', email_event_id, {
+        processing_status: 'Completed',
+        match_method: 'manual_assignment',
+      });
+    } catch (e) {
+      console.error('[assign-unidentified] email_event PATCH failed', (e as Error).message);
+    }
+
+    // ---- Invalidate KV cache ----
+    invalidateCache(
+      env.CACHE_KV,
+      'pending-classifications:annual_report',
+      'pending-classifications:capital_statements',
+      'pending-classifications:all',
+    );
+
+    logSecurity(c.executionCtx, airtable, {
+      timestamp: new Date().toISOString(),
+      event_type: 'INBOUND_MANUAL_ASSIGN',
+      severity: 'INFO',
+      actor: 'admin-token',
+      actor_ip: clientIp,
+      endpoint: '/webhook/assign-unidentified',
+      http_status: 200,
+      details: JSON.stringify({ email_event_id, target_client_id, processed, failed }),
+    });
+
+    return c.json({ ok: true, action: 'assigned', attachments_processed: processed, attachments_failed: failed, errors });
+  } catch (err) {
+    console.error('[assign-unidentified] fatal', (err as Error).message);
+    logError(c.executionCtx, env, {
+      endpoint: '/webhook/assign-unidentified',
+      error: err as Error,
+      details: JSON.stringify({ email_event_id, action }),
+    });
+    return c.json({ ok: false, error: (err as Error).message }, 500);
+  }
 });
 
 export default classifications;

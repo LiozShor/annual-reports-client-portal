@@ -94,8 +94,10 @@ export interface AttachmentInfo {
 export type MatchMethod =
   | 'email_match'
   | 'forwarded_email'
+  | 'forwarded_name'      // DL-361: display name in From: header fuzzy-matched against active client names
   | 'sender_name'
   | 'ai_identification'
+  | 'manual_assignment'   // DL-361: office picked the client via /webhook/assign-unidentified
   | 'unidentified';
 
 export interface ClientMatch {
