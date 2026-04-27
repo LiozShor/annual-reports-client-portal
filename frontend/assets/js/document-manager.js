@@ -3228,8 +3228,8 @@ function renderClientNotes() {
     // Composer bar (top, chat-style)
     html += `<div class="cn-add-bar">
         <textarea id="cnNewNote" placeholder="הוסף הערה..." rows="1"></textarea>
-        <button class="cn-send-btn" onclick="addClientNote()" title="שלח">
-            <i data-lucide="send" class="icon-sm"></i>
+        <button class="cn-send-btn" onclick="addClientNote()" title="הוסף הערה">
+            <i data-lucide="plus" class="icon-sm"></i>
         </button>
     </div>`;
 
