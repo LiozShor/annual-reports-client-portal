@@ -5129,6 +5129,118 @@ function buildClientAccordionHtml(clientName, clientItems, open) {
     return html;
 }
 
+// DL-361: Build a desktop pane-1 row for an unidentified email accordion.
+// `groupKey` is `__unidentified__:<email_event_id>`. All items share email_event_id.
+function buildUnidentifiedListRowHtml(groupKey, clientItems, isActive) {
+    const first = clientItems[0] || {};
+    const senderName = first.sender_name || first.sender_email || 'נשלח לא ידוע';
+    const subject = first.email_subject || '';
+    const count = clientItems.length;
+    const subjectShort = subject.length > 50 ? subject.substring(0, 50) + '…' : subject;
+    return `
+        <div class="ai-client-row ai-accordion-header ai-client-row--unidentified${isActive ? ' active' : ''}"
+             data-client="${escapeAttr(groupKey)}"
+             data-client-id=""
+             onclick="selectClient(this.dataset.client)"
+             style="border-inline-start: 3px solid var(--warning-500); background: var(--warning-50);"
+             title="לקוח לא מזוהה — דורש שיוך ידני">
+            <div class="ai-accordion-actions"></div>
+            <div class="ai-accordion-title" style="min-width: 0; flex: 1;">
+                <div style="min-width: 0;">
+                    <div style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-weight:500;">
+                        ❓ ${escapeHtml(senderName)}
+                    </div>
+                    <div class="ai-client-progress" style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+                        ${escapeHtml(subjectShort) || '(ללא נושא)'}
+                    </div>
+                </div>
+            </div>
+            <div class="ai-accordion-stats">
+                <span class="ai-client-pending-num" title="${count} קבצים ממתינים לשיוך" style="background: var(--warning-100); color: var(--warning-700);">${count}</span>
+            </div>
+        </div>
+    `;
+}
+
+// DL-361: Mobile accordion variant for unidentified emails. Reuses the desktop body.
+function buildUnidentifiedAccordionHtml(groupKey, clientItems) {
+    const first = clientItems[0] || {};
+    const senderName = first.sender_name || first.sender_email || 'נשלח לא ידוע';
+    const subject = first.email_subject || '';
+    const count = clientItems.length;
+    return `
+        <div class="ai-accordion ai-accordion--unidentified" data-client="${escapeAttr(groupKey)}">
+            <div class="ai-accordion-header" onclick="this.parentElement.classList.toggle('open')"
+                 style="border-inline-start: 3px solid var(--warning-500); background: var(--warning-50);">
+                <div class="ai-accordion-title" style="flex: 1;">
+                    <div style="font-weight:500;">❓ ${escapeHtml(senderName)}</div>
+                    <div style="font-size: 11px; color: var(--gray-700);">${escapeHtml(subject) || '(ללא נושא)'} · ${count} קבצים</div>
+                </div>
+            </div>
+            <div class="ai-accordion-content">
+                ${buildUnidentifiedDocsHtml(groupKey, clientItems)}
+            </div>
+        </div>
+    `;
+}
+
+// DL-361: Build the pane-2 body for an unidentified email — banner with assign/discard
+// actions and a read-only list of attachments (no per-row actions until assigned).
+function buildUnidentifiedDocsHtml(groupKey, clientItems) {
+    const first = clientItems[0] || {};
+    const evId = groupKey.startsWith('__unidentified__:') ? groupKey.substring('__unidentified__:'.length) : '';
+    const senderName = first.sender_name || first.sender_email || 'נשלח לא ידוע';
+    const subject = first.email_subject || '';
+    const receivedAt = first.received_at || '';
+    const receivedHuman = receivedAt ? new Date(receivedAt).toLocaleString('he-IL') : '';
+
+    let rowsHtml = '';
+    for (const item of clientItems) {
+        const fname = item.attachment_name || '';
+        const url = item.file_url || '';
+        const sizeKb = item.attachment_size ? Math.round(item.attachment_size / 1024) + ' KB' : '';
+        rowsHtml += `
+            <div class="ai-doc-row" style="opacity: 0.85; cursor: default;">
+                <div style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+                    ${escapeHtml(fname)}
+                </div>
+                <div style="font-size: 11px; color: var(--gray-600);">${sizeKb}</div>
+                ${url ? `<a href="${escapeAttr(url)}" target="_blank" class="ai-doc-row-link" onclick="event.stopPropagation()" title="פתח ב-OneDrive">${icon('external-link', 'icon-xs')}</a>` : ''}
+            </div>
+        `;
+    }
+
+    return `
+        <div class="ai-unidentified-pane" style="display: flex; flex-direction: column; height: 100%;">
+            <div class="ai-unidentified-banner" style="padding: 12px 16px; background: var(--warning-50); border-block-end: 1px solid var(--warning-200);">
+                <div style="display:flex; align-items:start; gap:12px; margin-bottom: 12px;">
+                    <div style="font-size: 24px; line-height: 1;">❓</div>
+                    <div style="flex:1; min-width:0;">
+                        <div style="font-weight: 600; font-size: 14px;">לקוח לא מזוהה</div>
+                        <div style="font-size: 12px; color: var(--gray-700); margin-top: 4px;">
+                            <strong>שולח:</strong> ${escapeHtml(senderName)}<br>
+                            <strong>נושא:</strong> ${escapeHtml(subject) || '(ללא נושא)'}<br>
+                            ${receivedHuman ? `<strong>התקבל:</strong> ${escapeHtml(receivedHuman)}<br>` : ''}
+                            <strong>קבצים:</strong> ${clientItems.length}
+                        </div>
+                    </div>
+                </div>
+                <div style="display:flex; gap:8px;">
+                    <button class="btn btn-primary" onclick="showAssignUnidentifiedModal('${escapeAttr(evId)}')">
+                        ${icon('user-plus', 'icon-sm')} בחר לקוח לשיוך
+                    </button>
+                    <button class="btn btn-secondary" onclick="discardUnidentified('${escapeAttr(evId)}')">
+                        ${icon('trash-2', 'icon-sm')} השלך
+                    </button>
+                </div>
+            </div>
+            <div class="ai-unidentified-doc-list" style="flex:1; overflow-y:auto; padding: 8px;">
+                ${rowsHtml}
+            </div>
+        </div>
+    `;
+}
+
 // DL-330: Build a compact client-row for desktop pane 1. Reuses .ai-accordion-header
 // look (per user requirement "exactly like today") but click selects the client into pane 2.
 function buildClientListRowHtml(clientName, clientItems, isActive) {
@@ -5250,8 +5362,17 @@ function selectClient(clientName) {
     // Re-render pane 2
     const docsPane = document.getElementById('aiDocsPane');
     if (!docsPane) return;
-    const clientItems = aiClassificationsData.filter(i => (i.client_name || 'לא ידוע') === clientName);
+    // DL-361: unidentified key looks like `__unidentified__:<email_event_id>`
+    const isUnid = clientName.startsWith('__unidentified__:');
+    const evId = isUnid ? clientName.substring('__unidentified__:'.length) : null;
+    const clientItems = isUnid
+        ? aiClassificationsData.filter(i => !i.client_id && (i.email_event_id || 'no-event') === evId)
+        : aiClassificationsData.filter(i => (i.client_name || 'לא ידוע') === clientName);
     if (clientItems.length > 0) {
+        if (isUnid) {
+            docsPane.innerHTML = buildUnidentifiedDocsHtml(clientName, clientItems);
+            safeCreateIcons(docsPane);
+        } else {
         // DL-334: desktop uses the new thin-row cockpit layout (mobile still uses accordion).
         docsPane.innerHTML = buildDesktopClientDocsHtml(clientName, clientItems);
         initAIReviewComboboxes(docsPane);
@@ -5260,6 +5381,7 @@ function selectClient(clientName) {
         const pendingLeft = clientItems.filter(i => (i.review_status || 'pending') === 'pending').length;
         if (pendingLeft === 0) {
             showClientReviewDonePrompt(clientName);
+        }
         }
     } else {
         docsPane.innerHTML = '';
@@ -5270,7 +5392,8 @@ function selectClient(clientName) {
 
     // DL-334: Auto-select first pending/on_hold doc into the cockpit.
     // DL-341: sort the same way pane 2 does so the auto-selected doc matches the topmost visible row.
-    if (clientItems.length > 0) {
+    // DL-361: skip auto-select for unidentified accordions — no per-row actions there.
+    if (!isUnid && clientItems.length > 0) {
         const firstPending = [...clientItems]
             .sort(compareDocRows)
             .find(i => !i.review_status || i.review_status === 'pending' || i.review_status === 'on_hold');
@@ -5332,9 +5455,21 @@ function renderAICards(items, allFilteredItems) {
     if (clientsPane) clientsPane.style.display = '';
     if (emptyState) emptyState.style.display = 'none';
 
-    // Group by client_name
+    // Group by client_name — except DL-361: unidentified rows (client_id==='')
+    // group by email_event_id so each email becomes its own accordion at the top.
     const groups = {};
+    const unidentifiedKeys = [];
     for (const item of items) {
+        if (!item.client_id) {
+            const evId = item.email_event_id || 'no-event';
+            const key = `__unidentified__:${evId}`;
+            if (!groups[key]) {
+                groups[key] = [];
+                unidentifiedKeys.push(key);
+            }
+            groups[key].push(item);
+            continue;
+        }
         const clientName = item.client_name || 'לא ידוע';
         if (!groups[clientName]) groups[clientName] = [];
         groups[clientName].push(item);
@@ -5385,11 +5520,22 @@ function renderAICards(items, allFilteredItems) {
     const clientsList = document.getElementById('aiClientsList');
     const renderTarget = clientsList || clientsPane;
 
+    // DL-361: split out unidentified groups so they render at the top.
+    const orderedGroupKeys = [
+        ...unidentifiedKeys,
+        ...Object.keys(groups).filter(k => !k.startsWith('__unidentified__:')),
+    ];
+
     if (isMobile) {
         // Mobile: render legacy grouped accordions into the clients list (docs/detail panes hidden by CSS)
         let html = '';
-        for (const [clientName, clientItems] of Object.entries(groups)) {
-            html += buildClientAccordionHtml(clientName, clientItems, false);
+        for (const key of orderedGroupKeys) {
+            const clientItems = groups[key];
+            if (key.startsWith('__unidentified__:')) {
+                html += buildUnidentifiedAccordionHtml(key, clientItems);
+            } else {
+                html += buildClientAccordionHtml(key, clientItems, false);
+            }
         }
         if (renderTarget) {
             renderTarget.innerHTML = html;
@@ -5410,9 +5556,15 @@ function renderAICards(items, allFilteredItems) {
         }
 
         // Pane 1: client rows go into the scrollable list (toolbar stays pinned above, untouched)
+        // DL-361: unidentified rows render first; their accordion key embeds the email_event_id.
         let listHtml = '';
-        for (const [clientName, clientItems] of Object.entries(groups)) {
-            listHtml += buildClientListRowHtml(clientName, clientItems, clientName === selectedClientName);
+        for (const key of orderedGroupKeys) {
+            const clientItems = groups[key];
+            if (key.startsWith('__unidentified__:')) {
+                listHtml += buildUnidentifiedListRowHtml(key, clientItems, key === selectedClientName);
+            } else {
+                listHtml += buildClientListRowHtml(key, clientItems, key === selectedClientName);
+            }
         }
         if (renderTarget) {
             renderTarget.innerHTML = listHtml;
@@ -5422,8 +5574,12 @@ function renderAICards(items, allFilteredItems) {
         // Pane 2: selected client — DL-334 thin-row cockpit (mobile path above keeps accordion).
         if (docsPane) {
             if (selectedClientName && groups[selectedClientName]) {
-                docsPane.innerHTML = buildDesktopClientDocsHtml(selectedClientName, groups[selectedClientName]);
-                initAIReviewComboboxes(docsPane);
+                if (selectedClientName.startsWith('__unidentified__:')) {
+                    docsPane.innerHTML = buildUnidentifiedDocsHtml(selectedClientName, groups[selectedClientName]);
+                } else {
+                    docsPane.innerHTML = buildDesktopClientDocsHtml(selectedClientName, groups[selectedClientName]);
+                    initAIReviewComboboxes(docsPane);
+                }
                 safeCreateIcons(docsPane);
                 // Re-apply .active row if the previously-active item is still in the list.
                 const activeId = window.activePreviewItemId;
@@ -6738,6 +6894,155 @@ function showAIReassignModal(recordId) {
 
     document.getElementById('aiReassignModal').classList.add('show');
     safeCreateIcons();
+}
+
+// =============================================================================
+// DL-361: Unidentified inbound — assign to client / discard
+// =============================================================================
+
+function _dl361CloseAssignModal() {
+    const ov = document.getElementById('dl361AssignModalOverlay');
+    if (ov) ov.remove();
+}
+
+function showAssignUnidentifiedModal(emailEventId) {
+    if (!emailEventId) return;
+    _dl361CloseAssignModal();
+
+    // Build modal DOM (no design-system .modal-overlay; per memory use .ai-modal-*)
+    const overlay = document.createElement('div');
+    overlay.id = 'dl361AssignModalOverlay';
+    overlay.className = 'ai-modal-overlay';
+    overlay.style.cssText = 'position:fixed; inset:0; background:rgba(0,0,0,0.4); z-index:9999; display:flex; align-items:center; justify-content:center;';
+    overlay.onclick = (e) => { if (e.target === overlay) _dl361CloseAssignModal(); };
+
+    const panel = document.createElement('div');
+    panel.className = 'ai-modal-panel';
+    panel.style.cssText = 'background:#fff; border-radius:8px; width:min(520px, 92vw); max-height:80vh; display:flex; flex-direction:column; box-shadow:0 12px 40px rgba(0,0,0,0.2);';
+
+    panel.innerHTML = `
+        <div style="padding:16px 20px; border-bottom:1px solid var(--gray-200); display:flex; align-items:center; justify-content:space-between;">
+            <div style="font-weight:600; font-size:15px;">בחר לקוח לשיוך</div>
+            <button onclick="_dl361CloseAssignModal()" style="background:none; border:none; cursor:pointer; font-size:20px; color:var(--gray-600);">×</button>
+        </div>
+        <div style="padding:12px 20px;">
+            <input id="dl361ClientSearch" type="text" placeholder="חיפוש שם או ת.ז..." autocomplete="off"
+                   style="width:100%; padding:8px 12px; font-size:14px; border:1px solid var(--gray-300); border-radius:6px;">
+        </div>
+        <div id="dl361ClientList" style="flex:1; overflow-y:auto; padding:0 12px 12px;"></div>
+        <div style="padding:12px 20px; border-top:1px solid var(--gray-200); display:flex; justify-content:flex-end; gap:8px;">
+            <button class="btn btn-secondary" onclick="_dl361CloseAssignModal()">ביטול</button>
+        </div>
+    `;
+    overlay.appendChild(panel);
+    document.body.appendChild(overlay);
+
+    const listEl = panel.querySelector('#dl361ClientList');
+    const searchEl = panel.querySelector('#dl361ClientSearch');
+
+    const renderList = (filter) => {
+        const lower = (filter || '').trim().toLowerCase();
+        const seen = new Set();
+        const rows = [];
+        for (const c of (clientsData || [])) {
+            if (!c.client_id || seen.has(c.client_id)) continue;
+            seen.add(c.client_id);
+            const name = c.name || '';
+            const cid = c.client_id || '';
+            const hay = (name + ' ' + cid).toLowerCase();
+            if (lower && !hay.includes(lower)) continue;
+            rows.push(`
+                <div class="dl361-client-item" data-client-id="${escapeAttr(cid)}" data-client-name="${escapeAttr(name)}"
+                     style="padding:8px 12px; border-radius:4px; cursor:pointer; display:flex; justify-content:space-between; align-items:center;"
+                     onmouseover="this.style.background='var(--gray-100)'" onmouseout="this.style.background=''">
+                    <div>
+                        <div style="font-weight:500;">${escapeHtml(name)}</div>
+                        <div style="font-size:11px; color:var(--gray-600);">${escapeHtml(cid)}</div>
+                    </div>
+                </div>
+            `);
+            if (rows.length >= 60) break;
+        }
+        listEl.innerHTML = rows.join('') || '<div style="padding:16px; text-align:center; color:var(--gray-600);">לא נמצאו לקוחות</div>';
+        listEl.querySelectorAll('.dl361-client-item').forEach(el => {
+            el.addEventListener('click', () => {
+                _dl361DoAssign(emailEventId, el.dataset.clientId, el.dataset.clientName);
+            });
+        });
+    };
+    renderList('');
+    searchEl.addEventListener('input', () => renderList(searchEl.value));
+    setTimeout(() => searchEl.focus(), 50);
+}
+
+async function _dl361DoAssign(emailEventId, targetClientId, clientName) {
+    _dl361CloseAssignModal();
+    if (typeof showAIToast === 'function') {
+        showAIToast(`שויך ל-${clientName} · מסווג מחדש…`, 'info');
+    }
+    try {
+        const response = await fetchWithTimeout(ENDPOINTS.ASSIGN_UNIDENTIFIED, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${authToken}`,
+            },
+            body: JSON.stringify({
+                email_event_id: emailEventId,
+                action: 'assign',
+                target_client_id: targetClientId,
+            }),
+        }, 60000); // re-classify can take time
+        const data = await response.json();
+        if (!data.ok) {
+            if (typeof showAIToast === 'function') showAIToast(data.error || 'שיוך נכשל', 'error');
+            return;
+        }
+        if (typeof showAIToast === 'function') {
+            showAIToast(`שויכו ${data.attachments_processed} קבצים ל-${clientName}`, 'success');
+        }
+        // Reload AI Review tab to surface the moved rows under the chosen client
+        if (typeof loadAIClassifications === 'function') {
+            await loadAIClassifications(false, true);
+        }
+    } catch (err) {
+        if (typeof showAIToast === 'function') showAIToast('שיוך נכשל: ' + (err.message || ''), 'error');
+    }
+}
+
+function discardUnidentified(emailEventId) {
+    if (!emailEventId) return;
+    showConfirmDialog(
+        'להשליך את כל הקבצים מהאימייל הזה? הפעולה תעביר את הקבצים לארכיון בתיקיית "לקוח לא מזוהה".',
+        async () => {
+            try {
+                const response = await fetchWithTimeout(ENDPOINTS.ASSIGN_UNIDENTIFIED, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${authToken}`,
+                    },
+                    body: JSON.stringify({
+                        email_event_id: emailEventId,
+                        action: 'discard',
+                    }),
+                }, 30000);
+                const data = await response.json();
+                if (!data.ok) {
+                    if (typeof showAIToast === 'function') showAIToast(data.error || 'השלכה נכשלה', 'error');
+                    return;
+                }
+                if (typeof showAIToast === 'function') showAIToast('הושלך', 'success');
+                if (typeof loadAIClassifications === 'function') {
+                    await loadAIClassifications(false, true);
+                }
+            } catch (err) {
+                if (typeof showAIToast === 'function') showAIToast('השלכה נכשלה: ' + (err.message || ''), 'error');
+            }
+        },
+        'השלך',
+        true,
+    );
 }
 
 function closeAIReassignModal() {

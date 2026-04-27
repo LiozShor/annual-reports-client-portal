@@ -775,22 +775,53 @@ export async function processInboundEmail(
       match_method: clientMatch.matchMethod,
     });
 
-    // 8. Handle unidentified client
+    // 8. Handle unidentified client (DL-361)
+    // Upload to לקוח לא מזוהה folder AND create a pending_classifications row per
+    // attachment so the email surfaces in the AI Review tab as a virtual accordion.
+    // The office can then assign-to-client via /webhook/assign-unidentified, which
+    // re-classifies + moves the OneDrive files into the correct client folder.
     if (clientMatch.matchMethod === 'unidentified') {
       const unidentifiedRoot = await resolveOneDriveRoot(graph);
-      // Upload attachments to unidentified folder if any
+      const yearStr = String(new Date().getFullYear());
       for (const att of attachments) {
         try {
-          await uploadToOneDrive(
+          const upload = await uploadToOneDrive(
             graph,
             unidentifiedRoot,
             'לקוח לא מזוהה',
-            String(new Date().getFullYear()),
+            yearStr,
             att.name,
             att.content,
           );
+          await airtable.createRecords(TABLES.PENDING_CLASSIFICATIONS, [{
+            fields: {
+              classification_key: `unidentified-${emailEventId}-${att.name}`,
+              report: [],
+              document: [],
+              email_event: emailEventId ? [emailEventId] : [],
+              attachment_name: att.name,
+              attachment_content_type: att.contentType,
+              attachment_size: att.size,
+              sender_email: metadata.senderEmail,
+              sender_name: metadata.senderName,
+              received_at: metadata.receivedAt,
+              matched_template_id: null,
+              ai_confidence: 0,
+              ai_reason: 'unidentified — awaiting client assignment',
+              issuer_name: '',
+              file_url: upload.webUrl,
+              onedrive_item_id: upload.itemId,
+              file_hash: att.sha256,
+              review_status: 'pending',
+              client_name: 'לקוח לא מזוהה',
+              client_id: '',
+              year: parseInt(yearStr, 10),
+              expected_filename: att.name,
+              email_body_text: (metadata.bodyPreview || '').substring(0, 500),
+            },
+          }]);
         } catch (err) {
-          console.error(`[inbound] Upload failed for unidentified: ${(err as Error).message}`);
+          console.error(`[inbound] Unidentified upload/row failed for "${att.name}": ${(err as Error).message}`);
         }
       }
       await airtable.updateRecord(TABLES.EMAIL_EVENTS, emailEventId, {

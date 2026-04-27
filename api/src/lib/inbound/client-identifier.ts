@@ -150,6 +150,69 @@ function isForwardedSelfMatch(extractedEmail: string, senderEmail: string): bool
   return extractedEmail.toLowerCase() === senderEmail.toLowerCase();
 }
 
+/**
+ * DL-361: Extract the display name from a forward header `From: <Name> <email>`.
+ * Mirrors `parseForwardedEmail` patterns. Returns null if not present.
+ */
+function parseForwardedSenderName(bodyText: string): string | null {
+  const patterns = [
+    // From: Name <email@domain.com>
+    /From:\s*"?([^"<\n]+?)"?\s*<[^>]+>/i,
+    // Hebrew: מאת: Name <email>
+    /מאת:\s*"?([^"<\n]+?)"?\s*<[^>]+>/,
+    // From: Name email@domain.com (no angle brackets)
+    /From:\s*([^\n<]+?)\s+[\w.+-]+@[\w.-]+\.[A-Za-z]{2,}/i,
+    // Hebrew bare: מאת: Name email@domain.com
+    /מאת:\s*([^\n<]+?)\s+[\w.+-]+@[\w.-]+\.[A-Za-z]{2,}/,
+  ];
+  for (const pattern of patterns) {
+    const m = bodyText.match(pattern);
+    if (m?.[1]) {
+      const name = m[1].trim().replace(/^["']|["']$/g, '').trim();
+      if (name && name.length >= 2) return name;
+    }
+  }
+  return null;
+}
+
+/** Tokenize a name into lowercased non-empty words (Unicode-aware). */
+function nameTokens(s: string): string[] {
+  return s
+    .normalize('NFKC')
+    .toLowerCase()
+    .split(/[\s ]+/)
+    .map(t => t.trim())
+    .filter(Boolean);
+}
+
+/**
+ * DL-361: Token-overlap fuzzy match.
+ * Returns the unique target client whose name tokens contain ALL candidate tokens.
+ * Returns null if 0 or 2+ targets match (ambiguity → defer to AI).
+ * Requires candidate to have ≥2 tokens to avoid over-matching common given names.
+ */
+function tokenOverlapMatch(
+  candidate: string,
+  targets: AirtableRecord<ClientFields>[],
+): AirtableRecord<ClientFields> | null {
+  const cTokens = nameTokens(candidate);
+  if (cTokens.length < 2) return null;
+
+  const matches: AirtableRecord<ClientFields>[] = [];
+  for (const t of targets) {
+    const tName = (t.fields.name ?? '').trim();
+    if (!tName) continue;
+    const tTokens = nameTokens(tName);
+    if (tTokens.length === 0) continue;
+    const allFound = cTokens.every(ct => tTokens.some(tt => tt.includes(ct) || ct.includes(tt)));
+    if (allFound) {
+      matches.push(t);
+      if (matches.length > 1) return null; // ambiguity
+    }
+  }
+  return matches.length === 1 ? matches[0] : null;
+}
+
 async function matchByForwardedEmail(
   pCtx: ProcessingContext,
   metadata: EmailMetadata,
@@ -332,16 +395,26 @@ async function matchByAI(
     return null;
   }
 
-  // Match AI response against active clients list
+  // Match AI response against active clients list.
+  // DL-361: client_id stays exact (authoritative); client_name uses
+  // tokenOverlapMatch so AI can return a short form (e.g. "עידן אלון")
+  // and still resolve to the longer Airtable name ("עידן יוסף אלון").
   const aiClientId = (aiResult.client_id ?? '').trim().toLowerCase();
-  const aiClientName = (aiResult.client_name ?? '').trim().toLowerCase();
+  const aiClientName = (aiResult.client_name ?? '').trim();
 
-  for (const client of activeClients) {
-    const cId = (client.fields.client_id ?? '').trim().toLowerCase();
-    const cName = (client.fields.name ?? '').trim().toLowerCase();
+  if (aiClientId) {
+    for (const client of activeClients) {
+      const cId = (client.fields.client_id ?? '').trim().toLowerCase();
+      if (cId && cId === aiClientId) {
+        return matchFromRecord(client, 'ai_identification', confidence, metadata.senderEmail);
+      }
+    }
+  }
 
-    if ((aiClientId && cId === aiClientId) || (aiClientName && cName === aiClientName)) {
-      return matchFromRecord(client, 'ai_identification', confidence, metadata.senderEmail);
+  if (aiClientName) {
+    const nameMatch = tokenOverlapMatch(aiClientName, activeClients);
+    if (nameMatch) {
+      return matchFromRecord(nameMatch, 'ai_identification', confidence, metadata.senderEmail);
     }
   }
 
@@ -384,8 +457,27 @@ export async function identifyClient(
     if (forwardedMatch) return forwardedMatch;
 
     // Forwarded email not in Clients table (common — clients have multiple
-    // addresses). Skip Tier 1 (would self-match office staff) and go to AI.
+    // addresses). Fetch active clients once, used by Tier 2.5 + Tier 4.
     const activeClients = await fetchActiveClients(pCtx);
+
+    // Tier 2.5 (DL-361): forwarded sender display-name fuzzy match.
+    // Catches the common case where the forwarded "From: <Name> <email>"
+    // name corresponds to a client whose Airtable email differs from the
+    // forwarded address (e.g. multiple addresses per client).
+    const forwardedName = parseForwardedSenderName(metadata.bodyText);
+    if (forwardedName && activeClients.length > 0) {
+      const nameMatch = tokenOverlapMatch(forwardedName, activeClients);
+      if (nameMatch) {
+        return matchFromRecord(
+          nameMatch,
+          'forwarded_name',
+          0.85,
+          forwardedInBody ?? metadata.senderEmail,
+        );
+      }
+    }
+
+    // Tier 4: AI identification fallback.
     if (activeClients.length > 0) {
       const aiMatch = await matchByAI(pCtx, metadata, activeClients, attachmentNames);
       if (aiMatch) {
