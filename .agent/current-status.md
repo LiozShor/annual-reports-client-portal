@@ -3,7 +3,7 @@
 **Last Updated:** 2026-04-27 (DL-362 — IMPLEMENTED, NEED TESTING; doc-manager client-notes redesigned as chat-bubble conversation view)
 **Last Updated:** 2026-04-27 (DL-358 — COMPLETED, live tests passed; comment email opens directly with bookkeeper's text, no greeting row)
 
-## DL-362: Doc-manager chat-bubble conversation view — IMPLEMENTED, NEED TESTING
+## DL-362: Doc-manager chat-bubble conversation view — COMPLETED (live 2026-04-27)
 
 Frontend-only redesign of the doc-manager client-notes timeline. Replaced DL-360's card+toggle layout with a true chat view: alternating office/client bubbles (office RIGHT / client LEFT — Israeli WhatsApp RTL convention), letter avatars on first-of-run, date dividers between Outlook threads, oldest-first message order within a thread, hover-revealed edit/delete icons, `batch_questions_sent` as a centered system notice. DL-360 `conversation_id` bucketing logic preserved. `toggleCnThread` deleted. Files: `frontend/assets/js/document-manager.js` (renderClientNotes rewritten), `frontend/assets/css/document-manager.css` (.cn-* block replaced).
 

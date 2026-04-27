@@ -1,5 +1,5 @@
 # Design Log 362: Doc-Manager Client-Notes as Chat-Bubble Conversation
-**Status:** [IMPLEMENTED — NEED TESTING]
+**Status:** [COMPLETED]
 **Date:** 2026-04-27
 **Related Logs:** DL-360 (thread grouping), DL-266 (office reply linkage), DL-337 (raw_snippet fallback)
 
