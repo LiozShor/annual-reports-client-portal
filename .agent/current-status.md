@@ -1,7 +1,34 @@
 # Annual Reports CRM - Current Status
 
+**Last Updated:** 2026-04-27 (DL-363 — IDEA / BACKLOG; chat-bubble side misclassification for office-authored emails landing as client notes)
 **Last Updated:** 2026-04-27 (DL-362 — IMPLEMENTED, NEED TESTING; doc-manager client-notes redesigned as chat-bubble conversation view)
 **Last Updated:** 2026-04-27 (DL-358 — COMPLETED, live tests passed; comment email opens directly with bookkeeper's text, no greeting row)
+
+## DL-363: Chat-bubble side misclassification for office-authored emails — IDEA / BACKLOG (logged 2026-04-27)
+
+**Symptom (live, observed on a client thread 2026-04-27):** A bubble with text clearly written by the office is rendered on the RIGHT (client side, client-initial avatar, sender label = client email) instead of LEFT (office side, `מ` avatar, brand-blue).
+
+**Root cause:**
+- `renderClientNotes` classifier at `frontend/assets/js/document-manager.js:3264` only flags `office` when `type === 'office_reply'` or `source === 'manual'`. Any entry that arrived via the inbound email pipeline is forced to `client`.
+- `api/src/lib/inbound/processor.ts:276` (`resolveNoteSenderEmail`, DL-282) deliberately overwrites the original `From:` header with the client's email and never stores office-domain authorship. There is currently no `direction` field in the saved client_note JSON.
+
+**Two ingest paths can produce this bug:**
+1. **Quoted-reply leak** — client replied, Outlook included the office's prior message in the quoted block, and `text-extractor.ts` didn't strip it; `raw_snippet` ends up holding office-authored text under the client envelope.
+2. **Outgoing-email capture** — office-sent mail (from Outlook, not the in-app composer) lands via Graph Sent-Items subscription and gets stored under the client thread with sender flipped to the client.
+
+**Three handling options (ranked):**
+
+**Option 1 — Authoritative fix at ingest (durable).** Add `direction: 'office' | 'client'` to the saved client_note JSON. In `processor.ts`, before `resolveNoteSenderEmail` runs, compare the raw `from` header to office domains (`moshe-atsits.co.il`, etc.) and set `direction`. Classifier reads `entry.direction` first. One-shot backfill endpoint patches historical notes via heuristics + reply-map linkage.
+
+**Option 2 — Manual re-side toggle (cheapest immediate win).** Add a swap-icon button to the hover-revealed action row in each bubble (next to edit/delete). Click persists `direction_override: 'office' | 'client'` via the existing `editClientNote` save path. ~30 LoC frontend, accept new field server-side. Doesn't prevent the bug — lets office staff correct any case in one click.
+
+**Option 3 — Strip quoted text in `text-extractor.ts`.** Detect Outlook/Hebrew quote markers (`From:` / `מאת:`, `Sent:` / `נשלח:`, `> ` prefixes, `<blockquote>`) and trim everything from the first marker. Prevents future cause-#1 occurrences only; doesn't help past notes or cause #2.
+
+**Recommended sequencing when picked up:** Option 2 first (1-day fix, gives manual control immediately), then Option 1 (durable + enables future analytics like "% of threads where office wrote first"). Add Option 3 only if a quick Airtable inspection of this specific entry's `raw_snippet` confirms quoted-block markers — i.e., cause #1 is dominant.
+
+**Pre-work to scope properly:** Open the affected client's Airtable record → `client_notes` JSON → find the misclassified entry → check whether `raw_snippet` contains quoted-block markers (`מאת:` / `From:` / `>` prefixes). That answers "Option 3 yes/no" before any code is written.
+
+---
 
 ## DL-362: Doc-manager chat-bubble conversation view — COMPLETED (live 2026-04-27)
 
