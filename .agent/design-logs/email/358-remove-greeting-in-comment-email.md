@@ -1,5 +1,5 @@
 # Design Log 358: Remove `שלום {clientName}` Greeting from Comment Email
-**Status:** [IMPLEMENTED — NEED TESTING]
+**Status:** [COMPLETED]
 **Date:** 2026-04-27
 **Related Logs:** [DL-289](../admin-ui/289-recent-messages-checkmark-thread.md) (live preview SSOT), [DL-199](../admin-ui/199-client-communication-notes.md) (comment send flow), [DL-076](076-wf03-client-email-card-layout.md) (Hebrew email layout)
 
@@ -39,12 +39,12 @@ Skipped — single-line edit to an established email template. Cumulative knowle
 | `.agent/current-status.md` | Modify | Add Test DL-358 entry. |
 
 ## 7. Validation Plan
-* [ ] TS build passes: `./node_modules/.bin/tsc --noEmit` (no new errors beyond pre-existing 3).
-* [ ] `wrangler deploy`.
-* [ ] Live preview: Recent Messages → expand reply modal → type "test" → preview shows logo, blue header bar, "test" as body, contact block, signature. NO greeting line above the comment body.
-* [ ] Send a real test comment to a test client → received email matches preview layout.
-* [ ] Other Hebrew emails (questionnaire reminder, batch status) STILL contain `שלום {name},` — regression check.
-* [ ] No broken layout: comment text correctly padded under blue header (no awkward whitespace where greeting used to be).
+* [x] TS build passes: `./node_modules/.bin/tsc --noEmit` (no new errors beyond pre-existing 3).
+* [x] `wrangler deploy` (version `ba1e99f0-4633-4a4b-95df-3829bc09e195`).
+* [x] Live preview: Recent Messages → expand reply modal → type "test" → preview shows logo, blue header bar, "test" as body, contact block, signature. NO greeting line above the comment body.
+* [x] Send a real test comment to a test client → received email matches preview layout.
+* [x] Other Hebrew emails (questionnaire reminder, batch status) STILL contain `שלום {name},` — regression check.
+* [x] No broken layout: comment text correctly padded under blue header (no awkward whitespace where greeting used to be).
 
 ## 8. Implementation Notes (Post-Code)
 - **Edit location:** `api/src/lib/email-html.ts:702` — single `<tr>` row deleted (greeting + closing tags), the rest of the body table preserved.
