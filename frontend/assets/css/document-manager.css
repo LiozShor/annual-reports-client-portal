@@ -2007,7 +2007,9 @@ body {
 
 /* ==================== CLIENT NOTES TIMELINE ==================== */
 .client-notes-timeline {
-    padding: var(--sp-4);
+    padding: var(--sp-2) var(--sp-4) var(--sp-4);
+    display: flex;
+    flex-direction: column;
 }
 
 .cn-empty {
@@ -2017,23 +2019,28 @@ body {
     font-size: 0.875rem;
 }
 
+/* DL-362: Chat-bubble conversation view */
+
+/* Composer restyled as chat input */
 .cn-add-bar {
     display: flex;
+    align-items: flex-end;
     gap: var(--sp-2);
-    margin-bottom: var(--sp-4);
+    padding: var(--sp-2) var(--sp-3) var(--sp-3);
 }
 
 .cn-add-bar textarea {
     flex: 1;
-    resize: vertical;
-    min-height: 36px;
+    min-height: 38px;
     max-height: 120px;
     padding: var(--sp-2) var(--sp-3);
     border: 1px solid var(--gray-200);
-    border-radius: var(--radius-md);
+    border-radius: 18px;
     font-size: 0.875rem;
     font-family: inherit;
     direction: rtl;
+    resize: none;
+    line-height: 1.4;
 }
 
 .cn-add-bar textarea:focus {
@@ -2042,59 +2049,227 @@ body {
     box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
 }
 
-.cn-add-bar .btn {
-    align-self: flex-end;
-    white-space: nowrap;
-}
-
-.cn-entry {
-    display: flex;
-    align-items: flex-start;
-    gap: var(--sp-3);
-    padding: var(--sp-3);
-    border-radius: var(--radius-md);
-    transition: background var(--transition-fast);
-}
-
-.cn-entry:hover {
-    background: var(--gray-50);
-}
-
-.cn-entry + .cn-entry {
-    border-top: 1px solid var(--gray-100);
-}
-
-.cn-icon {
+.cn-send-btn {
     flex-shrink: 0;
-    width: 28px;
-    height: 28px;
-    border-radius: var(--radius-full);
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: none;
+    background: var(--brand-500, #3b82f6);
+    color: #fff;
+    cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
+    transition: background var(--transition-fast);
+}
+
+.cn-send-btn:hover {
+    background: var(--brand-600, #2563eb);
+}
+
+/* Date divider (WhatsApp-style centered chip) */
+.cn-date-divider {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
+    margin: var(--sp-3) 0 var(--sp-2);
+    color: var(--gray-400);
+    font-size: 0.7rem;
+}
+
+.cn-date-divider::before,
+.cn-date-divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--gray-200);
+}
+
+.cn-date-divider span {
+    flex-shrink: 0;
+    padding: 2px 8px;
+    background: var(--gray-100);
+    border-radius: 10px;
+    white-space: nowrap;
+}
+
+/* Chat message row */
+.cn-msg {
+    display: flex;
+    align-items: flex-end;
+    gap: 6px;
+    max-width: 75%;
+    margin-bottom: 2px;
+    position: relative;
+}
+
+/* Client = left (inbound), Office = right (outbound) in RTL */
+.cn-msg--in  { align-self: flex-start; flex-direction: row; }
+.cn-msg--out { align-self: flex-end;   flex-direction: row-reverse; }
+
+.cn-msg--first-of-run {
+    margin-top: var(--sp-3);
+}
+
+/* Avatar (hidden on non-first-of-run to preserve alignment) */
+.cn-avatar {
+    flex-shrink: 0;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: var(--gray-200);
+    color: var(--gray-600);
+    font-size: 0.7rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    visibility: hidden;
+    user-select: none;
+}
+
+.cn-msg--out .cn-avatar {
+    background: var(--brand-100, #dbeafe);
+    color: var(--brand-700, #1d4ed8);
+}
+
+.cn-msg--first-of-run .cn-avatar {
+    visibility: visible;
+}
+
+/* Stack: header + bubble + actions */
+.cn-msg-stack {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    max-width: 100%;
+}
+
+.cn-msg--out .cn-msg-stack {
+    align-items: flex-end;
+}
+
+/* Sender header (only on first-of-run) */
+.cn-msg-header {
+    font-size: 0.68rem;
+    color: var(--gray-400);
+    margin-bottom: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 220px;
+}
+
+/* Bubble */
+.cn-bubble {
+    padding: 8px 12px;
+    border-radius: 16px;
+    font-size: 0.875rem;
+    line-height: 1.5;
+    word-break: break-word;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.08);
+    position: relative;
+    max-width: 340px;
+}
+
+/* Client bubble: light gray */
+.cn-bubble--in {
+    background: #f0f0f0;
+    color: var(--gray-900, #111827);
+    border-start-start-radius: 4px; /* flatten corner nearest avatar */
+}
+
+/* Office bubble: brand blue */
+.cn-bubble--out {
+    background: var(--brand-500, #3b82f6);
+    color: #fff;
+    border-start-end-radius: 4px; /* flatten corner nearest avatar */
+}
+
+/* Bubble tail (::before on first-of-run only) */
+.cn-msg--in.cn-msg--first-of-run .cn-bubble--in::before {
+    content: '';
+    position: absolute;
+    inset-block-end: 6px;
+    inset-inline-start: -5px;
+    width: 0;
+    height: 0;
+    border-style: solid;
+    border-width: 5px 6px 5px 0;
+    border-color: transparent #f0f0f0 transparent transparent;
+}
+
+.cn-msg--out.cn-msg--first-of-run .cn-bubble--out::before {
+    content: '';
+    position: absolute;
+    inset-block-end: 6px;
+    inset-inline-end: -5px;
+    width: 0;
+    height: 0;
+    border-style: solid;
+    border-width: 5px 0 5px 6px;
+    border-color: transparent transparent transparent var(--brand-500, #3b82f6);
+}
+
+/* Hover-revealed edit/delete actions */
+.cn-msg-actions {
+    display: flex;
+    gap: 2px;
+    margin-top: 3px;
+    opacity: 0;
+    transition: opacity var(--transition-fast);
+}
+
+.cn-msg:hover .cn-msg-actions {
+    opacity: 1;
+}
+
+.cn-msg-actions button {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 3px 5px;
+    border-radius: var(--radius-sm);
+    color: var(--gray-400);
+    transition: color var(--transition-fast), background var(--transition-fast);
+}
+
+.cn-msg-actions button:hover {
+    color: var(--gray-700);
+    background: var(--gray-100);
+}
+
+.cn-msg-actions button.cn-delete:hover {
+    color: var(--danger-500);
+    background: var(--danger-50);
+}
+
+/* DL-335: batch_questions_sent — centered system notice */
+.cn-system-notice {
+    align-self: center;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    padding: 5px 12px;
+    margin: var(--sp-2) auto;
+    max-width: 85%;
+    background: var(--warning-50, #fffbeb);
+    border: 1px solid var(--warning-200, #fde68a);
+    border-radius: 12px;
     font-size: 0.75rem;
+    color: var(--warning-700, #b45309);
+    text-align: center;
 }
 
-.cn-icon--email {
-    background: var(--info-50);
-    color: var(--info-500);
+.cn-system-notice .cn-bq-items {
+    width: 100%;
+    text-align: start;
 }
 
-.cn-icon--manual {
-    background: var(--warning-50);
-    color: var(--warning-500);
-}
-
-/* DL-335: office batch-questions outbound entry */
-.cn-icon--office-question {
-    background: var(--warning-100);
-    color: var(--warning-700);
-}
-
-.cn-entry--outbound {
-    border-inline-start: 2px solid var(--warning-300);
-}
-
+/* Shared list style for batch questions */
 .cn-bq-items {
     margin: var(--sp-1) 0 0 var(--sp-2);
     padding: 0;
@@ -2105,151 +2280,6 @@ body {
 
 .cn-bq-items li {
     margin-bottom: 2px;
-}
-
-.cn-body {
-    flex: 1;
-    min-width: 0;
-}
-
-.cn-meta {
-    display: flex;
-    align-items: center;
-    gap: var(--sp-2);
-    margin-bottom: 2px;
-    font-size: 0.75rem;
-    color: var(--gray-500);
-}
-
-.cn-summary {
-    font-size: 0.875rem;
-    color: var(--gray-800);
-    line-height: 1.5;
-    word-break: break-word;
-}
-
-.cn-label {
-    font-size: 0.7rem;
-    font-weight: 600;
-    color: var(--gray-400);
-    letter-spacing: 0.02em;
-}
-
-.cn-snippet {
-    font-size: 0.75rem;
-    color: var(--gray-500);
-    margin-top: 4px;
-    max-height: 0;
-    overflow: hidden;
-    transition: max-height var(--transition-slow);
-}
-
-.cn-entry:hover .cn-snippet {
-    max-height: 60px;
-}
-
-/* DL-266: Office reply threaded inside note card */
-.cn-office-reply {
-    margin-top: 6px;
-    padding: 6px 10px;
-    background: var(--blue-50, #eff6ff);
-    border-radius: var(--radius-sm, 4px);
-    border-right: 3px solid var(--brand-500, #3b82f6);
-}
-
-.cn-reply-label {
-    font-size: 0.7rem;
-    font-weight: 600;
-    color: var(--brand-600, #2563eb);
-    display: flex;
-    align-items: center;
-    gap: 3px;
-    margin-bottom: 2px;
-}
-
-.cn-reply-text {
-    font-size: 0.78rem;
-    color: var(--gray-700);
-    line-height: 1.4;
-}
-
-.cn-reply-date {
-    font-size: 0.68rem;
-    color: var(--gray-400);
-    margin-top: 2px;
-}
-
-.cn-icon--reply {
-    background: var(--blue-50, #eff6ff);
-    color: var(--brand-600, #2563eb);
-}
-
-.cn-actions {
-    flex-shrink: 0;
-    display: flex;
-    gap: var(--sp-1);
-    opacity: 0;
-    transition: opacity var(--transition-fast);
-}
-
-.cn-entry:hover .cn-actions {
-    opacity: 1;
-}
-
-.cn-actions button {
-    background: none;
-    border: none;
-    cursor: pointer;
-    padding: 4px;
-    border-radius: var(--radius-sm);
-    color: var(--gray-500);
-    transition: color var(--transition-fast), background var(--transition-fast);
-}
-
-.cn-actions button:hover {
-    color: var(--gray-800);
-    background: var(--gray-100);
-}
-
-.cn-actions button.cn-delete:hover {
-    color: var(--danger-500);
-    background: var(--danger-50);
-}
-
-/* DL-360: Thread collapse toggle + older messages */
-.cn-thread-toggle {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    background: none;
-    border: none;
-    cursor: pointer;
-    color: var(--brand-600, #2563eb);
-    font-size: 0.75rem;
-    font-family: inherit;
-    padding: 5px 0;
-    margin-top: 4px;
-    direction: rtl;
-}
-
-.cn-thread-toggle:hover {
-    color: var(--brand-800, #1e40af);
-}
-
-.cn-thread-older {
-    max-height: 0;
-    overflow: hidden;
-    transition: max-height 0.3s ease;
-}
-
-.cn-thread-older.open {
-    max-height: 4000px;
-}
-
-.cn-thread-msg {
-    border-top: 1px dashed var(--gray-200, #e5e7eb);
-    padding-top: 8px;
-    margin-top: 8px;
 }
 
 /* Edit mode */

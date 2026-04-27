@@ -1,6 +1,29 @@
 # Annual Reports CRM - Current Status
 
+**Last Updated:** 2026-04-27 (DL-362 — IMPLEMENTED, NEED TESTING; doc-manager client-notes redesigned as chat-bubble conversation view)
 **Last Updated:** 2026-04-27 (DL-358 — COMPLETED, live tests passed; comment email opens directly with bookkeeper's text, no greeting row)
+
+## DL-362: Doc-manager chat-bubble conversation view — IMPLEMENTED, NEED TESTING
+
+Frontend-only redesign of the doc-manager client-notes timeline. Replaced DL-360's card+toggle layout with a true chat view: alternating office/client bubbles (office RIGHT / client LEFT — Israeli WhatsApp RTL convention), letter avatars on first-of-run, date dividers between Outlook threads, oldest-first message order within a thread, hover-revealed edit/delete icons, `batch_questions_sent` as a centered system notice. DL-360 `conversation_id` bucketing logic preserved. `toggleCnThread` deleted. Files: `frontend/assets/js/document-manager.js` (renderClientNotes rewritten), `frontend/assets/css/document-manager.css` (.cn-* block replaced).
+
+Branch: `DL-362-doc-manager-chat-bubbles` — committed + pushed; **do NOT merge to main until live test approved**.
+
+### Test DL-362: Chat-bubble conversation view — NEEDS LIVE VERIFICATION
+After hard-reload (Ctrl+F5) of doc-manager.html:
+- [ ] client@example.com (3 client emails + 2 office replies in one Outlook thread) — chat bubbles, oldest-first, date divider above thread, alternating sides, avatars + sender header on first-of-run only, no collapse toggle
+- [ ] Client with multiple Outlook threads — separate date dividers; threads ordered newest-first
+- [ ] Client with only manual office notes — all bubbles on office side (RIGHT in RTL), brand-blue
+- [ ] Legacy emails (no conv_id) — fallback client-side gray bubbles, no crash
+- [ ] batch_questions_sent entry — centered system notice pill, NOT a bubble
+- [ ] Hover a bubble — edit + delete icons fade in; both handlers work correctly
+- [ ] Add note via top composer — appears as office bubble; save flow unchanged
+- [ ] No regression on Dashboard Recent Messages or AI Review tab
+- [ ] No Lucide icon-init errors in browser console
+
+Design log: `.agent/design-logs/admin-ui/362-doc-manager-chat-bubbles.md`
+
+---
 
 ## DL-358: Remove greeting from comment email — COMPLETED (live 2026-04-27)
 
