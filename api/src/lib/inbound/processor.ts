@@ -120,6 +120,7 @@ function extractMetadata(email: Record<string, any>, messageId: string): EmailMe
   return {
     messageId,
     internetMessageId: email.internetMessageId ?? '',
+    conversationId: email.conversationId ?? '',
     subject,
     senderEmail: (sender.address ?? '').toLowerCase(),
     senderName: sender.name ?? '',
@@ -413,6 +414,7 @@ Rules:
       summary: truncateSummary(summary),
       source: 'email',
       message_id: msgId,
+      conversation_id: metadata.conversationId || null,
       sender_email: clientEmail,
       raw_snippet: (cleanText || cleanBody).substring(0, 1000),
     };
@@ -728,7 +730,7 @@ export async function processInboundEmail(
   try {
     // 1. Fetch email from MS Graph
     const email = await graph.get(
-      `/users/${MAILBOX}/messages/${messageId}?$select=subject,from,body,bodyPreview,receivedDateTime,hasAttachments,internetMessageId,internetMessageHeaders`,
+      `/users/${MAILBOX}/messages/${messageId}?$select=subject,from,body,bodyPreview,receivedDateTime,hasAttachments,internetMessageId,internetMessageHeaders,conversationId`,
     );
 
     // 2. Extract metadata

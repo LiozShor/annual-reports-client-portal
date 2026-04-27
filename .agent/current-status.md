@@ -1,29 +1,89 @@
 # Annual Reports CRM - Current Status
 
-**Last Updated:** 2026-04-27 (DL-358 — IMPLEMENTED, NEED TESTING; comment email greeting `שלום {clientName},` removed — opens directly with bookkeeper's text)
+**Last Updated:** 2026-04-27 (DL-362 — IMPLEMENTED, NEED TESTING; doc-manager client-notes redesigned as chat-bubble conversation view)
+**Last Updated:** 2026-04-27 (DL-358 — COMPLETED, live tests passed; comment email opens directly with bookkeeper's text, no greeting row)
 
-## DL-358: Remove greeting from comment email — IMPLEMENTED, NEED TESTING
+## DL-362: Doc-manager chat-bubble conversation view — COMPLETED (live 2026-04-27)
 
-`api/src/lib/email-html.ts:702` — drop the `<tr>` greeting row from `buildCommentEmailHtml`. Single-source-of-truth template — propagates to both the send path and the DL-289 live preview without duplicate edits. Other Hebrew templates (questionnaire, batch-status, generic) untouched per Phase A scope. `clientName` retained in `CommentEmailParams` interface for caller compatibility but dropped from destructure with a `DL-358` marker. DL-289 Section 7 line 111 backfilled.
+Frontend-only redesign of the doc-manager client-notes timeline. Replaced DL-360's card+toggle layout with a true chat view: alternating office/client bubbles (office RIGHT / client LEFT — Israeli WhatsApp RTL convention), letter avatars on first-of-run, date dividers between Outlook threads, oldest-first message order within a thread, hover-revealed edit/delete icons, `batch_questions_sent` as a centered system notice. DL-360 `conversation_id` bucketing logic preserved. `toggleCnThread` deleted. Files: `frontend/assets/js/document-manager.js` (renderClientNotes rewritten), `frontend/assets/css/document-manager.css` (.cn-* block replaced).
 
-Branch: `DL-358-remove-greeting-in-comments` — committed locally, awaiting approval to push + deploy.
+Branch: `DL-362-doc-manager-chat-bubbles` — committed + pushed; **do NOT merge to main until live test approved**.
 
-### Test DL-358: Remove greeting from comment email — NEEDS LIVE VERIFICATION
-Backend-only change; goes live on `wrangler deploy`.
+### Test DL-362: Chat-bubble conversation view — NEEDS LIVE VERIFICATION
+After hard-reload (Ctrl+F5) of doc-manager.html:
+- [ ] client@example.com (3 client emails + 2 office replies in one Outlook thread) — chat bubbles, oldest-first, date divider above thread, alternating sides, avatars + sender header on first-of-run only, no collapse toggle
+- [ ] Client with multiple Outlook threads — separate date dividers; threads ordered newest-first
+- [ ] Client with only manual office notes — all bubbles on office side (RIGHT in RTL), brand-blue
+- [ ] Legacy emails (no conv_id) — fallback client-side gray bubbles, no crash
+- [ ] batch_questions_sent entry — centered system notice pill, NOT a bubble
+- [ ] Hover a bubble — edit + delete icons fade in; both handlers work correctly
+- [ ] Add note via top composer — appears as office bubble; save flow unchanged
+- [ ] No regression on Dashboard Recent Messages or AI Review tab
+- [ ] No Lucide icon-init errors in browser console
 
-- [ ] `tsc --noEmit` clean (no new errors beyond the 3 pre-existing)
-- [ ] `wrangler deploy` succeeds
-- [ ] Live preview: Recent Messages → expand reply modal → type test text → preview shows logo, blue header, comment body, contact block, signature — NO greeting line
-- [ ] Send a real test comment to a test client → received email layout matches preview
-- [ ] Regression: questionnaire reminders + batch-status emails STILL contain `שלום {name},`
-- [ ] No awkward whitespace where the greeting row used to live (comment text properly padded under blue header)
+Design log: `.agent/design-logs/admin-ui/362-doc-manager-chat-bubbles.md`
+
+---
+
+## DL-358: Remove greeting from comment email — COMPLETED (live 2026-04-27)
+
+`api/src/lib/email-html.ts:702` — greeting `<tr>` row removed from `buildCommentEmailHtml`. SSOT propagated to both send path and DL-289 live preview without duplicate edits. Other Hebrew templates untouched per scope. Worker version `ba1e99f0-4633-4a4b-95df-3829bc09e195`. DL-289 Section 7 line 111 backfilled.
 
 Design log: `.agent/design-logs/email/358-remove-greeting-in-comment-email.md`
 
 ---
 
+**Last Updated:** 2026-04-27 (DL-360 — IMPLEMENTED, NEED TESTING; doc-manager thread grouping by Outlook conversationId; also: doc-manager raw-text fix applied this session — AI summary label removed)
 **Last Updated:** 2026-04-26 (DL-354 — IDEA / BACKLOG logged; approve-and-send duplicate email — no idempotency guard between sendMail and Airtable write)
 **Last Updated:** 2026-04-26 (DL-356 — IMPLEMENTED, NEED TESTING; preview-url stale-itemId self-heal + centralized Required_Missing invariant + audit sweep route)
+
+## DL-360: Doc-manager thread grouping — IMPLEMENTED, NEED TESTING
+
+Group doc-manager client-notes by Outlook `conversationId`. Backend: `processor.ts` now persists `conversation_id` on new email notes; `dashboard.ts` office replies inherit it from parent. Backfill endpoint `/webhook/backfill-conversation-ids` patches historical notes via Graph lookup. Frontend: `renderClientNotes` buckets by `conversation_id`, renders one card per thread with the latest message visible and older ones collapsed behind a "▸ הצג N הודעות קודמות בשרשור" toggle.
+
+Branch: `DL-360-doc-manager-thread-grouping` — committed + pushed; Worker deployed.
+
+### Test DL-360: Doc-manager thread grouping — NEEDS LIVE VERIFICATION
+- [ ] Run `POST /webhook/backfill-conversation-ids?dryRun=1` (Auth: Bearer ADMIN_SECRET) → counts returned
+- [ ] Run with `dryRun=0` → notes patched; reload doc-manager for the client@example.com client → 3 cards collapse into 1 with toggle
+- [ ] Toggle expands/collapses older messages correctly; label flips between הצג/הסתר
+- [ ] Office replies stay attached to the correct message (not floated to latest)
+- [ ] Manual office note (no conversation_id) still renders as standalone card
+- [ ] New inbound email: check Airtable `client_notes` JSON contains `conversation_id`
+- [ ] Hard-reload doc-manager (Ctrl+F5) — no stale JS
+- [ ] No regression on Dashboard Recent Messages or AI Review tab
+
+Design log: `.agent/design-logs/admin-ui/360-doc-manager-thread-grouping.md`
+
+---
+
+**Last Updated:** 2026-04-27 (DL-359 — COMPLETED, live tests passed; AI Review T901/T902 full-year contract badge clickable to override LLM verdict)
+**Last Updated:** 2026-04-26 (DL-354 — IDEA / BACKLOG logged; approve-and-send duplicate email — no idempotency guard between sendMail and Airtable write)
+**Last Updated:** 2026-04-26 (DL-356 — IMPLEMENTED, NEED TESTING; preview-url stale-itemId self-heal + centralized Required_Missing invariant + audit sweep route)
+
+## DL-359: Edit full-year contract dates — COMPLETED (live 2026-04-27)
+
+Frontend-only fix for AI-review T901/T902 rental contracts. The green "📅 חוזה שנתי מלא ✓" badge is now clickable — click swaps it for the partial-mode editor (DL-270 UI) pre-filled with AI-detected dates. Save re-evaluates `coversFullYear` server-side via existing `update-contract-period` endpoint and the banner reverts bidirectionally to whichever state matches new dates. Side-fix: pre-existing `.period-label` no-op in `saveContractPeriod` partial→full transition (the element never existed) replaced by helper-based `outerHTML` swap. Files: `frontend/admin/js/script.js` (added `renderFullYearBadge`, `renderContractPeriodBanner`, `expandFullYearBadgeToEdit`; refactored AI-review render branch + `saveContractPeriod` post-save), `frontend/admin/index.html` (cache-bust `?v=363→364`). Pending Approval queue (5739) + mobile banner (781) intentionally out of scope.
+
+Branch: `DL-359-edit-full-year-contract-dates` — merged to main (commits `a42d0f9` + `3dad1d6`); Cloudflare Pages auto-deployed `script.js?v=364`. Live tests passed.
+
+### Test DL-359: Full-year contract date override — NEEDS LIVE VERIFICATION
+Manual checks after merge to main (Cloudflare Pages auto-deploys frontend; no Worker deploy needed):
+
+- [ ] Open AI-review tab on a card with a T901/T902 contract where AI marked `coversFullYear=true`. Verify the green badge has a pointer cursor, hover tooltip "לחץ לעריכה — תאריכי החוזה לא נכונים?", and a small ✏️ hint icon.
+- [ ] Click the badge → editor expands inline with the AI-detected dates pre-filled (e.g., 01.YYYY / 12.YYYY).
+- [ ] Edit start month to 06.YYYY → blur the input → success toast "תאריכי חוזה עודכנו".
+- [ ] Banner now shows partial-mode with "+ בקש חוזה 01-05/YYYY" button visible.
+- [ ] Click "+ בקש חוזה" → missing-period request flow still works.
+- [ ] Edit dates back to 01.YYYY / 12.YYYY → save → banner swaps BACK to the green full-year badge (this verifies the bidirectional swap and the `.period-label` bug-fix).
+- [ ] Hard-refresh (`script.js?v=364`) → state persists.
+- [ ] Regression: existing partial-mode click-to-edit + request-missing buttons still work on cards that started partial.
+- [ ] Confirm Pending Approval queue (line 5739 surface) and mobile banner (line 781 surface) still render correctly (no touch — full-year there remains static; document if user later asks for parity).
+
+Design log: `.agent/design-logs/ai-review/359-edit-full-year-contract-dates.md`
+
+---
+
 
 ## DL-356: Preview URL stale-itemId self-heal — IMPLEMENTED, NEED TESTING
 
