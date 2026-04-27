@@ -61,7 +61,7 @@ Design log: `.agent/design-logs/email/358-remove-greeting-in-comment-email.md`
 ---
 
 **Last Updated:** 2026-04-27 (DL-360 — IMPLEMENTED, NEED TESTING; doc-manager thread grouping by Outlook conversationId; also: doc-manager raw-text fix applied this session — AI summary label removed)
-**Last Updated:** 2026-04-26 (DL-354 — IDEA / BACKLOG logged; approve-and-send duplicate email — no idempotency guard between sendMail and Airtable write)
+**Last Updated:** 2026-04-27 (DL-354 — IMPLEMENTED, NEED TESTING; approve-and-send idempotency — KV lock + docs_first_sent_at guard; Worker e79b7292)
 **Last Updated:** 2026-04-26 (DL-356 — IMPLEMENTED, NEED TESTING; preview-url stale-itemId self-heal + centralized Required_Missing invariant + audit sweep route)
 
 ## DL-360: Doc-manager thread grouping — IMPLEMENTED, NEED TESTING
@@ -85,7 +85,7 @@ Design log: `.agent/design-logs/admin-ui/360-doc-manager-thread-grouping.md`
 ---
 
 **Last Updated:** 2026-04-27 (DL-359 — COMPLETED, live tests passed; AI Review T901/T902 full-year contract badge clickable to override LLM verdict)
-**Last Updated:** 2026-04-26 (DL-354 — IDEA / BACKLOG logged; approve-and-send duplicate email — no idempotency guard between sendMail and Airtable write)
+**Last Updated:** 2026-04-27 (DL-354 — IMPLEMENTED, NEED TESTING; approve-and-send idempotency — KV lock + docs_first_sent_at guard; Worker e79b7292)
 **Last Updated:** 2026-04-26 (DL-356 — IMPLEMENTED, NEED TESTING; preview-url stale-itemId self-heal + centralized Required_Missing invariant + audit sweep route)
 
 ## DL-359: Edit full-year contract dates — COMPLETED (live 2026-04-27)

@@ -1,7 +1,10 @@
 # DL-354: Approve & Send — idempotency lock to prevent duplicate emails
 
-**Status:** IDEA / BACKLOG (not scheduled)
+**Status:** IMPLEMENTED — NEED TESTING
 **Created:** 2026-04-26
+**Implemented:** 2026-04-27
+**Worker version:** e79b7292-5385-4a1a-8d30-38ae162fe34f
+**Branch:** DL-354-approve-send-idempotency (pushed, not yet merged to main)
 **Domain:** email
 
 ## Observed
@@ -26,5 +29,16 @@ Make Airtable the lock:
 - Optional: cheap KV lock `lock:approve:<reportId>` with `expirationTtl: 60` for race-tight protection.
 - Frontend mitigation only (disable confirm button on click) does NOT cover the two-tab case.
 
-## Verification when implemented
+## Implementation
+
+**`api/src/routes/approve-and-send.ts`** — two idempotency layers inserted after Step 3:
+- **Layer 1:** checks `docs_first_sent_at` from the already-fetched report; if set and `?force=1` not present, returns `{ ok: true, deduped: true }` immediately (covers tab resubmit, browser back-button).
+- **Layer 2:** KV lock `lock:approve-send:<reportId>` with 60s TTL; second concurrent request hits the lock and bails (covers double-click / Worker retry races).
+- `?force=1` query param bypasses both layers for intentional admin resends.
+
+**`frontend/approve-confirm.html`** — `_confirmSubmitting` flag in `doConfirm()` prevents the function body from running more than once even if the user clicks before the button DOM update disables it.
+
+## Verification
 Reproduce by opening `approve-confirm.html?...` in two tabs and clicking confirm in both — expect exactly one email + one stage transition.
+
+Also test: rapid double-click on a single confirm page → single email sent (KV lock fires on second request).
