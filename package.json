@@ -1,0 +1,7 @@
+{
+  "name": "annual-reports-root",
+  "private": true,
+  "scripts": {
+    "check": "cd api && npm ci && ./node_modules/.bin/tsc --noEmit && npx wrangler deploy --dry-run --outdir=./.dryrun-out"
+  }
+}
