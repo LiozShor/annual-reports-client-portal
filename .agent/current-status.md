@@ -11,9 +11,51 @@ Edited `~/.claude/skills/design-log/SKILL.md` to replace `WebSearch` / `WebFetch
 2. Trigger `/design-log` on a small task. In Phase B2 confirm Claude calls the Bright Data MCP tools (not the built-in WebSearch/WebFetch). If permission prompts appear, allowlist the four tools in settings.
 3. If Bright Data isn't installed yet: install per https://docs.brightdata.com/ai/mcp-server/integrations/claude-code, then redo step 1.
 
+**Last Updated:** 2026-04-27 (DL-364 — IMPLEMENTED, NEED TESTING; "מוכנים להכנה" v-button now advances Review→Moshe_Review + backend backfills docs_completed_at on manual stage→Review to fix 47 vs 49 count mismatch)
 **Last Updated:** 2026-04-27 (DL-363 — IDEA / BACKLOG; chat-bubble side misclassification for office-authored emails landing as client notes)
 **Last Updated:** 2026-04-27 (DL-362 — IMPLEMENTED, NEED TESTING; doc-manager client-notes redesigned as chat-bubble conversation view)
 **Last Updated:** 2026-04-27 (DL-358 — COMPLETED, live tests passed; comment email opens directly with bookkeeper's text, no greeting row)
+
+## DL-364: "מוכנים להכנה" v-button + count mismatch — IMPLEMENTED, NEED TESTING (2026-04-27)
+
+Two related fixes on the admin Stage 5 (Review) screen:
+
+1. **"v" (circle-check) row button** previously called `/admin-mark-complete` and jumped Stage 5 → Stage 8 (`Completed`), silently skipping `Moshe_Review` and `Before_Signing`. Now calls `/admin-change-stage` with `target_stage='Moshe_Review'` so it advances exactly one stage. New Hebrew wording: confirm `להעביר את "<name>" לבדיקת משה?` / button `העבר לבדיקת משה` / success modal `הועבר! "<name>" הועבר לבדיקת משה בהצלחה.`. Tooltip on the row button updated from `סמן כהושלם` to `העבר לבדיקת משה` (both desktop table and mobile card).
+2. **47 vs 49 count mismatch** on the same screen — stat card showed 49, tab badge showed 47. Root cause: `recalculateStats()` (script.js:2002) counts every Stage-5 active client, while `dashboard.ts:116-119` `review_queue` filter requires `docs_completed_at` set. Two clients were at Stage 5 with NULL `docs_completed_at` (typically because stage was set manually via the dropdown, bypassing the natural completion flow). Backend fix in `/admin-change-stage` (`api/src/routes/stage.ts`): when `target_stage === 'Review'` AND `docs_completed_at` is empty, set it to `now()`. Both surfaces will now agree on subsequent loads. The 2 currently-stuck clients will resolve naturally as they move out and back in (Open Question 2 — one-time backfill deferred).
+
+Files: `api/src/routes/stage.ts` (3-line addition), `frontend/admin/js/script.js` (`markComplete()` + button tooltips), `frontend/admin/index.html` (cache-bust `?v=365→366`). No new endpoints. Reuses `/admin-change-stage` (DL-155 reminder cleanup applies automatically).
+
+**Open Question 1 (deferred):** `POST /admin-mark-complete` (`api/src/routes/stage.ts:81`) is now dead code on the frontend. `frontend/shared/endpoints.js:35` still defines `ADMIN_MARK_COMPLETE` but no JS call site remains. Safe to delete after one release cycle.
+
+Branch: `DL-364-ready-prep-v-button` — committed + pushed. **Backend NOT yet deployed** (requires user approval to hit prod). **Do NOT merge to main until live test approved.**
+
+### Test DL-364: v-button + count mismatch — NEEDS LIVE VERIFICATION
+
+After Worker deploy + hard-reload (Ctrl+F5) of admin panel:
+
+**Frontend "v" button:**
+- [ ] "מוכנים להכנה" tab → Stage-5 test client → click "v" → confirm dialog reads "להעביר את \"<name>\" לבדיקת משה?"
+- [ ] Click "העבר לבדיקת משה" → success modal "הועבר!" with body "\"<name>\" הועבר לבדיקת משה בהצלחה."
+- [ ] Row disappears from "מוכנים להכנה" and appears in "לבדיקה של משה" (Stage 6)
+- [ ] Airtable check: `stage = Moshe_Review`, `docs_completed_at` preserved (not cleared)
+- [ ] Reminder fields all NULL on that record
+- [ ] Same flow works in mobile card view (resize narrow)
+- [ ] No regression: stage dropdown still works on the same client
+
+**Backend `docs_completed_at` backfill:**
+- [ ] Pick a Stage ≤4 client → use stage dropdown to move directly to `Review`
+- [ ] Airtable check: `docs_completed_at` is now set to current timestamp
+- [ ] Reload dashboard: stat card "מוכנים להכנה" and tab badge show the **same** number
+- [ ] Client appears at the **bottom** of the FIFO queue (most recent timestamp)
+- [ ] Move a Stage-5 client back to Stage 4 then forward to Stage 5 again → verify backward clears `docs_completed_at` (existing behavior) and forward re-sets it (new behavior)
+
+**Cache + deploy:**
+- [ ] Hard reload after deploy → browser fetches `script.js?v=366`
+- [ ] `wrangler tail` shows no startup errors after `wrangler deploy`
+
+Design log: `.agent/design-logs/admin-ui/364-review-tab-v-button-and-count-mismatch.md`
+
+---
 
 ## DL-363: Chat-bubble side misclassification for office-authored emails — IDEA / BACKLOG (logged 2026-04-27)
 
