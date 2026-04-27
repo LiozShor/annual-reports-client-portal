@@ -50,6 +50,7 @@ export interface ProcessingContext {
 export interface EmailMetadata {
   messageId: string;
   internetMessageId: string;
+  conversationId: string;
   subject: string;
   senderEmail: string;
   senderName: string;

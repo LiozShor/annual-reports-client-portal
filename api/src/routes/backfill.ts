@@ -3,6 +3,7 @@
  * an office member's email instead of the real client's email.
  * DL-315: Backfill pending_classifications for clients who received docs before
  * submitting their questionnaire (initially scoped to CPA-XXX).
+ * DL-360: Backfill conversation_id on historical email notes (thread grouping).
  * Remove after running once in production.
  */
 
@@ -235,6 +236,130 @@ backfill.post('/backfill-dl315', async (c) => {
     dryRun,
     rowsChecked: rows.length,
     resultsCount: results.length,
+    results,
+  });
+});
+
+// ---------------------------------------------------------------------------
+// DL-360: Backfill conversation_id on historical email notes (thread grouping)
+// Usage:
+//   POST /webhook/backfill-conversation-ids?dryRun=1
+//   POST /webhook/backfill-conversation-ids?clientId=CPA-XXX&dryRun=0
+//   Authorization: Bearer <ADMIN_SECRET token>
+// Remove after backfill is verified in production.
+// ---------------------------------------------------------------------------
+
+const MAILBOX = 'reports@moshe-atsits.co.il';
+
+backfill.post('/backfill-conversation-ids', async (c) => {
+  const token = c.req.header('Authorization')?.replace('Bearer ', '') || c.req.query('token') || '';
+  if (!verifyToken(token, c.env.ADMIN_SECRET)) {
+    return c.json({ ok: false, error: 'Unauthorized' }, 401);
+  }
+
+  const dryRun = c.req.query('dryRun') !== '0';
+  const clientIdFilter = c.req.query('clientId') || '';
+
+  const airtable = new AirtableClient(c.env.AIRTABLE_BASE_ID, c.env.AIRTABLE_PAT);
+  const msGraph = new MSGraphClient(c.env, c.executionCtx);
+
+  // Load reports that have email notes missing conversation_id
+  const filterFormula = clientIdFilter
+    ? `AND(FIND('"source":"email"', {client_notes}), {client_id} = '${clientIdFilter.replace(/'/g, "\\'")}')`
+    : `FIND('"source":"email"', {client_notes})`;
+
+  const reports = await airtable.listAllRecords(TABLES.REPORTS, {
+    filterByFormula: filterFormula,
+    fields: ['client_notes', 'client_name', 'client_id'],
+  });
+
+  let reportsPatched = 0;
+  let notesPatched = 0;
+  let notesNotFound = 0;
+  const results: Array<{ id: string; name: string; patched: number; notFound: number }> = [];
+
+  for (const report of reports) {
+    const f = report.fields as Record<string, unknown>;
+    let notes: Array<Record<string, unknown>> = [];
+    try {
+      notes = JSON.parse((f.client_notes as string) || '[]');
+      if (!Array.isArray(notes)) continue;
+    } catch { continue; }
+
+    // Check if any email notes are missing conversation_id
+    const needsBackfill = notes.some(n => n.source === 'email' && !n.conversation_id);
+    if (!needsBackfill) continue;
+
+    let patched = 0;
+    let notFound = 0;
+
+    // Pass 1: fill email notes from Graph
+    for (const note of notes) {
+      if (note.source !== 'email' || note.conversation_id) continue;
+
+      const msgId = note.message_id as string;
+      if (!msgId) { notFound++; continue; }
+
+      try {
+        // Normalize: MS Graph internetMessageId filter requires the value with angle brackets
+        const normalizedId = msgId.startsWith('<') ? msgId : `<${msgId}>`;
+        const encodedId = encodeURIComponent(normalizedId);
+        const url = `/users/${MAILBOX}/messages?$filter=internetMessageId eq '${encodedId}'&$select=conversationId&$top=1`;
+        const resp = await msGraph.get(url) as { value?: Array<{ conversationId?: string }> };
+        const convId = resp?.value?.[0]?.conversationId;
+        if (convId) {
+          note.conversation_id = convId;
+          patched++;
+        } else {
+          notFound++;
+        }
+      } catch {
+        notFound++;
+      }
+    }
+
+    // Pass 2: propagate conversation_id to office_reply notes from their parent
+    const idToConvId = new Map<string, string>();
+    for (const note of notes) {
+      if (note.conversation_id && note.id) {
+        idToConvId.set(note.id as string, note.conversation_id as string);
+      }
+    }
+    for (const note of notes) {
+      if (note.type === 'office_reply' && !note.conversation_id && note.reply_to) {
+        const parentConvId = idToConvId.get(note.reply_to as string);
+        if (parentConvId) {
+          note.conversation_id = parentConvId;
+          patched++;
+        }
+      }
+    }
+
+    if (patched > 0) {
+      if (!dryRun) {
+        await airtable.updateRecord(TABLES.REPORTS, report.id, {
+          client_notes: JSON.stringify(notes),
+        });
+      }
+      reportsPatched++;
+      notesPatched += patched;
+    }
+    notesNotFound += notFound;
+    results.push({
+      id: report.id,
+      name: (f.client_name as string) || '',
+      patched,
+      notFound,
+    });
+  }
+
+  return c.json({
+    ok: true,
+    dryRun,
+    reportsChecked: reports.length,
+    reportsPatched,
+    notesPatched,
+    notesNotFound,
     results,
   });
 });

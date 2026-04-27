@@ -309,6 +309,7 @@ dashboard.post('/admin-send-comment', async (c) => {
   const commentHtml = buildCommentEmailHtml({ commentText: trimmed, clientName, year });
 
   // Build note entry for client_notes
+  const parentNote = note_id ? notes.find((n: any) => n.id === note_id) : null;
   const noteEntry = {
     id: 'reply_' + Date.now(),
     date: new Date().toISOString(),
@@ -316,6 +317,7 @@ dashboard.post('/admin-send-comment', async (c) => {
     source: 'manual' as const,
     type: 'office_reply',
     ...(note_id ? { reply_to: note_id } : {}),
+    ...(parentNote?.conversation_id ? { conversation_id: parentNote.conversation_id } : {}),
   };
 
   notes.push(noteEntry);

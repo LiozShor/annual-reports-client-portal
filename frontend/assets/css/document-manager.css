@@ -2216,6 +2216,42 @@ body {
     background: var(--danger-50);
 }
 
+/* DL-360: Thread collapse toggle + older messages */
+.cn-thread-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--brand-600, #2563eb);
+    font-size: 0.75rem;
+    font-family: inherit;
+    padding: 5px 0;
+    margin-top: 4px;
+    direction: rtl;
+}
+
+.cn-thread-toggle:hover {
+    color: var(--brand-800, #1e40af);
+}
+
+.cn-thread-older {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease;
+}
+
+.cn-thread-older.open {
+    max-height: 4000px;
+}
+
+.cn-thread-msg {
+    border-top: 1px dashed var(--gray-200, #e5e7eb);
+    padding-top: 8px;
+    margin-top: 8px;
+}
+
 /* Edit mode */
 .cn-edit-textarea {
     width: 100%;

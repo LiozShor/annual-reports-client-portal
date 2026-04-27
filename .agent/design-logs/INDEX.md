@@ -2,7 +2,7 @@
 
 Active and pending logs. For completed history, see [ARCHIVE-INDEX.md](ARCHIVE-INDEX.md).
 
-**Total logs:** 220 | **Active:** 122 | **Archived:** 98
+**Total logs:** 221 | **Active:** 123 | **Archived:** 98
 
 ## Folder Structure
 
@@ -21,6 +21,7 @@ Active and pending logs. For completed history, see [ARCHIVE-INDEX.md](ARCHIVE-I
 
 | # | File | Status | Summary |
 |---|------|--------|---------|
+| 360 | [360-doc-manager-thread-grouping.md](admin-ui/360-doc-manager-thread-grouping.md) | IMPLEMENTED — NEED TESTING | Group doc-manager client-notes timeline by Outlook `conversationId`. Persist `conversationId` in MS Graph `$select` + note entry (`processor.ts`); office replies inherit parent's `conversation_id` (`dashboard.ts`). Backfill endpoint `/webhook/backfill-conversation-ids` fetches historic conversation IDs from Graph and patches existing notes. Frontend `renderClientNotes` buckets email notes by `conversation_id` into threads; renders one card per thread — latest message visible, older messages collapsed behind a "▸ הצג N הודעות קודמות בשרשור" toggle. Single-message threads render as today (no toggle). Standalone notes (no `conversation_id`) unaffected. |
 | 356 | [356-preview-url-stale-itemid-self-heal.md](infrastructure/356-preview-url-stale-itemid-self-heal.md) | IMPLEMENTED — NEED TESTING | Self-heal stale `onedrive_item_id` references on `/webhook/get-preview-url` 404. Centralize the DL-205 invariant at the data-write layer (new `api/src/lib/doc-invariants.ts`) and call from `edit-documents.ts` + `classifications.ts` (reject/reassign/revert_cascade). On MS Graph 404+itemNotFound, `preview.ts` PATCHes the row's file fields to null (when `recordId` provided) and returns structured `{code:'FILE_GONE'}`. Frontend toasts in Hebrew + locally re-renders the row without preview button. New admin-only `GET /webhook/audit-stale-itemids?dryRun=1` mirrors backfill.ts pattern to find/clean residual records. Cross-report duplicate (DL-230) accepted as-is — fix is record-scoped. |
 | 354 | [354-approve-and-send-idempotency.md](email/354-approve-and-send-idempotency.md) | IDEA / BACKLOG | Duplicate `דרישת מסמכים` email observed (client@example.com, 16:16 twice). Root cause: `api/src/routes/approve-and-send.ts` has no idempotency guard between `graph.sendMail` (Step 5) and the Airtable write (Step 6) — double-click, two-tab, or Worker retry can fire two sends. Proposed: re-read `docs_first_sent_at` and set it to `now` *before* `sendMail`; treat second caller as no-op. Optional KV lock `lock:approve:<reportId>` for race-tight protection. |
 | 353 | [353-reject-reason-optional.md](ai-review/353-reject-reason-optional.md) | COMPLETED | AI-Review inline reject pane: drop the `disabled` gate on the confirm button so admin can reject in one click without picking a reason. Dropdown placeholder relabeled `בחר סיבה (אופציונלי)`. Display-layer fallback `נדחה ע"י המשרד` substituted in admin reviewed-card (`script.js` L4659, L5792) when no reason is stored; backend email-callout fallback (`api/src/lib/email-html.ts:250`) flipped from `אחר`/`Other` → `נדחה ע"י המשרד`/`Rejected by office`. Batch/persistent-review modal (L6550) intentionally left untouched. No API contract or schema change. Cache-bust `script.js?v=352→353`. |
