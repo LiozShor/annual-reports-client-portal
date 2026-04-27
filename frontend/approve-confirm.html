@@ -166,7 +166,10 @@
             reinitIcons();
         }
 
+        var _confirmSubmitting = false;
         function doConfirm() {
+            if (_confirmSubmitting) return;
+            _confirmSubmitting = true;
             var btn = document.getElementById('confirmBtn');
             if (btn) btn.disabled = true;
 

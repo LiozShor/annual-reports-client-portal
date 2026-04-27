@@ -127,6 +127,26 @@ approveAndSend.get('/approve-and-send', async (c) => {
       ),
     ]);
 
+    // DL-354: Idempotency guard — prevent duplicate emails from double-click / tab resubmit / Worker retry.
+    // Layer 1: if already sent and caller didn't explicitly pass ?force=1, return deduped.
+    const existingFirstSent = first(report.fields.docs_first_sent_at);
+    const force = c.req.query('force') === '1';
+    if (!isPreview && !force && existingFirstSent) {
+      if (respondJson) return c.json({ ok: true, deduped: true, stage: first(report.fields.stage) });
+      return c.redirect(`${FRONTEND_BASE}/approve-confirm.html?report_id=${reportId}&result=success`, 302);
+    }
+
+    // Layer 2: KV lock — prevents two simultaneous requests racing past the Airtable check.
+    if (!isPreview && !force) {
+      const lockKey = `lock:approve-send:${reportId}`;
+      const lockHeld = await c.env.CACHE_KV.get(lockKey);
+      if (lockHeld) {
+        if (respondJson) return c.json({ ok: true, deduped: true });
+        return c.redirect(`${FRONTEND_BASE}/approve-confirm.html?report_id=${reportId}&result=success`, 302);
+      }
+      await c.env.CACHE_KV.put(lockKey, '1', { expirationTtl: 60 });
+    }
+
     // Step 4: Build email
     const clientName = first(report.fields.client_name);
     const spouseName = first(report.fields.spouse_name);
@@ -189,9 +209,6 @@ approveAndSend.get('/approve-and-send', async (c) => {
     }
 
     if (!clientEmail) return errorResponse('No client email on report');
-
-    // Compute existingFirstSent early — needed by both queue and normal paths
-    const existingFirstSent = first(report.fields.docs_first_sent_at);
 
     // Step 5: Send email — deferred if off-hours (DL-273: PidTagDeferredSendTime)
     const graph = new MSGraphClient(c.env, c.executionCtx);
