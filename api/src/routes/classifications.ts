@@ -2174,10 +2174,15 @@ classifications.post('/assign-unidentified', async (c) => {
 
   try {
     // ---- Fetch unidentified classifications for this email_event ----
-    // Using FIND() against the email_event lookup (link field flatten to comma list)
-    const escapedEvId = email_event_id.replace(/'/g, "\\'");
-    const allRows = await airtable.listAllRecords(TABLES.CLASSIFICATIONS, {
-      filterByFormula: `AND(FIND('${escapedEvId}', ARRAYJOIN({email_event})) > 0, {client_id} = '')`,
+    // ARRAYJOIN on a linked-record field returns primary field values (event_key),
+    // not record ids — so we filter in-memory by the linked record id instead.
+    const allUnidentified = await airtable.listAllRecords(TABLES.CLASSIFICATIONS, {
+      filterByFormula: `{client_id} = ''`,
+    });
+    const allRows = allUnidentified.filter((r) => {
+      const ev = (r.fields as any).email_event;
+      const evId = Array.isArray(ev) ? ev[0] : ev;
+      return evId === email_event_id;
     });
 
     if (allRows.length === 0) {
