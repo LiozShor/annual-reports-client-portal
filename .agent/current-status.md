@@ -1,7 +1,32 @@
 # Annual Reports CRM - Current Status
 
+**Last Updated:** 2026-04-27 (DL-359 — IMPLEMENTED, NEED TESTING; AI Review T901/T902 full-year contract badge made clickable to override LLM verdict)
 **Last Updated:** 2026-04-26 (DL-354 — IDEA / BACKLOG logged; approve-and-send duplicate email — no idempotency guard between sendMail and Airtable write)
 **Last Updated:** 2026-04-26 (DL-356 — IMPLEMENTED, NEED TESTING; preview-url stale-itemId self-heal + centralized Required_Missing invariant + audit sweep route)
+
+## DL-359: Edit full-year contract dates — IMPLEMENTED, NEED TESTING
+
+Frontend-only fix for AI-review T901/T902 rental contracts. The green "📅 חוזה שנתי מלא ✓" badge is now clickable — click swaps it for the partial-mode editor (DL-270 UI) pre-filled with AI-detected dates. Save re-evaluates `coversFullYear` server-side via existing `update-contract-period` endpoint and the banner reverts bidirectionally to whichever state matches new dates. Side-fix: pre-existing `.period-label` no-op in `saveContractPeriod` partial→full transition (the element never existed) replaced by helper-based `outerHTML` swap. Files: `frontend/admin/js/script.js` (added `renderFullYearBadge`, `renderContractPeriodBanner`, `expandFullYearBadgeToEdit`; refactored AI-review render branch + `saveContractPeriod` post-save), `frontend/admin/index.html` (cache-bust `?v=363→364`). Pending Approval queue (5739) + mobile banner (781) intentionally out of scope.
+
+Branch: `DL-359-edit-full-year-contract-dates` — committed locally, **awaiting explicit approval before push + merge**.
+
+### Test DL-359: Full-year contract date override — NEEDS LIVE VERIFICATION
+Manual checks after merge to main (Cloudflare Pages auto-deploys frontend; no Worker deploy needed):
+
+- [ ] Open AI-review tab on a card with a T901/T902 contract where AI marked `coversFullYear=true`. Verify the green badge has a pointer cursor, hover tooltip "לחץ לעריכה — תאריכי החוזה לא נכונים?", and a small ✏️ hint icon.
+- [ ] Click the badge → editor expands inline with the AI-detected dates pre-filled (e.g., 01.YYYY / 12.YYYY).
+- [ ] Edit start month to 06.YYYY → blur the input → success toast "תאריכי חוזה עודכנו".
+- [ ] Banner now shows partial-mode with "+ בקש חוזה 01-05/YYYY" button visible.
+- [ ] Click "+ בקש חוזה" → missing-period request flow still works.
+- [ ] Edit dates back to 01.YYYY / 12.YYYY → save → banner swaps BACK to the green full-year badge (this verifies the bidirectional swap and the `.period-label` bug-fix).
+- [ ] Hard-refresh (`script.js?v=364`) → state persists.
+- [ ] Regression: existing partial-mode click-to-edit + request-missing buttons still work on cards that started partial.
+- [ ] Confirm Pending Approval queue (line 5739 surface) and mobile banner (line 781 surface) still render correctly (no touch — full-year there remains static; document if user later asks for parity).
+
+Design log: `.agent/design-logs/ai-review/359-edit-full-year-contract-dates.md`
+
+---
+
 
 ## DL-356: Preview URL stale-itemId self-heal — IMPLEMENTED, NEED TESTING
 

@@ -2,12 +2,12 @@
 
 Active and pending logs. For completed history, see [ARCHIVE-INDEX.md](ARCHIVE-INDEX.md).
 
-**Total logs:** 220 | **Active:** 122 | **Archived:** 98
+**Total logs:** 221 | **Active:** 123 | **Archived:** 98
 
 ## Folder Structure
 
 - `admin-ui/` — Admin UI (33)
-- `ai-review/` — AI Review & Classification (41)
+- `ai-review/` — AI Review & Classification (42)
 - `capital-statements/` — Capital Statements (4)
 - `client-portal/` — Client Portal & Questionnaires (13)
 - `documents/` — Documents & OneDrive (20)
@@ -21,6 +21,7 @@ Active and pending logs. For completed history, see [ARCHIVE-INDEX.md](ARCHIVE-I
 
 | # | File | Status | Summary |
 |---|------|--------|---------|
+| 359 | [359-edit-full-year-contract-dates.md](ai-review/359-edit-full-year-contract-dates.md) | IMPLEMENTED — NEED TESTING | AI Review T901/T902 full-year contract badge made clickable to override LLM verdict. Click swaps the green `📅 חוזה שנתי מלא ✓` badge for the partial-mode editor (same UI as DL-270) pre-filled with AI-detected dates; save re-evaluates `coversFullYear` server-side via existing `update-contract-period` endpoint and the banner reverts to whichever state matches new dates. Frontend-only: extract `renderFullYearBadge(rid, year)` + `renderContractPeriodBanner(rid, cp, year)` helpers in `script.js`, swap inline rendering at AI-review card (line ~4804) to call them, add `expandFullYearBadgeToEdit(rid, badgeEl)` (replaces outerHTML), refactor `saveContractPeriod` post-save UI swap to use both helpers bidirectionally — also fixes the pre-existing `.period-label` no-op bug on partial→full transitions. Pending Approval queue (5739) + mobile banner (781) intentionally out of scope. Cache-bust: `script.js?v=363→364`. |
 | 356 | [356-preview-url-stale-itemid-self-heal.md](infrastructure/356-preview-url-stale-itemid-self-heal.md) | IMPLEMENTED — NEED TESTING | Self-heal stale `onedrive_item_id` references on `/webhook/get-preview-url` 404. Centralize the DL-205 invariant at the data-write layer (new `api/src/lib/doc-invariants.ts`) and call from `edit-documents.ts` + `classifications.ts` (reject/reassign/revert_cascade). On MS Graph 404+itemNotFound, `preview.ts` PATCHes the row's file fields to null (when `recordId` provided) and returns structured `{code:'FILE_GONE'}`. Frontend toasts in Hebrew + locally re-renders the row without preview button. New admin-only `GET /webhook/audit-stale-itemids?dryRun=1` mirrors backfill.ts pattern to find/clean residual records. Cross-report duplicate (DL-230) accepted as-is — fix is record-scoped. |
 | 355 | [355-onedrive-rename-always-short-name.md](documents/355-onedrive-rename-always-short-name.md) | IMPLEMENTED — NEED TESTING | OneDrive filenames inconsistent across paths: `טופס 106 – טופס 106.pdf` (no-bold fallback duplicating template name into `{issuer}`), literal `{year}` in T501 names, admin upload + inbound + split bypassing `buildShortName`. Fix: (1) add echo-detection in `buildShortName` Step 3 — when no `<b>...</b>` AND input equals `HE_TITLE`/`name_he`/pattern-stripped, suppress fallback so `{issuer}` is stripped cleanly; (2) new `resolveOneDriveFilename({templateId, issuerName, attachmentName, templateMap, suffix?})` single source of truth for ALL OneDrive write paths; (3) wire the 4 bypass paths (admin upload, inbound `buildExpectedFilename`, split-classify segment rename, approve no-longer-gated-by-match-quality) through it; (4) Documents PATCH post-rename now propagates `issuer_name` + `matched_doc_name` + `expected_filename` (fix for admin views showing blank columns after approve). Audit script `scripts/audit-short-name-he.mjs` (read-only) flags `{year}`/parentheticals/overlong patterns in Airtable templates. No OneDrive backfill (per user). T901/T902 rental-period suffix preserved via `resolveOneDriveFilename({suffix})`. |
 | 354 | [354-approve-and-send-idempotency.md](email/354-approve-and-send-idempotency.md) | IDEA / BACKLOG | Duplicate `דרישת מסמכים` email observed (client@example.com, 16:16 twice). Root cause: `api/src/routes/approve-and-send.ts` has no idempotency guard between `graph.sendMail` (Step 5) and the Airtable write (Step 6) — double-click, two-tab, or Worker retry can fire two sends. Proposed: re-read `docs_first_sent_at` and set it to `now` *before* `sendMail`; treat second caller as no-op. Optional KV lock `lock:approve:<reportId>` for race-tight protection. |
