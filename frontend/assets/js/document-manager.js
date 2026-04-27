@@ -3225,13 +3225,6 @@ function renderClientNotes() {
 
     let html = '';
 
-    // Composer bar (top, chat-style)
-    html += `<div class="cn-add-bar">
-        <textarea id="cnNewNote" placeholder="הוסף הערה..." rows="1"></textarea>
-        <button class="cn-send-btn" onclick="addClientNote()" title="שלח">
-            <i data-lucide="send" class="icon-sm"></i>
-        </button>
-    </div>`;
 
     // DL-266: Build reply map (office_reply notes keyed by reply_to)
     const replyMap = {};
