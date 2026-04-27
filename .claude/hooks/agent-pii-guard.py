@@ -34,6 +34,8 @@ ALLOWLIST_PATTERNS = [
     re.compile(r'הוסף'),                     # UI button label (DL-336 design log + tests)
     re.compile(r'חפש מסמך'),                 # UI search placeholder label
     re.compile(r'או מסמך מותאם אישית'),      # UI divider label
+    re.compile(r'הצג|הסתר'),                 # UI thread toggle labels (DL-360)
+    re.compile(r'שרשור'),                    # Outlook thread concept in design doc (DL-360)
 ]
 
 

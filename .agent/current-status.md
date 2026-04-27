@@ -10,8 +10,29 @@ Design log: `.agent/design-logs/email/358-remove-greeting-in-comment-email.md`
 
 ---
 
+**Last Updated:** 2026-04-27 (DL-360 — IMPLEMENTED, NEED TESTING; doc-manager thread grouping by Outlook conversationId; also: doc-manager raw-text fix applied this session — AI summary label removed)
 **Last Updated:** 2026-04-26 (DL-354 — IDEA / BACKLOG logged; approve-and-send duplicate email — no idempotency guard between sendMail and Airtable write)
 **Last Updated:** 2026-04-26 (DL-356 — IMPLEMENTED, NEED TESTING; preview-url stale-itemId self-heal + centralized Required_Missing invariant + audit sweep route)
+
+## DL-360: Doc-manager thread grouping — IMPLEMENTED, NEED TESTING
+
+Group doc-manager client-notes by Outlook `conversationId`. Backend: `processor.ts` now persists `conversation_id` on new email notes; `dashboard.ts` office replies inherit it from parent. Backfill endpoint `/webhook/backfill-conversation-ids` patches historical notes via Graph lookup. Frontend: `renderClientNotes` buckets by `conversation_id`, renders one card per thread with the latest message visible and older ones collapsed behind a "▸ הצג N הודעות קודמות בשרשור" toggle.
+
+Branch: `DL-360-doc-manager-thread-grouping` — committed + pushed; Worker deployed.
+
+### Test DL-360: Doc-manager thread grouping — NEEDS LIVE VERIFICATION
+- [ ] Run `POST /webhook/backfill-conversation-ids?dryRun=1` (Auth: Bearer ADMIN_SECRET) → counts returned
+- [ ] Run with `dryRun=0` → notes patched; reload doc-manager for the client@example.com client → 3 cards collapse into 1 with toggle
+- [ ] Toggle expands/collapses older messages correctly; label flips between הצג/הסתר
+- [ ] Office replies stay attached to the correct message (not floated to latest)
+- [ ] Manual office note (no conversation_id) still renders as standalone card
+- [ ] New inbound email: check Airtable `client_notes` JSON contains `conversation_id`
+- [ ] Hard-reload doc-manager (Ctrl+F5) — no stale JS
+- [ ] No regression on Dashboard Recent Messages or AI Review tab
+
+Design log: `.agent/design-logs/admin-ui/360-doc-manager-thread-grouping.md`
+
+---
 
 ## DL-356: Preview URL stale-itemId self-heal — IMPLEMENTED, NEED TESTING
 
