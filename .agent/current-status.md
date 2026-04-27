@@ -1,5 +1,27 @@
 # Annual Reports CRM - Current Status
 
+**Last Updated:** 2026-04-27 (DL-358 — IMPLEMENTED, NEED TESTING; comment email greeting `שלום {clientName},` removed — opens directly with bookkeeper's text)
+
+## DL-358: Remove greeting from comment email — IMPLEMENTED, NEED TESTING
+
+`api/src/lib/email-html.ts:702` — drop the `<tr>` greeting row from `buildCommentEmailHtml`. Single-source-of-truth template — propagates to both the send path and the DL-289 live preview without duplicate edits. Other Hebrew templates (questionnaire, batch-status, generic) untouched per Phase A scope. `clientName` retained in `CommentEmailParams` interface for caller compatibility but dropped from destructure with a `DL-358` marker. DL-289 Section 7 line 111 backfilled.
+
+Branch: `DL-358-remove-greeting-in-comments` — committed locally, awaiting approval to push + deploy.
+
+### Test DL-358: Remove greeting from comment email — NEEDS LIVE VERIFICATION
+Backend-only change; goes live on `wrangler deploy`.
+
+- [ ] `tsc --noEmit` clean (no new errors beyond the 3 pre-existing)
+- [ ] `wrangler deploy` succeeds
+- [ ] Live preview: Recent Messages → expand reply modal → type test text → preview shows logo, blue header, comment body, contact block, signature — NO greeting line
+- [ ] Send a real test comment to a test client → received email layout matches preview
+- [ ] Regression: questionnaire reminders + batch-status emails STILL contain `שלום {name},`
+- [ ] No awkward whitespace where the greeting row used to live (comment text properly padded under blue header)
+
+Design log: `.agent/design-logs/email/358-remove-greeting-in-comment-email.md`
+
+---
+
 **Last Updated:** 2026-04-26 (DL-354 — IDEA / BACKLOG logged; approve-and-send duplicate email — no idempotency guard between sendMail and Airtable write)
 **Last Updated:** 2026-04-26 (DL-356 — IMPLEMENTED, NEED TESTING; preview-url stale-itemId self-heal + centralized Required_Missing invariant + audit sweep route)
 

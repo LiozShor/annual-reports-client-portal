@@ -677,7 +677,8 @@ interface CommentEmailParams {
 }
 
 export function buildCommentEmailHtml(params: CommentEmailParams): string {
-  const { commentText, clientName, year } = params;
+  // DL-358: clientName intentionally unused — greeting row removed.
+  const { commentText, year } = params;
   const escapedComment = commentText
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
@@ -698,9 +699,7 @@ export function buildCommentEmailHtml(params: CommentEmailParams): string {
     // Body
     + '<tr><td style="padding:32px;">'
     + '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">'
-    + '<tr><td style="font-family:' + FONT + ';font-size:16px;color:' + C.body + ';line-height:1.6;padding-bottom:16px;">'
-    + 'שלום ' + clientName + ','
-    + '</td></tr>'
+    // DL-358: greeting row removed — comment opens directly with the bookkeeper's typed text.
     + '<tr><td style="font-family:' + FONT + ';font-size:15px;color:' + C.body + ';line-height:1.6;padding-bottom:24px;">'
     + escapedComment
     + '</td></tr>'

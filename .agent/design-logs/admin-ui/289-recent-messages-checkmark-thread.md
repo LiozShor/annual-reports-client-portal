@@ -108,7 +108,7 @@ Office can see all reply threads stacked under each message, mark messages as ha
 * [ ] Click "השאר פתוח" or wait 8s → panel reloads, new reply visible in thread
 * [ ] Compact reply box: expand button visible top-right
 * [ ] Click expand → modal opens, textarea preserves typed text
-* [ ] Type in expanded textarea → preview updates within ~400ms, shows logo, blue header bar, "שלום {name}", comment body, contact block, footer
+* [ ] Type in expanded textarea → preview updates within ~400ms, shows logo, blue header bar, comment body, contact block, footer (greeting row removed in DL-358)
 * [ ] Empty textarea → preview shows "הקלד הודעה לתצוגה מקדימה" placeholder
 * [ ] Click collapse → modal closes, compact textarea has the typed text
 * [ ] Click send from expanded mode → email sent (or queued off-hours), same pipeline as compact
