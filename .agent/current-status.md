@@ -1,5 +1,16 @@
 # Annual Reports CRM - Current Status
 
+**Last Updated:** 2026-04-27 (design-log skill switched from built-in WebSearch/WebFetch to Bright Data MCP — VERIFY NEXT SESSION)
+
+## Design-log skill: Bright Data MCP swap (NEEDS VERIFICATION)
+
+Edited `~/.claude/skills/design-log/SKILL.md` to replace `WebSearch` / `WebFetch` with Bright Data MCP tools (`mcp__brightdata__search_engine`, `scrape_as_markdown`, `search_engine_batch`, `scrape_batch`) in both the `allowed-tools` frontmatter and the Phase B2 research instructions.
+
+**To verify next session in this repo:**
+1. Run `claude mcp list` and confirm the Bright Data MCP server is registered — note its actual server-name prefix (might be `brightdata`, `Bright_Data`, or other). If different from `brightdata`, fix the four `mcp__brightdata__*` tool names in `~/.claude/skills/design-log/SKILL.md` lines 6 + Phase B2.
+2. Trigger `/design-log` on a small task. In Phase B2 confirm Claude calls the Bright Data MCP tools (not the built-in WebSearch/WebFetch). If permission prompts appear, allowlist the four tools in settings.
+3. If Bright Data isn't installed yet: install per https://docs.brightdata.com/ai/mcp-server/integrations/claude-code, then redo step 1.
+
 **Last Updated:** 2026-04-27 (DL-363 — IDEA / BACKLOG; chat-bubble side misclassification for office-authored emails landing as client notes)
 **Last Updated:** 2026-04-27 (DL-362 — IMPLEMENTED, NEED TESTING; doc-manager client-notes redesigned as chat-bubble conversation view)
 **Last Updated:** 2026-04-27 (DL-358 — COMPLETED, live tests passed; comment email opens directly with bookkeeper's text, no greeting row)
