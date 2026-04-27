@@ -3212,7 +3212,6 @@ function renderClientNotes() {
     const countBadge = document.getElementById('clientNotesCount');
     if (!container) return;
 
-    // Update badge count
     if (countBadge) {
         if (CLIENT_NOTES.length > 0) {
             countBadge.textContent = CLIENT_NOTES.length;
@@ -3222,16 +3221,15 @@ function renderClientNotes() {
         }
     }
 
-    // Sort newest first
     const sorted = [...CLIENT_NOTES].sort((a, b) => (b.date || '').localeCompare(a.date || ''));
 
     let html = '';
 
-    // Add note bar
+    // Composer bar (top, chat-style)
     html += `<div class="cn-add-bar">
         <textarea id="cnNewNote" placeholder="הוסף הערה..." rows="1"></textarea>
-        <button class="btn btn-sm btn-secondary" onclick="addClientNote()">
-            <i data-lucide="plus" class="icon-sm"></i> הוסף
+        <button class="cn-send-btn" onclick="addClientNote()" title="שלח">
+            <i data-lucide="send" class="icon-sm"></i>
         </button>
     </div>`;
 
@@ -3259,7 +3257,7 @@ function renderClientNotes() {
             }
         }
 
-        // Unified list sorted newest-first by representative date
+        // Unified timeline sorted newest-first by representative date
         const allItems = [];
         for (const entry of standaloneItems) {
             allItems.push({ date: entry.date || '', kind: 'standalone', entry });
@@ -3269,145 +3267,108 @@ function renderClientNotes() {
         }
         allItems.sort((a, b) => b.date.localeCompare(a.date));
 
-        const buildReplyHtml = (entryId) => {
-            const reply = replyMap[entryId];
-            if (!reply) return '';
-            const replyDate = (reply.date || '').slice(0, 10).replace(/^(\d{4})-(\d{2})-(\d{2})/, '$3-$2-$1');
-            return `<div class="cn-office-reply">
-                    <div class="cn-reply-label"><i data-lucide="corner-down-left" class="icon-xs"></i> תגובת המשרד</div>
-                    <div class="cn-reply-text">${escapeHtml(reply.summary)}</div>
-                    <div class="cn-reply-date">${replyDate}</div>
-                </div>`;
+        // Classify a note as 'office' or 'client'
+        const classify = (entry) => {
+            if (entry.type === 'office_reply') return 'office';
+            if (entry.source === 'manual') return 'office';
+            return 'client';
+        };
+
+        const fmtDate = (raw) => (raw || '').match(/^(\d{4})-(\d{2})-(\d{2})/)
+            ? raw.slice(0, 10).replace(/^(\d{4})-(\d{2})-(\d{2})/, '$3-$2-$1')
+            : (raw || '');
+
+        // Build a single chat bubble; firstOfRun controls avatar/header/tail
+        const buildBubble = (entry, firstOfRun) => {
+            const side = classify(entry);
+            const isOut = side === 'office'; // office = right in RTL (cn-msg--out)
+            const dirClass = isOut ? 'cn-msg--out' : 'cn-msg--in';
+            const bubbleClass = isOut ? 'cn-bubble--out' : 'cn-bubble--in';
+            const runClass = firstOfRun ? ' cn-msg--first-of-run' : '';
+            const displayText = entry.raw_snippet || entry.summary || '';
+            const dateStr = fmtDate(entry.date);
+            const senderLabel = isOut
+                ? `המשרד · ${escapeHtml(dateStr)}`
+                : entry.sender_email
+                    ? `${escapeHtml(entry.sender_email)} · ${escapeHtml(dateStr)}`
+                    : escapeHtml(dateStr);
+            const avatarLetter = isOut ? 'מ' : (entry.sender_email || '?')[0].toUpperCase();
+
+            const headerHtml = firstOfRun
+                ? `<div class="cn-msg-header">${senderLabel}</div>`
+                : '';
+
+            return `<div class="cn-msg ${dirClass}${runClass}" data-cn-id="${escapeAttr(entry.id || '')}">
+                <div class="cn-avatar">${escapeHtml(avatarLetter)}</div>
+                <div class="cn-msg-stack">
+                    ${headerHtml}
+                    <div class="cn-bubble ${bubbleClass}">${escapeHtml(displayText)}</div>
+                    <div class="cn-msg-actions">
+                        <button onclick="editClientNote('${escapeAttr(entry.id || '')}')" title="ערוך">
+                            <i data-lucide="pencil" class="icon-xs"></i>
+                        </button>
+                        <button class="cn-delete" onclick="deleteClientNote('${escapeAttr(entry.id || '')}')" title="מחק">
+                            <i data-lucide="trash-2" class="icon-xs"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>`;
         };
 
         for (const item of allItems) {
+            // Date divider chip for each timeline section
+            const repDate = fmtDate(item.date);
+            html += `<div class="cn-date-divider"><span>${escapeHtml(repDate)}</span></div>`;
+
             if (item.kind === 'standalone') {
                 const entry = item.entry;
 
-                // DL-335: batch_questions_sent — render as outbound office question card
+                // DL-335: batch_questions_sent — centered system notice
                 if (entry.type === 'batch_questions_sent') {
-                    const rawDate = entry.date || '';
-                    const dateStr = rawDate.match(/^(\d{4})-(\d{2})-(\d{2})/) ? rawDate.slice(0, 10).replace(/^(\d{4})-(\d{2})-(\d{2})/, '$3-$2-$1') : rawDate;
-                    const queuedNote = entry.queued ? ' <span class="cn-label">(נשלח בבוקר)</span>' : '';
+                    const dateStr = fmtDate(entry.date);
+                    const queuedNote = entry.queued ? ' (נשלח בבוקר)' : '';
                     let itemsHtml = '';
                     if (Array.isArray(entry.items) && entry.items.length > 0) {
                         itemsHtml = '<ul class="cn-bq-items">' + entry.items.map(q =>
                             `<li><strong>${escapeHtml(q.attachment_name || q.short_name || '')}</strong>${q.question ? ': ' + escapeHtml(q.question) : ''}</li>`
                         ).join('') + '</ul>';
                     }
-                    html += `<div class="cn-entry cn-entry--outbound" data-cn-id="${escapeAttr(entry.id || '')}">
-                        <div class="cn-icon cn-icon--office-question">
-                            <i data-lucide="help-circle" class="icon-sm"></i>
-                        </div>
-                        <div class="cn-body">
-                            <div class="cn-meta">
-                                <span>${escapeHtml(dateStr)}</span>${queuedNote}
-                            </div>
-                            <div class="cn-summary"><span class="cn-label">שאלות ששלח המשרד:</span> ${escapeHtml(entry.summary || '')}</div>
-                            ${itemsHtml}
-                        </div>
+                    html += `<div class="cn-system-notice" data-cn-id="${escapeAttr(entry.id || '')}">
+                        <i data-lucide="help-circle" class="icon-xs"></i>
+                        <span>שאלות ששלח המשרד${queuedNote}: ${escapeHtml(entry.summary || '')}</span>
+                        ${itemsHtml}
                     </div>`;
                     continue;
                 }
 
-                const isEmail = entry.source === 'email';
-                const iconClass = isEmail ? 'cn-icon--email' : 'cn-icon--manual';
-                const iconName = isEmail ? 'mail' : 'pencil';
-                const rawDate = entry.date || '';
-                const dateStr = rawDate.match(/^(\d{4})-(\d{2})-(\d{2})/) ? rawDate.slice(0, 10).replace(/^(\d{4})-(\d{2})-(\d{2})/, '$3-$2-$1') : rawDate;
-                const senderStr = entry.sender_email ? ` · ${escapeHtml(entry.sender_email)}` : '';
-                const displayText = entry.raw_snippet || entry.summary || '';
+                html += buildBubble(entry, true);
 
-                html += `<div class="cn-entry" data-cn-id="${escapeAttr(entry.id)}">
-                    <div class="cn-icon ${iconClass}">
-                        <i data-lucide="${iconName}" class="icon-sm"></i>
-                    </div>
-                    <div class="cn-body">
-                        <div class="cn-meta">
-                            <span>${escapeHtml(dateStr)}</span>${senderStr}
-                        </div>
-                        <div class="cn-summary">${escapeHtml(displayText)}</div>
-                        ${buildReplyHtml(entry.id)}
-                    </div>
-                    <div class="cn-actions">
-                        <button onclick="editClientNote('${escapeAttr(entry.id)}')" title="ערוך">
-                            <i data-lucide="pencil" class="icon-sm"></i>
-                        </button>
-                        <button class="cn-delete" onclick="deleteClientNote('${escapeAttr(entry.id)}')" title="מחק">
-                            <i data-lucide="trash-2" class="icon-sm"></i>
-                        </button>
-                    </div>
-                </div>`;
+                // Emit office reply as next bubble if linked
+                const reply = replyMap[entry.id];
+                if (reply) html += buildBubble(reply, true);
+
             } else {
-                // DL-360: Thread card — latest visible, older collapsed
-                const [latest, ...older] = item.messages;
-                const rawDate = latest.date || '';
-                const dateStr = rawDate.match(/^(\d{4})-(\d{2})-(\d{2})/) ? rawDate.slice(0, 10).replace(/^(\d{4})-(\d{2})-(\d{2})/, '$3-$2-$1') : rawDate;
-                const senderStr = latest.sender_email ? ` · ${escapeHtml(latest.sender_email)}` : '';
-                const displayText = latest.raw_snippet || latest.summary || '';
-                const toggleId = `cn-thread-${escapeAttr(item.convId)}`;
-
-                let olderHtml = '';
-                if (older.length > 0) {
-                    const olderMsgsHtml = older.map(msg => {
-                        const msgDate = (msg.date || '').slice(0, 10).replace(/^(\d{4})-(\d{2})-(\d{2})/, '$3-$2-$1');
-                        const msgSender = msg.sender_email ? ` · ${escapeHtml(msg.sender_email)}` : '';
-                        const msgText = msg.raw_snippet || msg.summary || '';
-                        return `<div class="cn-thread-msg">
-                            <div class="cn-meta"><span>${escapeHtml(msgDate)}</span>${msgSender}</div>
-                            <div class="cn-summary">${escapeHtml(msgText)}</div>
-                            ${buildReplyHtml(msg.id)}
-                        </div>`;
-                    }).join('');
-                    olderHtml = `<button class="cn-thread-toggle" onclick="toggleCnThread('${toggleId}', this)">
-                        <i data-lucide="chevron-left" class="icon-xs"></i>
-                        <span>הצג ${older.length} הודעות קודמות בשרשור</span>
-                    </button>
-                    <div class="cn-thread-older" id="${toggleId}">${olderMsgsHtml}</div>`;
+                // Thread: emit messages oldest-first (chat top-to-bottom)
+                const messages = [...item.messages].reverse();
+                let prevSender = null;
+                for (const msg of messages) {
+                    const side = classify(msg);
+                    const firstOfRun = side !== prevSender;
+                    html += buildBubble(msg, firstOfRun);
+                    prevSender = side;
+                    // Emit office reply immediately after client message
+                    const reply = replyMap[msg.id];
+                    if (reply) {
+                        html += buildBubble(reply, classify(reply) !== prevSender);
+                        prevSender = classify(reply);
+                    }
                 }
-
-                html += `<div class="cn-entry" data-cn-id="${escapeAttr(latest.id)}">
-                    <div class="cn-icon cn-icon--email">
-                        <i data-lucide="mail" class="icon-sm"></i>
-                    </div>
-                    <div class="cn-body">
-                        <div class="cn-meta">
-                            <span>${escapeHtml(dateStr)}</span>${senderStr}
-                        </div>
-                        <div class="cn-summary">${escapeHtml(displayText)}</div>
-                        ${buildReplyHtml(latest.id)}
-                        ${olderHtml}
-                    </div>
-                    <div class="cn-actions">
-                        <button onclick="editClientNote('${escapeAttr(latest.id)}')" title="ערוך">
-                            <i data-lucide="pencil" class="icon-sm"></i>
-                        </button>
-                        <button class="cn-delete" onclick="deleteClientNote('${escapeAttr(latest.id)}')" title="מחק">
-                            <i data-lucide="trash-2" class="icon-sm"></i>
-                        </button>
-                    </div>
-                </div>`;
             }
         }
     }
 
     container.innerHTML = html;
     try { if (typeof lucide !== 'undefined') lucide.createIcons({ nameAttr: 'data-lucide', attrs: {} }); } catch (_) {}
-}
-
-function toggleCnThread(id, btn) {
-    const el = document.getElementById(id);
-    if (!el) return;
-    const open = el.classList.toggle('open');
-    const span = btn.querySelector('span');
-    const icon = btn.querySelector('[data-lucide]');
-    if (open) {
-        if (span) span.textContent = span.textContent.replace('הצג', 'הסתר');
-        if (icon) { icon.setAttribute('data-lucide', 'chevron-down'); try { lucide.createIcons({ nameAttr: 'data-lucide', attrs: {} }); } catch (_) {} }
-    } else {
-        if (span) span.textContent = span.textContent.replace('הסתר', 'הצג');
-        if (icon) { icon.setAttribute('data-lucide', 'chevron-left'); try { lucide.createIcons({ nameAttr: 'data-lucide', attrs: {} }); } catch (_) {} }
-    }
 }
 
 async function saveClientNotes() {
