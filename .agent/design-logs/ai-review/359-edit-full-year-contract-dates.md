@@ -1,5 +1,5 @@
 # Design Log 359: Edit Full-Year Contract Dates (Override AI Verdict)
-**Status:** [IMPLEMENTED — NEED TESTING]
+**Status:** [COMPLETED]
 **Date:** 2026-04-27
 **Related Logs:** DL-270 (inline click-to-edit partial contract dates), DL-269/271 (request missing period), DL-314 (rental contract templates T901/T902)
 

@@ -34,15 +34,15 @@ Design log: `.agent/design-logs/admin-ui/360-doc-manager-thread-grouping.md`
 
 ---
 
-**Last Updated:** 2026-04-27 (DL-359 — IMPLEMENTED, NEED TESTING; AI Review T901/T902 full-year contract badge made clickable to override LLM verdict)
+**Last Updated:** 2026-04-27 (DL-359 — COMPLETED, live tests passed; AI Review T901/T902 full-year contract badge clickable to override LLM verdict)
 **Last Updated:** 2026-04-26 (DL-354 — IDEA / BACKLOG logged; approve-and-send duplicate email — no idempotency guard between sendMail and Airtable write)
 **Last Updated:** 2026-04-26 (DL-356 — IMPLEMENTED, NEED TESTING; preview-url stale-itemId self-heal + centralized Required_Missing invariant + audit sweep route)
 
-## DL-359: Edit full-year contract dates — IMPLEMENTED, NEED TESTING
+## DL-359: Edit full-year contract dates — COMPLETED (live 2026-04-27)
 
 Frontend-only fix for AI-review T901/T902 rental contracts. The green "📅 חוזה שנתי מלא ✓" badge is now clickable — click swaps it for the partial-mode editor (DL-270 UI) pre-filled with AI-detected dates. Save re-evaluates `coversFullYear` server-side via existing `update-contract-period` endpoint and the banner reverts bidirectionally to whichever state matches new dates. Side-fix: pre-existing `.period-label` no-op in `saveContractPeriod` partial→full transition (the element never existed) replaced by helper-based `outerHTML` swap. Files: `frontend/admin/js/script.js` (added `renderFullYearBadge`, `renderContractPeriodBanner`, `expandFullYearBadgeToEdit`; refactored AI-review render branch + `saveContractPeriod` post-save), `frontend/admin/index.html` (cache-bust `?v=363→364`). Pending Approval queue (5739) + mobile banner (781) intentionally out of scope.
 
-Branch: `DL-359-edit-full-year-contract-dates` — committed locally, **awaiting explicit approval before push + merge**.
+Branch: `DL-359-edit-full-year-contract-dates` — merged to main (commits `a42d0f9` + `3dad1d6`); Cloudflare Pages auto-deployed `script.js?v=364`. Live tests passed.
 
 ### Test DL-359: Full-year contract date override — NEEDS LIVE VERIFICATION
 Manual checks after merge to main (Cloudflare Pages auto-deploys frontend; no Worker deploy needed):
