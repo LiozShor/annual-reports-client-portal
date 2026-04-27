@@ -3223,7 +3223,7 @@ function renderReviewTable(queue) {
                 <td><span class="waiting-badge ${waitingClass}">${waitingText}</span></td>
                 <td>
                     <button class="action-btn view" onclick="viewClient('${escapeAttr(client.report_id)}')" title="צפה בתיק">${icon('eye', 'icon-sm')}</button>
-                    <button class="action-btn complete" onclick="markComplete('${escapeOnclick(client.report_id)}', '${escapeOnclick(client.name)}')" title="סמן כהושלם">${icon('circle-check', 'icon-sm')}</button>
+                    <button class="action-btn complete" onclick="markComplete('${escapeOnclick(client.report_id)}', '${escapeOnclick(client.name)}')" title="העבר לבדיקת משה">${icon('circle-check', 'icon-sm')}</button>
                 </td>
             </tr>
         `;
@@ -3265,7 +3265,7 @@ function renderReviewTable(queue) {
             </div>
             <div class="mobile-card-actions">
                 <button class="action-btn view" onclick="viewClient('${escapeAttr(client.report_id)}')" title="צפה בתיק">${icon('eye', 'icon-sm')}</button>
-                <button class="action-btn complete" onclick="markComplete('${escapeOnclick(client.report_id)}', '${escapeOnclick(client.name)}')" title="סמן כהושלם">${icon('circle-check', 'icon-sm')}</button>
+                <button class="action-btn complete" onclick="markComplete('${escapeOnclick(client.report_id)}', '${escapeOnclick(client.name)}')" title="העבר לבדיקת משה">${icon('circle-check', 'icon-sm')}</button>
             </div>
         </li>`;
     }
@@ -3280,17 +3280,18 @@ let _markCompleteLocked = false;
 
 async function markComplete(reportId, name) {
     if (_markCompleteLocked) return;
-    showConfirmDialog(`לסמן את "${name}" כהושלם?`, async () => {
+    showConfirmDialog(`להעביר את "${name}" לבדיקת משה?`, async () => {
         _markCompleteLocked = true;
         showLoading('מעדכן...');
 
         try {
-            const response = await fetchWithTimeout(ENDPOINTS.ADMIN_MARK_COMPLETE, {
+            const response = await fetchWithTimeout(ENDPOINTS.ADMIN_CHANGE_STAGE, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     token: authToken,
-                    report_id: reportId
+                    report_id: reportId,
+                    target_stage: 'Moshe_Review'
                 })
             }, FETCH_TIMEOUTS.mutate);
 
@@ -3299,7 +3300,7 @@ async function markComplete(reportId, name) {
 
             if (!data.ok) throw new Error(data.error);
 
-            showModal('success', 'הושלם!', `"${name}" סומן כהושלם בהצלחה.`);
+            showModal('success', 'הועבר!', `"${name}" הועבר לבדיקת משה בהצלחה.`);
             loadDashboard();
 
         } catch (error) {
@@ -3308,7 +3309,7 @@ async function markComplete(reportId, name) {
         } finally {
             _markCompleteLocked = false;
         }
-    }, 'סמן כהושלם');
+    }, 'העבר לבדיקת משה');
 }
 
 function exportReviewToExcel() {

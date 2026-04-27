@@ -58,6 +58,12 @@ stage.post('/admin-change-stage', async (c) => {
     fields.rejected_uploads_log = '';
   }
 
+  // DL-364: backfill docs_completed_at on manual transition to Review when empty,
+  // so the FIFO queue (dashboard.ts) and the stat-card counts agree.
+  if (target_stage === 'Review' && !report.fields.docs_completed_at) {
+    fields.docs_completed_at = new Date().toISOString();
+  }
+
   await airtable.updateRecord('tbls7m3hmHC4hhQVy', report_id, fields);
 
   const clientName = Array.isArray(report.fields.client_name)
