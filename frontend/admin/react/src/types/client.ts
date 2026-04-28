@@ -21,12 +21,13 @@ export interface ClientDetail {
 
 export interface ClientUpdatePayload {
   reportId: string
+  name?: string
   email?: string
   cc_email?: string | null
   phone?: string | null
 }
 
-export type ClientDetailFocusField = 'email' | 'cc_email' | 'phone'
+export type ClientDetailFocusField = 'name' | 'email' | 'cc_email' | 'phone'
 
 export interface ClientDetailContext {
   /** The vanilla JS context object passed from script.js — can be used for callbacks */

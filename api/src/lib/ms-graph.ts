@@ -1,5 +1,6 @@
 import type { Env } from './types';
 import { getAccessToken } from './ms-graph-token';
+import { DRIVE_ID } from './classification-helpers';
 
 const KV_ACCESS_TOKEN = 'ms_graph_access_token';
 const GRAPH_BASE = 'https://graph.microsoft.com/v1.0';
@@ -129,6 +130,14 @@ export class MSGraphClient {
     }
 
     return response.json();
+  }
+
+  /** Upload binary content replacing the existing file in-place (keeps version history). */
+  async putBinaryReplace(itemId: string, body: ArrayBuffer): Promise<any> {
+    return this.putBinary(
+      `/drives/${DRIVE_ID}/items/${itemId}/content?@microsoft.graph.conflictBehavior=replace`,
+      body
+    );
   }
 
   private async request(method: string, path: string, body?: unknown): Promise<any> {

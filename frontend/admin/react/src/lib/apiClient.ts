@@ -35,3 +35,4 @@ export async function updateClient(payload: ClientUpdatePayload): Promise<void> 
     body: JSON.stringify(payload),
   })
 }
+

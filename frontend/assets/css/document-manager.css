@@ -2492,6 +2492,7 @@ body {
     justify-content: flex-end;
 }
 
+/* Legacy static-HTML form (dead fallback, kept for reference) */
 .client-detail-form .form-field {
     display: flex;
     flex-direction: column;
@@ -2511,6 +2512,87 @@ body {
     outline: none;
     border-color: var(--brand-500, #6366f1);
     box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+}
+
+/* ==================== AI MODAL React classes (DL-371 — mirrored from admin/css/style.css) ==================== */
+.ai-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--sp-6, 24px) var(--sp-6, 24px) var(--sp-4, 16px);
+    border-bottom: 1px solid var(--gray-200, #e5e7eb);
+    gap: var(--sp-3, 12px);
+}
+.ai-modal-title {
+    margin: 0;
+    font-size: var(--text-lg, 17px);
+    font-weight: 700;
+    color: var(--gray-800, #1f2937);
+    line-height: 1.3;
+}
+.ai-modal-title-action {
+    color: var(--gray-500, #6b7280);
+    font-weight: 500;
+}
+.ai-modal-title-name {
+    color: var(--gray-900, #111827);
+}
+.ai-modal-close {
+    background: none;
+    border: 0;
+    font-size: 18px;
+    cursor: pointer;
+    color: var(--gray-500, #6b7280);
+    line-height: 1;
+    padding: 2px 4px;
+    border-radius: var(--radius-sm, 4px);
+    transition: color 150ms, background 150ms;
+    flex-shrink: 0;
+}
+.ai-modal-close:hover {
+    color: var(--gray-800, #1f2937);
+    background: var(--gray-100, #f3f4f6);
+}
+.ai-modal-body {
+    padding: var(--sp-5, 20px) var(--sp-6, 24px);
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-4, 16px);
+}
+.ai-modal-body .form-input {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 10px 12px;
+    font-size: var(--text-sm, 14px);
+}
+.ai-modal-body input[type="email"],
+.ai-modal-body input[type="tel"] {
+    direction: ltr;
+    text-align: left;
+}
+.ai-modal-body .form-label {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--sp-2, 8px);
+}
+.ai-modal-footer {
+    display: flex;
+    gap: var(--sp-3, 12px);
+    justify-content: flex-start;
+    padding: var(--sp-4, 16px) var(--sp-6, 24px) var(--sp-6, 24px);
+    border-top: 1px solid var(--gray-100, #f3f4f6);
+}
+.ai-modal-footer .btn-primary { min-width: 96px; }
+.ai-modal-footer .btn-secondary { min-width: 96px; }
+.client-detail-field-icon {
+    width: 14px;
+    height: 14px;
+    stroke: var(--gray-500, #6b7280);
+    fill: none;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    flex-shrink: 0;
 }
 .client-detail-loading {
     display: flex;

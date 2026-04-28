@@ -9,6 +9,7 @@
     "test": "node --test test/**/*.test.mjs"
   },
   "dependencies": {
+    "@localonlytools/pdf-decrypt": "^1.0.1",
     "archive-wasm": "^2.1.0",
     "dotenv": "^17.3.1",
     "hono": "^4.7.0",

@@ -22,7 +22,7 @@ const classifications = new Hono<{ Bindings: Env }>();
 
 // DL-224: Move a file to the ארכיון folder (same pattern as reject)
 // DL-240: Files are directly in filing type folder — traverse: file → filingFolder → yearFolder (2 levels up)
-async function moveFileToArchive(msGraph: MSGraphClient, itemId: string) {
+export async function moveFileToArchive(msGraph: MSGraphClient, itemId: string, opts?: { subfolder?: string }) {
   try {
     const fileInfo = await msGraph.get(`/drives/${DRIVE_ID}/items/${itemId}?$select=id,name,parentReference`);
     const filingFolderId = fileInfo?.parentReference?.id;
@@ -48,9 +48,28 @@ async function moveFileToArchive(msGraph: MSGraphClient, itemId: string) {
       }
     }
 
+    // Optional: move into a subfolder inside ארכיון
+    if (archiveFolderId && opts?.subfolder) {
+      try {
+        const created = await msGraph.post(`/drives/${DRIVE_ID}/items/${archiveFolderId}/children`, {
+          name: opts.subfolder,
+          folder: {},
+          '@microsoft.graph.conflictBehavior': 'fail',
+        });
+        archiveFolderId = created?.id ?? archiveFolderId;
+      } catch {
+        try {
+          const existing = await msGraph.get(`/drives/${DRIVE_ID}/items/${archiveFolderId}:/${encodeURIComponent(opts.subfolder)}:`);
+          archiveFolderId = existing?.id ?? archiveFolderId;
+        } catch {
+          // subfolder creation failed — fall back to year-level ארכיון
+        }
+      }
+    }
+
     if (archiveFolderId) {
       await msGraph.patch(`/drives/${DRIVE_ID}/items/${itemId}`, { parentReference: { id: archiveFolderId } });
-      console.log('[moveFileToArchive] Moved', itemId, 'to ארכיון (year level)');
+      console.log('[moveFileToArchive] Moved', itemId, 'to ארכיון', opts?.subfolder ?? '(year level)');
     }
   } catch (err) {
     console.error('[moveFileToArchive] Failed:', (err as Error).message);
