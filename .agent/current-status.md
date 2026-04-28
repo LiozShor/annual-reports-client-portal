@@ -1,6 +1,6 @@
 # Annual Reports CRM - Current Status
 
-**Last Updated:** 2026-04-28 (DL-370 — IMPLEMENTED, NEED TESTING; move-classification-client edge cases now land classification as `pending` on target (not `reassigned`); target-doc-Received conflict no longer 409s — file uploads, existing doc untouched, conflict toast shown; cache-bust `script.js?v=373`)
+**Last Updated:** 2026-04-28 (DL-370 — COMPLETED; all three edge cases verified live: zero-missing-docs, no-AI-match, and already-Received-slot all land classification as `pending` under target; source-clear skips if doc already Required_Missing; script.js?v=377 deployed)
 **Last Updated:** 2026-04-28 (DL-368 — GitHub App reinstall did NOT fix it; `source.config.repo_id` still stale; CF support ticket required to rebind project to new repo id)
 **Last Updated:** 2026-04-28 (DL-369 — IMPLEMENTED, NEED TESTING; AI Review overflow menu adds "העבר ללקוח אחר..." and Worker endpoint `/webhook/move-classification-client` moves/reclassifies the current document to another client)
 **Last Updated:** 2026-04-28 (Pages manual deploy guardrail — current Wrangler auth token can deploy Workers but fails Pages project auth with Cloudflare code 10000; before retrying `wrangler pages deploy`, verify `pages project list/get` succeeds with the same auth context, otherwise deploy frontend via Git push or fix token permissions)
