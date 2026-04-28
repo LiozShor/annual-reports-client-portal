@@ -125,6 +125,7 @@ router.get('/get-client-reports', async (c) => {
     const clientEmail = clientRec ? String(clientRec.fields.email || '') : '';
     const clientCcEmail = clientRec ? String(clientRec.fields.cc_email || '') : '';
     const clientPhone = clientRec ? String(clientRec.fields.phone || '') : '';
+    const clientSpouseName = clientRec ? String(clientRec.fields.spouse_name || '') : '';
 
     // DL-306: fetch pending AI classifications grouped by report.
     // Filter by client_id + year (direct fields) — Airtable formula ARRAYJOIN({report})
@@ -179,6 +180,19 @@ router.get('/get-client-reports', async (c) => {
           // Client mode: generate a token for each report
           if (mode === 'client') {
             item.token = await generateClientToken(r.id, c.env.CLIENT_SECRET_KEY);
+          }
+
+          // DL-306: office-mode React client-detail island reads
+          // reports[0].{reportId, clientName, spouseName, email, ccEmail, phone, stage, filingType}
+          // — provide camelCase aliases on each item so the modal can read them directly.
+          if (mode === 'office') {
+            item.reportId = r.id;
+            item.clientName = clientName;
+            item.spouseName = clientSpouseName || null;
+            item.email = clientEmail;
+            item.ccEmail = clientCcEmail || null;
+            item.phone = clientPhone || null;
+            item.filingType = filingType === 'capital_statement' ? 'CS' : 'AR';
           }
 
           return item;
