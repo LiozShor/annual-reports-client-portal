@@ -1,6 +1,36 @@
 # Annual Reports CRM - Current Status
 
+**Last Updated:** 2026-04-28 (DL-367 — IMPLEMENTED, NEED TESTING; Gmail Drive smart-link attachment fetcher live + CPA-XXX backfilled)
 **Last Updated:** 2026-04-27 (design-log skill switched from built-in WebSearch/WebFetch to Bright Data MCP — VERIFY NEXT SESSION)
+
+## DL-367: Gmail Drive Smart-Link Attachments — IMPLEMENTED, NEED TESTING (2026-04-28)
+
+Gmail's "Insert from Drive" embeds inline `gmail_drive_chip` HTML cards in the email body — `hasAttachments=false`, 0 Graph attachments, so the inbound Worker silently completed a test client's email on 2026-04-28 with 0 pending_classifications. Live fix:
+
+- `parseDriveLinks(bodyHtml)` extracts `{fileId, filename}` from chip divs (matched by `class*=gmail_drive_chip` + `id="<fileId>"`, with `title="..."` on inner `<div>`) and bare `drive.google.com/file/d/...` URLs.
+- `fetchDriveAttachment` calls `https://drive.usercontent.google.com/download?id={id}&export=download&authuser=0&confirm=t` (post-May-2024 endpoint, `confirm=t` bypasses virus-scan warning), validates Content-Type (rejects HTML "you need access" page), streams with 25 MB byte cap, computes sha256, synthesizes `AttachmentInfo` so the rest of the pipeline is unchanged.
+- `stripDriveChipsFromHtml` removes chip divs in `extractMetadata` before HTML→text so chip filenames don't pollute the LLM-summarized note.
+- `ghostAttachments` guard now also fires when Drive links found but all fetches failed → email_event `NeedsHuman` with Drive URLs preserved in `error_message`.
+
+**Backfill outcome (CPA-XXX, 2026-04-28):** 4 pending_classifications rows with proper Hebrew names, 3 T501 matches at conf 0.95 (provident-fund / pension issuers), 1 T106 unclassified for manual review.
+
+Files: `api/src/lib/inbound/attachment-utils.ts`, `api/src/lib/inbound/processor.ts`. Branch: `DL-367-gmail-drive-smart-links` — committed + pushed (pending). Worker deployed (`69e3a88b`). **Do NOT merge to main until live test approved.**
+
+**Test DL-367 — gmail-drive-smart-links:** verify Drive parser + fetcher work end-to-end in production.
+- [ ] Unit — `parseDriveLinks`: the test client's HTML returns 4 entries with Hebrew filenames (already verified by re-ingestion)
+- [ ] Unit — `parseDriveLinks`: bare URL `drive.google.com/file/d/X/view` returns 1 entry
+- [ ] Unit — `parseDriveLinks`: non-Google URL returns 0 entries
+- [ ] Unit — `fetchDriveAttachment`: public PDF returns AttachmentInfo with valid sha256
+- [ ] Unit — `fetchDriveAttachment`: unshared file returns `{error: 'not_binary_text/html'}`
+- [ ] Unit — `fetchDriveAttachment`: 30 MB file aborts with `{error: 'too_large'}`
+- [ ] E2E — willing client sends 1 PDF as Drive smart-link → processed within ~2 min
+- [ ] E2E — unshared Drive smart-link → email_event `NeedsHuman` + Drive URL in error_message
+- [ ] Regression — direct MIME attachments still process identically
+- [ ] Regression — chip-strip note: prose + 1 chip → note stores prose only (the test client's note had no prose so this is untested)
+- [ ] Cleanup: test client's OneDrive folder (`<client_name>/2025/דוח שנתי/`) may have 4 stale `drive_{fileId}.pdf` files from first replay (lioz to clean up)
+
+Design log: `.agent/design-logs/email/367-gmail-drive-smart-links.md`
+
 
 ## Design-log skill: Bright Data MCP swap (NEEDS VERIFICATION)
 
