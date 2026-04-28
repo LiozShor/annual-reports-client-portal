@@ -1594,6 +1594,9 @@ function renderClientsTable(clients) {
                             <button onclick="viewClient('${rid}'); closeAllRowMenus();">${icon('external-link')} צפייה כלקוח</button>
                             ${stageNum >= 3 ?
                 `<button onclick="viewQuestionnaire('${rid}'); closeAllRowMenus();">${icon('file-text')} צפה בשאלון</button>` : ''}
+                            <button onclick="openCcEmailFromKebab('${rid}', '${escapeAttr(client.stage)}'); closeAllRowMenus();">${icon('users')} ${client.cc_email ? 'ערוך אימייל משני' : 'הוסף אימייל משני'}</button>
+                            ${stageNum >= 1 && stageNum <= 3 ?
+                `<button onclick="copyQuestionnaireLink('${rid}'); closeAllRowMenus();">${icon('copy')} העתק קישור לשאלון</button>` : ''}
                             ${isActive && otherType ?
                 `<button onclick="addSecondFilingType('${rid}'); closeAllRowMenus();">${icon('file-plus')} הוסף ${otherTypeLabel}</button>` : ''}
                             ${isActive ?
@@ -1659,6 +1662,9 @@ function renderClientsTable(clients) {
                         <button onclick="viewClient('${rid}'); closeAllRowMenus();">${icon('external-link')} צפייה כלקוח</button>
                         ${stageNum >= 3 ?
                             `<button onclick="viewQuestionnaire('${rid}'); closeAllRowMenus();">${icon('file-text')} צפה בשאלון</button>` : ''}
+                        <button onclick="openCcEmailFromKebab('${rid}', '${escapeAttr(client.stage)}'); closeAllRowMenus();">${icon('users')} ${client.cc_email ? 'ערוך אימייל משני' : 'הוסף אימייל משני'}</button>
+                        ${stageNum >= 1 && stageNum <= 3 ?
+                            `<button onclick="copyQuestionnaireLink('${rid}'); closeAllRowMenus();">${icon('copy')} העתק קישור לשאלון</button>` : ''}
                         ${isActive && mOtherType ?
                             `<button onclick="addSecondFilingType('${rid}'); closeAllRowMenus();">${icon('file-plus')} הוסף ${mOtherTypeLabel}</button>` : ''}
                         ${isActive ?
@@ -12596,10 +12602,13 @@ async function executeToggleActive(reportId, active) {
 // Modal logic lives in frontend/assets/js/client-detail-modal.js (DL-293).
 // This wrapper injects the dashboard-specific context (authToken, toast, onSaved).
 
-function openClientDetailModal(reportId) {
+function openClientDetailModal(reportId, options) {
+    const opts = options || {};
     return openClientDetailModalShared(reportId, {
         authToken,
         toast: showAIToast,
+        // DL-366: optional auto-focus target ('email' | 'cc_email' | 'phone')
+        focusField: opts.focusField,
         onSaved: (updated, prev) => {
             // Optimistic update in clientsData
             const client = clientsData.find(c => c.report_id === updated.report_id);
@@ -12620,8 +12629,56 @@ function openClientDetailModal(reportId) {
             } else {
                 showAIToast('לא בוצעו שינויים', 'success');
             }
+            // DL-366: callback for post-save flows (e.g., resend questionnaire prompt)
+            if (typeof opts.afterSave === 'function') {
+                opts.afterSave(updated, prev, changes);
+            }
         }
     });
+}
+
+// DL-366: kebab-menu entry-point — opens modal focused on cc_email and,
+// for stage 1 rows, prompts to re-send the questionnaire after save.
+function openCcEmailFromKebab(reportId, stageKey) {
+    openClientDetailModal(reportId, {
+        focusField: 'cc_email',
+        afterSave: (updated, prev) => {
+            const prevCc = (prev && prev.cc_email) || '';
+            const newCc = (updated && updated.cc_email) || '';
+            if (prevCc === newCc) return;
+            if (!newCc) return; // cleared, not added
+            if (stageKey === 'Send_Questionnaire') {
+                showConfirmDialog(
+                    'לשלוח את השאלון עכשיו לאימייל המשני?',
+                    () => sendSingle(reportId),
+                    'שלח',
+                    false
+                );
+            } else {
+                showAIToast('נשמר. ייכנס לתוקף בשליחה הבאה של השאלון', 'success');
+            }
+        }
+    });
+}
+
+// DL-366: copy questionnaire link to clipboard via Worker-minted fresh token.
+async function copyQuestionnaireLink(reportId) {
+    try {
+        const res = await fetch(`${API_BASE}/admin-questionnaire-link`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ token: authToken, report_id: reportId }),
+        });
+        const data = await res.json();
+        if (!res.ok || !data.ok || !data.url) {
+            showAIToast('שגיאה ביצירת הקישור', 'danger');
+            return;
+        }
+        await navigator.clipboard.writeText(data.url);
+        showAIToast('הקישור הועתק ללוח', 'success');
+    } catch {
+        showAIToast('שגיאה בהעתקת הקישור', 'danger');
+    }
 }
 
 function toggleArchiveMode() {

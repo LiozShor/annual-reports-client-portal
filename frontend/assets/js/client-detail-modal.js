@@ -87,6 +87,8 @@ function openClientDetailModalShared(reportId, ctx) {
       ctx: {
         onClose: () => closeClientDetailModal(true),
         onSaved: ctx?.onSaved ?? null,
+        // DL-366: optional auto-focus target ('email' | 'cc_email' | 'phone')
+        focusField: ctx?.focusField,
       },
     })
     console.log('[client-detail-modal] mountClientDetail returned ok')

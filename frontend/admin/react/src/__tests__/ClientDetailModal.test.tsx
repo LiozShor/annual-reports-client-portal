@@ -87,6 +87,27 @@ describe('ClientDetailModal', () => {
     })
   })
 
+  it('focusField=cc_email auto-focuses the cc email input on mount (DL-366)', async () => {
+    vi.mocked(useClient).mockReturnValue({
+      data: mockClient,
+      isLoading: false,
+      isError: false,
+      error: null,
+    } as ReturnType<typeof useClient>)
+
+    vi.mocked(useUpdateClient).mockReturnValue({
+      mutate: vi.fn(),
+      isPending: false,
+    } as unknown as ReturnType<typeof useUpdateClient>)
+
+    render(<ClientDetailModal reportId="R001" onClose={vi.fn()} focusField="cc_email" />)
+
+    const ccInput = await screen.findByLabelText('CC אימייל')
+    await waitFor(() => {
+      expect(document.activeElement).toBe(ccInput)
+    })
+  })
+
   it('closing with dirty state calls window.showConfirmDialog', async () => {
     vi.mocked(useClient).mockReturnValue({
       data: mockClient,

@@ -39,6 +39,7 @@ window.mountClientDetail = function (element: HTMLElement, props: MountProps): v
           reportId={props.reportId}
           onClose={handleClose}
           onSaved={props.ctx?.onSaved}
+          focusField={props.ctx?.focusField}
         />
         {import.meta.env.DEV && <ReactQueryDevtools initialIsOpen={false} />}
       </QueryClientProvider>

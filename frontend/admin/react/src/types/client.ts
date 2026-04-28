@@ -26,8 +26,12 @@ export interface ClientUpdatePayload {
   phone?: string | null
 }
 
+export type ClientDetailFocusField = 'email' | 'cc_email' | 'phone'
+
 export interface ClientDetailContext {
   /** The vanilla JS context object passed from script.js — can be used for callbacks */
   onClose?: () => void
   onSaved?: (updated: Partial<ClientDetail>) => void
+  /** DL-366: optionally auto-focus a specific field when the modal opens. */
+  focusField?: ClientDetailFocusField
 }

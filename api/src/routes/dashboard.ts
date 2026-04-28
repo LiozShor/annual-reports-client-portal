@@ -46,14 +46,22 @@ dashboard.get('/admin-dashboard', async (c) => {
 
   // Parallel Airtable queries (replaces n8n Merge node)
   // DL-254: Cache available_years in KV (1hr TTL) to avoid full-table scan
-  const [reports, yearRecords] = await Promise.all([
+  // DL-366: Also fetch clients to surface cc_email per row.
+  const [reports, yearRecords, clientsCcRecords] = await Promise.all([
     airtable.listAllRecords('tbls7m3hmHC4hhQVy', {
       filterByFormula,
     }),
     getCachedOrFetch(c.env.CACHE_KV, 'cache:available_years', 3600, () =>
       airtable.listAllRecords('tbls7m3hmHC4hhQVy', { fields: ['year'] })
     ),
+    airtable.listAllRecords('tblFFttFScDRZ7Ah5', { fields: ['cc_email'] }),
   ]);
+
+  const ccEmailByClientId = new Map<string, string>();
+  for (const cr of clientsCcRecords) {
+    const cc = (cr.fields.cc_email as string | undefined) || '';
+    if (cc) ccEmailByClientId.set(cr.id, cc);
+  }
 
   // Distinct years
   const available_years = [
@@ -92,11 +100,16 @@ dashboard.get('/admin-dashboard', async (c) => {
 
     const getField = (val: unknown) => Array.isArray(val) ? val[0] : (val || '');
 
+    const clientLink = f.client;
+    const clientRecId = Array.isArray(clientLink) ? String(clientLink[0] ?? '') : '';
+    const ccEmail = clientRecId ? (ccEmailByClientId.get(clientRecId) || '') : '';
+
     clients.push({
       report_id: report.id,
       client_id: String(getField(f.client_id) || ''),
       name: getField(f.client_name) || 'Unknown',
       email: getField(f.client_email) || '',
+      cc_email: ccEmail,
       year: f.year,
       stage,
       docs_received: parseInt(String(f.docs_received_count)) || 0,

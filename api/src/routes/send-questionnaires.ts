@@ -1,16 +1,15 @@
 import { Hono } from 'hono';
 import { verifyToken } from '../lib/token';
-import { generateClientToken } from '../lib/client-token';
 import { AirtableClient } from '../lib/airtable';
 import { MSGraphClient } from '../lib/ms-graph';
 import { calcReminderNextDate } from '../lib/reminders';
 import { buildQuestionnaireEmailHtml } from '../lib/email-html';
+import { buildQuestionnaireUrl } from '../lib/questionnaire-url';
 import { logError } from '../lib/error-logger';
 import type { Env } from '../lib/types';
 
 const sendQuestionnaires = new Hono<{ Bindings: Env }>();
 
-const FRONTEND_BASE = 'https://docs.moshe-atsits.com';
 const SENDER = 'reports@moshe-atsits.co.il';
 const REPORTS_TABLE = 'tbls7m3hmHC4hhQVy';
 const CLIENTS_TABLE = 'tblFFttFScDRZ7Ah5';
@@ -77,8 +76,7 @@ sendQuestionnaires.post('/admin-send-questionnaires', async (c) => {
           continue;
         }
 
-        const clientToken = await generateClientToken(reportId, c.env.CLIENT_SECRET_KEY);
-        const landingPageUrl = `${FRONTEND_BASE}/?report_id=${reportId}&token=${encodeURIComponent(clientToken)}`;
+        const landingPageUrl = await buildQuestionnaireUrl(reportId, c.env.CLIENT_SECRET_KEY);
 
         const ccEmail = first(client.fields.cc_email) || undefined;
         const html = buildQuestionnaireEmailHtml({ clientName, year, landingPageUrl, showFamilyNote: !!ccEmail, filingType });

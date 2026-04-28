@@ -1,11 +1,19 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useClient, useUpdateClient } from '@/hooks/useClient'
-import type { ClientDetail } from '@/types/client'
+import type { ClientDetail, ClientDetailFocusField } from '@/types/client'
 
 interface Props {
   reportId: string
   onClose: () => void
   onSaved?: (updated: Partial<ClientDetail>) => void
+  /** DL-366: when set, the matching input is focused + scrolled into view on mount. */
+  focusField?: ClientDetailFocusField
+}
+
+const FOCUS_FIELD_TO_INPUT_ID: Record<ClientDetailFocusField, string> = {
+  email: 'cd-email',
+  cc_email: 'cd-cc-email',
+  phone: 'cd-phone',
 }
 
 interface DraftState {
@@ -30,10 +38,11 @@ function isDirtyCheck(draft: DraftState, client: ClientDetail): boolean {
   )
 }
 
-export function ClientDetailModal({ reportId, onClose, onSaved }: Props) {
+export function ClientDetailModal({ reportId, onClose, onSaved, focusField }: Props) {
   const { data: client, isLoading, isError, error } = useClient(reportId)
   const { mutate, isPending } = useUpdateClient(reportId, onSaved)
   const [draft, setDraft] = useState<DraftState | null>(null)
+  const focusedRef = useRef(false)
 
   // Sync draft when data first loads (don't overwrite user edits on refetch)
   useEffect(() => {
@@ -41,6 +50,18 @@ export function ClientDetailModal({ reportId, onClose, onSaved }: Props) {
       setDraft(toDraft(client))
     }
   }, [client, draft])
+
+  // DL-366: auto-focus + scroll the requested field once the form is rendered.
+  useEffect(() => {
+    if (!focusField || focusedRef.current || !draft) return
+    const inputId = FOCUS_FIELD_TO_INPUT_ID[focusField]
+    const el = document.getElementById(inputId) as HTMLInputElement | null
+    if (el) {
+      el.focus()
+      el.scrollIntoView({ block: 'center', behavior: 'smooth' })
+      focusedRef.current = true
+    }
+  }, [focusField, draft])
 
   const isDirty = draft !== null && client !== undefined ? isDirtyCheck(draft, client) : false
 

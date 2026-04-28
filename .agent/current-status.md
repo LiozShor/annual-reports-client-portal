@@ -1,6 +1,8 @@
 # Annual Reports CRM - Current Status
 
 **Last Updated:** 2026-04-28 (Bright Data MCP registered via SSE — connected; server-name prefix is `brightdata`)
+**Last Updated:** 2026-04-28 (DL-366 — IMPLEMENTED, NEED TESTING; dashboard kebab adds two new actions: add/edit cc_email + auto-resend, and copy questionnaire link to clipboard)
+**Last Updated:** 2026-04-27 (design-log skill switched from built-in WebSearch/WebFetch to Bright Data MCP — VERIFY NEXT SESSION)
 
 ## Design-log skill: Bright Data MCP — REGISTERED
 
@@ -55,6 +57,33 @@ After Worker deploy + hard-reload (Ctrl+F5) of admin panel:
 Design log: `.agent/design-logs/admin-ui/364-review-tab-v-button-and-count-mismatch.md`
 
 ---
+## Test DL-366: Dashboard kebab — add/edit cc_email + copy questionnaire link — NEEDS LIVE VERIFICATION
+
+**Branch:** `DL-366-secondary-client-email`
+**Design log:** `.agent/design-logs/admin-ui/366-kebab-add-cc-email-and-resend.md`
+
+Live checks (after merge to main + Pages deploy + `wrangler deploy`):
+
+- [ ] Row WITHOUT cc_email, stage=`Send_Questionnaire`: kebab shows "הוסף אימייל משני" → click opens modal auto-focused on cc_email → save → confirm dialog → confirm → questionnaire arrives at primary AND cc inboxes (verify via `gws`).
+- [ ] Row WITH cc_email already set: kebab shows "ערוך אימייל משני", field pre-filled.
+- [ ] Stage ≥ 2: save flow works, no confirm dialog, toast "נשמר. ייכנס לתוקף בשליחה הבאה".
+- [ ] Modal cancel: no API write, no send, no toast.
+- [ ] Mobile layout (Lighthouse mobile or real phone): both kebab items render correctly.
+- [ ] Hebrew RTL: labels and toasts render correctly.
+- [ ] Cache `?v=366` bumped — hard refresh shows new behavior.
+- [ ] No `cc_email` value appears in Worker logs.
+- [ ] Regression: existing "צפייה כלקוח" / "העבר לארכיון" still work.
+- [ ] Regression: pencil-icon edit-client flow still works without `focusField` set.
+- [ ] Stage 1 row: kebab shows "העתק קישור לשאלון" → click → clipboard contains valid URL `${FRONTEND_BASE}/?report_id=...&token=...` → opening URL lands on questionnaire successfully.
+- [ ] Stages 2 and 3: copy-link visible and works.
+- [ ] Stage 4+ (Collecting_Docs and beyond): copy-link NOT shown.
+- [ ] Copy-link toast in Hebrew RTL.
+- [ ] Copy-link API failure (e.g., wrong token): error toast, clipboard untouched.
+- [ ] Token expiry: copied URL works for 45 days.
+
+Pre-existing issues surfaced during DL-366 (NOT regressions, but worth noting):
+- React island tests in `frontend/admin/react/` all fail with `act(...) is not supported in production builds of React.` — vitest config has `process.env.NODE_ENV='production'` from `vite.config.ts:8`. Pre-existing; my new test for `focusField` couldn't be verified locally for this reason. Suggest separate DL to fix vitest setup.
+- Pre-existing API tsc errors in `backfill.ts` (ADMIN_SECRET), `classifications.ts` (pageCount, DocFields cast), `edit-documents.ts` (`.mjs` declaration). NOT introduced by DL-366. Build still succeeds via wrangler.
 
 ## DL-363: Chat-bubble side misclassification for office-authored emails — IDEA / BACKLOG (logged 2026-04-27)
 
