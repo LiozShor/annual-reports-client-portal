@@ -3739,6 +3739,8 @@ function resetPreviewPanel() {
     if (iframe) { iframe.style.display = 'none'; iframe.src = 'about:blank'; }
     if (header) header.style.display = 'none';
     if (download) { download.style.display = 'none'; download.href = '#'; }
+    const pwPanel = document.getElementById('previewPasswordPanel');
+    if (pwPanel) pwPanel.style.display = 'none';
     applyPreviewReviewState(null);
     // DL-334: if actions panel exists, clear it to empty state
     const panel = document.getElementById('aiActionsPanel');
@@ -3795,6 +3797,8 @@ async function loadDocPreview(recordId) {
     iframe.style.display = 'none';
     loading.style.display = '';
     downloadBtn.style.display = 'none';
+    const _pwPanelOnLoad = document.getElementById('previewPasswordPanel');
+    if (_pwPanelOnLoad) _pwPanelOnLoad.style.display = 'none';
     // v3.2: populate skeleton filename so the user sees immediate acknowledgment
     // of their click during the 300-1700ms iframe-bootstrap window.
     const skeletonFilename = document.getElementById('previewSkeletonFilename');
@@ -3839,6 +3843,11 @@ async function loadDocPreview(recordId) {
                 try { performance.measure(`dl334:preview:iframeOnload:${_perfId}`, { start: _perfUrlFetched, duration: loadMs }); } catch (e) {}
             }
         };
+        // DL-373: MS Graph can't render encrypted PDFs — detect on iframe error
+        iframe.onerror = () => {
+            if (activePreviewItemId !== recordId) return;
+            if (downloadUrl) tryDetectEncryption(downloadUrl, recordId, item.onedrive_item_id);
+        };
         iframe.src = previewUrl;
         if (downloadUrl) {
             downloadBtn.href = downloadUrl;
@@ -3863,6 +3872,114 @@ async function loadDocPreview(recordId) {
             retryBtn.style.display = isTimeout ? '' : 'none';
             retryBtn.onclick = () => loadDocPreview(recordId);
         }
+    }
+}
+
+// DL-373: Detect encrypted PDF after MS Graph preview fails to render.
+// Fetches first 8 KB of the raw PDF and uses PDF.js to test for PasswordException.
+async function tryDetectEncryption(downloadUrl, recordId, itemId) {
+    try {
+        const resp = await fetch(downloadUrl, { headers: { Range: 'bytes=0-8191' } });
+        if (!resp.ok) return;
+        const chunk = await resp.arrayBuffer();
+        // PDF.js is loaded globally via CDN. Attempt a parse with empty password.
+        if (typeof pdfjsLib === 'undefined') return;
+        try {
+            await pdfjsLib.getDocument({ data: chunk, password: '' }).promise;
+            // Loaded without error — not encrypted (or error was unrelated)
+        } catch (pdfErr) {
+            if (pdfErr?.name === 'PasswordException') {
+                _showPdfPasswordPanel(recordId, itemId, downloadUrl);
+            }
+        }
+    } catch {
+        // Ignore detection errors — leave the existing error panel visible
+    }
+}
+
+let _pdfUnlockRecordId = null;
+let _pdfUnlockItemId = null;
+let _pdfUnlockAttempts = 0;
+const _PDF_UNLOCK_MAX_ATTEMPTS = 5;
+
+function _showPdfPasswordPanel(recordId, itemId, downloadUrl) {
+    _pdfUnlockRecordId = recordId;
+    _pdfUnlockItemId = itemId;
+    _pdfUnlockAttempts = 0;
+
+    const error = document.getElementById('previewError');
+    const iframe = document.getElementById('previewIframe');
+    const panel = document.getElementById('previewPasswordPanel');
+    const downloadBtn = document.getElementById('previewPasswordDownloadBtn');
+    const attemptsEl = document.getElementById('previewPasswordAttempts');
+    const input = document.getElementById('previewPasswordInput');
+
+    if (!panel) return;
+    if (error) error.style.display = 'none';
+    if (iframe) iframe.style.display = 'none';
+    if (attemptsEl) attemptsEl.style.display = 'none';
+    if (downloadBtn && downloadUrl) { downloadBtn.href = downloadUrl; downloadBtn.style.display = ''; }
+    if (input) input.value = '';
+    panel.style.display = 'flex';
+
+    if (input) {
+        input.onkeydown = (e) => { if (e.key === 'Enter') submitPdfUnlock(); };
+    }
+    setTimeout(() => { if (input) input.focus(); }, 50);
+}
+
+async function submitPdfUnlock() {
+    if (!_pdfUnlockItemId || !_pdfUnlockRecordId) return;
+    const input = document.getElementById('previewPasswordInput');
+    const unlockBtn = document.getElementById('previewPasswordUnlockBtn');
+    const attemptsEl = document.getElementById('previewPasswordAttempts');
+    const password = input ? input.value : '';
+    if (!password) { showAIToast('יש להזין סיסמה', 'error'); return; }
+
+    if (unlockBtn) { unlockBtn.disabled = true; unlockBtn.textContent = 'פותח...'; }
+
+    try {
+        const res = await fetch(`${API_BASE}/webhook/unlock-pdf`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
+            body: JSON.stringify({ itemId: _pdfUnlockItemId, recordId: _pdfUnlockRecordId, password }),
+        });
+        const data = await res.json();
+
+        if (res.ok && data.ok) {
+            const panel = document.getElementById('previewPasswordPanel');
+            if (panel) panel.style.display = 'none';
+            showAIToast('הקובץ נפתח בהצלחה — הגרסה המקורית הועברה לארכיון ✓', 'success');
+            loadDocPreview(_pdfUnlockRecordId);
+            _pdfUnlockRecordId = null;
+            _pdfUnlockItemId = null;
+            return;
+        }
+
+        if (data.error === 'WRONG_PASSWORD') {
+            _pdfUnlockAttempts++;
+            const remaining = typeof data.attemptsRemaining === 'number' ? data.attemptsRemaining : (_PDF_UNLOCK_MAX_ATTEMPTS - _pdfUnlockAttempts);
+            if (attemptsEl) {
+                attemptsEl.textContent = `סיסמה שגויה — נותרו ${remaining} ניסיונות`;
+                attemptsEl.style.display = '';
+            }
+            if (input) { input.value = ''; input.focus(); }
+        } else if (data.error === 'RATE_LIMITED') {
+            showAIToast('יותר מדי ניסיונות — המתן 60 שניות ונסה שוב', 'error');
+        } else if (data.error === 'UNSUPPORTED_ENCRYPTION') {
+            showAIToast('סוג ההצפנה אינו נתמך — הורד את הקובץ ופתח אותו ידנית', 'warning');
+        } else if (data.error === 'ALREADY_UNLOCKED') {
+            showAIToast('הקובץ כבר פתוח — מרענן תצוגה מקדימה', 'success');
+            const panel = document.getElementById('previewPasswordPanel');
+            if (panel) panel.style.display = 'none';
+            loadDocPreview(_pdfUnlockRecordId);
+        } else {
+            showAIToast('שגיאה בפתיחת הקובץ: ' + (data.message || data.error || 'שגיאה'), 'error');
+        }
+    } catch (err) {
+        showAIToast('שגיאת רשת: ' + (err.message || 'Unknown error'), 'error');
+    } finally {
+        if (unlockBtn) { unlockBtn.disabled = false; unlockBtn.textContent = '🔓 פתח'; }
     }
 }
 
@@ -4832,6 +4949,7 @@ function _renderPanelAdditive(item, variant, reReviewing) {
         // pending (non-on_hold) + on-hold
         overflowItems.push(`<button class="ai-ap-overflow__item" onclick="openAddQuestionDialog('${idA}'); _closePanelOverflow();">${qLabel}</button>`);
     }
+    overflowItems.push(`<button class="ai-ap-overflow__item" onclick="showAddPdfNoteModal('${idA}'); _closePanelOverflow();">📝 הוסף הערה ל-PDF</button>`);
     overflowItems.push(`<button class="ai-ap-overflow__item" onclick="showMoveClassificationClientModal('${idA}'); _closePanelOverflow();">העבר ללקוח אחר...</button>`);
 
     const overflowHtml = `<div class="ai-ap-overflow">
@@ -7057,6 +7175,91 @@ async function _dl361DoAssign(emailEventId, targetClientId, clientName) {
 function closeMoveClassificationClientModal() {
     const overlay = document.getElementById('moveClassificationClientModal');
     if (overlay) overlay.remove();
+}
+
+// DL-372: PDF sticky-note modal
+function showAddPdfNoteModal(classificationId) {
+    const item = (aiClassificationsData || []).find(i => i.id === classificationId);
+    if (!item) return;
+
+    const corners = [
+        { value: 'tr', label: 'פינה עליונה ימנית (ברירת מחדל)' },
+        { value: 'tl', label: 'פינה עליונה שמאלית' },
+        { value: 'br', label: 'פינה תחתונה ימנית' },
+        { value: 'bl', label: 'פינה תחתונה שמאלית' },
+    ];
+
+    const overlay = document.createElement('div');
+    overlay.className = 'ai-modal-overlay';
+    overlay.innerHTML = `
+        <div class="ai-modal-panel" style="max-width:420px; direction:rtl;">
+            <div class="ai-modal-header">
+                <span>📝 הוסף הערה ל-PDF</span>
+                <button class="ai-modal-close" onclick="this.closest('.ai-modal-overlay').remove()">✕</button>
+            </div>
+            <div class="ai-modal-body" style="display:flex; flex-direction:column; gap:12px;">
+                <div style="font-size:12px; color:var(--text-secondary);">${escapeHtml(item.attachment_name || 'ללא שם')}</div>
+                <div>
+                    <label style="font-size:13px; font-weight:500; display:block; margin-bottom:4px;">הערה (עד 500 תווים)</label>
+                    <textarea id="pdfNoteText" rows="5" maxlength="500" class="form-control form-control-sm" placeholder="הקלד הערה פנימית..." style="width:100%; resize:vertical;"></textarea>
+                    <div style="font-size:11px; color:var(--text-secondary); margin-top:2px; text-align:left;"><span id="pdfNoteCharCount">0</span>/500</div>
+                </div>
+                <div>
+                    <label style="font-size:13px; font-weight:500; display:block; margin-bottom:4px;">מיקום</label>
+                    <select id="pdfNoteCorner" class="form-select form-select-sm">
+                        ${corners.map(c => `<option value="${c.value}">${c.label}</option>`).join('')}
+                    </select>
+                </div>
+            </div>
+            <div class="ai-modal-footer" style="display:flex; gap:8px; justify-content:flex-end;">
+                <button class="btn btn-secondary btn-sm" onclick="this.closest('.ai-modal-overlay').remove()">ביטול</button>
+                <button id="pdfNoteSaveBtn" class="btn btn-primary btn-sm" onclick="_submitPdfNote('${escapeAttr(classificationId)}', '${escapeAttr(item.onedrive_item_id || '')}')">שמור הערה</button>
+            </div>
+        </div>`;
+    document.body.appendChild(overlay);
+
+    const textarea = document.getElementById('pdfNoteText');
+    const counter = document.getElementById('pdfNoteCharCount');
+    textarea.addEventListener('input', () => { counter.textContent = textarea.value.length; });
+    textarea.focus();
+}
+
+async function _submitPdfNote(recordId, itemId) {
+    if (!itemId) { showAIToast('אין מזהה קובץ לביצוע הפעולה', 'error'); return; }
+    const textarea = document.getElementById('pdfNoteText');
+    const corner = document.getElementById('pdfNoteCorner');
+    const note = textarea ? textarea.value.trim() : '';
+    if (!note) { showAIToast('יש להזין הערה', 'error'); return; }
+
+    const saveBtn = document.getElementById('pdfNoteSaveBtn');
+    if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = 'שומר...'; }
+
+    try {
+        const res = await fetch(`${API_BASE}/webhook/add-pdf-note`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
+            body: JSON.stringify({ itemId, recordId, note, corner: corner?.value || 'tr' }),
+        });
+        const data = await res.json();
+        if (!res.ok || !data.ok) {
+            if (data.error === 'PDF_ENCRYPTED') {
+                showAIToast('PDF מוצפן — יש לפתוח אותו תחילה', 'error');
+            } else if (data.error === 'PDF_LOCKED_PDFA') {
+                showAIToast('לא ניתן להוסיף הערה ל-PDF זה (PDF/A) — ההערה נשמרה ברשומה', 'warning');
+            } else {
+                showAIToast('שגיאה בשמירת ההערה: ' + (data.message || data.error || 'שגיאה'), 'error');
+            }
+            return;
+        }
+        document.querySelector('.ai-modal-overlay')?.remove();
+        showAIToast('ההערה נשמרה בהצלחה על ה-PDF ✓', 'success');
+        // Reload preview so annotation shows
+        if (activePreviewItemId === recordId) loadDocPreview(recordId);
+    } catch (err) {
+        showAIToast('שגיאת רשת: ' + (err.message || 'Unknown error'), 'error');
+    } finally {
+        if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = 'שמור הערה'; }
+    }
 }
 
 function showMoveClassificationClientModal(classificationId) {
