@@ -3831,7 +3831,9 @@ async function loadDocPreview(recordId) {
         }
         // Verify still the active card (user might have clicked another)
         if (activePreviewItemId !== recordId) return;
-        // Keep spinner until iframe actually loads
+        // DL-373: MS Graph returns HTTP 200 (with password-prompt HTML) for encrypted PDFs,
+        // so onerror never fires. Detect on onload too — tryDetectEncryption fetches 8 KB
+        // and checks for PasswordException; if clean it bails immediately.
         iframe.onload = () => {
             if (activePreviewItemId !== recordId) return;
             loading.style.display = 'none';
@@ -3842,8 +3844,8 @@ async function loadDocPreview(recordId) {
                 console.log(`[dl334:preview:iframeOnload] ${loadMs}ms · total=${totalMs}ms · id=${_perfId}`);
                 try { performance.measure(`dl334:preview:iframeOnload:${_perfId}`, { start: _perfUrlFetched, duration: loadMs }); } catch (e) {}
             }
+            if (downloadUrl) tryDetectEncryption(downloadUrl, recordId, item.onedrive_item_id);
         };
-        // DL-373: MS Graph can't render encrypted PDFs — detect on iframe error
         iframe.onerror = () => {
             if (activePreviewItemId !== recordId) return;
             if (downloadUrl) tryDetectEncryption(downloadUrl, recordId, item.onedrive_item_id);
