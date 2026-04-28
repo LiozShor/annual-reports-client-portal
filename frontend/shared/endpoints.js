@@ -72,3 +72,9 @@ const ENDPOINTS = {
     SEND_BATCH_QUESTIONS:           `${CF_BASE}/send-batch-questions`,
     SAVE_CLASSIFICATION_QUESTION:   `${CF_BASE}/save-classification-question`,
 };
+
+// Expose to window for React island bundles. Includes camelCase aliases
+// expected by the client-detail React bundle (DL-306).
+window.ENDPOINTS = Object.assign({}, ENDPOINTS, {
+    adminUpdateClient: ENDPOINTS.ADMIN_UPDATE_CLIENT,
+});
