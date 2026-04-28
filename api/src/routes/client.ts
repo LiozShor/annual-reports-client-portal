@@ -202,13 +202,7 @@ client.post('/admin-update-client', async (c) => {
   if (body.cc_email !== undefined) updateFields.cc_email = body.cc_email;
   if (body.phone !== undefined) updateFields.phone = body.phone;
 
-  console.log('[admin-update-client] clientId:', clientId, 'fields:', JSON.stringify(updateFields));
-  try {
-    await airtable.updateRecord('tblFFttFScDRZ7Ah5', clientId, updateFields);
-  } catch (err) {
-    console.error('[admin-update-client] Airtable error:', (err as Error).message);
-    throw err;
-  }
+  await airtable.updateRecord('tblFFttFScDRZ7Ah5', clientId, updateFields);
 
   logAudit(c.executionCtx, airtable, {
     action: 'client_updated', report_id,
