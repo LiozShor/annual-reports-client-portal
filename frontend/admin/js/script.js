@@ -5280,6 +5280,13 @@ function buildClientListRowHtml(clientName, clientItems, isActive) {
             ? `<span class="ai-client-pending-num" title="${pendingCount} ממתינים">${pendingCount}</span>`
             : '');
 
+    // DL-370: surface DL-315 pre_questionnaire flag at the client-row level
+    // (badge already exists on individual cards via .ai-pre-questionnaire-badge)
+    const hasPreQuestionnaire = clientItems.some(i => i.pre_questionnaire);
+    const stageWarningChip = hasPreQuestionnaire
+        ? `<span class="ai-pre-questionnaire-badge" title="הלקוח טרם מילא את השאלון">טרם מולא שאלון</span>`
+        : '';
+
     return `
         <div class="ai-client-row ai-accordion-header${isActive ? ' active' : ''}${isComplete ? ' is-complete' : ''}"
              data-client="${escapeHtml(clientName)}"
@@ -5288,7 +5295,7 @@ function buildClientListRowHtml(clientName, clientItems, isActive) {
             <div class="ai-accordion-actions">${docManagerBtn}</div>
             <div class="ai-accordion-title" style="min-width: 0; flex: 1;">
                 <div style="min-width: 0;">
-                    <div style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-weight:500;">${escapeHtml(clientName)}</div>
+                    <div style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-weight:500;">${escapeHtml(clientName)} ${stageWarningChip}</div>
                     <div class="ai-client-progress">${reviewedCount}/${total} נבדקו</div>
                 </div>
             </div>
@@ -7114,12 +7121,8 @@ function showMoveClassificationClientModal(classificationId) {
             });
     })();
 
-    // DL-370: pre-questionnaire stage warning labels for target picker
-    const PRE_DOCS_STAGE_WARNINGS = {
-        'Send_Questionnaire':  'טרם נשלח שאלון',
-        'Waiting_For_Answers': 'טרם מילא שאלון',
-        'Pending_Approval':    'השאלון לא אושר',
-    };
+    // DL-370: reuse DL-315 .ai-pre-questionnaire-badge for target picker
+    const PRE_DOCS_STAGES = new Set(['Send_Questionnaire', 'Waiting_For_Answers', 'Pending_Approval']);
 
     const renderList = (filter) => {
         const q = (filter || '').trim().toLowerCase();
@@ -7130,13 +7133,12 @@ function showMoveClassificationClientModal(classificationId) {
             const email = c.email || '';
             const hay = `${name} ${id} ${email}`.toLowerCase();
             if (q && !hay.includes(q)) continue;
-            const stageWarning = PRE_DOCS_STAGE_WARNINGS[c.stage] || '';
-            const warningChip = stageWarning
-                ? `<span class="ai-move-client-item__warning" title="ללקוח אין רשימת מסמכים נדרשים — הסיווג ינחת כממתין לבדיקה">⚠ ${escapeHtml(stageWarning)}</span>`
+            const warningChip = PRE_DOCS_STAGES.has(c.stage)
+                ? `<span class="ai-pre-questionnaire-badge" title="הלקוח טרם מילא את השאלון — הסיווג ינחת כממתין לבדיקה">טרם מולא שאלון</span>`
                 : '';
             rows.push(`
                 <button class="ai-move-client-item" type="button" data-client-id="${escapeAttr(id)}" data-client-name="${escapeAttr(name)}">
-                    <span class="ai-move-client-item__name">${escapeHtml(name || id)}${warningChip}</span>
+                    <span class="ai-move-client-item__name">${escapeHtml(name || id)} ${warningChip}</span>
                     <span class="ai-move-client-item__meta">${escapeHtml(id)}${email ? ' · ' + escapeHtml(email) : ''}</span>
                 </button>
             `);
