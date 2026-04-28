@@ -78,3 +78,9 @@ const ENDPOINTS = {
 window.ENDPOINTS = Object.assign({}, ENDPOINTS, {
     adminUpdateClient: ENDPOINTS.ADMIN_UPDATE_CLIENT,
 });
+
+// Override window.API_BASE for the React bundle. The bundled code reads
+// `${window.API_BASE}/get-client-reports`, which is a Cloudflare Worker
+// endpoint — n8n does not serve it and would fail CORS. Nothing else
+// reads window.API_BASE (script.js uses the lexical `const API_BASE`).
+window.API_BASE = CF_BASE;
