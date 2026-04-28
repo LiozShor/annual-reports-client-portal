@@ -12751,6 +12751,20 @@ async function executeToggleActive(reportId, active) {
 // Modal logic lives in frontend/assets/js/client-detail-modal.js (DL-293).
 // This wrapper injects the dashboard-specific context (authToken, toast, onSaved).
 
+function buildClientDetailChanges(updated, prev) {
+    const labels = { name: 'שם', email: 'אימייל', cc_email: 'CC אימייל', phone: 'טלפון' };
+    const changes = [];
+    for (const [key, label] of Object.entries(labels)) {
+        if (updated[key] === undefined) continue;
+        const oldVal = prev ? (prev[key] || '') : null;
+        const newVal = updated[key] || '';
+        if (oldVal === null || oldVal !== newVal) {
+            changes.push(`${label}: ${newVal || '—'}`);
+        }
+    }
+    return changes;
+}
+
 function openClientDetailModal(reportId, options) {
     const opts = options || {};
     return openClientDetailModalShared(reportId, {
@@ -12760,7 +12774,7 @@ function openClientDetailModal(reportId, options) {
         focusField: opts.focusField,
         onSaved: (updated, prev) => {
             // Optimistic update in clientsData
-            const client = clientsData.find(c => c.report_id === updated.report_id);
+            const client = clientsData.find(c => c.report_id === updated.reportId);
             if (client) {
                 client.name = updated.name;
                 client.email = updated.email;
