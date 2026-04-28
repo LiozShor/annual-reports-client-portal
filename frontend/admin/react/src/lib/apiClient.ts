@@ -22,7 +22,7 @@ async function apiFetch<T>(url: string, init?: RequestInit): Promise<T> {
 
 export async function fetchClient(reportId: string): Promise<ClientDetail> {
   const data = await apiFetch<{ reports: ClientDetail[] }>(
-    `${window.API_BASE}/get-client-reports?report_id=${encodeURIComponent(reportId)}`
+    `${window.ENDPOINTS.GET_CLIENT_REPORTS}?report_id=${encodeURIComponent(reportId)}`
   )
   const report = data.reports[0]
   if (!report) throw new Error(`No client found for reportId ${reportId}`)
