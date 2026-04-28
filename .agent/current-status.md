@@ -1,8 +1,8 @@
 # Annual Reports CRM - Current Status
 
-**Last Updated:** 2026-04-28 (DL-365 Phase 1 of 4 — IMPLEMENTED, NEED TESTING; activity logger foundation pushed, deploy pending approval)
+**Last Updated:** 2026-04-28 (DL-365 Phase 1 COMPLETE — smoke test passed, CF Logs verified, Logpush active; Phases 2-4 queued)
 
-## DL-365: Activity Logger — Phase 1 (Foundation) IMPLEMENTED — NEED TESTING (2026-04-28)
+## DL-365: Activity Logger — Phase 1 COMPLETE ✓ — Phases 2-4 TODO (2026-04-28)
 
 Replacing Airtable `security_logs` (DL-094) with Cloudflare-native activity log (Workers Logs + R2). PII strategy: client_id-only logs + viewer-side Airtable join. Branch `DL-365-activity-logger` pushed. Design log: `.agent/design-logs/infrastructure/365-activity-logger.md`.
 
@@ -14,12 +14,11 @@ Replacing Airtable `security_logs` (DL-094) with Cloudflare-native activity log 
 - `api/wrangler.toml` — `ACTIVITY_LOGS` R2 binding added
 - Env types updated: `DEV_PASSWORD`, `PII_HASH_KEY`, `ACTIVITY_LOGS` (`N8N_INTERNAL_KEY` already existed)
 
-**Blockers / pending manual steps before live test:**
-1. **`wrangler deploy` from `api/`** — denied this session, needs explicit user approval
-2. **Set Worker secrets:** `DEV_PASSWORD`, `PII_HASH_KEY` (HMAC key for future phone-hash use, even if not yet referenced) — `wrangler secret put DEV_PASSWORD`, `wrangler secret put PII_HASH_KEY`
-3. **Create R2 bucket `activity-logs-archive`** in CF dashboard
-4. **Create Logpush job:** Workers > activity-logs-archive Worker > Logs > Logpush. Dataset = `workers_trace_events`, destination = R2 bucket `activity-logs-archive`
-5. **NOT merging to main** until live `wrangler tail` smoke test passes
+**Phase 1 verified live (2026-04-28):**
+- Deployed version `116eff90`; R2 bucket `activity-logs-archive` created; Logpush job active (status: Pushing)
+- Smoke test passed: POST `/webhook/events` with `X-N8N-Key` → CF Logs shows `{"event_type":"test_ping","pii_safe":true,"actor_ip":"194.90.91.0",...}`
+- Workers Logs at 100% sampling (`head_sampling_rate = 1`)
+- Still need to set Worker secrets: `DEV_PASSWORD`, `PII_HASH_KEY` (`wrangler secret put` from `api/`)
 
 ### Test DL-365 (Phase 1 only — Section 7 items): foundation smoke test
 
@@ -31,7 +30,7 @@ Replacing Airtable `security_logs` (DL-094) with Cloudflare-native activity log 
 - [ ] PII check: include `email: "test@x.com"` in `details` → emitted log has `[redacted_email]`, no clear-text email.
 - [ ] No regressions: existing `logError()` callers still produce error logs (Phase 1 doesn't touch `error-logger.ts` or `security-log.ts` yet).
 
-### Phases 2-4 (deferred — separate `/subagent-driven-development` runs after Phase 1 verified):
+### TODO: Phases 2-4 — run each as a separate session with `/subagent-driven-development`:
 - **Phase 2** — server-side instrumentation: dual-write `logSecurity()` to console.log, wrap `logError()` to also emit `logEvent()`, add `logEvent()` calls to inbound processor / classifications / approve-and-send / upload-document
 - **Phase 3** — admin viewer (`/admin/dev/activity` React island) + `frontend/shared/telemetry.js` + `DEV_PASSWORD`-gated lookup endpoints (`/webhook/admin-dev-verify`, `/webhook/admin-dev-activity`, `/webhook/admin-clients-lookup`)
 - **Phase 4** — client portal page hooks + n8n workflow updates (replace 7 Airtable POSTs with `/webhook/events`)
