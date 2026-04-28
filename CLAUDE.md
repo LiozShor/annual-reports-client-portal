@@ -41,6 +41,16 @@ Expert n8n automation architect using **n8n-MCP tools** for **Moshe Atsits CPA F
 
 - **Always push after committing — do NOT ask.** This overrides the global "ask before pushing" rule.
 
+## Debugging — Autonomous Log Access
+
+When investigating a bug or unexpected Worker behavior, Claude can pull logs directly without asking:
+
+- **Live tail:** `wrangler tail -c wrangler.toml` (run from `api/`, background Bash for monitoring) — catches events while streaming.
+- **R2 archive (historical, primary):** Use AWS CLI against the S3 API — `source ~/Desktop/moshe/annual-reports/.env` then `AWS_ACCESS_KEY_ID="$R2_ACCESS_KEY_ID" AWS_SECRET_ACCESS_KEY="$R2_SECRET_ACCESS_KEY" AWS_DEFAULT_REGION=auto aws s3 ls s3://activity-logs-archive/ --endpoint-url=$R2_S3_ENDPOINT --recursive`. Filter NDJSON with `gunzip -c <file> | jq 'select(.event_type=="...")'`. 90d retention; ~5min Logpush latency.
+- **Pass `-c wrangler.toml` explicitly** when using wrangler (avoid autoconfig-hijack bug).
+- **Historical hot-tier (last 7d) is NOT queryable from CLI** — Workers Logs dashboard only. If repeated need arises, propose adding a `/admin/logs/query` Worker endpoint (Automation Reflex).
+- Use `logEvent()` filters (`event_type`, `category`, `client_id`) when grepping NDJSON archives — same shape as `api/src/lib/activity-logger.ts`.
+
 ---
 
 ## Communication Rules
