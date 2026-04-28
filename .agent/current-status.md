@@ -41,6 +41,40 @@ Replacing Airtable `security_logs` (DL-094) with Cloudflare-native activity log 
 ### Notes from Phase 1 implementation
 - T6 wrangler.toml: did NOT add `logpush = true` directive — keeping logpush as a CF-dashboard configuration step (subagent reported wrangler treats it as unknown; safer to leave it out and configure via dashboard).
 - T2 surfaced two minor bugs in `pii.ts` for follow-up: (a) `sanitizeValue` helper is dead code (object walking happens in `walkObj` directly); (b) byte-truncation in `sanitizeDetails` mutates only an internal string, not the returned object — so the 4096-byte cap is currently a no-op on the returned details. Workers Logs' own 256KB-per-entry cap means this is non-blocking, but worth fixing in Phase 2 cleanup.
+**Last Updated:** 2026-04-28 (DL-306 client-detail React modal — many integration breaks fixed live, USER NOT SATISFIED, see session log below)
+
+## 2026-04-28 session — DL-306 client-detail React modal hot-fix marathon
+
+**Status:** Modal renders + populates + saves on most clients. User reports remaining dissatisfaction (specific bug not yet pinpointed; see "Open" below).
+
+**What was wrong (production, found by clicking the pencil):**
+1. Static "Client Name" placeholder leaked into title bar / login screen / privacy / view-documents / print-questionnaire footer (8 surfaces).
+2. `frontend/shared/constants.js` declares `const API_BASE` etc — top-level `const` does NOT attach to `window` in classic scripts. The DL-306 React island reads `window.API_BASE`, `window.ADMIN_TOKEN_KEY`, `window.ENDPOINTS.adminUpdateClient` → all `undefined` in prod.
+3. The bundle URL `${window.API_BASE}/get-client-reports` resolved to `undefined/...`, then later (after override) to n8n base — but `get-client-reports` lives on the **Worker**; n8n returned no CORS → preflight failed.
+4. Worker route `GET /webhook/get-client-reports` only accepted `?client_id=...` (admin Bearer) or `?report_id=...&token=...` (client HMAC). React island sends `?report_id=...` + admin Bearer → 400.
+5. Pages auto-deploy from GitHub had silently stopped 14 hours earlier (`bf528d9` was last prod deploy). All recent merges to main never reached prod until manual `wrangler pages deploy frontend`.
+6. React modal markup: `.ai-modal-overlay` rendered but no `.show` class → CSS hid it (`display:none`).
+7. React island uses `.ai-modal-header/-body/-footer` but design-system CSS targets `.ai-modal-panel-header/-body/-footer` — modal looked unstyled.
+8. Worker `/get-client-reports` response had client info at top-level (`client_email`, `cc_email`); React expects per-report `email`, `ccEmail`, `phone`, `clientName`, `spouseName`.
+9. Worker `POST /admin-update-client` reads `body.token` + requires snake-case `report_id` + `action: "update"`; React sends `Authorization: Bearer` + camelCase `reportId` + no `action` → "unauthorized" → toast "שגיאה בשמירה".
+10. `client_name` lookup on reports is sometimes empty for orphan reports → modal title was blank; spouse_name wrongly read from clients table (lives on reports).
+
+**What shipped (all merged to main, Pages + Worker deployed):**
+- Branding rename: "Client Name" → "משה עציץ" globally (commits `115cfd1`, also `c96aea2` merge).
+- `frontend/shared/constants.js` + `frontend/shared/endpoints.js`: explicit `window.X = X` exposures + camelCase `adminUpdateClient` alias + `window.API_BASE = CF_BASE` override.
+- `frontend/assets/js/client-detail-modal.js`: shim now (a) injects scoped CSS to force-show `#react-client-detail-root .ai-modal-overlay` and alias `.ai-modal-header/-body/-footer` to design-system styling, (b) forces `window.API_BASE/ADMIN_TOKEN_KEY/ENDPOINTS` from lexical constants pre-mount, (c) emits `[client-detail-modal]` diagnostic logs (still in for now).
+- `frontend/admin/index.html` + `frontend/document-manager.html`: cache-bust `?v=370` on shared scripts + react-dist bundle.
+- `frontend/admin/react/src/lib/apiClient.ts`: source patched to use `window.ENDPOINTS.GET_CLIENT_REPORTS` (bundle still uses old code; harmless because runtime override redirects via `window.API_BASE`).
+- `api/src/routes/client-reports.ts`: (a) office mode also accepts `?report_id=...` + Bearer (resolves client_id from report); (b) per-report items get camelCase `clientName`/`spouseName`/`email`/`ccEmail`/`phone`/`filingType`; (c) `clientName` falls back to `clientRec.fields.name`; (d) `spouse_name` correctly read from report.
+- `api/src/routes/client.ts`: `/admin-update-client` accepts `Authorization: Bearer` header (when `body.token` missing), camelCase `reportId`, defaults `action` to `"update"`.
+
+**PII incident (resolved on HEAD, NOT scrubbed from history):** Commit `ef79b29` accidentally added `admin-after-pencil.png` (Playwright screenshot of live admin = real client names). Removed in commit `a033384`. Blob still exists in git history on session branch and in main. **TODO: scrub via `git filter-repo` if PII review fails.**
+
+**Pages auto-deploy is broken:** No new prod deployments triggered by GitHub→Pages integration since 14 hours before this session. All deploys this session were manual (`npx wrangler pages deploy frontend ...`). **TODO: investigate Pages project ↔ GitHub link.**
+
+**Diagnostic logs still in production:** `frontend/assets/js/client-detail-modal.js` emits `[client-detail-modal]` console.logs on every pencil click. Remove next session if no further bugs surface.
+
+**User dissatisfaction at end of session:** specific reason not captured before "end session". Likely candidates: (a) save-flow may still error on some clients, (b) some clients show all-empty fields, (c) the modal was iterated on too long, eroding trust. Verify all three before next deploy.
 
 ---
 
