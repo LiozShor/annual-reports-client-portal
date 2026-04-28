@@ -125,7 +125,13 @@ router.get('/get-client-reports', async (c) => {
     const clientEmail = clientRec ? String(clientRec.fields.email || '') : '';
     const clientCcEmail = clientRec ? String(clientRec.fields.cc_email || '') : '';
     const clientPhone = clientRec ? String(clientRec.fields.phone || '') : '';
-    const clientSpouseName = clientRec ? String(clientRec.fields.spouse_name || '') : '';
+    // spouse_name lives on reports (per-year value); pick from the first report we have
+    const clientSpouseName = String((reports[0]?.fields as Record<string, unknown> | undefined)?.['spouse_name'] || '');
+    // Clients table has `name` (singleLineText). Reports.client_name is a
+    // lookup that can be empty for orphan reports — prefer the canonical
+    // value from the client record.
+    const clientNameFromRec = clientRec ? String(clientRec.fields.name || '') : '';
+    if (clientNameFromRec) clientName = clientNameFromRec;
 
     // DL-306: fetch pending AI classifications grouped by report.
     // Filter by client_id + year (direct fields) — Airtable formula ARRAYJOIN({report})
