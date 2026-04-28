@@ -10270,6 +10270,18 @@ tr:hover .client-edit-link {
     color: var(--gray-500);
     font-size: 11px;
 }
+.ai-move-client-item__warning {
+    display: inline-block;
+    margin-inline-start: 8px;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: #fff3cd;
+    color: #92400e;
+    font-size: 10.5px;
+    font-weight: 500;
+    border: 1px solid #fde68a;
+    vertical-align: middle;
+}
 .ai-move-client-empty {
     padding: 18px;
     color: var(--gray-500);
