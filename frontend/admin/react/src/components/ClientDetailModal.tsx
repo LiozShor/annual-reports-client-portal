@@ -69,7 +69,10 @@ function IconPhone() {
 
 export function ClientDetailModal({ reportId, onClose, onSaved, focusField }: Props) {
   const { data: client, isLoading, isError, error } = useClient(reportId)
-  const { mutate, isPending } = useUpdateClient(reportId, onSaved)
+  const { mutate, isPending } = useUpdateClient(reportId, (updated) => {
+    onSaved?.(updated)
+    onClose()
+  })
   const [draft, setDraft] = useState<DraftState | null>(null)
   const focusedRef = useRef(false)
 
