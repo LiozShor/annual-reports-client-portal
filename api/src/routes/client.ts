@@ -42,12 +42,26 @@ client.post('/admin-toggle-active', async (c) => {
 
 // POST /webhook/admin-update-client
 client.post('/admin-update-client', async (c) => {
-  const body = await c.req.json<{
-    token?: string; report_id?: string; action?: string;
+  const rawBody = await c.req.json<{
+    token?: string; report_id?: string; reportId?: string; action?: string;
     name?: string; email?: string; cc_email?: string; phone?: string; notes?: string; client_notes?: string;
     rejected_uploads_log?: string;
     note_id?: string; mode?: string;
   }>();
+
+  // DL-306 React island sends camelCase reportId, no body.token (uses Bearer
+  // header), and no action (implies 'update'). Normalize to the canonical
+  // snake-case + body.token + explicit action shape used by the rest of the
+  // route, so both callers work without a bundle rebuild.
+  const authHeader = c.req.header('Authorization') || '';
+  const bearer = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : '';
+  const body = {
+    ...rawBody,
+    token: rawBody.token || bearer,
+    report_id: rawBody.report_id || rawBody.reportId,
+    action: rawBody.action || 'update',
+  };
+
   const tokenResult = await verifyToken(body.token || '', c.env.SECRET_KEY);
   if (!tokenResult.valid) return c.json({ ok: false, error: 'unauthorized' });
 
