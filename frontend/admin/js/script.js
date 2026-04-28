@@ -14082,7 +14082,7 @@ function generateQuestionnairePrintHTML(items) {
         }
 
         printHtml += `
-  <div class="footer">הודפס מתוך מערכת ניהול דוחות — Client Name רו"ח</div>
+  <div class="footer">הודפס מתוך מערכת ניהול דוחות — משה עציץ רו"ח</div>
 </div>`;
     });
 
