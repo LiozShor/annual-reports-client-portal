@@ -56,5 +56,12 @@ max_batch_size = 5
 max_batch_timeout = 10
 max_retries = 1
 
+[[r2_buckets]]
+binding = "ACTIVITY_LOGS"
+bucket_name = "activity-logs-archive"
+
 [observability]
 enabled = true
+# DL-365: enable logpush via Cloudflare dashboard
+# (Workers > activity-logs-archive Worker > Logs > Add Logpush Job)
+# dataset = workers_trace_events, destination = R2 bucket activity-logs-archive
