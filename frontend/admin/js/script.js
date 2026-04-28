@@ -7205,7 +7205,7 @@ function showAddPdfNoteModal(classificationId) {
     ];
 
     const overlay = document.createElement('div');
-    overlay.className = 'ai-modal-overlay';
+    overlay.className = 'ai-modal-overlay show';
     overlay.innerHTML = `
         <div class="ai-modal-panel" style="max-width:420px; direction:rtl;">
             <div class="ai-modal-header">
