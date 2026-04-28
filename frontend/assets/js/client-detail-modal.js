@@ -43,20 +43,38 @@ function openClientDetailModalShared(reportId, ctx) {
   console.log('[client-detail-modal] open called for reportId:', reportId)
   ensureReactBundleGlobals()
 
+  console.log('[client-detail-modal] mountClientDetail typeof:', typeof window.mountClientDetail)
+
   // Remove any stale root from a previous open
   closeClientDetailModal(true)
 
   const el = document.createElement('div')
   el.id = CLIENT_DETAIL_CONTAINER_ID
   document.body.appendChild(el)
+  console.log('[client-detail-modal] container appended; in DOM:', !!document.getElementById(CLIENT_DETAIL_CONTAINER_ID))
 
-  window.mountClientDetail(el, {
-    reportId,
-    ctx: {
-      onClose: () => closeClientDetailModal(true),
-      onSaved: ctx?.onSaved ?? null,
-    },
-  })
+  if (typeof window.mountClientDetail !== 'function') {
+    console.error('[client-detail-modal] window.mountClientDetail is NOT a function — react-dist/client-detail.js failed to load or expose it')
+    el.innerHTML = '<div style="position:fixed;inset:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:9999"><div style="background:white;padding:24px;border-radius:8px">React bundle not loaded. Check console.</div></div>'
+    return
+  }
+
+  try {
+    window.mountClientDetail(el, {
+      reportId,
+      ctx: {
+        onClose: () => closeClientDetailModal(true),
+        onSaved: ctx?.onSaved ?? null,
+      },
+    })
+    console.log('[client-detail-modal] mountClientDetail returned ok')
+    setTimeout(() => {
+      const overlay = el.querySelector('.ai-modal-overlay')
+      console.log('[client-detail-modal] post-mount overlay:', !!overlay, 'children:', el.childElementCount, 'innerHTML.len:', el.innerHTML.length)
+    }, 200)
+  } catch (e) {
+    console.error('[client-detail-modal] mountClientDetail threw', e)
+  }
 }
 
 function closeClientDetailModal(skipDirtyCheck) {
