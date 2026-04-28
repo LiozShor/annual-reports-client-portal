@@ -3880,22 +3880,26 @@ async function loadDocPreview(recordId) {
 // DL-373: Detect encrypted PDF after MS Graph preview fails to render.
 // Fetches first 8 KB of the raw PDF and uses PDF.js to test for PasswordException.
 async function tryDetectEncryption(downloadUrl, recordId, itemId) {
+    console.log('[dl373:detect] start', { recordId, itemId, hasUrl: !!downloadUrl });
+    if (!downloadUrl) return;
     try {
         const resp = await fetch(downloadUrl, { headers: { Range: 'bytes=0-8191' } });
+        console.log('[dl373:detect] fetch done', { status: resp.status, ok: resp.ok });
         if (!resp.ok) return;
         const chunk = await resp.arrayBuffer();
-        // PDF.js is loaded globally via CDN. Attempt a parse with empty password.
-        if (typeof pdfjsLib === 'undefined') return;
+        console.log('[dl373:detect] got bytes', chunk.byteLength);
+        if (typeof pdfjsLib === 'undefined') { console.warn('[dl373:detect] pdfjsLib not loaded'); return; }
         try {
             await pdfjsLib.getDocument({ data: chunk, password: '' }).promise;
-            // Loaded without error — not encrypted (or error was unrelated)
+            console.log('[dl373:detect] pdf opened ok — not encrypted');
         } catch (pdfErr) {
+            console.log('[dl373:detect] pdf error', pdfErr?.name, pdfErr?.message);
             if (pdfErr?.name === 'PasswordException') {
                 _showPdfPasswordPanel(recordId, itemId, downloadUrl);
             }
         }
-    } catch {
-        // Ignore detection errors — leave the existing error panel visible
+    } catch (err) {
+        console.warn('[dl373:detect] fetch/parse failed', err);
     }
 }
 
@@ -3941,7 +3945,7 @@ async function submitPdfUnlock() {
     if (unlockBtn) { unlockBtn.disabled = true; unlockBtn.textContent = 'פותח...'; }
 
     try {
-        const res = await fetch(`${API_BASE}/webhook/unlock-pdf`, {
+        const res = await fetch('https://annual-reports-api.liozshor1.workers.dev/webhook/unlock-pdf', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
             body: JSON.stringify({ itemId: _pdfUnlockItemId, recordId: _pdfUnlockRecordId, password }),
@@ -7250,7 +7254,7 @@ async function _submitPdfNote(recordId, itemId) {
     if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = 'שומר...'; }
 
     try {
-        const res = await fetch(`${API_BASE}/webhook/add-pdf-note`, {
+        const res = await fetch('https://annual-reports-api.liozshor1.workers.dev/webhook/add-pdf-note', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
             body: JSON.stringify({ itemId, recordId, note, corner: corner?.value || 'tr' }),
