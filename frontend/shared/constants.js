@@ -25,3 +25,7 @@ const STAGES = {
 const STAGE_NUM_TO_KEY = Object.fromEntries(Object.entries(STAGES).map(([k, v]) => [v.num, k]));
 const STAGE_LABELS = Object.fromEntries(Object.entries(STAGES).map(([k, v]) => [k, v.label]));
 const STAGE_ORDER = Object.fromEntries(Object.entries(STAGES).map(([k, v]) => [k, v.num]));
+
+// Expose to window for React island bundles (top-level `const` does not attach to window)
+window.API_BASE = API_BASE;
+window.ADMIN_TOKEN_KEY = ADMIN_TOKEN_KEY;
