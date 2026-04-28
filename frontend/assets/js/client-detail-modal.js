@@ -13,7 +13,18 @@ const CLIENT_DETAIL_CONTAINER_ID = 'react-client-detail-root'
   if (document.getElementById('react-client-detail-modal-css')) return
   const s = document.createElement('style')
   s.id = 'react-client-detail-modal-css'
-  s.textContent = '#' + 'react-client-detail-root .ai-modal-overlay { display: flex !important; }'
+  // Force-show overlay (React doesn't add `.show`) AND alias the React island's
+  // header/body/footer classes to the design-system panel-* equivalents so the
+  // modal picks up the proper SSOT styling.
+  s.textContent = [
+    '#' + 'react-client-detail-root .ai-modal-overlay { display: flex !important; }',
+    '#' + 'react-client-detail-root .ai-modal-header  { padding: var(--sp-6) var(--sp-6) 0; display: flex; align-items: center; justify-content: space-between; gap: var(--sp-3); font-size: var(--text-xl); font-weight: 700; color: var(--gray-800); }',
+    '#' + 'react-client-detail-root .ai-modal-title   { margin: 0; font-size: inherit; font-weight: inherit; color: inherit; }',
+    '#' + 'react-client-detail-root .ai-modal-close   { background: transparent; border: none; cursor: pointer; padding: var(--sp-2); font-size: 1.25rem; color: var(--gray-500); border-radius: var(--radius-md); }',
+    '#' + 'react-client-detail-root .ai-modal-close:hover { background: var(--gray-100); color: var(--gray-800); }',
+    '#' + 'react-client-detail-root .ai-modal-body    { padding: var(--sp-5) var(--sp-6); color: var(--gray-600); line-height: 1.7; }',
+    '#' + 'react-client-detail-root .ai-modal-footer  { padding: 0 var(--sp-6) var(--sp-6); display: flex; gap: var(--sp-3); justify-content: flex-end; }',
+  ].join('\n')
   document.head.appendChild(s)
 })()
 
