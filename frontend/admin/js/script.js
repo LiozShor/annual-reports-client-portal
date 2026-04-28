@@ -12664,7 +12664,7 @@ function openCcEmailFromKebab(reportId, stageKey) {
 // DL-366: copy questionnaire link to clipboard via Worker-minted fresh token.
 async function copyQuestionnaireLink(reportId) {
     try {
-        const res = await fetch(`${API_BASE}/admin-questionnaire-link`, {
+        const res = await fetch(ENDPOINTS.ADMIN_QUESTIONNAIRE_LINK, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ token: authToken, report_id: reportId }),
