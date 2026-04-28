@@ -1,6 +1,14 @@
 # Annual Reports CRM - Current Status
 
 **Last Updated:** 2026-04-28 (DL-368 — GitHub App reinstall did NOT fix it; `source.config.repo_id` still stale; CF support ticket required to rebind project to new repo id)
+**Last Updated:** 2026-04-28 (DL-369 — IMPLEMENTED, NEED TESTING; AI Review overflow menu adds "העבר ללקוח אחר..." and Worker endpoint `/webhook/move-classification-client` moves/reclassifies the current document to another client)
+**Last Updated:** 2026-04-28 (Pages manual deploy guardrail — current Wrangler auth token can deploy Workers but fails Pages project auth with Cloudflare code 10000; before retrying `wrangler pages deploy`, verify `pages project list/get` succeeds with the same auth context, otherwise deploy frontend via Git push or fix token permissions)
+**Last Updated:** 2026-04-28 (DL-368 domain cutover COMPLETE — `docs.moshe-atsits.com` removed from old Pages project and active on new Git-backed `annual-reports-client-portal-git`; Cloudflare API validation active; SSL shown enabled in dashboard; browser verified `https://docs.moshe-atsits.com/admin/#annual` works. Remaining: resolve repository access banner + prove next push deploys via `github:push`, then delete accidental direct-upload `annual-reports-client-portal-v2`)
+**Last Updated:** 2026-04-28 (CORS hotfix deployed — `api/wrangler.toml` ALLOWED_ORIGIN now includes `https://annual-reports-client-portal-git.pages.dev`; Worker deployed version `ccf0acd8-abd8-4fc9-898f-4c214a9e5f5c`; browser hard-refresh/login test pending)
+**Last Updated:** 2026-04-28 (DL-368 self-service replacement created — new Pages project `annual-reports-client-portal-git` is Git Provider=Yes, bound to current repo id `1222817442`, output dir `frontend`, deployed `origin/main` commit `8849912`; still needs test push to prove future `github:push` and custom domain migration from old project)
+**Last Updated:** 2026-04-28 (DL-368 API patch attempt — public Pages PATCH accepts `source.config.repo_id` but ignores repo-id rebinding on existing Git-bound project; two PATCH attempts returned success/no errors yet persisted stale `1136319991`; prevention: always verify returned `source.config.repo_id` immediately, then use new Pages project/domain migration or CF support)
+**Last Updated:** 2026-04-28 (DL-368 verification — dashboard repo chip/latest PR text still misleading; CF API shows latest deploy `21c1488` is `deployment_trigger.type=ad_hoc`, `commit_dirty=false`, and project `source.config.repo_id` remains stale `1136319991`)
+**Last Updated:** 2026-04-28 (Pages Git investigation guardrail — when downloading Pages config from `tmp/`, use absolute Wrangler path `C:\Users\liozm\Desktop\moshe\annual-reports\api\node_modules\.bin\wrangler.cmd` to avoid relative-path/overwrite retries)
 **Last Updated:** 2026-04-28 (Bright Data MCP registered via SSE — connected; server-name prefix is `brightdata`)
 **Last Updated:** 2026-04-28 (DL-366 — IMPLEMENTED, NEED TESTING; dashboard kebab adds two new actions: add/edit cc_email + auto-resend, and copy questionnaire link to clipboard)
 **Last Updated:** 2026-04-28 (DL-365 Phase 1 COMPLETE — smoke test passed, CF Logs verified, Logpush active; Phases 2-4 queued)
@@ -25,6 +33,28 @@ npx wrangler pages deploy frontend --project-name=annual-reports-client-portal -
 - [ ] CF API `source.config.repo_id` == `1222817442` after fix.
 
 Design log: `.agent/design-logs/infrastructure/368-cf-pages-git-integration-broken.md`
+## DL-369: AI Review move current document to another client — IMPLEMENTED, NEED TESTING (2026-04-28)
+
+Design log: `.agent/design-logs/ai-review/369-ai-review-move-document-to-client.md`.
+
+Implemented:
+- AI Review actions-panel overflow menu now shows `העבר ללקוח אחר...` for every card state.
+- New custom client-picker modal excludes the source client, confirms with `showConfirmDialog`, calls `POST /webhook/move-classification-client`, shows card-level loading, refreshes AI Review, and selects the target client when available.
+- Worker endpoint moves only the current classification/file: same-filing-type target report resolution, target reclassification, DL-355 OneDrive filename upload, guarded source-doc reset to `Required_Missing`, target doc/classification patch, old OneDrive item delete after target upload.
+
+Validation:
+- [x] `frontend/admin/js/script.js` parses with Node `new Function`.
+- [x] `frontend/shared/endpoints.js` parses with Node `new Function`.
+- [ ] Live/browser: pending AI Review card shows action and opens client picker.
+- [ ] Live/browser: approved/rejected/reassigned cards also show action.
+- [ ] Live/browser: move seeded test document to another client; card appears under target client after refresh.
+- [ ] Airtable: source document resets to `Required_Missing` only if it still referenced the moved file.
+- [ ] OneDrive: target file exists in target client folder; old source item is deleted after upload.
+- [ ] Regression: same-client reassign modal still works.
+- [ ] Regression: DL-361 unidentified assignment still works.
+- [ ] Error paths: bad token, same target client, invalid target client, ambiguous target report, missing OneDrive item.
+
+Note: `api` `tsc --noEmit` still fails on pre-existing errors already tracked from DL-366/DL-361 (`ADMIN_SECRET`, `ClassificationResult.pageCount`, DL-361 document typing, missing `.mjs` declaration). DL-369's new type mismatch was fixed.
 
 ## DL-365: Activity Logger — Phase 1 COMPLETE ✓ — Phases 2-4 TODO (2026-04-28)
 

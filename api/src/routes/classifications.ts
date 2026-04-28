@@ -63,6 +63,7 @@ const TABLES = {
   DOCUMENTS: 'tblcwptR63skeODPn',
   TEMPLATES: 'tblQTsbhC6ZBrhspc',
   CATEGORIES: 'tblbn6qzWNfR8uL2b',
+  CLIENTS: 'tblFFttFScDRZ7Ah5',
 };
 
 const EMPTY_STATS = {
@@ -77,6 +78,8 @@ const EMPTY_STATS = {
 /** Extract first element from Airtable lookup arrays, or return value as-is. */
 const getField = (val: unknown): unknown =>
   Array.isArray(val) ? val[0] : (val || '');
+
+const escapeAirtableValue = (value: string): string => value.replace(/'/g, "\\'");
 
 // GET /webhook/get-pending-classifications
 classifications.get('/get-pending-classifications', async (c) => {
@@ -2112,6 +2115,285 @@ classifications.post('/save-classification-question', async (c) => {
     pending_question: question || null,
   });
   return c.json({ ok: true });
+});
+
+// =====================================================================
+// DL-369: POST /webhook/move-classification-client
+// =====================================================================
+// Move one current AI Review classification/file to another client, then
+// reclassify it against the target client's required documents.
+classifications.post('/move-classification-client', async (c) => {
+  const env = c.env;
+  const airtable = new AirtableClient(env.AIRTABLE_BASE_ID, env.AIRTABLE_PAT);
+  const clientIp = getClientIp(c.req.raw.headers);
+
+  let body: { token?: string; classification_id?: string; target_client_id?: string };
+  try { body = await c.req.json(); } catch { return c.json({ ok: false, error: 'Invalid JSON' }, 400); }
+
+  const authHeader = c.req.header('Authorization') || '';
+  const bearer = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : '';
+  const tokenResult = await verifyToken(body.token || bearer || '', env.SECRET_KEY);
+  if (!tokenResult.valid) {
+    logSecurity(c.executionCtx, airtable, {
+      timestamp: new Date().toISOString(),
+      event_type: tokenResult.reason === 'TOKEN_EXPIRED' ? 'TOKEN_EXPIRED' : 'TOKEN_INVALID',
+      severity: 'WARNING',
+      actor: 'admin-token',
+      actor_ip: clientIp,
+      endpoint: '/webhook/move-classification-client',
+      http_status: 401,
+      error_message: tokenResult.reason || '',
+    });
+    return c.json({ ok: false, error: 'Unauthorized' }, 401);
+  }
+
+  const { classification_id, target_client_id } = body;
+  if (!classification_id) return c.json({ ok: false, error: 'Missing classification_id' }, 400);
+  if (!target_client_id) return c.json({ ok: false, error: 'Missing target_client_id' }, 400);
+
+  try {
+    const cls = await airtable.getRecord(TABLES.CLASSIFICATIONS, classification_id);
+    const clsFields = cls.fields as Record<string, any>;
+    const oldItemId = clsFields.onedrive_item_id as string;
+    if (!oldItemId) {
+      return c.json({ ok: false, code: 'missing_onedrive_item', error: 'Classification has no OneDrive item to move' }, 400);
+    }
+
+    const sourceClientId = (getField(clsFields.client_id) as string) || '';
+    const sourceClientName = (getField(clsFields.client_name) as string) || '';
+    if (sourceClientId && sourceClientId === target_client_id) {
+      return c.json({ ok: false, code: 'same_client', error: 'Target client is the same as source client' }, 400);
+    }
+
+    const sourceReportId = getField(clsFields.report) as string;
+    let sourceFilingType = (clsFields.filing_type as string) || '';
+    if (!sourceFilingType && sourceReportId) {
+      try {
+        const sourceReport = await airtable.getRecord(TABLES.REPORTS, sourceReportId);
+        sourceFilingType = ((sourceReport.fields as any).filing_type as string) || 'annual_report';
+      } catch {
+        sourceFilingType = 'annual_report';
+      }
+    }
+    sourceFilingType = sourceFilingType || 'annual_report';
+
+    let clientRec: { id: string; fields: { name?: string; client_id?: string } } | null = null;
+    if (target_client_id.startsWith('rec')) {
+      clientRec = await airtable.getRecord<{ name?: string; client_id?: string }>(TABLES.CLIENTS, target_client_id);
+    } else {
+      const lookups = await airtable.listAllRecords<{ name?: string; client_id?: string }>(TABLES.CLIENTS, {
+        filterByFormula: `{client_id} = '${escapeAirtableValue(target_client_id)}'`,
+        fields: ['name', 'client_id'],
+        maxRecords: 1,
+      });
+      clientRec = lookups[0] || null;
+    }
+    if (!clientRec) {
+      return c.json({ ok: false, code: 'target_client_not_found', error: 'Target client not found' }, 404);
+    }
+
+    const targetClientName = clientRec.fields.name || '';
+    const targetClientCpaId = clientRec.fields.client_id || '';
+    if (!targetClientName || !targetClientCpaId) {
+      return c.json({ ok: false, code: 'target_client_invalid', error: 'Target client is missing name or client_id' }, 400);
+    }
+    if (sourceClientId && sourceClientId === targetClientCpaId) {
+      return c.json({ ok: false, code: 'same_client', error: 'Target client is the same as source client' }, 400);
+    }
+
+    const targetReports = await airtable.listAllRecords(TABLES.REPORTS, {
+      filterByFormula: `AND({client_id} = '${escapeAirtableValue(targetClientCpaId)}', OR({stage} = 'Send_Questionnaire', {stage} = 'Waiting_For_Answers', {stage} = 'Pending_Approval', {stage} = 'Collecting_Docs', {stage} = 'Review'))`,
+      fields: ['report_key', 'year', 'stage', 'client_name', 'filing_type'],
+    });
+    const sameTypeReports = targetReports.filter((r) => (((r.fields as any).filing_type as string) || 'annual_report') === sourceFilingType);
+    if (sameTypeReports.length === 0) {
+      return c.json({ ok: false, code: 'target_report_not_found', error: 'Target client has no active report for this filing type' }, 400);
+    }
+    sameTypeReports.sort((a, b) => Number((b.fields as any).year || 0) - Number((a.fields as any).year || 0));
+    const topYear = Number((sameTypeReports[0].fields as any).year || 0);
+    const topReports = sameTypeReports.filter((r) => Number((r.fields as any).year || 0) === topYear);
+    if (topReports.length > 1) {
+      return c.json({ ok: false, code: 'ambiguous_target_report', error: 'Target client has multiple active reports for the same filing type and year' }, 409);
+    }
+
+    const targetReport = topReports[0];
+    const targetReportId = targetReport.id;
+    const targetReportKey = ((targetReport.fields as any).report_key as string) || '';
+    const targetYear = String((targetReport.fields as any).year ?? new Date().getFullYear());
+    const targetDocsFormula = targetReportKey
+      ? `AND({report_key_lookup} = '${escapeAirtableValue(targetReportKey)}', {status} = 'Required_Missing')`
+      : `AND(FIND('${escapeAirtableValue(targetReportId)}', ARRAYJOIN({report})), {status} = 'Required_Missing')`;
+    const requiredDocs = await airtable.listAllRecords(TABLES.DOCUMENTS, {
+      filterByFormula: targetDocsFormula,
+      fields: ['type', 'issuer_name', 'issuer_key', 'person', 'status', 'report_key_lookup', 'expected_filename', 'category', 'onedrive_item_id'],
+    });
+
+    const msGraph = new MSGraphClient(env, c.executionCtx);
+    const oneDriveRoot = await resolveOneDriveRoot(msGraph);
+    const fileBytes = await msGraph.getBinary(`/drives/${oneDriveRoot.driveId}/items/${oldItemId}/content`);
+    if (!fileBytes || fileBytes.byteLength === 0) {
+      return c.json({ ok: false, code: 'missing_onedrive_item', error: 'Could not download source OneDrive file' }, 404);
+    }
+
+    const templateRecords = await getCachedOrFetch(env.CACHE_KV, 'cache:templates', 3600,
+      () => airtable.listAllRecords(TABLES.TEMPLATES));
+    const templateMap = buildTemplateMap(templateRecords);
+    const attachmentName = (clsFields.attachment_name as string) || (clsFields.expected_filename as string) || 'document.pdf';
+    const contentType = (clsFields.attachment_content_type as string) || 'application/octet-stream';
+    const fileHash = (clsFields.file_hash as string) || await computeSha256(fileBytes);
+    const attachment: AttachmentInfo = {
+      id: oldItemId,
+      name: attachmentName,
+      contentType,
+      size: (clsFields.attachment_size as number) || fileBytes.byteLength,
+      content: fileBytes,
+      sha256: fileHash,
+    };
+
+    const pCtx: ProcessingContext = {
+      env,
+      ctx: c.executionCtx,
+      graph: msGraph,
+      airtable,
+      messageId: `move-client-${classification_id}`,
+      templateMap,
+    };
+
+    let classification: ClassificationResult | null = null;
+    try {
+      classification = await classifyAttachment(pCtx, attachment, requiredDocs as any, targetClientName, {
+        subject: (clsFields.email_subject as string) || '',
+        bodyPreview: (clsFields.email_body_text as string) || '',
+        senderName: (clsFields.sender_name as string) || '',
+        senderEmail: (clsFields.sender_email as string) || '',
+        fallbackMode: requiredDocs.length === 0,
+        filingType: sourceFilingType,
+      });
+    } catch (e) {
+      console.warn('[move-classification-client] classify failed', classification_id, (e as Error).message);
+    }
+
+    let targetDoc: { id: string; fields: Record<string, any> } | null = null;
+    if (classification?.matchedDocRecordId) {
+      targetDoc = await airtable.getRecord(TABLES.DOCUMENTS, classification.matchedDocRecordId) as { id: string; fields: Record<string, any> };
+      const tf = targetDoc.fields || {};
+      if (tf.status === 'Received' && tf.onedrive_item_id) {
+        return c.json({ ok: false, code: 'target_doc_conflict', error: 'Target document already has a received file' }, 409);
+      }
+    }
+
+    const finalName = classification?.templateId
+      ? resolveOneDriveFilename({ templateId: classification.templateId, issuerName: classification.issuerName, attachmentName, templateMap })
+      : attachmentName;
+
+    let upload: { itemId: string; webUrl: string };
+    try {
+      upload = await uploadToOneDrive(msGraph, oneDriveRoot, targetClientName, targetYear, finalName, fileBytes, sourceFilingType);
+    } catch (e) {
+      console.error('[move-classification-client] target upload failed', classification_id, (e as Error).message);
+      return c.json({ ok: false, code: 'file_move_failed', error: 'Failed to upload file to target client folder' }, 502);
+    }
+
+    const sourceDocId = getField(clsFields.document) as string;
+    if (sourceDocId) {
+      try {
+        const sourceDoc = await airtable.getRecord(TABLES.DOCUMENTS, sourceDocId);
+        const sourceDocItemId = (sourceDoc.fields as any).onedrive_item_id as string;
+        if (!sourceDocItemId || sourceDocItemId === oldItemId) {
+          await airtable.updateRecord(TABLES.DOCUMENTS, sourceDocId, applyMissingStatusInvariant({ status: 'Required_Missing' }));
+        } else {
+          console.log('[move-classification-client] skip source clear: document now references a different file', JSON.stringify({ sourceDocId, sourceDocItemId, oldItemId }));
+        }
+      } catch (e) {
+        console.error('[move-classification-client] source clear failed', sourceDocId, (e as Error).message);
+        return c.json({ ok: false, code: 'source_clear_failed', error: 'Moved file to target folder but failed to clear source document' }, 500);
+      }
+    }
+
+    if (targetDoc) {
+      await airtable.updateRecord(TABLES.DOCUMENTS, targetDoc.id, {
+        status: 'Received',
+        review_status: 'confirmed',
+        reviewed_by: 'Natan',
+        reviewed_at: new Date().toISOString(),
+        file_url: upload.webUrl,
+        onedrive_item_id: upload.itemId,
+        file_hash: fileHash,
+        ai_confidence: classification?.confidence ?? 0,
+        ai_reason: `Moved from ${sourceClientName || sourceClientId}: ${classification?.reason || ''}`,
+        source_attachment_name: attachmentName,
+        source_sender_email: clsFields.sender_email || null,
+        uploaded_at: clsFields.received_at || new Date().toISOString(),
+        expected_filename: finalName,
+        matched_doc_name: classification?.matchedDocName || null,
+      });
+    }
+
+    await airtable.updateRecord(TABLES.CLASSIFICATIONS, classification_id, {
+      report: [targetReportId],
+      client_name: targetClientName,
+      client_id: targetClientCpaId,
+      year: parseInt(targetYear, 10),
+      file_url: upload.webUrl,
+      onedrive_item_id: upload.itemId,
+      expected_filename: finalName,
+      matched_template_id: classification?.templateId ?? null,
+      ai_confidence: classification?.confidence ?? 0,
+      ai_reason: classification?.reason ?? 'moved to another client by office',
+      issuer_name: classification?.issuerName ?? '',
+      issuer_match_quality: classification?.matchQuality ?? null,
+      matched_doc_name: classification?.matchedDocName ?? null,
+      document: classification?.matchedDocRecordId ? [classification.matchedDocRecordId] : [],
+      review_status: 'reassigned',
+      reviewed_at: new Date().toISOString(),
+      notes: `Moved from ${sourceClientName || sourceClientId || 'source client'} to ${targetClientName}`,
+    });
+
+    try {
+      await msGraph.delete(`/drives/${oneDriveRoot.driveId}/items/${oldItemId}`);
+    } catch (e) {
+      console.warn('[move-classification-client] old OneDrive delete failed', oldItemId, (e as Error).message);
+    }
+
+    if (sourceReportId) await checkAutoAdvanceToReview(airtable, sourceReportId);
+    await checkAutoAdvanceToReview(airtable, targetReportId);
+    invalidateCache(env.CACHE_KV, 'cache:documents_non_waived_v2', 'pending-classifications:annual_report', 'pending-classifications:capital_statements', 'pending-classifications:all');
+
+    logSecurity(c.executionCtx, airtable, {
+      timestamp: new Date().toISOString(),
+      event_type: 'CLASSIFICATION_MOVED_CLIENT',
+      severity: 'INFO',
+      actor: 'admin-token',
+      actor_ip: clientIp,
+      endpoint: '/webhook/move-classification-client',
+      http_status: 200,
+      details: JSON.stringify({ classification_id, source_client_id: sourceClientId, target_client_id: targetClientCpaId }),
+    });
+
+    return c.json({
+      ok: true,
+      classification_id,
+      source_client_name: sourceClientName,
+      target_client_name: targetClientName,
+      target_report_id: targetReportId,
+      target_document_id: classification?.matchedDocRecordId || '',
+      doc_title: classification?.matchedDocName || classification?.issuerName || finalName,
+      file_url: upload.webUrl,
+    });
+  } catch (err) {
+    console.error('[move-classification-client] fatal', (err as Error).message);
+    logSecurity(c.executionCtx, airtable, {
+      timestamp: new Date().toISOString(),
+      event_type: 'API_ERROR',
+      severity: 'ERROR',
+      actor: 'admin-token',
+      actor_ip: clientIp,
+      endpoint: '/webhook/move-classification-client',
+      http_status: 500,
+      error_message: (err as Error).message,
+    });
+    return c.json({ ok: false, error: 'Move failed', details: (err as Error).message }, 500);
+  }
 });
 
 // =====================================================================

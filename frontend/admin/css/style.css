@@ -10122,6 +10122,98 @@ tr:hover .client-edit-link {
     background: var(--gray-50);
 }
 
+/* DL-369: Move current AI Review document to another client */
+.ai-move-client-modal {
+    max-width: 560px;
+    width: min(560px, 92vw);
+}
+.ai-move-client-close {
+    width: 32px;
+    height: 32px;
+    border: 0;
+    background: transparent;
+    color: var(--gray-500);
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    font-size: 22px;
+    line-height: 1;
+}
+.ai-move-client-close:hover {
+    background: var(--gray-100);
+    color: var(--gray-800);
+}
+.ai-move-client-summary {
+    display: grid;
+    gap: 6px;
+    padding: 10px 12px;
+    margin-bottom: 14px;
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius-md);
+    background: var(--gray-50);
+    color: var(--gray-700);
+    font-size: 13px;
+}
+.ai-move-client-label {
+    display: block;
+    margin-bottom: 6px;
+    color: var(--gray-700);
+    font-size: 13px;
+    font-weight: 600;
+}
+.ai-move-client-search {
+    width: 100%;
+    height: 38px;
+    padding: 8px 12px;
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius-md);
+    color: var(--gray-800);
+    font: inherit;
+}
+.ai-move-client-search:focus {
+    outline: none;
+    border-color: var(--brand-500);
+    box-shadow: 0 0 0 3px var(--brand-100);
+}
+.ai-move-client-list {
+    max-height: 340px;
+    overflow-y: auto;
+    margin-top: 10px;
+    padding: 4px;
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius-md);
+}
+.ai-move-client-item {
+    width: 100%;
+    display: grid;
+    gap: 2px;
+    padding: 9px 10px;
+    border: 0;
+    border-radius: 6px;
+    background: transparent;
+    cursor: pointer;
+    text-align: start;
+}
+.ai-move-client-item:hover,
+.ai-move-client-item:focus {
+    outline: none;
+    background: var(--brand-50);
+}
+.ai-move-client-item__name {
+    color: var(--gray-800);
+    font-size: 13px;
+    font-weight: 600;
+}
+.ai-move-client-item__meta {
+    color: var(--gray-500);
+    font-size: 11px;
+}
+.ai-move-client-empty {
+    padding: 18px;
+    color: var(--gray-500);
+    text-align: center;
+    font-size: 13px;
+}
+
 /* ----- Empty state ----- */
 .ai-ap-empty {
     flex: 1 1 auto;

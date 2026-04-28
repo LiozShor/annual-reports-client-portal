@@ -4832,9 +4832,10 @@ function _renderPanelAdditive(item, variant, reReviewing) {
         // pending (non-on_hold) + on-hold
         overflowItems.push(`<button class="ai-ap-overflow__item" onclick="openAddQuestionDialog('${idA}'); _closePanelOverflow();">${qLabel}</button>`);
     }
+    overflowItems.push(`<button class="ai-ap-overflow__item" onclick="showMoveClassificationClientModal('${idA}'); _closePanelOverflow();">העבר ללקוח אחר...</button>`);
 
     const overflowHtml = `<div class="ai-ap-overflow">
-        <button class="ai-ap-overflow__btn" onclick="_togglePanelOverflow(this, event)" title="פעולות נוספות">⋮</button>
+        <button class="ai-ap-overflow__btn" onclick="_togglePanelOverflow(this, event)" title="פעולות נוספות" aria-haspopup="menu" aria-expanded="false">⋮</button>
         <div class="ai-ap-overflow__menu">${overflowItems.join('')}</div>
     </div>`;
     secondaryBtns.push(overflowHtml);
@@ -4866,11 +4867,14 @@ function _togglePanelOverflow(btn, event) {
             menu.style.zIndex = '10000';
         }
         wrap.classList.add('open');
+        btn.setAttribute('aria-expanded', 'true');
     }
 }
 function _closePanelOverflow() {
     document.querySelectorAll('.ai-ap-overflow.open').forEach(el => {
         el.classList.remove('open');
+        const btn = el.querySelector('.ai-ap-overflow__btn');
+        if (btn) btn.setAttribute('aria-expanded', 'false');
         const menu = el.querySelector('.ai-ap-overflow__menu');
         if (menu) {
             menu.style.position = '';
@@ -7047,6 +7051,151 @@ async function _dl361DoAssign(emailEventId, targetClientId, clientName) {
     } catch (err) {
         _dl361HideProgressOverlay();
         if (typeof showAIToast === 'function') showAIToast('שיוך נכשל: ' + (err.message || ''), 'error');
+    }
+}
+
+function closeMoveClassificationClientModal() {
+    const overlay = document.getElementById('moveClassificationClientModal');
+    if (overlay) overlay.remove();
+}
+
+function showMoveClassificationClientModal(classificationId) {
+    const item = (aiClassificationsData || []).find(i => i.id === classificationId);
+    if (!item) {
+        showModal('error', 'שגיאה', 'לא נמצא המסמך להעברה.');
+        return;
+    }
+
+    closeMoveClassificationClientModal();
+    const overlay = document.createElement('div');
+    overlay.id = 'moveClassificationClientModal';
+    overlay.className = 'ai-modal-overlay show';
+    overlay.onclick = (event) => {
+        if (event.target === overlay) closeMoveClassificationClientModal();
+    };
+
+    const sourceClientId = item.client_id || '';
+    const sourceClientName = item.client_name || '';
+    const fileName = item.attachment_name || item.expected_filename || item.matched_doc_name || 'מסמך';
+
+    overlay.innerHTML = `
+        <div class="ai-modal-panel ai-move-client-modal" onclick="event.stopPropagation()">
+            <div class="ai-modal-panel-header">
+                <span>העבר מסמך ללקוח אחר</span>
+                <button class="ai-move-client-close" type="button" onclick="closeMoveClassificationClientModal()" aria-label="סגור">×</button>
+            </div>
+            <div class="ai-modal-panel-body">
+                <div class="ai-move-client-summary">
+                    <div><strong>מסמך:</strong> ${escapeHtml(fileName)}</div>
+                    <div><strong>מלקוח:</strong> ${escapeHtml(sourceClientName || sourceClientId || 'לא ידוע')}</div>
+                </div>
+                <label class="ai-move-client-label" for="moveClassificationClientSearch">בחר לקוח יעד</label>
+                <input id="moveClassificationClientSearch" class="ai-move-client-search" type="text" autocomplete="off" placeholder="חיפוש לפי שם, ת.ז או אימייל...">
+                <div id="moveClassificationClientList" class="ai-move-client-list"></div>
+            </div>
+            <div class="ai-modal-panel-footer">
+                <button class="btn btn-secondary" type="button" onclick="closeMoveClassificationClientModal()">ביטול</button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(overlay);
+
+    const listEl = overlay.querySelector('#moveClassificationClientList');
+    const searchEl = overlay.querySelector('#moveClassificationClientSearch');
+
+    const uniqueClients = (() => {
+        const seen = new Set();
+        return (clientsData || [])
+            .filter(c => c && c.client_id && c.client_id !== sourceClientId && c.is_active !== false)
+            .filter(c => {
+                if (seen.has(c.client_id)) return false;
+                seen.add(c.client_id);
+                return true;
+            });
+    })();
+
+    const renderList = (filter) => {
+        const q = (filter || '').trim().toLowerCase();
+        const rows = [];
+        for (const c of uniqueClients) {
+            const name = c.name || '';
+            const id = c.client_id || '';
+            const email = c.email || '';
+            const hay = `${name} ${id} ${email}`.toLowerCase();
+            if (q && !hay.includes(q)) continue;
+            rows.push(`
+                <button class="ai-move-client-item" type="button" data-client-id="${escapeAttr(id)}" data-client-name="${escapeAttr(name)}">
+                    <span class="ai-move-client-item__name">${escapeHtml(name || id)}</span>
+                    <span class="ai-move-client-item__meta">${escapeHtml(id)}${email ? ' · ' + escapeHtml(email) : ''}</span>
+                </button>
+            `);
+            if (rows.length >= 80) break;
+        }
+        listEl.innerHTML = rows.join('') || '<div class="ai-move-client-empty">לא נמצאו לקוחות</div>';
+        listEl.querySelectorAll('.ai-move-client-item').forEach(btn => {
+            btn.addEventListener('click', () => {
+                confirmMoveClassificationClient(classificationId, btn.dataset.clientId, btn.dataset.clientName);
+            });
+        });
+    };
+
+    renderList('');
+    searchEl.addEventListener('input', () => renderList(searchEl.value));
+    setTimeout(() => searchEl.focus(), 40);
+}
+
+function confirmMoveClassificationClient(classificationId, targetClientId, targetClientName) {
+    if (!classificationId || !targetClientId) return;
+    const item = (aiClassificationsData || []).find(i => i.id === classificationId);
+    const fileName = item?.attachment_name || item?.expected_filename || item?.matched_doc_name || 'המסמך';
+    const sourceClient = item?.client_name || item?.client_id || 'הלקוח הנוכחי';
+    showConfirmDialog(
+        `להעביר את "${fileName}" מ-${sourceClient} אל ${targetClientName}? המסמך יסווג מחדש ויועבר בתיקיית OneDrive.`,
+        async () => {
+            closeMoveClassificationClientModal();
+            await moveClassificationClient(classificationId, targetClientId, targetClientName);
+        },
+        'העבר ללקוח',
+        false
+    );
+}
+
+async function moveClassificationClient(classificationId, targetClientId, targetClientName) {
+    setCardLoading(classificationId, 'מעביר ללקוח אחר...');
+    try {
+        const response = await fetchWithTimeout(ENDPOINTS.MOVE_CLASSIFICATION_CLIENT, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${authToken}`,
+            },
+            body: JSON.stringify({
+                token: authToken,
+                classification_id: classificationId,
+                target_client_id: targetClientId,
+            }),
+        }, 90000);
+        const data = await response.json();
+        clearCardLoading(classificationId);
+        if (!data.ok) {
+            const message = data.code === 'ambiguous_target_report'
+                ? 'ללקוח היעד יש כמה דוחות פעילים מתאימים. צריך לפתור את זה ידנית לפני ההעברה.'
+                : (data.error || 'העברת המסמך נכשלה.');
+            showModal(data.code === 'ambiguous_target_report' ? 'warning' : 'error', 'לא ניתן להעביר', message);
+            return;
+        }
+
+        if (typeof loadAIClassifications === 'function') {
+            await loadAIClassifications(false, true);
+        }
+        const targetName = data.target_client_name || targetClientName;
+        if (targetName && typeof selectClient === 'function') {
+            try { selectClient(targetName); } catch {}
+        }
+        showAIToast(`המסמך הועבר אל ${targetName}`, 'success');
+    } catch (error) {
+        clearCardLoading(classificationId);
+        showModal('error', 'שגיאה', humanizeError(error));
     }
 }
 
