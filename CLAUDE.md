@@ -103,6 +103,8 @@ Anti-pattern: re-typing the same command in three sessions and never installing 
 
 **React Islands:** Source at `frontend/admin/react/` (Vite + React 18 + TS strict). Built output at `frontend/admin/react-dist/` (committed). See `frontend/admin/react/README.md` for dev/build/test commands and island bridge contract.
 
+**Activity Logger (DL-365):** Cloudflare-native logger replacing Airtable `security_logs`. Use `logEvent({event_type, category, ...})` from `api/src/lib/activity-logger.ts` for ALL activity logs (auth, inbound, AI, admin actions, errors). PII-safe by default — sanitization in `api/src/lib/pii.ts` (drop names/emails/phones; pass `client_id` only). External callers POST to `/webhook/events` (admin token / `X-N8N-Key` / client HMAC). Logs land in CF Workers Logs (7d hot, queryable in dashboard) + Logpush → R2 `activity-logs-archive` (90d archive). Do NOT add new Airtable `security_logs` writes. Phase 1 live; Phases 2-4 pending. Design log: `.agent/design-logs/infrastructure/365-activity-logger.md`.
+
 **React-First for New Features (default):** When proposing or implementing a NEW feature, default to a React island if it involves a form with 2+ fields, data fetching + mutation, complex UI state (tabs, inline editing, multi-step flows), or anything that warrants unit tests. Stay in vanilla `script.js` only for trivial additions (button wired to existing fn, wording tweaks, CSS-only changes, quick fixes to existing vanilla flows). **Never rewrite working vanilla code just to "be in React"** — Strangler Fig principle: new growth in React, touch the old only when you have to.
 
 ---
