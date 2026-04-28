@@ -7114,6 +7114,13 @@ function showMoveClassificationClientModal(classificationId) {
             });
     })();
 
+    // DL-370: pre-questionnaire stage warning labels for target picker
+    const PRE_DOCS_STAGE_WARNINGS = {
+        'Send_Questionnaire':  'טרם נשלח שאלון',
+        'Waiting_For_Answers': 'טרם מילא שאלון',
+        'Pending_Approval':    'השאלון לא אושר',
+    };
+
     const renderList = (filter) => {
         const q = (filter || '').trim().toLowerCase();
         const rows = [];
@@ -7123,9 +7130,13 @@ function showMoveClassificationClientModal(classificationId) {
             const email = c.email || '';
             const hay = `${name} ${id} ${email}`.toLowerCase();
             if (q && !hay.includes(q)) continue;
+            const stageWarning = PRE_DOCS_STAGE_WARNINGS[c.stage] || '';
+            const warningChip = stageWarning
+                ? `<span class="ai-move-client-item__warning" title="ללקוח אין רשימת מסמכים נדרשים — הסיווג ינחת כממתין לבדיקה">⚠ ${escapeHtml(stageWarning)}</span>`
+                : '';
             rows.push(`
                 <button class="ai-move-client-item" type="button" data-client-id="${escapeAttr(id)}" data-client-name="${escapeAttr(name)}">
-                    <span class="ai-move-client-item__name">${escapeHtml(name || id)}</span>
+                    <span class="ai-move-client-item__name">${escapeHtml(name || id)}${warningChip}</span>
                     <span class="ai-move-client-item__meta">${escapeHtml(id)}${email ? ' · ' + escapeHtml(email) : ''}</span>
                 </button>
             `);
@@ -7191,7 +7202,7 @@ async function moveClassificationClient(classificationId, targetClientId, target
         }
 
         if (typeof loadAIClassifications === 'function') {
-            await loadAIClassifications(false, true);
+            await loadAIClassifications(false, false);
         }
         const targetName = data.target_client_name || targetClientName;
         if (targetName && typeof selectClient === 'function') {
