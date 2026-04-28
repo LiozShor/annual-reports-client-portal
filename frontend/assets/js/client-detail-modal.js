@@ -11,6 +11,11 @@ const CLIENT_DETAIL_CONTAINER_ID = 'react-client-detail-root'
 // the globals the React bundle reads, using the lexical references that ARE
 // available in this shim's scope. Safe no-op if already set.
 function ensureReactBundleGlobals() {
+  const before = {
+    API_BASE: window.API_BASE,
+    ADMIN_TOKEN_KEY: window.ADMIN_TOKEN_KEY,
+    ENDPOINTS: !!window.ENDPOINTS,
+  }
   try {
     if (typeof CF_BASE !== 'undefined' && !window.API_BASE) {
       window.API_BASE = CF_BASE
@@ -23,10 +28,19 @@ function ensureReactBundleGlobals() {
         adminUpdateClient: ENDPOINTS.ADMIN_UPDATE_CLIENT,
       })
     }
-  } catch (_) { /* lexical names may be out-of-scope on some pages; ignore */ }
+  } catch (e) {
+    console.error('[client-detail-modal] ensureReactBundleGlobals threw', e)
+  }
+  console.log('[client-detail-modal] globals before:', before, 'after:', {
+    API_BASE: window.API_BASE,
+    ADMIN_TOKEN_KEY: window.ADMIN_TOKEN_KEY,
+    ENDPOINTS: !!window.ENDPOINTS,
+    GET_CLIENT_REPORTS: window.ENDPOINTS && window.ENDPOINTS.GET_CLIENT_REPORTS,
+  })
 }
 
 function openClientDetailModalShared(reportId, ctx) {
+  console.log('[client-detail-modal] open called for reportId:', reportId)
   ensureReactBundleGlobals()
 
   // Remove any stale root from a previous open
