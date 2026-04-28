@@ -33,6 +33,8 @@ import backfill from './routes/backfill';
 import extractIssuerNames from './routes/extract-issuer-names';
 import sendBatchQuestions from './routes/send-batch-questions';
 import auditStaleItemIds from './routes/audit-stale-itemids'; // DL-356
+import addPdfNote from './routes/add-pdf-note'; // DL-372
+import unlockPdf from './routes/unlock-pdf'; // DL-373
 import { logError } from './lib/error-logger';
 import { handleInboundQueue } from './lib/inbound/queue-consumer';
 import { handleInboundDLQ } from './lib/inbound/dlq-consumer';
@@ -80,6 +82,8 @@ app.route('/webhook', backfill); // DL-267: temporary — remove after backfill
 app.route('/webhook', extractIssuerNames);
 app.route('/webhook', sendBatchQuestions);
 app.route('/webhook', auditStaleItemIds); // DL-356
+app.route('/webhook', addPdfNote); // DL-372
+app.route('/webhook', unlockPdf); // DL-373
 
 // Health check
 app.get('/health', (c) => c.json({ ok: true, service: 'annual-reports-api' }));

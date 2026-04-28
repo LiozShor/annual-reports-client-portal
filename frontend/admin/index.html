@@ -1047,6 +1047,18 @@
                                 </button>
                             </div>
                             <iframe class="preview-iframe" id="previewIframe" style="display: none;"></iframe>
+                            <!-- DL-373: Password-protected PDF unlock panel -->
+                            <div id="previewPasswordPanel" style="display:none; flex-direction:column; align-items:center; justify-content:center; gap:12px; padding:24px; text-align:center;">
+                                <svg class="icon icon-2xl" aria-hidden="true" focusable="false" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"><use href="#icon-lock"/></svg>
+                                <div style="font-size:15px; font-weight:600; color:var(--text-primary);">PDF מוגן בסיסמה</div>
+                                <div style="font-size:13px; color:var(--text-secondary);">הזן את הסיסמה כדי לפתוח את הקובץ</div>
+                                <input id="previewPasswordInput" type="password" class="form-control form-control-sm" placeholder="סיסמה..." style="max-width:240px; direction:ltr;" autocomplete="off"/>
+                                <div id="previewPasswordAttempts" style="font-size:12px; color:var(--danger-600); display:none;"></div>
+                                <div style="display:flex; gap:8px;">
+                                    <button id="previewPasswordUnlockBtn" class="btn btn-primary btn-sm" onclick="submitPdfUnlock()">🔓 פתח</button>
+                                    <a id="previewPasswordDownloadBtn" class="btn btn-secondary btn-sm" style="display:none;" download>הורד קובץ</a>
+                                </div>
+                            </div>
                             <div class="preview-review-stamp" id="previewReviewStamp" style="display:none;" aria-hidden="true"></div>
                         </div>
                     </div>
