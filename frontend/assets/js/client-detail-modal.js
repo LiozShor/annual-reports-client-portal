@@ -6,6 +6,17 @@
 
 const CLIENT_DETAIL_CONTAINER_ID = 'react-client-detail-root'
 
+// The React island renders `.ai-modal-overlay` without the `.show` class
+// the static CSS (style.css L2820, document-manager.css L2440) requires.
+// Force-show overlays inside the React root.
+;(function injectReactModalCss() {
+  if (document.getElementById('react-client-detail-modal-css')) return
+  const s = document.createElement('style')
+  s.id = 'react-client-detail-modal-css'
+  s.textContent = '#' + 'react-client-detail-root .ai-modal-overlay { display: flex !important; }'
+  document.head.appendChild(s)
+})()
+
 // Defensive: top-level `const` in shared/constants.js does NOT attach to
 // window in some browser/CSP configs we're seeing in production. Force-set
 // the globals the React bundle reads, using the lexical references that ARE
