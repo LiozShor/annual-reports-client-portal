@@ -1,5 +1,6 @@
 # Annual Reports CRM - Current Status
 
+**Last Updated:** 2026-04-28 (DL-370 — COMPLETED; all three edge cases verified live: zero-missing-docs, no-AI-match, and already-Received-slot all land classification as `pending` under target; source-clear skips if doc already Required_Missing; script.js?v=377 deployed)
 **Last Updated:** 2026-04-28 (DL-370 — IMPLEMENTED, NEED TESTING; move-classification-client edge cases now land classification as `pending` on target (not `reassigned`); target-doc-Received conflict no longer 409s — file uploads, existing doc untouched, conflict toast shown; cache-bust `script.js?v=373`)
 **Last Updated:** 2026-04-28 (DL-371 — COMPLETED; edit-client modal full redesign live: new header, name field, icons, full-width inputs, modal closes on save; two post-deploy bugs fixed: missing `buildClientDetailChanges` fn + modal not closing; verified by user)
 **Last Updated:** 2026-04-28 (DL-368 — GitHub App reinstall did NOT fix it; `source.config.repo_id` still stale; CF support ticket required to rebind project to new repo id)

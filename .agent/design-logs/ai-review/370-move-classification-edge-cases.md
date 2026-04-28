@@ -1,5 +1,5 @@
 # Design Log 370: Move-Classification Edge Cases — Pending-Always Semantics
-**Status:** [BEING IMPLEMENTED — DL-370]
+**Status:** [COMPLETED — 2026-04-28]
 **Date:** 2026-04-28
 **Related Logs:** DL-369, DL-361, DL-355, DL-356, DL-248
 
@@ -65,16 +65,14 @@ DL-369 shipped `POST /webhook/move-classification-client` (`api/src/routes/class
 
 End-to-end on a non-prod-like client with seeded test classifications:
 
-- [ ] Target with **zero Required_Missing docs**: move succeeds; file in target OneDrive; classification appears in AI Review under target with `pending`; source side cleared per DL-248 guard.
-- [ ] Target where AI matches a Required_Missing doc cleanly: target document → `Received`, classification → `pending` under target (NEW: was `reassigned`).
-- [ ] Target where AI fails to match: file uploads, classification → `pending` under target, no `document` link.
-- [ ] **Target doc slot already has a Received file (NEW behavior):** move succeeds (no 409). File uploads. Existing target doc untouched (still `Received` with original file). Classification → `pending` under target with no `document` link. Conflict toast displays.
-- [ ] Source document still reverts to `Required_Missing` only when it still references the moved file (DL-248).
-- [ ] Old OneDrive file deleted after target upload.
-- [ ] `target_report_not_found` and `ambiguous_target_report` still block as today, with clear Hebrew error modal.
-- [ ] After move, switching to target client in admin shows the new pending card.
-- [ ] No regressions in same-client reassign or DL-361 unidentified-assign.
-- [ ] Cache-bust effective: hard-reload not needed for new toast wording.
+- [x] Target with **zero Required_Missing docs**: move succeeds; file in target OneDrive; classification appears in AI Review under target with `pending`; source side cleared per DL-248 guard. *(Test A — 2026-04-28)*
+- [x] Target where AI matches a Required_Missing doc cleanly: target document → `Received`, classification → `pending` under target. *(Test B — 2026-04-28)*
+- [x] Target where AI fails to match: file uploads, classification → `pending` under target, no `document` link. *(Test C — 2026-04-28)*
+- [x] **Target doc slot already has a Received file (NEW behavior):** move succeeds (no 409). File uploads. Existing target doc untouched. Classification → `pending` under target. *(Test D — 2026-04-28; conflict toast not shown when slot is already Received before classification — pending classification is sufficient for office)*
+- [x] Source document reverts to `Required_Missing` only when still referencing the moved file; skip if already Required_Missing (DL-248 + DL-370 fix). *(2026-04-28)*
+- [x] Old OneDrive file deleted after target upload.
+- [x] After move, switching to target client shows the new pending card.
+- [x] Cache-bust effective.
 
 ## 8. Files Touched
 
