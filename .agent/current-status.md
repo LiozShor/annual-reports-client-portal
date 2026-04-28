@@ -1,8 +1,24 @@
 # Annual Reports CRM - Current Status
 
+**Last Updated:** 2026-04-28 (DL-368 — CF Pages git integration root-caused: stale `repo_id` in CF source binding; catch-up deploy of `21c1488` shipped; USER reconnect required)
 **Last Updated:** 2026-04-28 (Bright Data MCP registered via SSE — connected; server-name prefix is `brightdata`)
 **Last Updated:** 2026-04-28 (DL-366 — IMPLEMENTED, NEED TESTING; dashboard kebab adds two new actions: add/edit cc_email + auto-resend, and copy questionnaire link to clipboard)
 **Last Updated:** 2026-04-28 (DL-365 Phase 1 COMPLETE — smoke test passed, CF Logs verified, Logpush active; Phases 2-4 queued)
+
+## DL-368: CF Pages git integration broken — IMPLEMENTED (catch-up shipped) — USER ACTION required (2026-04-28)
+
+Pages project `annual-reports-client-portal` (`docs.moshe-atsits.com`) stopped auto-building from `main` pushes since 2026-04-27 evening. Root cause: CF Pages stored `source.config.repo_id=1136319991` is stale — actual GitHub repo id is `1222817442` (repo was deleted+recreated at some point). Every prod deploy on 2026-04-28 was manual `wrangler pages deploy` (`ad_hoc`, `commit_dirty=true`). All earlier "manual deploy: …" commit messages were workarounds for this. Design log: `.agent/design-logs/infrastructure/368-cf-pages-git-integration-broken.md`. Catch-up deploy of clean `origin/main` (HEAD `21c1488`) shipped via wrangler from a temp worktree → preview URL `https://4f7dbadf.annual-reports-client-portal.pages.dev`.
+
+### Test DL-368: verify CF Pages git integration restored
+
+- [ ] **USER ACTION:** Open CF Dash → Workers & Pages → `annual-reports-client-portal` → Settings → Builds & deployments → Git integration → "Manage GitHub App permissions" → ensure repo is in allowed list → Save → back on CF Pages, "Disconnect Git" then "Connect" and pick the same repo.
+- [ ] After reconnect, run from main: `git commit --allow-empty -m "chore(deploy): verify CF Pages git integration restored (DL-368)" && git push origin main`
+- [ ] Wait ~30s, then `cd api && npx wrangler pages deployment list --project-name=annual-reports-client-portal | head -5` — newest row should show new SHA, trigger `github:push` (NOT `ad_hoc`), `commit_dirty=false`.
+- [ ] Verify CF API: `curl -sS "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/pages/projects/annual-reports-client-portal" -H "Authorization: Bearer <token>" | jq '.result.source.config.repo_id'` → should equal `1222817442` (matches GitHub).
+- [ ] Browser cache-bust check on `https://docs.moshe-atsits.com` → admin/client surfaces serve current main.
+- [ ] Decide whether to add a periodic CF↔GitHub `repo_id` drift check (small `scripts/` script, optional CI gate). Out of DL-368; spin into a follow-up DL if approved.
+
+Design log: `.agent/design-logs/infrastructure/368-cf-pages-git-integration-broken.md`
 
 ## DL-365: Activity Logger — Phase 1 COMPLETE ✓ — Phases 2-4 TODO (2026-04-28)
 

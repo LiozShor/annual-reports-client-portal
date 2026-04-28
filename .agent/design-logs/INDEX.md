@@ -2,7 +2,7 @@
 
 Active and pending logs. For completed history, see [ARCHIVE-INDEX.md](ARCHIVE-INDEX.md).
 
-**Total logs:** 227 | **Active:** 129 | **Archived:** 98
+**Total logs:** 228 | **Active:** 130 | **Archived:** 98
 
 ## Folder Structure
 
@@ -12,7 +12,7 @@ Active and pending logs. For completed history, see [ARCHIVE-INDEX.md](ARCHIVE-I
 - `client-portal/` — Client Portal & Questionnaires (13)
 - `documents/` — Documents & OneDrive (20)
 - `email/` — Email System (21)
-- `infrastructure/` — Infrastructure & Workflows (20)
+- `infrastructure/` — Infrastructure & Workflows (21)
 - `reminders/` — Reminder System (17)
 - `research/` — Research & Feasibility (7)
 - `security/` — Security & Auth (7)
@@ -21,6 +21,7 @@ Active and pending logs. For completed history, see [ARCHIVE-INDEX.md](ARCHIVE-I
 
 | # | File | Status | Summary |
 |---|------|--------|---------|
+| 368 | [368-cf-pages-git-integration-broken.md](infrastructure/368-cf-pages-git-integration-broken.md) | IMPLEMENTED — NEED TESTING | CF Pages `annual-reports-client-portal` stopped firing builds from `main` pushes since 2026-04-27 evening. Root cause: stored `source.config.repo_id=1136319991` no longer matches GitHub's actual repo id `1222817442` — the GitHub repo was deleted and recreated at some point, orphaning CF's binding. GitHub PushEvents on main delivered fine; CF just ignored them. All 10 prod deploys today were `ad_hoc` from manual `wrangler pages deploy` with `commit_dirty=true`. Fix: (1) catch-up deploy of clean main HEAD `21c1488` shipped via wrangler from a temporary worktree; (2) USER must reconnect Git integration in CF Dash → Pages → Settings → Git integration (no public API for repo rebinding); (3) verification via empty trigger commit + checking next deploy has `trigger.type=github:push` and CF `repo_id=1222817442`. Suggests follow-up: nightly drift check comparing CF `repo_id` vs GitHub `id`. |
 | 367 | [367-gmail-drive-smart-links.md](email/367-gmail-drive-smart-links.md) | IMPLEMENTED — NEED TESTING | Inbound pipeline now fetches Gmail "Insert from Drive" smart-link attachments (live case: CPA-XXX, 4 PDFs lost 2026-04-28). Gmail embeds them as inline `gmail_drive_chip` HTML cards with `hasAttachments=false`, so `fetchAttachments` returned 0 and the email completed silently. New `parseDriveLinks(bodyHtml)` extracts `{fileId, filename}` from chip divs (matched by `class*=gmail_drive_chip` + `id="<fileId>"`, with `title="..."` on inner `<div>`) and bare `drive.google.com/file/d/...` URLs; `fetchDriveAttachment(link, maxBytes=25MB)` calls `https://drive.usercontent.google.com/download?id={id}&export=download&authuser=0&confirm=t` (post-May-2024 endpoint), validates Content-Type (rejects HTML "you need access" page), streams with byte cap, computes sha256, synthesizes the same `AttachmentInfo` shape as Graph attachments — pipeline downstream is unchanged. New `stripDriveChipsFromHtml` removes chip divs in `extractMetadata` before HTML→text so chip filenames don't pollute the LLM-summarized note. `ghostAttachments` guard extended to also fire when Drive links found but all fetches failed. Per-file failure → email_event `NeedsHuman` with Drive URLs preserved in `error_message`. Backfill confirmed: 4 pending_classifications with proper Hebrew names + 3 T501 matches at conf 0.95. Files: `attachment-utils.ts`, `processor.ts`. |
 | 366 | [366-kebab-add-cc-email-and-resend.md](admin-ui/366-kebab-add-cc-email-and-resend.md) | IMPLEMENTED — NEED TESTING | Two new dashboard kebab actions: (1) "הוסף/ערוך אימייל משני" opens `ClientDetailModal` auto-focused on `cc_email` (new `focusField` prop threaded through bridge → island → component); on save when stage=`Send_Questionnaire`, prompts `showConfirmDialog` to re-send via existing `sendSingle(rid)`; off stage 1, toast only. (2) "העתק קישור לשאלון" (stages 1–3) calls new Worker route `POST /webhook/admin-questionnaire-link` which mints a fresh signed URL via new helper `api/src/lib/questionnaire-url.ts` (extracted from `send-questionnaires.ts:81`); frontend writes URL to clipboard. Dashboard API (`dashboard.ts`) now returns `cc_email` per row via parallel clients-table fetch + Map join. Cache-bust `script.js?v=369→370` (rebased over DL-364). Out of scope: extending CC to non-questionnaire emails (deferred). |
 | 365 | [365-activity-logger.md](infrastructure/365-activity-logger.md) | BEING IMPLEMENTED — DL-365 (Phase 1 COMPLETE — smoke test passed 2026-04-28) | Replace Airtable security_logs with Cloudflare-native activity logger (Workers Logs + R2). Phase 1 (Foundation) shipped + verified live. PII strategy: client_id-only logs + viewer-side Airtable join. Phases 2-4 queued. |
