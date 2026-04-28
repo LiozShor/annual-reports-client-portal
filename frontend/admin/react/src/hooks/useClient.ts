@@ -23,7 +23,9 @@ export function useUpdateClient(reportId: string, onSaved?: (updated: Partial<Cl
       const snapshot = qc.getQueryData(clientQueryKey(reportId))
       qc.setQueryData(clientQueryKey(reportId), (old: unknown) => {
         if (!old || typeof old !== 'object') return old
-        return { ...old, ...payload }
+        const update: Record<string, unknown> = { ...payload }
+        if (payload.name !== undefined) update.clientName = payload.name
+        return { ...(old as object), ...update }
       })
       return { snapshot }
     },
