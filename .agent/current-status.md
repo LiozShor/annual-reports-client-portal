@@ -1,5 +1,6 @@
 # Annual Reports CRM - Current Status
 
+**Last Updated:** 2026-04-28 (DL-371 — IMPLEMENTED, NEED TESTING; edit-client modal full redesign: new header `עריכת לקוח: {name}`, name field added, inline icons, all inputs full-width, cc_email placeholder, indigo Save; 5/5 Vitest pass, tsc clean, built and committed on branch DL-371-edit-client-modal-ux-polish)
 **Last Updated:** 2026-04-28 (DL-368 — GitHub App reinstall did NOT fix it; `source.config.repo_id` still stale; CF support ticket required to rebind project to new repo id)
 **Last Updated:** 2026-04-28 (DL-369 — IMPLEMENTED, NEED TESTING; AI Review overflow menu adds "העבר ללקוח אחר..." and Worker endpoint `/webhook/move-classification-client` moves/reclassifies the current document to another client)
 **Last Updated:** 2026-04-28 (Pages manual deploy guardrail — current Wrangler auth token can deploy Workers but fails Pages project auth with Cloudflare code 10000; before retrying `wrangler pages deploy`, verify `pages project list/get` succeeds with the same auth context, otherwise deploy frontend via Git push or fix token permissions)

@@ -21,3 +21,6 @@ window.ENDPOINTS = {
 // Minimal constants
 window.ADMIN_TOKEN_KEY = 'admin_auth_token'
 window.API_BASE = 'http://localhost:8787/webhook'
+
+// jsdom doesn't implement scrollIntoView
+window.HTMLElement.prototype.scrollIntoView = vi.fn()

@@ -24,7 +24,7 @@ beforeEach(() => {
 })
 
 describe('ClientDetailModal', () => {
-  it('renders client name and form fields from query data', async () => {
+  it('renders edit-client header and form fields from query data', async () => {
     vi.mocked(useClient).mockReturnValue({
       data: mockClient,
       isLoading: false,
@@ -40,8 +40,12 @@ describe('ClientDetailModal', () => {
     render(<ClientDetailModal reportId="R001" onClose={vi.fn()} />)
 
     await waitFor(() => {
+      expect(screen.getByText('עריכת לקוח:')).toBeInTheDocument()
       expect(screen.getByText('ישראל ישראלי')).toBeInTheDocument()
     })
+
+    const nameInput = screen.getByLabelText('שם מלא') as HTMLInputElement
+    expect(nameInput.value).toBe('ישראל ישראלי')
 
     const emailInput = screen.getByLabelText('אימייל') as HTMLInputElement
     expect(emailInput.value).toBe('israel@test.com')
@@ -81,10 +85,48 @@ describe('ClientDetailModal', () => {
 
     expect(mockMutate).toHaveBeenCalledWith({
       reportId: 'R001',
+      name: undefined,
       email: 'new@test.com',
       cc_email: undefined,
       phone: undefined,
     })
+  })
+
+  it('editing name fires mutation with name in payload', async () => {
+    const mockMutate = vi.fn()
+
+    vi.mocked(useClient).mockReturnValue({
+      data: mockClient,
+      isLoading: false,
+      isError: false,
+      error: null,
+    } as ReturnType<typeof useClient>)
+
+    vi.mocked(useUpdateClient).mockReturnValue({
+      mutate: mockMutate,
+      isPending: false,
+    } as unknown as ReturnType<typeof useUpdateClient>)
+
+    const user = userEvent.setup()
+    render(<ClientDetailModal reportId="R001" onClose={vi.fn()} />)
+
+    await waitFor(() => {
+      expect(screen.getByLabelText('שם מלא')).toBeInTheDocument()
+    })
+
+    const nameInput = screen.getByLabelText('שם מלא')
+    await user.clear(nameInput)
+    await user.type(nameInput, 'שם חדש')
+
+    const saveButton = screen.getByRole('button', { name: 'שמור' })
+    await user.click(saveButton)
+
+    expect(mockMutate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        reportId: 'R001',
+        name: 'שם חדש',
+      })
+    )
   })
 
   it('focusField=cc_email auto-focuses the cc email input on mount (DL-366)', async () => {
