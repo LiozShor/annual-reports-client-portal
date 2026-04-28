@@ -22,9 +22,9 @@ Pages project `annual-reports-client-portal` (`docs.moshe-atsits.com`) stopped a
 ```
 cd C:/Users/liozm/Desktop/moshe/annual-reports
 git pull --ff-only origin main
-npx wrangler pages deploy frontend --project-name=annual-reports-client-portal --branch=main \
-  --commit-hash=$(git rev-parse HEAD) --commit-message="$(git log -1 --pretty=%s) (manual)"
+bash scripts/deploy-pages.sh "manual deploy"
 ```
+**IMPORTANT:** `docs.moshe-atsits.com` is bound to project `annual-reports-client-portal-git` (NOT the old `annual-reports-client-portal`). The old project still accepts deploys but they will NOT reach the live domain — silent no-op. Use the wrapper script which targets the correct project and verifies via curl.
 
 ### OPEN BLOCKER: CF support ticket required
 
