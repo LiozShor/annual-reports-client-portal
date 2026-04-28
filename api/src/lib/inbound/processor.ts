@@ -22,7 +22,7 @@ import {
   OFFICE_CONVERTIBLE,
   IMAGE_EXTENSIONS,
 } from './types';
-import { fetchAttachments, uploadToOneDrive, resolveOneDriveRoot, getFileExtension, type OneDriveRoot } from './attachment-utils';
+import { fetchAttachments, uploadToOneDrive, resolveOneDriveRoot, getFileExtension, parseDriveLinks, fetchDriveAttachment, stripDriveChipsFromHtml, type OneDriveRoot } from './attachment-utils';
 import { identifyClient } from './client-identifier';
 import { classifyAttachment, checkFileHashDuplicate, TEMPLATE_TITLES } from './document-classifier';
 import { resolveOneDriveFilename } from '../classification-helpers';
@@ -93,7 +93,11 @@ const AUTO_REPLY_SUBJECT_PATTERNS = [
 function extractMetadata(email: Record<string, any>, messageId: string): EmailMetadata {
   const subject = email.subject ?? '';
   const sender = email.from?.emailAddress ?? {};
-  const bodyHtml = email.body?.content ?? '';
+  const bodyHtmlRaw = email.body?.content ?? '';
+  // DL-367: strip Gmail Drive chip blocks before HTML→text conversion so
+  // chip filenames (which are attachment metadata, not prose) don't pollute
+  // the LLM-summarized note.
+  const bodyHtml = stripDriveChipsFromHtml(bodyHtmlRaw);
   const bodyText = bodyHtml
     .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
     .replace(/<br\s*\/?>/gi, '\n')
@@ -340,6 +344,15 @@ async function summarizeAndSaveNote(
       return;
     }
 
+    // Hard override: never skip emails carrying credentials. PDF passwords
+    // arrive as short messages ("סיסמה: I4NB36") that Haiku tends to
+    // classify as attachment-only — losing the password is unacceptable.
+    const hasCredential =
+      /סיסמ[האא]\s*[:：]?/i.test(cleanBody) ||
+      /\bpassword\s*[:：]/i.test(cleanBody) ||
+      /\bpwd\s*[:：]/i.test(cleanBody) ||
+      /\bקוד\b/.test(cleanBody);
+
     // Call LLM with tool_use for structured extraction (DL-262)
     const systemPrompt = `You are a CPA office assistant at an Israeli accounting firm. Parse a client email for an internal timeline.
 
@@ -393,12 +406,18 @@ Rules:
       };
       const toolBlock = data.content?.find((b) => b.type === 'tool_use');
       if (toolBlock?.input) {
-        if (toolBlock.input.skip) {
+        if (toolBlock.input.skip && !hasCredential) {
           logSkip('llm_skip');
           return;
         }
         summary = String(toolBlock.input.summary || '');
         cleanText = String(toolBlock.input.clean_text || '');
+        // If the LLM tried to skip a credential-bearing email, force a
+        // sensible summary + raw_snippet from the cleaned body itself.
+        if (toolBlock.input.skip && hasCredential) {
+          if (!summary) summary = subject || cleanBody.split('\n')[0] || 'סיסמה למסמך';
+          if (!cleanText) cleanText = cleanBody;
+        }
       }
     }
 
@@ -751,6 +770,43 @@ export async function processInboundEmail(
     // 4. Fetch and filter attachments
     let attachments = await fetchAttachments(graph, messageId);
 
+    // 4a. DL-367: Gmail Drive smart-link attachments. Gmail's "Insert from
+    // Drive" embeds inline chip cards in the body HTML (hasAttachments=false,
+    // 0 Graph attachments). Parse them out and fetch via Drive's anonymous
+    // public-download endpoint, then merge into the standard attachments array.
+    const driveLinks = parseDriveLinks(email.body?.content ?? '');
+    const driveFailures: Array<{ fileId: string; filename: string; error: string; url: string }> = [];
+    let driveSuccessCount = 0;
+    if (driveLinks.length > 0) {
+      console.log(`[inbound][DL-367] Found ${driveLinks.length} Gmail Drive chip(s) for message ${messageId}`);
+      for (const link of driveLinks) {
+        const r = await fetchDriveAttachment(link);
+        if (r.ok) {
+          attachments.push(r.attachment);
+          driveSuccessCount++;
+          console.log(`[inbound][DL-367] Fetched ${link.filename} (${r.attachment.size} bytes)`);
+        } else {
+          driveFailures.push({
+            fileId: link.fileId,
+            filename: link.filename,
+            error: r.error,
+            url: `https://drive.google.com/file/d/${link.fileId}/view`,
+          });
+          console.warn(`[inbound][DL-367] Drive fetch failed for ${link.filename}: ${r.error}`);
+        }
+        // Polite spacing between Drive requests
+        await new Promise((resolve) => setTimeout(resolve, 500));
+      }
+    }
+
+    // Detect "ghost attachments": Gmail Drive smart-links / itemAttachment
+    // forwards arrive with hasAttachments=true but produce 0 readable files.
+    // Without this guard the email completes silently and the docs disappear.
+    // DL-367: also fire when Drive links were parsed but ALL fetches failed.
+    const ghostAttachments =
+      (!!email.hasAttachments && attachments.length === 0) ||
+      (driveLinks.length > 0 && driveSuccessCount === 0);
+
     // 4b. Expand archives (ZIP/RAR/7z) into individual files (DL-260)
     const archiveResult = await expandArchiveAttachments(attachments);
     if (archiveResult.log.length > 0) {
@@ -1045,10 +1101,33 @@ export async function processInboundEmail(
     // Wait for note to finish
     await notePromise;
 
-    // 14. Update email event to Completed
-    await airtable.updateRecord(TABLES.EMAIL_EVENTS, emailEventId, {
-      processing_status: 'Completed',
-    });
+    // 14. Update email event to Completed (or NeedsHuman if attachments
+    // were declared but unreadable — e.g. Gmail Drive smart-links).
+    const driveFailureSummary = driveFailures.length > 0
+      ? `Drive fetch failed for ${driveFailures.length} file(s): ${driveFailures.map(f => `${f.filename} (${f.error}) ${f.url}`).join(' | ')}`
+      : '';
+    if (ghostAttachments) {
+      const reason = driveLinks.length > 0
+        ? `All ${driveLinks.length} Gmail Drive smart-link(s) failed to download. ${driveFailureSummary}`
+        : 'Attachments declared on email but none readable (likely Gmail Drive smart-links or referenceAttachment).';
+      console.warn(`[inbound] Marking NeedsHuman for message ${messageId}: ${reason}`);
+      await airtable.updateRecord(TABLES.EMAIL_EVENTS, emailEventId, {
+        processing_status: 'NeedsHuman',
+        error_message: reason.slice(0, 1000),
+      });
+    } else if (driveFailures.length > 0) {
+      // Partial Drive success: process completed for the readable files but
+      // some Drive links failed — surface so operator can manually retrieve.
+      console.warn(`[inbound] Partial Drive failure for message ${messageId}: ${driveFailureSummary}`);
+      await airtable.updateRecord(TABLES.EMAIL_EVENTS, emailEventId, {
+        processing_status: 'NeedsHuman',
+        error_message: driveFailureSummary.slice(0, 1000),
+      });
+    } else {
+      await airtable.updateRecord(TABLES.EMAIL_EVENTS, emailEventId, {
+        processing_status: 'Completed',
+      });
+    }
   } catch (err) {
     console.error('[inbound] Pipeline error:', (err as Error).message);
 
