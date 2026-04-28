@@ -2305,8 +2305,12 @@ classifications.post('/move-classification-client', async (c) => {
     if (sourceDocId) {
       try {
         const sourceDoc = await airtable.getRecord(TABLES.DOCUMENTS, sourceDocId);
-        const sourceDocItemId = (sourceDoc.fields as any).onedrive_item_id as string;
-        if (!sourceDocItemId || sourceDocItemId === oldItemId) {
+        const sourceDocFields = sourceDoc.fields as any;
+        const sourceDocItemId = sourceDocFields.onedrive_item_id as string;
+        const sourceDocStatus = sourceDocFields.status as string;
+        if (sourceDocStatus === 'Required_Missing') {
+          console.log('[move-classification-client] skip source clear: already Required_Missing', sourceDocId);
+        } else if (!sourceDocItemId || sourceDocItemId === oldItemId) {
           await airtable.updateRecord(TABLES.DOCUMENTS, sourceDocId, applyMissingStatusInvariant({ status: 'Required_Missing' }));
         } else {
           console.log('[move-classification-client] skip source clear: document now references a different file', JSON.stringify({ sourceDocId, sourceDocItemId, oldItemId }));
