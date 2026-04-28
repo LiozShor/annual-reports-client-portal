@@ -183,7 +183,7 @@ Live checks (after merge to main + Pages deploy + `wrangler deploy`):
 - [ ] No `cc_email` value appears in Worker logs.
 - [ ] Regression: existing "צפייה כלקוח" / "העבר לארכיון" still work.
 - [ ] Regression: pencil-icon edit-client flow still works without `focusField` set.
-- [ ] Stage 1 row: kebab shows "העתק קישור לשאלון" → click → clipboard contains valid URL `${FRONTEND_BASE}/?report_id=...&token=...` → opening URL lands on questionnaire successfully.
+- [x] Stage 1 row: kebab shows "העתק קישור לשאלון" → click → clipboard contains valid URL `${FRONTEND_BASE}/?report_id=...&token=...` → opening URL lands on questionnaire successfully. **VERIFIED 2026-04-28 (live, recRnAb2iJEFu0mXb).** Initial CORS error — `script.js` was hitting n8n base; fixed by routing through `ENDPOINTS.ADMIN_QUESTIONNAIRE_LINK` (CF Worker). Cache-bust `?v=370→371`.
 - [ ] Stages 2 and 3: copy-link visible and works.
 - [ ] Stage 4+ (Collecting_Docs and beyond): copy-link NOT shown.
 - [ ] Copy-link toast in Hebrew RTL.
