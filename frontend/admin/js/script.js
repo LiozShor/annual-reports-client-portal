@@ -4955,7 +4955,6 @@ function _renderPanelAdditive(item, variant, reReviewing) {
         // pending (non-on_hold) + on-hold
         overflowItems.push(`<button class="ai-ap-overflow__item" onclick="openAddQuestionDialog('${idA}'); _closePanelOverflow();">${qLabel}</button>`);
     }
-    overflowItems.push(`<button class="ai-ap-overflow__item" onclick="showAddPdfNoteModal('${idA}'); _closePanelOverflow();">📝 הוסף הערה ל-PDF</button>`);
     overflowItems.push(`<button class="ai-ap-overflow__item" onclick="showMoveClassificationClientModal('${idA}'); _closePanelOverflow();">העבר ללקוח אחר...</button>`);
 
     const overflowHtml = `<div class="ai-ap-overflow">
@@ -7197,90 +7196,6 @@ function closeMoveClassificationClientModal() {
 }
 
 // DL-372: PDF sticky-note modal
-function showAddPdfNoteModal(classificationId) {
-    const item = (aiClassificationsData || []).find(i => i.id === classificationId);
-    if (!item) return;
-
-    const corners = [
-        { value: 'tr', label: 'פינה עליונה ימנית (ברירת מחדל)' },
-        { value: 'tl', label: 'פינה עליונה שמאלית' },
-        { value: 'br', label: 'פינה תחתונה ימנית' },
-        { value: 'bl', label: 'פינה תחתונה שמאלית' },
-    ];
-
-    const overlay = document.createElement('div');
-    overlay.className = 'ai-modal-overlay show';
-    overlay.innerHTML = `
-        <div class="ai-modal-panel" style="max-width:420px; direction:rtl;">
-            <div class="ai-modal-header">
-                <span>📝 הוסף הערה ל-PDF</span>
-                <button class="ai-modal-close" onclick="this.closest('.ai-modal-overlay').remove()">✕</button>
-            </div>
-            <div class="ai-modal-body" style="display:flex; flex-direction:column; gap:12px;">
-                <div style="font-size:12px; color:var(--text-secondary);">${escapeHtml(item.attachment_name || 'ללא שם')}</div>
-                <div>
-                    <label style="font-size:13px; font-weight:500; display:block; margin-bottom:4px;">הערה (עד 500 תווים)</label>
-                    <textarea id="pdfNoteText" rows="5" maxlength="500" class="form-control form-control-sm" placeholder="הקלד הערה פנימית..." style="width:100%; resize:vertical;"></textarea>
-                    <div style="font-size:11px; color:var(--text-secondary); margin-top:2px; text-align:left;"><span id="pdfNoteCharCount">0</span>/500</div>
-                </div>
-                <div>
-                    <label style="font-size:13px; font-weight:500; display:block; margin-bottom:4px;">מיקום</label>
-                    <select id="pdfNoteCorner" class="form-select form-select-sm">
-                        ${corners.map(c => `<option value="${c.value}">${c.label}</option>`).join('')}
-                    </select>
-                </div>
-            </div>
-            <div class="ai-modal-footer" style="display:flex; gap:8px; justify-content:flex-end;">
-                <button class="btn btn-secondary btn-sm" onclick="this.closest('.ai-modal-overlay').remove()">ביטול</button>
-                <button id="pdfNoteSaveBtn" class="btn btn-primary btn-sm" onclick="_submitPdfNote('${escapeAttr(classificationId)}', '${escapeAttr(item.onedrive_item_id || '')}')">שמור הערה</button>
-            </div>
-        </div>`;
-    document.body.appendChild(overlay);
-
-    const textarea = document.getElementById('pdfNoteText');
-    const counter = document.getElementById('pdfNoteCharCount');
-    textarea.addEventListener('input', () => { counter.textContent = textarea.value.length; });
-    textarea.focus();
-}
-
-async function _submitPdfNote(recordId, itemId) {
-    if (!itemId) { showAIToast('אין מזהה קובץ לביצוע הפעולה', 'error'); return; }
-    const textarea = document.getElementById('pdfNoteText');
-    const corner = document.getElementById('pdfNoteCorner');
-    const note = textarea ? textarea.value.trim() : '';
-    if (!note) { showAIToast('יש להזין הערה', 'error'); return; }
-
-    const saveBtn = document.getElementById('pdfNoteSaveBtn');
-    if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = 'שומר...'; }
-
-    try {
-        const res = await fetch('https://annual-reports-api.liozshor1.workers.dev/webhook/add-pdf-note', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
-            body: JSON.stringify({ itemId, recordId, note, corner: corner?.value || 'tr' }),
-        });
-        const data = await res.json();
-        if (!res.ok || !data.ok) {
-            if (data.error === 'PDF_ENCRYPTED') {
-                showAIToast('PDF מוצפן — יש לפתוח אותו תחילה', 'error');
-            } else if (data.error === 'PDF_LOCKED_PDFA') {
-                showAIToast('לא ניתן להוסיף הערה ל-PDF זה (PDF/A) — ההערה נשמרה ברשומה', 'warning');
-            } else {
-                showAIToast('שגיאה בשמירת ההערה: ' + (data.message || data.error || 'שגיאה'), 'error');
-            }
-            return;
-        }
-        document.querySelector('.ai-modal-overlay')?.remove();
-        showAIToast('ההערה נשמרה בהצלחה על ה-PDF ✓', 'success');
-        // Reload preview so annotation shows
-        if (activePreviewItemId === recordId) loadDocPreview(recordId);
-    } catch (err) {
-        showAIToast('שגיאת רשת: ' + (err.message || 'Unknown error'), 'error');
-    } finally {
-        if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = 'שמור הערה'; }
-    }
-}
-
 function showMoveClassificationClientModal(classificationId) {
     const item = (aiClassificationsData || []).find(i => i.id === classificationId);
     if (!item) {
