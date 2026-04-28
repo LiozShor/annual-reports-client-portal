@@ -5300,8 +5300,9 @@ function buildClientListRowHtml(clientName, clientItems, isActive) {
             <div class="ai-accordion-actions">${docManagerBtn}</div>
             <div class="ai-accordion-title" style="min-width: 0; flex: 1;">
                 <div style="min-width: 0;">
-                    <div style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-weight:500;">${escapeHtml(clientName)} ${stageWarningChip}</div>
+                    <div style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-weight:500;">${escapeHtml(clientName)}</div>
                     <div class="ai-client-progress">${reviewedCount}/${total} נבדקו</div>
+                    ${stageWarningChip}
                 </div>
             </div>
             <div class="ai-accordion-stats">${pendingHtml}</div>
