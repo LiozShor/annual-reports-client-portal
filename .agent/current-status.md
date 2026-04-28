@@ -2,6 +2,48 @@
 
 **Last Updated:** 2026-04-28 (Bright Data MCP registered via SSE — connected; server-name prefix is `brightdata`)
 **Last Updated:** 2026-04-28 (DL-366 — IMPLEMENTED, NEED TESTING; dashboard kebab adds two new actions: add/edit cc_email + auto-resend, and copy questionnaire link to clipboard)
+**Last Updated:** 2026-04-28 (DL-365 Phase 1 COMPLETE — smoke test passed, CF Logs verified, Logpush active; Phases 2-4 queued)
+
+## DL-365: Activity Logger — Phase 1 COMPLETE ✓ — Phases 2-4 TODO (2026-04-28)
+
+Replacing Airtable `security_logs` (DL-094) with Cloudflare-native activity log (Workers Logs + R2). PII strategy: client_id-only logs + viewer-side Airtable join. Branch `DL-365-activity-logger` pushed. Design log: `.agent/design-logs/infrastructure/365-activity-logger.md`.
+
+**Phase 1 shipped (foundation only):**
+- `api/src/lib/pii.ts` — PII sanitizer (drop keys, scrub text, redact IP)
+- `api/src/lib/activity-logger.ts` — `logEvent()` core, structured JSON via `console.*`
+- `api/src/routes/events.ts` — `POST /webhook/events` (admin-token / X-N8N-Key / client HMAC)
+- `api/src/index.ts` — events router mounted at `/webhook`
+- `api/wrangler.toml` — `ACTIVITY_LOGS` R2 binding added
+- Env types updated: `DEV_PASSWORD`, `PII_HASH_KEY`, `ACTIVITY_LOGS` (`N8N_INTERNAL_KEY` already existed)
+
+**Phase 1 verified live (2026-04-28):**
+- Deployed version `116eff90`; R2 bucket `activity-logs-archive` created; Logpush job active (status: Pushing)
+- Smoke test passed: POST `/webhook/events` with `X-N8N-Key` → CF Logs shows `{"event_type":"test_ping","pii_safe":true,"actor_ip":"194.90.91.0",...}`
+- Workers Logs at 100% sampling (`head_sampling_rate = 1`)
+- Still need to set Worker secrets: `DEV_PASSWORD`, `PII_HASH_KEY` (`wrangler secret put` from `api/`)
+
+### Test DL-365 (Phase 1 only — Section 7 items): foundation smoke test
+
+- [ ] After deploy: `wrangler tail` from `api/` → POST a sample event via curl to `/webhook/events` with valid admin token. Confirm a single JSON line in the tail with `event_type`, `category`, `pii_safe: true`, sanitized `actor_ip` (last octet 0).
+- [ ] R2 bucket `activity-logs-archive` exists; Logpush job status = "Active".
+- [ ] After ~5 min of any traffic, R2 bucket has ≥1 `.json.gz` file.
+- [ ] CF Logs dashboard query `event_type = "<test>"` returns the event.
+- [ ] Auth: missing/wrong token → 401. Body > 64KB → 400 `payload_too_large`. Invalid `event_type` regex → counted as `rejected` but request still 200.
+- [ ] PII check: include `email: "test@x.com"` in `details` → emitted log has `[redacted_email]`, no clear-text email.
+- [ ] No regressions: existing `logError()` callers still produce error logs (Phase 1 doesn't touch `error-logger.ts` or `security-log.ts` yet).
+
+### TODO: Phases 2-4 — run each as a separate session with `/subagent-driven-development`:
+- **Phase 2** — server-side instrumentation: dual-write `logSecurity()` to console.log, wrap `logError()` to also emit `logEvent()`, add `logEvent()` calls to inbound processor / classifications / approve-and-send / upload-document
+- **Phase 3** — admin viewer (`/admin/dev/activity` React island) + `frontend/shared/telemetry.js` + `DEV_PASSWORD`-gated lookup endpoints (`/webhook/admin-dev-verify`, `/webhook/admin-dev-activity`, `/webhook/admin-clients-lookup`)
+- **Phase 4** — client portal page hooks + n8n workflow updates (replace 7 Airtable POSTs with `/webhook/events`)
+- **Phase 5** (2 weeks after Phase 4 lives) — strip dual-write to Airtable; deactivate `[MONITOR] Security Alerts` + `[MONITOR] Log Cleanup`; mark `security_logs` table deprecated
+
+### Notes from Phase 1 implementation
+- T6 wrangler.toml: did NOT add `logpush = true` directive — keeping logpush as a CF-dashboard configuration step (subagent reported wrangler treats it as unknown; safer to leave it out and configure via dashboard).
+- T2 surfaced two minor bugs in `pii.ts` for follow-up: (a) `sanitizeValue` helper is dead code (object walking happens in `walkObj` directly); (b) byte-truncation in `sanitizeDetails` mutates only an internal string, not the returned object — so the 4096-byte cap is currently a no-op on the returned details. Workers Logs' own 256KB-per-entry cap means this is non-blocking, but worth fixing in Phase 2 cleanup.
+
+---
+
 **Last Updated:** 2026-04-27 (design-log skill switched from built-in WebSearch/WebFetch to Bright Data MCP — VERIFY NEXT SESSION)
 
 ## Design-log skill: Bright Data MCP — REGISTERED

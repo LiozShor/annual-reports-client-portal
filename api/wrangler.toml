@@ -56,5 +56,14 @@ max_batch_size = 5
 max_batch_timeout = 10
 max_retries = 1
 
+# DL-365: R2 archive for activity logs (Logpush destination, also read by dev viewer)
+[[r2_buckets]]
+binding = "ACTIVITY_LOGS"
+bucket_name = "activity-logs-archive"
+
 [observability]
 enabled = true
+head_sampling_rate = 1   # 100% sampling — ~1000 req/day is well within 20M/month free tier
+# DL-365: enable logpush via Cloudflare dashboard
+# (Workers > activity-logs-archive Worker > Logs > Add Logpush Job)
+# dataset = workers_trace_events, destination = R2 bucket activity-logs-archive
