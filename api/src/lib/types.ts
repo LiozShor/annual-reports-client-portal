@@ -24,6 +24,11 @@ export interface Env {
   // Alert email for error notifications (Phase 6)
   ALERT_EMAIL: string;
 
+  // DL-365 activity logger
+  ACTIVITY_LOGS: R2Bucket;
+  DEV_PASSWORD: string;
+  PII_HASH_KEY: string;
+
   // KV namespaces
   TOKEN_CACHE: KVNamespace;
   CACHE_KV: KVNamespace;
