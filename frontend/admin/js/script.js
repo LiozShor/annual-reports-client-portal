@@ -5280,9 +5280,14 @@ function buildClientListRowHtml(clientName, clientItems, isActive) {
             ? `<span class="ai-client-pending-num" title="${pendingCount} ממתינים">${pendingCount}</span>`
             : '');
 
-    // DL-370: surface DL-315 pre_questionnaire flag at the client-row level
-    // (badge already exists on individual cards via .ai-pre-questionnaire-badge)
-    const hasPreQuestionnaire = clientItems.some(i => i.pre_questionnaire);
+    // DL-370: surface DL-315 pre_questionnaire signal at the client-row level.
+    // OR together: any item flagged pre_questionnaire (from inbound at low stage),
+    // or client's CURRENT stage is pre-doc-collection (covers post-move/manual cases).
+    const PRE_DOCS_STAGES = new Set(['Send_Questionnaire', 'Waiting_For_Answers', 'Pending_Approval']);
+    const clientStage = clientId
+        ? ((clientsData || []).find(c => c.client_id === clientId)?.stage || '')
+        : '';
+    const hasPreQuestionnaire = clientItems.some(i => i.pre_questionnaire) || PRE_DOCS_STAGES.has(clientStage);
     const stageWarningChip = hasPreQuestionnaire
         ? `<span class="ai-pre-questionnaire-badge" title="הלקוח טרם מילא את השאלון">טרם מולא שאלון</span>`
         : '';
