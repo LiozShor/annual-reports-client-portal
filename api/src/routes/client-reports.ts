@@ -43,8 +43,10 @@ router.get('/get-client-reports', async (c) => {
     let mode: 'office' | 'client' = 'office';
 
     // ---- Determine Auth Mode ----
-    if (query.client_id) {
-      // Office mode — requires admin bearer token
+    // Office mode: ?client_id=CPA-XXX  OR  ?report_id=recXXX (no client token) + admin Bearer.
+    // The report_id-only form lets the admin React client-detail island look up a single
+    // report by its record ID without first knowing the client_id.
+    if (query.client_id || (query.report_id && !query.token)) {
       mode = 'office';
       const authHeader = c.req.header('Authorization') || '';
       const bearerToken = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : '';
@@ -64,7 +66,17 @@ router.get('/get-client-reports', async (c) => {
         return c.json({ ok: false, error: 'Unauthorized' }, 401);
       }
 
-      clientId = query.client_id;
+      if (query.client_id) {
+        clientId = query.client_id;
+      } else {
+        // Resolve client_id from report_id
+        const reportRec = await airtable.getRecord(TABLES.REPORTS, query.report_id);
+        const rf = reportRec.fields as Record<string, unknown>;
+        clientId = String(getField(rf['client_id']) || '');
+        if (!clientId) {
+          return c.json({ ok: false, error: 'Could not resolve client_id from report' }, 400);
+        }
+      }
     } else if (query.report_id && query.token) {
       // Client mode — validate client token against the provided report
       mode = 'client';
