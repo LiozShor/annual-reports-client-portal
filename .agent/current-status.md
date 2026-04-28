@@ -1,5 +1,6 @@
 # Annual Reports CRM - Current Status
 
+**Last Updated:** 2026-04-28 (DL-370 — IMPLEMENTED, NEED TESTING; move-classification-client edge cases now land classification as `pending` on target (not `reassigned`); target-doc-Received conflict no longer 409s — file uploads, existing doc untouched, conflict toast shown; cache-bust `script.js?v=373`)
 **Last Updated:** 2026-04-28 (DL-368 — GitHub App reinstall did NOT fix it; `source.config.repo_id` still stale; CF support ticket required to rebind project to new repo id)
 **Last Updated:** 2026-04-28 (DL-369 — IMPLEMENTED, NEED TESTING; AI Review overflow menu adds "העבר ללקוח אחר..." and Worker endpoint `/webhook/move-classification-client` moves/reclassifies the current document to another client)
 **Last Updated:** 2026-04-28 (Pages manual deploy guardrail — current Wrangler auth token can deploy Workers but fails Pages project auth with Cloudflare code 10000; before retrying `wrangler pages deploy`, verify `pages project list/get` succeeds with the same auth context, otherwise deploy frontend via Git push or fix token permissions)
@@ -33,6 +34,26 @@ npx wrangler pages deploy frontend --project-name=annual-reports-client-portal -
 - [ ] CF API `source.config.repo_id` == `1222817442` after fix.
 
 Design log: `.agent/design-logs/infrastructure/368-cf-pages-git-integration-broken.md`
+## DL-370: Move-classification edge cases — IMPLEMENTED, NEED TESTING (2026-04-28)
+
+Design log: `.agent/design-logs/ai-review/370-move-classification-edge-cases.md`.
+
+Implemented:
+- `/webhook/move-classification-client` now sets `review_status: 'pending'` (was `'reassigned'`) on every successful move, so the classification surfaces in AI Review under the target client.
+- Target-doc-already-Received case no longer 409s. File is uploaded to target OneDrive folder; existing target document row is left untouched; classification lands as pending with no `document` link.
+- Response payload extended with `target_doc_conflict` and `target_matched`.
+- Frontend: explicit Hebrew error mapping for `target_report_not_found`; tailored success toast (default vs conflict); cache-bust `script.js?v=372→373`.
+
+Phase E — testing handoff:
+- [ ] Target with zero `Required_Missing` docs → classification appears as `pending` under target.
+- [ ] Target where AI matches cleanly → target doc `Received`, classification `pending` (NEW: was `reassigned`).
+- [ ] Target where AI fails to match → file uploads, classification `pending` with no `document` link.
+- [ ] **Target slot already Received** → no 409. File uploads. Existing doc untouched. Conflict toast displayed.
+- [ ] DL-248 source-clear guard still applies.
+- [ ] Old OneDrive item deleted after target upload.
+- [ ] `target_report_not_found` and `ambiguous_target_report` still block with Hebrew error modal.
+- [ ] No regressions in same-client reassign or DL-361 unidentified-assign.
+
 ## DL-369: AI Review move current document to another client — IMPLEMENTED, NEED TESTING (2026-04-28)
 
 Design log: `.agent/design-logs/ai-review/369-ai-review-move-document-to-client.md`.

@@ -2274,11 +2274,18 @@ classifications.post('/move-classification-client', async (c) => {
     }
 
     let targetDoc: { id: string; fields: Record<string, any> } | null = null;
+    let targetDocConflict = false;
     if (classification?.matchedDocRecordId) {
-      targetDoc = await airtable.getRecord(TABLES.DOCUMENTS, classification.matchedDocRecordId) as { id: string; fields: Record<string, any> };
-      const tf = targetDoc.fields || {};
+      const fetched = await airtable.getRecord(TABLES.DOCUMENTS, classification.matchedDocRecordId) as { id: string; fields: Record<string, any> };
+      const tf = fetched.fields || {};
       if (tf.status === 'Received' && tf.onedrive_item_id) {
-        return c.json({ ok: false, code: 'target_doc_conflict', error: 'Target document already has a received file' }, 409);
+        // DL-370: target slot already has a received file. Skip patching it,
+        // upload the moved file anyway, and leave the classification pending
+        // for office to resolve manually.
+        targetDocConflict = true;
+        targetDoc = null;
+      } else {
+        targetDoc = fetched;
       }
     }
 
@@ -2343,8 +2350,8 @@ classifications.post('/move-classification-client', async (c) => {
       issuer_name: classification?.issuerName ?? '',
       issuer_match_quality: classification?.matchQuality ?? null,
       matched_doc_name: classification?.matchedDocName ?? null,
-      document: classification?.matchedDocRecordId ? [classification.matchedDocRecordId] : [],
-      review_status: 'reassigned',
+      document: classification?.matchedDocRecordId && !targetDocConflict ? [classification.matchedDocRecordId] : [],
+      review_status: 'pending',
       reviewed_at: new Date().toISOString(),
       notes: `Moved from ${sourceClientName || sourceClientId || 'source client'} to ${targetClientName}`,
     });
@@ -2379,6 +2386,8 @@ classifications.post('/move-classification-client', async (c) => {
       target_document_id: classification?.matchedDocRecordId || '',
       doc_title: classification?.matchedDocName || classification?.issuerName || finalName,
       file_url: upload.webUrl,
+      target_doc_conflict: targetDocConflict,
+      target_matched: Boolean(classification?.matchedDocRecordId) && !targetDocConflict,
     });
   } catch (err) {
     console.error('[move-classification-client] fatal', (err as Error).message);

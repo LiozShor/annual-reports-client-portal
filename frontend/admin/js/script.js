@@ -7178,9 +7178,14 @@ async function moveClassificationClient(classificationId, targetClientId, target
         const data = await response.json();
         clearCardLoading(classificationId);
         if (!data.ok) {
-            const message = data.code === 'ambiguous_target_report'
-                ? 'ללקוח היעד יש כמה דוחות פעילים מתאימים. צריך לפתור את זה ידנית לפני ההעברה.'
-                : (data.error || 'העברת המסמך נכשלה.');
+            let message;
+            if (data.code === 'ambiguous_target_report') {
+                message = 'ללקוח היעד יש כמה דוחות פעילים מתאימים. צריך לפתור את זה ידנית לפני ההעברה.';
+            } else if (data.code === 'target_report_not_found') {
+                message = 'לא נמצא דוח פעיל מתאים אצל לקוח היעד.';
+            } else {
+                message = data.error || 'העברת המסמך נכשלה.';
+            }
             showModal(data.code === 'ambiguous_target_report' ? 'warning' : 'error', 'לא ניתן להעביר', message);
             return;
         }
@@ -7192,7 +7197,10 @@ async function moveClassificationClient(classificationId, targetClientId, target
         if (targetName && typeof selectClient === 'function') {
             try { selectClient(targetName); } catch {}
         }
-        showAIToast(`המסמך הועבר אל ${targetName}`, 'success');
+        const toastMsg = data.target_doc_conflict
+            ? `הקובץ הועבר אל ${targetName} אך כבר קיים שם מסמך מאושר. הסיווג ממתין להחלטה.`
+            : `המסמך הועבר אל ${targetName} (ממתין לבדיקה)`;
+        showAIToast(toastMsg, 'success');
     } catch (error) {
         clearCardLoading(classificationId);
         showModal('error', 'שגיאה', humanizeError(error));
