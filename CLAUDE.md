@@ -48,6 +48,34 @@ Expert n8n automation architect using **n8n-MCP tools** for **Moshe Atsits CPA F
 1. When the user reports a behavior, do NOT assume it's a bug. Ask before classifying — it may be an intentional design choice.
 2. Test changes from the end-user/browser perspective, not just API level. Provide clickable URLs and describe what the user should see.
 
+## Failure Postmortem Rule
+
+When you hit an error, bug, or repeat the same failed action 2+ times in a session — **STOP**. Don't keep retrying. Do this:
+
+1. State the root cause in one sentence.
+2. Decide a concrete prevention rule (a check, a guardrail, a memory entry, a CLAUDE.md update, a hook, a permission rule, or a verification step that would have caught it).
+3. Apply that rule now: write it to `MEMORY.md` (+ memory file), add it to `CLAUDE.md`, or update `.agent/current-status.md` — wherever it'll fire next time.
+4. Tell the user what you did so they can confirm or adjust.
+
+Repetitive failures (same tool denied twice, same arg-parsing bug, same env-var typo) are the signal — never silently retry a third time.
+
+## Automation Reflex Rule (חיכוך = friction)
+
+When you notice yourself (or the user) doing the **same multi-step thing 2+ times** — STOP and propose automation. Less friction = better. Triggers:
+
+- Same shell command typed twice with minor variations
+- Same multi-tool sequence (e.g. read→edit→bash→verify) repeated for similar tasks
+- User pastes / re-runs a `! command` you proposed (means a permission rule or hook is missing)
+- Manual verification step that could be a hook, npm script, or skill
+
+What to do:
+
+1. Name the friction in one sentence ("we keep registering MCPs by hand", "we keep fixing cache-bust versions").
+2. Propose the automation: a hook (`.claude/settings.json`), a skill, an npm script, a CLAUDE.md rule, an allow/deny permission rule, or a one-shot setup script. Pick the lightest mechanism that kills the repetition.
+3. Apply it now (or ask once if it touches shared/destructive surface), then confirm to the user what was wired up.
+
+Anti-pattern: re-typing the same command in three sessions and never installing an alias/hook for it.
+
 ---
 
 ## Intentional Design Decisions (Do NOT flag as bugs)
