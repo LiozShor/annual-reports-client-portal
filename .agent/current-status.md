@@ -1,5 +1,6 @@
 # Annual Reports CRM - Current Status
 
+**Last Updated:** 2026-04-29 (DL-377 — IMPLEMENTED, NEED TESTING; layered PII/secret defense — harness deny rules for `--no-verify`/`--force`, new CI workflow `pii-guard.yml` with diff-range PII guard + gitleaks, pre-commit secret scanners wrapped in `timeout 30`, PII regex extended with itemId/recId/client-email patterns)
 **Last Updated:** 2026-04-28 (DL-370 — COMPLETED; all three edge cases verified live: zero-missing-docs, no-AI-match, and already-Received-slot all land classification as `pending` under target; source-clear skips if doc already Required_Missing; script.js?v=377 deployed)
 **Last Updated:** 2026-04-28 (DL-370 — IMPLEMENTED, NEED TESTING; move-classification-client edge cases now land classification as `pending` on target (not `reassigned`); target-doc-Received conflict no longer 409s — file uploads, existing doc untouched, conflict toast shown; cache-bust `script.js?v=373`)
 **Last Updated:** 2026-04-28 (DL-371 — COMPLETED; edit-client modal full redesign live: new header, name field, icons, full-width inputs, modal closes on save; two post-deploy bugs fixed: missing `buildClientDetailChanges` fn + modal not closing; verified by user)
@@ -37,6 +38,24 @@ bash scripts/deploy-pages.sh "manual deploy"
 - [ ] CF API `source.config.repo_id` == `1222817442` after fix.
 
 Design log: `.agent/design-logs/infrastructure/368-cf-pages-git-integration-broken.md`
+## DL-377: Pre-commit + CI PII/Secret Enforcement — IMPLEMENTED, NEED TESTING (2026-04-29)
+
+Design log: `.agent/design-logs/security/377-pre-commit-pii-enforcement.md`.
+
+### Active TODOs — Test DL-377
+
+- [ ] Harness deny: in a fresh Claude session, attempt `git commit --no-verify` — confirm tool call is blocked
+- [ ] Harness deny (force push): attempt `git push --force-with-lease origin <branch>` — confirm blocked
+- [ ] CI fails on PII: open a draft PR with a `CPA-XXX` literal in a `.agent/` file → `pii-guard.yml` red. Close PR.
+- [ ] CI fails on secret: open a draft PR with a fake AWS key in any file → `pii-guard.yml` red (gitleaks). Close PR.
+- [ ] CI passes on clean diff: any benign PR shows green
+- [ ] Hook timeout fires: simulate slow network (block ggshield network) → hook exits ~30s with timeout error, not a hang
+- [ ] PII guard catches itemId: stage an `01[A-Z2-7]{30,}` literal in `.agent/` → blocked
+- [ ] PII guard catches recId: stage a `rec[A-Za-z0-9]{14}` literal with at least one digit in `.agent/` → blocked
+- [ ] PII guard catches client email: stage a real-client `<handle>@gmail.com` in `.agent/` → blocked; `liozshor1@gmail.com` allowed
+- [ ] No regression: `python3 .claude/hooks/agent-pii-guard.py --all` baseline 429 → post-DL 474 (45 new are real recIds/itemIds in grandfathered content; no new false positives)
+- [ ] Followup: enable GitHub branch-protection "required status checks" for `pii-guard.yml` (one-time UI step)
+
 ## DL-370: Move-classification edge cases — IMPLEMENTED, NEED TESTING (2026-04-28)
 
 Design log: `.agent/design-logs/ai-review/370-move-classification-edge-cases.md`.

@@ -3,8 +3,9 @@
 Pre-commit hook: blocks commits of .agent/ files containing CPA-IDs,
 Hebrew text (client names/values from live records), or raw API tokens.
 
-Default mode: scans only ADDED lines in the staged diff (grandfathers existing content).
---all flag:    full-file scan of all tracked files (informational, always exits 0).
+Default mode:           scans only ADDED lines in the staged diff (grandfathers existing content).
+--all flag:             full-file scan of all tracked files (informational, always exits 0).
+--diff-range BASE HEAD: scans only ADDED lines between two refs (CI mode, blocking).
 
 Exit 0 = clean. Exit 1 = blocked (prints offending lines + line numbers).
 """
@@ -21,6 +22,17 @@ PATTERNS = [
     (re.compile(r'[\u0590-\u05FF]{4,}'), "Hebrew text (possible client data)", True),
     # Airtable PAT: starts with 'pat' followed by 14+ base62 chars, then a dot + 64 hex chars
     (re.compile(r'\bpat[A-Za-z0-9]{14,}\.[a-f0-9]{64}\b'), "Airtable PAT token", False),
+    # OneDrive itemId: starts with "01" + 30+ uppercase base32 chars
+    (re.compile(r'\b01[A-Z2-7]{30,}\b'), "OneDrive itemId", False),
+    # Airtable record id: "rec" + exactly 14 base62 chars, with at least one digit
+    # (camelCase English words like "recoverTemplateId" have no digit and are excluded)
+    (re.compile(r'\brec(?=[A-Za-z0-9]*\d)[A-Za-z0-9]{14}\b'), "Airtable recId", False),
+    # Real-client email local-part on common providers \u2014 allow-list dev/office/example handles
+    (re.compile(
+        r'\b(?!(?:liozshor1|test|example|noreply|client|yosi|moshe|coralhouse2|n8n|reports|admin|info|support|hello|gmail|moshe-atsits)[\W_])'
+        r'[a-z][a-z0-9._-]{2,30}@(?:gmail|outlook|hotmail|yahoo|icloud)\.com\b',
+        re.IGNORECASE,
+    ), "client email local-part", True),
 ]
 
 # Lines that are clearly documenting past incidents — allow them through
@@ -60,16 +72,24 @@ def is_allowlisted(line):
     return any(p.search(line) for p in ALLOWLIST_PATTERNS)
 
 
-def scan_diff(paths):
+def scan_diff(paths, diff_range=None):
     """
-    Scan only added lines (+lines) from the staged diff for the given paths.
+    Scan only added lines (+lines) from a git diff for the given paths.
+    diff_range=None  → staged diff (`git diff --cached`)
+    diff_range="A..B" → range diff (`git diff A..B`)
     Returns list of (path, lineno, label, line) tuples for violations.
     """
     found = []
     for path in paths:
+        cmd = ["git", "diff"]
+        if diff_range:
+            cmd.append(diff_range)
+        else:
+            cmd.append("--cached")
+        cmd += ["-U0", "--", path]
         try:
             result = subprocess.run(
-                ["git", "diff", "--cached", "-U0", "--", path],
+                cmd,
                 capture_output=True, text=True, encoding="utf-8", errors="ignore"
             )
         except OSError:
@@ -145,6 +165,20 @@ def scan_all(paths):
 def main():
     args = sys.argv[1:]
     audit_mode = "--all" in args
+    diff_range = None
+    if "--diff-range" in args:
+        i = args.index("--diff-range")
+        # next two positional args are BASE HEAD (or a single A..B token)
+        nxt = args[i + 1] if i + 1 < len(args) else None
+        if nxt and ".." in nxt:
+            diff_range = nxt
+            args = args[:i] + args[i + 2:]
+        else:
+            base = args[i + 1] if i + 1 < len(args) else None
+            head = args[i + 2] if i + 2 < len(args) else None
+            if base and head:
+                diff_range = f"{base}..{head}"
+                args = args[:i] + args[i + 3:]
     paths = [a for a in args if not a.startswith("--")]
 
     if audit_mode:
@@ -166,8 +200,8 @@ def main():
             print("agent-pii-guard --all: no matches found.")
         sys.exit(0)
 
-    # Default pre-commit hook mode: diff-only scan
-    found = scan_diff(paths)
+    # Default pre-commit hook mode: diff-only scan (staged or ref-range)
+    found = scan_diff(paths, diff_range=diff_range)
 
     if found:
         print("agent-pii-guard: potential PII/secrets in NEW lines of .agent/ files:\n")
