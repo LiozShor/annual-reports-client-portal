@@ -1,6 +1,6 @@
 # Annual Reports CRM - Current Status
 
-**Last Updated:** 2026-04-29 (DL-374 — IMPLEMENTED, NEED TESTING; AI-review "open in new tab" anchor now uses fresh MS Graph `webUrl` from `/webhook/get-preview-url` instead of stale Airtable `file_url`. Worker `$select`s webUrl alongside downloadUrl — zero extra MS Graph calls. Cache-bust `script.js?v=382→383`. DL-356 self-heal still fires on permanent 404.)
+**Last Updated:** 2026-04-29 (DL-374 — COMPLETED; live verification passed. AI-review open-in-new-tab uses fresh MS Graph `webUrl` from `/webhook/get-preview-url`; legacy `file_url` retained as synchronous fallback so the button is visible immediately and upgraded in place. Worker version `e6e72dee-b2f0-434d-ae7e-057a0b5fec1c`, Pages script.js?v=384 live on docs.moshe-atsits.com.)
 **Last Updated:** 2026-04-28 (DL-370 — COMPLETED; all three edge cases verified live: zero-missing-docs, no-AI-match, and already-Received-slot all land classification as `pending` under target; source-clear skips if doc already Required_Missing; script.js?v=377 deployed)
 **Last Updated:** 2026-04-28 (DL-370 — IMPLEMENTED, NEED TESTING; move-classification-client edge cases now land classification as `pending` on target (not `reassigned`); target-doc-Received conflict no longer 409s — file uploads, existing doc untouched, conflict toast shown; cache-bust `script.js?v=373`)
 **Last Updated:** 2026-04-28 (DL-371 — COMPLETED; edit-client modal full redesign live: new header, name field, icons, full-width inputs, modal closes on save; two post-deploy bugs fixed: missing `buildClientDetailChanges` fn + modal not closing; verified by user)
@@ -42,6 +42,10 @@ Design log: `.agent/design-logs/infrastructure/368-cf-pages-git-integration-brok
 ## TODO: doc-manager open-file anchor has same staleness bug (follow-up to DL-374)
 
 `frontend/assets/js/document-manager.js:1149` builds the doc-manager "open file" anchor from raw `doc.file_url` — same Hebrew SharePoint path that 404s after OneDrive renames/moves. DL-374 only fixed the AI-review surface. Open a follow-up DL to route doc-manager's view (and the download anchor at lines ~284-289) through `getDocPreviewUrl` (itemId-based) so the same DL-356 self-heal + freshness applies. `doc.onedrive_item_id` is already on the row (per DL-051 §4 and `document-manager.js:3173`).
+
+## TODO: download icon (`הורד`) missing from AI-review preview header
+
+User reported (2026-04-29) that the `#previewDownload` button at `frontend/admin/index.html:1029` is not visible in the AI-review preview header — verified live on encrypted-PDF (DL-373 password panel) and asked to defer. Code path looks correct: `script.js:3873-3876` sets `downloadBtn.href = downloadUrl; downloadBtn.style.display = ''` synchronously after `iframe.src = previewUrl`, and `_showPdfPasswordPanel` does NOT re-hide the header download. Hypotheses to investigate next session: (a) MS Graph not returning `@microsoft.graph.downloadUrl` for some files (Worker `preview.ts:69` falls back to `''` → button stays hidden); (b) CSS/RTL flex pushing the button off-screen behind filename; (c) some other code path setting `display:none` after the reveal. Reproducer: open Amir CPA-728 record (encrypted PDF) → check DOM for `#previewDownload` element + computed style + DevTools Network tab for the `get-preview-url` JSON `downloadUrl` field. Mobile counterpart `#mobilePreviewDownload` to check too.
 
 ## DL-374: AI-review open-in-new-tab via itemId webUrl — IMPLEMENTED, NEED TESTING (2026-04-29)
 

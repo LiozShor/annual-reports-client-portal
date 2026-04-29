@@ -1,5 +1,5 @@
 # Design Log 374: AI-Review "Open in New Tab" — Route via itemId webUrl
-**Status:** [IMPLEMENTED — NEED TESTING]
+**Status:** [COMPLETED] — 2026-04-29 live verification passed
 **Date:** 2026-04-29
 **Related Logs:** [DL-051](../documents/051-onedrive-persistent-file-links.md), [DL-356](../infrastructure/356-preview-url-stale-itemid-self-heal.md), [DL-230](../infrastructure/230-duplicate-classification-missing-file-info.md), [DL-341](341-preview-zoom-and-completion-flow.md)
 
