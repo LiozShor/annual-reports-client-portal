@@ -1,0 +1,39 @@
+name: PII + Secret Guard
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: [main]
+
+jobs:
+  pii-guard:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # gitleaks needs history for diff
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: agent-pii-guard (block on additions to .agent/ files)
+        run: |
+          git fetch origin main --depth=1 || true
+          BASE="${{ github.event.pull_request.base.sha || github.event.before }}"
+          if [ -z "$BASE" ] || [ "$BASE" = "0000000000000000000000000000000000000000" ]; then
+            BASE="$(git rev-parse HEAD~1 2>/dev/null || git rev-parse HEAD)"
+          fi
+          CHANGED=$(git diff --name-only --diff-filter=AM "$BASE" "$GITHUB_SHA" -- '.agent/**' || true)
+          if [ -n "$CHANGED" ]; then
+            echo "Scanning changed .agent/ files:"
+            echo "$CHANGED"
+            python3 .claude/hooks/agent-pii-guard.py --diff-range "$BASE" "$GITHUB_SHA" $CHANGED
+          else
+            echo "No .agent/ changes in diff."
+          fi
+
+      - name: gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
