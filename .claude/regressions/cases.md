@@ -4,7 +4,7 @@
 
 # --- Wrangler ---
 W01 | wrangler | grep -q '^name = ' api/wrangler.toml | wrangler.toml has name field (autoconfig guard) | feedback_wrangler_autoconfig_bug.md
-W02 | wrangler | grep -q '\-c wrangler\.toml' api/wrangler.toml || grep -q '\-c wrangler\.toml' api/package.json || true | -c flag documented or deploy script updated | feedback_wrangler_autoconfig_bug.md
+W02 | wrangler | grep -q '\-c wrangler\.toml' api/package.json | -c wrangler.toml flag present in deploy scripts (autoconfig guard) | feedback_wrangler_autoconfig_bug.md
 W03 | wrangler | grep -q 'annual-reports-api' api/wrangler.toml | wrangler.toml names correct Worker (not empty hello-world) | feedback_wrangler_autoconfig_bug.md
 W04 | wrangler | ! grep -q 'CLOUDFLARE_API_TOKEN' api/wrangler.toml | stale token not hardcoded in wrangler.toml | feedback_wrangler_token_stale.md
 
