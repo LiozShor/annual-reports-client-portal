@@ -18,7 +18,7 @@
 (function () {
   'use strict';
 
-  window.showEmailPreviewModal = async function ({ reportId, clientName, getToken, endpoint, extraPayload }) {
+  window.showEmailPreviewModal = async function ({ reportId, clientName, getToken, endpoint, extraPayload, actionLabel, onAction }) {
     // 1) Idempotency: close any pre-existing preview overlay first.
     const existing = document.querySelector('.ai-modal-overlay.email-preview-overlay');
     if (existing) {
@@ -138,18 +138,62 @@
     footer.style.borderTop = '1px solid var(--border-color, #e5e7eb)';
     footer.style.gap = '12px';
 
-    const hint = document.createElement('div');
-    hint.textContent = 'זוהי תצוגה בלבד — המייל לא נשלח';
-    hint.style.color = 'var(--text-secondary, #666)';
-    hint.style.fontSize = '13px';
+    const hasAction = typeof onAction === 'function' && actionLabel;
 
-    const closeBtn = document.createElement('button');
-    closeBtn.type = 'button';
-    closeBtn.className = 'btn btn-secondary';
-    closeBtn.textContent = 'סגור';
+    if (!hasAction) {
+      // Read-only mode: hint + close button (original behavior)
+      const hint = document.createElement('div');
+      hint.textContent = 'זוהי תצוגה בלבד — המייל לא נשלח';
+      hint.style.color = 'var(--text-secondary, #666)';
+      hint.style.fontSize = '13px';
 
-    footer.appendChild(hint);
-    footer.appendChild(closeBtn);
+      const closeBtn = document.createElement('button');
+      closeBtn.type = 'button';
+      closeBtn.className = 'btn btn-secondary';
+      closeBtn.textContent = 'סגור';
+
+      footer.appendChild(hint);
+      footer.appendChild(closeBtn);
+
+      // closeBtn wired below via the shared close() reference after it's defined
+      footer._closeBtn = closeBtn;
+    } else {
+      // Action mode: error bar (hidden) + cancel + primary action button
+      const errorBar = document.createElement('div');
+      errorBar.style.display = 'none';
+      errorBar.style.color = '#b91c1c';
+      errorBar.style.background = '#fee2e2';
+      errorBar.style.border = '1px solid #fca5a5';
+      errorBar.style.borderRadius = '6px';
+      errorBar.style.padding = '8px 12px';
+      errorBar.style.fontSize = '13px';
+      errorBar.style.flex = '1 1 auto';
+
+      const cancelBtn = document.createElement('button');
+      cancelBtn.type = 'button';
+      cancelBtn.className = 'btn btn-secondary';
+      cancelBtn.textContent = 'ביטול';
+
+      const actionBtn = document.createElement('button');
+      actionBtn.type = 'button';
+      actionBtn.className = 'btn btn-primary';
+      actionBtn.textContent = actionLabel;
+
+      const btnWrap = document.createElement('div');
+      btnWrap.style.display = 'flex';
+      btnWrap.style.gap = '8px';
+      btnWrap.style.alignItems = 'center';
+
+      btnWrap.appendChild(cancelBtn);
+      btnWrap.appendChild(actionBtn);
+
+      footer.appendChild(errorBar);
+      footer.appendChild(btnWrap);
+
+      footer._cancelBtn = cancelBtn;
+      footer._actionBtn = actionBtn;
+      footer._errorBar = errorBar;
+    }
 
     panel.appendChild(header);
     panel.appendChild(body);
@@ -175,7 +219,43 @@
     }
 
     closeX.addEventListener('click', close);
-    closeBtn.addEventListener('click', close);
+    if (footer._closeBtn) {
+      footer._closeBtn.addEventListener('click', close);
+    }
+    if (footer._cancelBtn) {
+      footer._cancelBtn.addEventListener('click', close);
+    }
+    if (footer._actionBtn) {
+      footer._actionBtn.addEventListener('click', async function () {
+        const actionBtn = footer._actionBtn;
+        const errorBar = footer._errorBar;
+
+        // Disable + spinner text
+        actionBtn.disabled = true;
+        actionBtn.textContent = 'שולח...';
+        errorBar.style.display = 'none';
+
+        try {
+          await onAction();
+          // Success: replace modal body with success state
+          body.innerHTML = '';
+          body.style.alignItems = 'center';
+          body.style.justifyContent = 'center';
+          body.innerHTML = `<div style="text-align:center;padding:32px 16px;">
+            <div style="font-size:48px;color:#16a34a;margin-bottom:12px;">✓</div>
+            <div style="font-size:18px;font-weight:600;color:#16a34a;">הבקשה נשלחה ללקוח</div>
+          </div>`;
+          footer.style.display = 'none';
+          setTimeout(function () { close(); }, 1200);
+        } catch (err) {
+          // Error: show inline error bar, re-enable button
+          errorBar.textContent = err && err.message ? err.message : 'אירעה שגיאה, נסה שנית';
+          errorBar.style.display = 'block';
+          actionBtn.disabled = false;
+          actionBtn.textContent = actionLabel;
+        }
+      });
+    }
     overlay.addEventListener('click', function (e) {
       if (e.target === overlay) close();
     });

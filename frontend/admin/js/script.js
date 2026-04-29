@@ -1017,6 +1017,18 @@ function formatRelativeTime(dateStr) {
     return dateOnly.replace(/^(\d{4})-(\d{2})-(\d{2})/, '$3/$2/$1');
 }
 
+// DL-380: Compact relative date label for password-request timestamps.
+function humanRelDate(isoStr) {
+    if (!isoStr) return '';
+    const t = new Date(isoStr).getTime();
+    if (isNaN(t)) return '';
+    const diff = Date.now() - t;
+    const days = Math.floor(diff / 86400000);
+    if (days === 0) return 'היום';
+    if (days === 1) return 'אתמול';
+    return `לפני ${days} ימים`;
+}
+
 async function loadRecentMessages() {
     if (!authToken) return;
     const container = document.getElementById('recentMessagesContainer');
@@ -3952,6 +3964,35 @@ function _showPdfPasswordPanel(recordId, itemId, downloadUrl) {
     if (input) input.value = '';
     panel.style.display = 'flex';
 
+    // DL-380: Inject suggested-password chip + raw-reply details above/below the input
+    if (input) {
+        // Remove any previously injected DL-380 elements
+        panel.querySelectorAll('.dl380-suggestion').forEach(el => el.remove());
+
+        const classItem = (aiClassificationsData || []).find(i => i.id === recordId);
+        const suggestedPwd = classItem && classItem.suggested_password;
+        const replyRaw = classItem && classItem.password_reply_raw;
+
+        if (suggestedPwd) {
+            const escapedPwd = escapeAttr(suggestedPwd);
+            const chip = document.createElement('div');
+            chip.className = 'ai-suggested-password-chip dl380-suggestion';
+            chip.title = 'לחץ למילוי אוטומטי';
+            chip.innerHTML = `סיסמה מוצעת: <code>${escapedPwd}</code>`;
+            chip.onclick = () => { document.getElementById('previewPasswordInput').value = suggestedPwd; };
+            input.parentNode.insertBefore(chip, input);
+        }
+
+        if (replyRaw) {
+            const escapedRaw = escapeAttr(replyRaw).substring(0, 200);
+            const details = document.createElement('details');
+            details.className = 'dl380-suggestion';
+            details.style.cssText = 'font-size:12px; text-align:right; max-width:280px; margin-top:4px;';
+            details.innerHTML = `<summary style="cursor:pointer; color:var(--text-secondary);">תגובת הלקוח המלאה</summary><pre style="white-space:pre-wrap; margin:4px 0 0; font-size:11px;">${escapedRaw}</pre>`;
+            input.parentNode.insertBefore(details, input.nextSibling);
+        }
+    }
+
     if (input) {
         input.onkeydown = (e) => { if (e.key === 'Enter') submitPdfUnlock(); };
     }
@@ -4991,6 +5032,17 @@ function _renderPanelAdditive(item, variant, reReviewing) {
         overflowItems.push(`<button class="ai-ap-overflow__item" onclick="openAddQuestionDialog('${idA}'); _closePanelOverflow();">${qLabel}</button>`);
     }
     overflowItems.push(`<button class="ai-ap-overflow__item" onclick="showMoveClassificationClientModal('${idA}'); _closePanelOverflow();">העבר ללקוח אחר...</button>`);
+
+    // DL-380: Encrypted PDF — password request kebab item
+    const isEncrypted = !!(item.ai_reason && /password[_\s]?protected|מוגן.*סיסמה/i.test(item.ai_reason));
+    if (isEncrypted) {
+        const sentAt = item.password_request_sent_at;
+        if (sentAt) {
+            overflowItems.push(`<button class="ai-ap-overflow__item" disabled style="opacity:0.6; cursor:default;">נשלחה בקשת סיסמה (${humanRelDate(sentAt)})</button>`);
+        } else {
+            overflowItems.push(`<button class="ai-ap-overflow__item" onclick="requestPdfPassword('${idA}'); _closePanelOverflow();">בקש סיסמה מהלקוח</button>`);
+        }
+    }
 
     const overflowHtml = `<div class="ai-ap-overflow">
         <button class="ai-ap-overflow__btn" onclick="_togglePanelOverflow(this, event)" title="פעולות נוספות" aria-haspopup="menu" aria-expanded="false">⋮</button>
@@ -6347,6 +6399,36 @@ function renderOnHoldCard(item) {
 }
 
 // DL-086: Re-review — restore action buttons on a reviewed card
+// DL-380: Show email preview then POST /request-pdf-password for a password-protected PDF.
+async function requestPdfPassword(recordId) {
+    const item = (aiClassificationsData || []).find(i => i.id === recordId);
+    if (!item) return;
+    if (typeof window.showEmailPreviewModal !== 'function') {
+        console.error('[DL-380] showEmailPreviewModal not loaded');
+        showAIToast('שגיאה בטעינת התצוגה המקדימה', 'danger');
+        return;
+    }
+    window.showEmailPreviewModal({
+        recordId,
+        clientName: item.client_name || item.client_id || '',
+        endpoint: ENDPOINTS.REQUEST_PDF_PASSWORD,
+        getToken: () => authToken,
+        extraPayload: { record_id: recordId },
+        actionLabel: 'שלח בקשת סיסמה',
+        onAction: async () => {
+            const res = await fetchWithTimeout(ENDPOINTS.REQUEST_PDF_PASSWORD, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
+                body: JSON.stringify({ record_id: recordId })
+            }, FETCH_TIMEOUTS.quick);
+            const data = await res.json();
+            if (!data.ok) throw new Error(data.error === 'already_sent' ? 'בקשת הסיסמה כבר נשלחה ללקוח' : (data.error || 'שגיאה בשליחה'));
+            item.password_request_sent_at = new Date().toISOString();
+            refreshItemDom(item);
+        }
+    });
+}
+
 function startReReview(recordId) {
     const item = aiClassificationsData.find(i => i.id === recordId);
     if (!item) return;

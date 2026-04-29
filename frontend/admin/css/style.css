@@ -10457,3 +10457,28 @@ tr:hover .client-edit-link {
 
 /* ============ /DL-334 ============ */
 
+/* DL-380: suggested password chip */
+.ai-suggested-password-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border-radius: 6px;
+    border: 1px solid var(--brand-200);
+    background: var(--brand-50);
+    color: var(--brand-700);
+    font-size: 12px;
+    cursor: pointer;
+    user-select: none;
+    margin-bottom: 6px;
+    transition: background 0.15s;
+}
+.ai-suggested-password-chip:hover {
+    background: var(--brand-100);
+}
+.ai-suggested-password-chip code {
+    font-family: monospace;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+}
+
