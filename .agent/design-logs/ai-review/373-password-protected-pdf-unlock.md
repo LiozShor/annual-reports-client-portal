@@ -74,6 +74,7 @@ Clients (especially banks and government bodies) routinely send password-protect
 
 ## 7. Validation Plan
 - [x] Encrypted PDF (RC4/AES-128) — end-to-end on a real client T106 PDF (2026-04-29): detect → panel → POST → 200 → decrypted file at original location, encrypted copy in archive
+- [x] Re-verified post-redeploy 2026-04-29 (worker version `71baa3c4`) on a fresh client sample: original year-folder holds decrypted file, archive subfolder holds encrypted copy
 - [ ] AES-256 encrypted PDF — not yet exercised; expect 422 UNSUPPORTED_ENCRYPTION
 - [ ] Wrong password — not yet exercised; expect 401 + attempt counter
 - [ ] Already-unlocked PDF — not yet exercised; expect 409 ALREADY_UNLOCKED
@@ -113,6 +114,11 @@ OneDrive item IDs are stable across moves. `moveFileToArchive` PATCHed `parentRe
 4. `putBinaryReplace(itemId, decryptedBytes)` replaces the original in-place — itemId, parent, Airtable references all unchanged.
 
 `moveFileToArchive` is no longer used by this route; the inline helper resolves folders the same way but does NOT move the source file.
+
+### 9.5 Fix `6b451b7a` was committed but never deployed (2026-04-29)
+After the §9.3 commit landed on main, the live worker (`43b5f07f`) was still running the old `moveFileToArchive` path — verified via Cloudflare Observability log showing a `[moveFileToArchive] Moved <itemId> to encrypted-originals` line on a fresh attempt. Symptom matched §9.3 exactly. Redeployed manually (`wrangler deploy -c wrangler.toml`, version `71baa3c4-dda6-4f66-90f7-754294f6570a`); re-test on a fresh encrypted PDF confirmed the move-to-archive log line is gone and OneDrive layout is correct.
+
+**Prevention:** memory entry `feedback_deploy_after_main_push.md` already covers this — the gap was that the previous merge of `6b451b7a` skipped the wrangler-deploy step. No code change needed; just adhere to the rule.
 
 ### 9.4 Recovery for files already unlocked under the buggy version
 Single occurrence (one client T106 PDF). The file's *content* was correctly decrypted; only its *location* was wrong. Recovered manually by dragging the file from `/ארכיון/encrypted-originals/` back into the year-folder `דוח שנתי` subfolder in OneDrive — itemId stays the same, Airtable stays in sync.
