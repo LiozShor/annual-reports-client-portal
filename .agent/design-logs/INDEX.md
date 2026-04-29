@@ -2,7 +2,7 @@
 
 Active and pending logs. For completed history, see [ARCHIVE-INDEX.md](ARCHIVE-INDEX.md).
 
-**Total logs:** 230 | **Active:** 132 | **Archived:** 98
+**Total logs:** 231 | **Active:** 133 | **Archived:** 98
 
 ## Folder Structure
 
@@ -21,6 +21,7 @@ Active and pending logs. For completed history, see [ARCHIVE-INDEX.md](ARCHIVE-I
 
 | # | File | Status | Summary |
 |---|------|--------|---------|
+| 375 | [375-restore-download-button.md](ai-review/375-restore-download-button.md) | IMPLEMENTED — NEED TESTING | "Download" (Hebrew) button vanished from AI-review preview header for ALL files after DL-374. Root cause: DL-374 added `webUrl` to `$select` on `/me/drive/items/{id}` — `@microsoft.graph.downloadUrl` is an instance annotation that MS Graph silently omits under `$select`, so Worker returned `downloadUrl:""`. Fix: drop `$select` entirely (~1-2 KB extra payload) so both fields always come back. No frontend change — existing reveal at `script.js:3873-3876` self-heals. |
 | 374 | [374-ai-review-open-tab-itemid.md](ai-review/374-ai-review-open-tab-itemid.md) | COMPLETED — 2026-04-29 | AI-review "open in new tab" anchor was using stale Airtable `file_url` (long Hebrew SharePoint path) → 404 after staff rename/move in OneDrive. Worker `/webhook/get-preview-url` now also `$select`s `webUrl` from MS Graph (zero extra calls — same item GET that fetches downloadUrl) and returns it in the JSON. `getDocPreviewUrl()` plumbs it through to `loadDocPreview` + `loadMobileDocPreview`; both anchors now hide upfront and reveal with `webUrl || item.file_url || ''` once the fetch resolves. DL-356 self-heal still fires on permanent 404 — toast + Airtable null + button stays hidden. Cache-bust `script.js?v=382→383`. Reuses `MSGraphClient`, `getDocPreviewUrl`, `handleFileGoneSelfHeal`. |
 | 373 | [373-password-protected-pdf-unlock.md](ai-review/373-password-protected-pdf-unlock.md) | IMPLEMENTED — NEED TESTING | Password-protected PDF unlock from AI Review preview. Client-side PDF.js detects encrypted PDFs; server-side `@localonlytools/pdf-decrypt` decrypts; encrypted original archived to `/ארכיון/encrypted-originals/` before replace. Rate-limited (5/min). New Worker route `POST /webhook/unlock-pdf`. |
 | 372 | [372-pdf-sticky-note.md](ai-review/372-pdf-sticky-note.md) | IMPLEMENTED — NEED TESTING | PDF sticky-note annotation from AI Review card. pdf-lib /Annot Text placed at chosen corner (TL/TR/BL/BR) of page 1. Idempotent — strip+re-add on save. Note also mirrored to Airtable `documents.internal_pdf_note`. New Worker route `POST /webhook/add-pdf-note`. Shared infra: `MSGraphClient.putBinaryReplace`. |
