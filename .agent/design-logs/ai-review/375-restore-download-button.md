@@ -1,5 +1,5 @@
 # Design Log 375: Restore download button on AI-review preview pane
-**Status:** [IMPLEMENTED — NEED TESTING]
+**Status:** [COMPLETED]
 **Date:** 2026-04-29
 **Related Logs:** [DL-374](374-ai-review-open-tab-itemid.md), [DL-373](373-password-protected-pdf-unlock.md)
 
