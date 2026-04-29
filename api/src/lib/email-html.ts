@@ -810,3 +810,73 @@ export function buildBatchQuestionsHtml(
 
   return wrapWithHeader(headerSubject, contentRows, dir);
 }
+
+// ── Password Request Email (DL-380) ───────────────────────────────
+
+export function buildPasswordRequestEmailHtml({
+  firstName,
+  filename,
+  recordIdShort,
+}: {
+  firstName: string;
+  filename: string;
+  recordIdShort: string;
+}): string {
+  // Escape HTML to prevent XSS
+  const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const safeFirst = esc(firstName);
+  const safeFilename = esc(filename);
+
+  const headerTitle = `קובץ מוגן בסיסמה — ${safeFilename}`;
+
+  // Two-card bilingual stack: HE first, EN below
+  return (
+    // Outer wrapper (no dir — bilingual)
+    `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="${BG.outer}" style="font-family:${FONT};">` +
+    `<tr><td align="center" style="padding-top:32px; padding-right:16px; padding-bottom:32px; padding-left:16px;">` +
+    `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="${BG.card}" style="max-width:600px; margin:0 auto; border-radius:8px;">` +
+    // Logo
+    `<tr><td align="center" bgcolor="${BG.outer}" style="background-color:${BG.outer};padding:24px 0 16px;">` +
+    `<img src="${LOGO_URL}" alt="Moshe Atsits" width="180" height="auto" style="display:block;border:0;max-width:180px;height:auto;" />` +
+    `</td></tr>` +
+    // Blue header bar (RTL — Hebrew title)
+    `<tr><td style="padding-top:24px; padding-right:32px; padding-bottom:24px; padding-left:32px; background-color:${ACCENT.clientBg}; border-bottom:3px solid ${C.brand}; border-radius:8px 8px 0 0;" dir="rtl">` +
+    `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">` +
+    `<tr><td style="font-size:22px; font-weight:bold; color:${C.brand}; line-height:1.3; font-family:${FONT}; direction:rtl; text-align:right;">${headerTitle}</td></tr>` +
+    `</table></td></tr>` +
+    // Hebrew card
+    `<tr><td style="padding-top:24px; padding-right:32px; padding-bottom:0; padding-left:32px;">` +
+    `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border:1px solid ${C.border}; border-radius:8px; background-color:${BG.altRow};">` +
+    `<tr><td style="padding:24px;" dir="rtl">` +
+    `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" dir="rtl" style="direction:rtl; text-align:right;">` +
+    `<tr><td style="font-size:12px; color:${C.muted}; padding-bottom:16px; font-family:${FONT};">\u{1F524} עברית</td></tr>` +
+    `<tr><td style="font-size:15px; color:${C.body}; line-height:1.6; padding-bottom:16px; font-family:${FONT};">` +
+    `שלום ${safeFirst}, ניסינו לפתוח את הקובץ <strong>${safeFilename}</strong> שצירפת לדוח השנתי, אך הוא מוגן בסיסמה. אנא השב במייל זה עם הסיסמה. אין צורך לציין את שם הקובץ — מערכת המשרד תזהה אוטומטית.` +
+    `</td></tr>` +
+    `</table></td></tr></table></td></tr>` +
+    // Spacer
+    `<tr><td style="padding-top:16px; font-size:1px; line-height:1px;">&nbsp;</td></tr>` +
+    // English card
+    `<tr><td style="padding-top:0; padding-right:32px; padding-bottom:24px; padding-left:32px;">` +
+    `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border:1px solid ${C.border}; border-radius:8px; background-color:${BG.card};">` +
+    `<tr><td style="padding:24px;" dir="ltr">` +
+    `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" dir="ltr" style="direction:ltr; text-align:left;">` +
+    `<tr><td style="font-size:12px; color:${C.muted}; padding-bottom:16px; font-family:${FONT};">\u{1F524} English</td></tr>` +
+    `<tr><td style="font-size:15px; color:${C.body}; line-height:1.5; padding-bottom:16px; font-family:${FONT};">` +
+    `Hi ${safeFirst}, we tried to open the file <strong>${safeFilename}</strong> you attached to your annual report, but it’s password-protected. Please reply to this email with the password — our system will detect it automatically.` +
+    `</td></tr>` +
+    `</table></td></tr></table></td></tr>` +
+    // Bilingual footer
+    `<tr><td style="padding-top:24px; padding-right:32px; padding-bottom:24px; padding-left:32px; border-top:1px solid ${C.border};">` +
+    `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">` +
+    `<tr><td align="center" style="font-size:14px; color:${C.muted}; line-height:1.5; font-family:${FONT};">Moshe Atsits CPA Firm / משרד רו"ח Client Name | ${OFFICE_EMAIL}</td></tr>` +
+    `</table></td></tr>` +
+    `</table></td></tr></table>`
+  );
+}
+
+export function buildPasswordRequestEmailSubject(filename: string): string {
+  const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const safeFilename = esc(filename);
+  return `קובץ מוגן בסיסמא — ${safeFilename}`;
+}
