@@ -479,7 +479,7 @@ export function buildClientEmailHtml(params: ClientEmailParams): string {
       // Bilingual footer
       `<tr><td style="padding-top:24px; padding-right:32px; padding-bottom:24px; padding-left:32px; border-top:1px solid ${C.border};">` +
       `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">` +
-      `<tr><td align="center" style="font-size:14px; color:${C.muted}; line-height:1.5; font-family:${FONT};">Moshe Atsits CPA Firm / משרד רו"ח Client Name | ${officeEmailAddr}</td></tr>` +
+      `<tr><td align="center" style="font-size:14px; color:${C.muted}; line-height:1.5; font-family:${FONT};">Moshe Atsits CPA Firm / משרד רו"ח משה עציץ | ${officeEmailAddr}</td></tr>` +
       `</table></td></tr>` +
       `</table></td></tr></table>`;
   } else {
@@ -501,7 +501,7 @@ export function buildClientEmailHtml(params: ClientEmailParams): string {
       `</table>` +
       dividerRow() +
       `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">` +
-      `<tr><td align="center" style="font-size:14px; color:${C.muted}; line-height:1.5; font-family:${FONT};">משרד רו"ח Client Name | ${officeEmailAddr}</td></tr>` +
+      `<tr><td align="center" style="font-size:14px; color:${C.muted}; line-height:1.5; font-family:${FONT};">משרד רו"ח משה עציץ | ${officeEmailAddr}</td></tr>` +
       `</table>`;
 
     clientEmailHtml = wrapWithHeader(heSubject, heContentRows, 'rtl');
@@ -652,7 +652,7 @@ export function buildQuestionnaireEmailHtml(params: QuestionnaireEmailParams): s
     + afterCta
     + '<tr><td>' + contactBlock() + '</td></tr>'
     + '<tr><td style="font-family:' + FONT + ';font-size:15px;color:#374151;line-height:1.6;padding-top:24px;">'
-    + 'בברכה,<br><strong>צוות משרד רו"ח Client Name</strong>'
+    + 'בברכה,<br><strong>צוות משרד רו"ח משה עציץ</strong>'
     + '</td></tr>'
     + '</table></td></tr>'
     + '<tr><td style="padding:16px 32px;background-color:#f9fafb;border-top:1px solid #e5e7eb;border-radius:0 0 8px 8px;">'
@@ -694,7 +694,7 @@ export function buildCommentEmailHtml(params: CommentEmailParams): string {
     + '<tr><td style="padding:16px 32px;background-color:' + ACCENT.clientBg + ';border-bottom:3px solid ' + C.brand + ';">'
     + '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">'
     + '<tr><td style="font-family:' + FONT + ';font-size:20px;font-weight:bold;color:' + C.brand + ';line-height:1.3;">'
-    + 'הודעה ממשרד רו"ח Client Name \u2014 ' + year
+    + 'הודעה ממשרד רו"ח משה עציץ \u2014 ' + year
     + '</td></tr></table></td></tr>'
     // Body
     + '<tr><td style="padding:32px;">'
@@ -706,20 +706,20 @@ export function buildCommentEmailHtml(params: CommentEmailParams): string {
     // Contact block
     + '<tr><td>' + contactBlock() + '</td></tr>'
     + '<tr><td style="font-family:' + FONT + ';font-size:15px;color:' + C.body + ';line-height:1.6;padding-top:16px;border-top:1px solid ' + C.border + ';">'
-    + 'בברכה,<br><strong>צוות משרד רו"ח Client Name</strong>'
+    + 'בברכה,<br><strong>צוות משרד רו"ח משה עציץ</strong>'
     + '</td></tr>'
     + '</table></td></tr>'
     // Footer
     + '<tr><td style="padding:16px 32px;background-color:' + BG.altRow + ';border-top:1px solid ' + C.border + ';border-radius:0 0 8px 8px;">'
     + '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">'
     + '<tr><td align="center" style="font-family:' + FONT + ';font-size:12px;color:' + C.muted + ';line-height:1.5;">'
-    + 'מייל זה נשלח ממשרד רו"ח Client Name בנוגע לתיק ' + year + ' שלך.'
+    + 'מייל זה נשלח ממשרד רו"ח משה עציץ בנוגע לתיק ' + year + ' שלך.'
     + '</td></tr></table></td></tr>'
     + '</table></td></tr></table>';
 }
 
 export function buildCommentEmailSubject(year: string): string {
-  return 'הודעה ממשרד רו"ח Client Name \u2014 דוחות ' + year;
+  return 'הודעה ממשרד רו"ח משה עציץ \u2014 דוחות ' + year;
 }
 
 // ── Batch Questions Email (DL-328) ─────────────────────────────────
@@ -771,7 +771,7 @@ export function buildBatchQuestionsHtml(
   const questionLabel = isEnglish ? 'Question' : 'שאלה';
   const footerText = isEnglish
     ? `Moshe Atsits CPA Firm | ${OFFICE_EMAIL}`
-    : `משרד רו"ח Client Name | ${OFFICE_EMAIL}`;
+    : `משרד רו"ח משה עציץ | ${OFFICE_EMAIL}`;
 
   // Build question cards
   let cardsHtml = '';
@@ -869,7 +869,8 @@ export function buildPasswordRequestEmailHtml({
     // Bilingual footer
     `<tr><td style="padding-top:24px; padding-right:32px; padding-bottom:24px; padding-left:32px; border-top:1px solid ${C.border};">` +
     `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">` +
-    `<tr><td align="center" style="font-size:14px; color:${C.muted}; line-height:1.5; font-family:${FONT};">Moshe Atsits CPA Firm / משרד רו"ח Client Name | ${OFFICE_EMAIL}</td></tr>` +
+    `<tr><td align="center" style="font-size:14px; color:${C.muted}; line-height:1.5; font-family:${FONT};">${safeFirst} | ${OFFICE_EMAIL} | משרד רו"ח משה עציץ</td></tr>` +
+    `<tr><td align="center" style="font-size:10px; color:${C.muted}; padding-top:8px; font-family:${FONT}; opacity:0.5;">[#PWD-${recordIdShort}]</td></tr>` +
     `</table></td></tr>` +
     `</table></td></tr></table>`
   );

@@ -105,7 +105,7 @@ export async function handleRequestPdfPassword(c: Context<{ Bindings: Env }>): P
 
     // ── Build email ─────────────────────────────────────────────────────────
     const recordIdShort = record_id.slice(-8);
-    const subject = `[#PWD-${recordIdShort}] קובץ מוגן בסיסמה — ${filename}`;
+    const subject = `קובץ מוגן בסיסמה — ${filename}`;
     const html = buildPasswordRequestEmailHtml({ firstName, filename, recordIdShort });
 
     // ── Preview mode: return without side effects ───────────────────────────

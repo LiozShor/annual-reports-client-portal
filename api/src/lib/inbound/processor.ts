@@ -767,8 +767,9 @@ async function tryHandlePasswordReply(
   emailEventId: string | undefined,
   airtable: AirtableClient,
 ): Promise<{ handled: boolean }> {
-  // 1. Match subject token
-  const tokenMatch = subject.match(/\[#PWD-([A-Za-z0-9]{6,12})\]/i);
+  // 1. Match token — check subject first, then body (token moved to footer in DL-380)
+  const tokenMatch = subject.match(/\[#PWD-([A-Za-z0-9]{6,12})\]/i)
+    || bodyText.match(/\[#PWD-([A-Za-z0-9]{6,12})\]/i);
   if (!tokenMatch) return { handled: false };
   const token = tokenMatch[1];
 
