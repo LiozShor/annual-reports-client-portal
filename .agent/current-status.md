@@ -1,5 +1,7 @@
 # Annual Reports CRM - Current Status
 
+**Last Updated:** 2026-04-29 (DL-365 Phase 2 SHIPPED + verified live — server-side activity-logger instrumentation. logSecurity dual-writes (Airtable + CF Logs); logError emits worker_error event; new business events: inbound_note_saved, attachment_classified, classifications_listed, doc_approve|reject|reassign, batch_send, doc_upload. request_id middleware threads correlation. Verified: auth_fail/success ✅, doc_reassign ✅, PII contract ✅. Inbound queue chain inconclusive — queue consumer logs not surfacing in CF Observability (separate investigation, not Phase 2 issue). Plan: `~/.claude/plans/velvet-wandering-quasar.md`.)
+**Last Updated:** 2026-04-29 (git-ship skill updated to use `.claude/workflows/` wrappers — merge-and-push, deploy-worker, close-design-log; reduces friction on multi-step git ops.)
 **Last Updated:** 2026-04-29 (Self-Improvement Infra Tiers 1+2 SHIPPED — Tier 1: regression scaffold (12 cases), MEMORY.md size guard, retry-detector hook, telemetry gitignore. Tier 2: memory timestamps backfilled (46 files), `.claude/workflows/` (deploy-worker.sh, merge-and-push.sh, close-design-log.sh), Stop-hook session telemetry, design-log skill wired to close-design-log.sh. Plan: `~/.claude/plans/snoopy-conjuring-blossom.md`. Tier 3 SHIPPED — `/consolidate-memory` skill at `.agent/skills/consolidate-memory/SKILL.md`, monthly-insights extended with self-improvement signals section.)
 **Last Updated:** 2026-04-29 (DL-379 COMPLETED — encrypted-PDF lock indicator on AI Review cards live.)
 **Last Updated:** 2026-04-29 (DL-377 COMPLETED — layered PII/secret defense: harness deny rules, CI pii-guard.yml + secret-scan.yml, pre-commit hook chain. Optional follow-up: enable GitHub branch-protection required status checks for pii-guard.yml.)
@@ -61,17 +63,17 @@ Existing files uploaded before the DL-376 fix (approved 867/106/T501 files) stil
 
 ---
 
-## OPEN: DL-365 — Activity Logger Phases 2-4
+## OPEN: DL-365 — Activity Logger Phases 3-5
 
 Design log: `.agent/design-logs/infrastructure/365-activity-logger.md`
 
-**Phase 2** — server-side instrumentation: dual-write `logSecurity()` to console.log, wrap `logError()` to also emit `logEvent()`, add `logEvent()` calls to inbound processor / classifications / approve-and-send / upload-document.
+**Phase 2 SHIPPED 2026-04-29** — verified live via auth + reassign + PII contract checks. Inbound queue-consumer log surface gap remains (consumer logs not visible in CF Observability — needs `[observability.logs]` config check or separate investigation).
 
 **Phase 3** — admin viewer (`/admin/dev/activity` React island) + `frontend/shared/telemetry.js` + `DEV_PASSWORD`-gated lookup endpoints.
 
 **Phase 4** — client portal page hooks + n8n workflow updates (replace 7 Airtable POSTs with `/webhook/events`).
 
-**Phase 5** (2 weeks after Phase 4 lives) — strip dual-write; deactivate `[MONITOR] Security Alerts` + `[MONITOR] Log Cleanup`; mark `security_logs` deprecated.
+**Phase 5** (2 weeks after Phase 4 lives) — flip `LEGACY_LOG_TO_AIRTABLE=false`, deactivate `[MONITOR] Security Alerts` + `[MONITOR] Log Cleanup`; mark `security_logs` deprecated.
 
 Still need to set Worker secrets: `DEV_PASSWORD`, `PII_HASH_KEY` (`wrangler secret put` from `api/`).
 
