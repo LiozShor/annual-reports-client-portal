@@ -1923,10 +1923,14 @@ classifications.post('/review-classification', async (c) => {
           // Previously skipped for exact/single match — that left files with their
           // original attachment_name. Now every approve normalizes the filename.
           const _approveTemplateId = clsFields.matched_template_id as string;
+          // DL-376: prefer the source doc's rich issuer_name (HTML with <b>company</b>
+          // tags) so resolveOneDriveFilename can substitute the {issuer} placeholder.
+          // matched_doc_name is the plain template-title label (e.g. "טופס 867") and
+          // would be detected as a template-title echo, stripping the issuer entirely.
           const _approveDocName =
-            (clsFields.matched_doc_name as string) ||
-            (clsFields.issuer_name as string) ||
             ((sourceDoc?.fields as any)?.issuer_name as string) ||
+            (clsFields.issuer_name as string) ||
+            (clsFields.matched_doc_name as string) ||
             '';
           const _approvePeriod = getRentalPeriodLabel();
           newFilename = resolveOneDriveFilename({
