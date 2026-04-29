@@ -3929,6 +3929,7 @@ let _pdfUnlockAttempts = 0;
 const _PDF_UNLOCK_MAX_ATTEMPTS = 5;
 
 function _showPdfPasswordPanel(recordId, itemId, downloadUrl) {
+    console.log('[dl373:panel] show', { recordId, itemId, hasDownloadUrl: !!downloadUrl });
     _pdfUnlockRecordId = recordId;
     _pdfUnlockItemId = itemId;
     _pdfUnlockAttempts = 0;
@@ -3940,7 +3941,8 @@ function _showPdfPasswordPanel(recordId, itemId, downloadUrl) {
     const attemptsEl = document.getElementById('previewPasswordAttempts');
     const input = document.getElementById('previewPasswordInput');
 
-    if (!panel) return;
+    console.log('[dl373:panel] elements', { hasPanel: !!panel, hasIframe: !!iframe, hasInput: !!input });
+    if (!panel) { console.warn('[dl373:panel] previewPasswordPanel element missing — falling through to MS Graph iframe UI'); return; }
     if (error) error.style.display = 'none';
     if (iframe) iframe.style.display = 'none';
     if (attemptsEl) attemptsEl.style.display = 'none';
@@ -3955,7 +3957,8 @@ function _showPdfPasswordPanel(recordId, itemId, downloadUrl) {
 }
 
 async function submitPdfUnlock() {
-    if (!_pdfUnlockItemId || !_pdfUnlockRecordId) return;
+    console.log('[dl373:submit] called', { hasItemId: !!_pdfUnlockItemId, hasRecordId: !!_pdfUnlockRecordId });
+    if (!_pdfUnlockItemId || !_pdfUnlockRecordId) { console.warn('[dl373:submit] missing state — aborting'); return; }
     const input = document.getElementById('previewPasswordInput');
     const unlockBtn = document.getElementById('previewPasswordUnlockBtn');
     const attemptsEl = document.getElementById('previewPasswordAttempts');
@@ -3965,12 +3968,14 @@ async function submitPdfUnlock() {
     if (unlockBtn) { unlockBtn.disabled = true; unlockBtn.textContent = 'פותח...'; }
 
     try {
+        console.log('[dl373:submit] POST /webhook/unlock-pdf', { itemId: _pdfUnlockItemId, recordId: _pdfUnlockRecordId, hasAuth: !!authToken });
         const res = await fetch('https://annual-reports-api.liozshor1.workers.dev/webhook/unlock-pdf', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
             body: JSON.stringify({ itemId: _pdfUnlockItemId, recordId: _pdfUnlockRecordId, password }),
         });
         const data = await res.json();
+        console.log('[dl373:submit] response', { status: res.status, ok: data?.ok, error: data?.error });
 
         if (res.ok && data.ok) {
             const panel = document.getElementById('previewPasswordPanel');
@@ -4003,6 +4008,7 @@ async function submitPdfUnlock() {
             showAIToast('שגיאה בפתיחת הקובץ: ' + (data.message || data.error || 'שגיאה'), 'error');
         }
     } catch (err) {
+        console.error('[dl373:submit] network error', err);
         showAIToast('שגיאת רשת: ' + (err.message || 'Unknown error'), 'error');
     } finally {
         if (unlockBtn) { unlockBtn.disabled = false; unlockBtn.textContent = '🔓 פתח'; }
