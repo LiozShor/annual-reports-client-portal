@@ -840,11 +840,11 @@ export function buildPasswordRequestEmailHtml({
 
   const heBody = isBatch
     ? `שלום ${safeFirst}, ניסינו לפתוח את הקבצים הבאים ששלחת לנו, אך הם מוגנים בסיסמה:${heBulletList}אנא השב במייל זה עם הסיסמה. אם לכל קובץ סיסמה נפרדת, ציין זאת בתשובה — צוות המשרד יטפל בכך.`
-    : `שלום ${safeFirst}, ניסינו לפתוח את הקובץ <strong>${safeFilenames[0]}</strong> ששלחת לנו, אך הוא מוגן בסיסמה. אנא השב במייל זה עם הסיסמה. אין צורך לציין את שם הקובץ — מערכת המשרד תזהה אוטומטית.`;
+    : `שלום ${safeFirst}, ניסינו לפתוח את הקובץ <strong>${safeFilenames[0]}</strong> ששלחת לנו, אך הוא מוגן בסיסמה. אנא השב במייל זה עם הסיסמה.`;
 
   const enBody = isBatch
     ? `Hi ${safeFirst}, we tried to open the following files you sent us, but they are password-protected:${enBulletList}Please reply to this email with the password(s). If different files have different passwords, please note which is which.`
-    : `Hi ${safeFirst}, we tried to open the file <strong>${safeFilenames[0]}</strong> you sent us, but it's password-protected. Please reply to this email with the password — our system will detect it automatically.`;
+    : `Hi ${safeFirst}, we tried to open the file <strong>${safeFilenames[0]}</strong> you sent us, but it's password-protected. Please reply to this email with the password.`;
 
   // Two-card bilingual stack: HE first, EN below
   return (
@@ -872,6 +872,15 @@ export function buildPasswordRequestEmailHtml({
     `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" dir="ltr" style="direction:ltr; text-align:left;">` +
     `<tr><td style="font-size:12px; color:${C.muted}; padding-bottom:16px; font-family:${FONT};">\u{1F524} English</td></tr>` +
     `<tr><td style="font-size:15px; color:${C.body}; line-height:1.5; padding-bottom:16px; font-family:${FONT};">${enBody}</td></tr>` +
+    `</table></td></tr></table></td></tr>` +
+    `<tr><td style="padding-top:16px; padding-right:32px; padding-bottom:0; padding-left:32px;">` +
+    `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border:1px solid ${C.border}; border-radius:8px; background-color:#f9fafb; direction:rtl; text-align:right;">` +
+    `<tr><td style="padding:20px 24px;">` +
+    `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">` +
+    `<tr><td style="font-family:${FONT};font-size:14px;font-weight:bold;color:#374151;padding-bottom:10px;">&#9658; צריכים עזרה? פנו אלינו</td></tr>` +
+    `<tr><td style="font-family:${FONT};font-size:14px;color:#374151;padding-bottom:4px;">&#9742; 03-6390820 &nbsp;|&nbsp; 077-9928421</td></tr>` +
+    `<tr><td style="font-family:${FONT};font-size:14px;color:#374151;padding-bottom:8px;"><a href="mailto:natan@moshe-atsits.co.il" style="color:${C.brand};text-decoration:none;">&#9993; natan@moshe-atsits.co.il</a></td></tr>` +
+    `<tr><td><a href="${WA_URL}" target="_blank" style="color:#25D366;text-decoration:none;font-family:${FONT};font-size:14px;font-weight:bold;"><img src="${WA_ICON}" width="16" height="16" alt="WhatsApp" style="vertical-align:middle;border:0;"> WhatsApp</a></td></tr>` +
     `</table></td></tr></table></td></tr>` +
     `<tr><td style="padding-top:24px; padding-right:32px; padding-bottom:24px; padding-left:32px; border-top:1px solid ${C.border};">` +
     `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">` +
