@@ -73,7 +73,7 @@ Clients (especially banks and government bodies) routinely send password-protect
 5. UI: success toast → reload preview.
 
 ## 7. Validation Plan
-- [x] Encrypted PDF (RC4/AES-128) — end-to-end on *** `***_T106.pdf` (2026-04-29): detect → panel → POST → 200 → decrypted file at original location, encrypted copy in archive
+- [x] Encrypted PDF (RC4/AES-128) — end-to-end on a real client T106 PDF (2026-04-29): detect → panel → POST → 200 → decrypted file at original location, encrypted copy in archive
 - [ ] AES-256 encrypted PDF — not yet exercised; expect 422 UNSUPPORTED_ENCRYPTION
 - [ ] Wrong password — not yet exercised; expect 401 + attempt counter
 - [ ] Already-unlocked PDF — not yet exercised; expect 409 ALREADY_UNLOCKED
@@ -115,4 +115,4 @@ OneDrive item IDs are stable across moves. `moveFileToArchive` PATCHed `parentRe
 `moveFileToArchive` is no longer used by this route; the inline helper resolves folders the same way but does NOT move the source file.
 
 ### 9.4 Recovery for files already unlocked under the buggy version
-Single occurrence: *** `***_T106.pdf` (recordId `***`, itemId `***`). The file's *content* was correctly decrypted; only its *location* was wrong. Recovered manually by dragging the file from `/ארכיון/encrypted-originals/` back into `/2025/דוח שנתי/` in OneDrive — itemId stays the same, Airtable stays in sync.
+Single occurrence (one client T106 PDF). The file's *content* was correctly decrypted; only its *location* was wrong. Recovered manually by dragging the file from `/ארכיון/encrypted-originals/` back into the year-folder `דוח שנתי` subfolder in OneDrive — itemId stays the same, Airtable stays in sync.
