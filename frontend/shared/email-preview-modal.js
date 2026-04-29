@@ -18,7 +18,7 @@
 (function () {
   'use strict';
 
-  window.showEmailPreviewModal = async function ({ reportId, clientName, getToken, endpoint, extraPayload, actionLabel, onAction }) {
+  window.showEmailPreviewModal = async function ({ reportId, clientName, getToken, endpoint, extraPayload, actionLabel, onAction, selectionList }) {
     // 1) Idempotency: close any pre-existing preview overlay first.
     const existing = document.querySelector('.ai-modal-overlay.email-preview-overlay');
     if (existing) {
@@ -127,6 +127,124 @@
     wrap.appendChild(loading);
 
     body.appendChild(subjectRow);
+
+    // DL-382: optional nested checkbox list for batch password requests
+    let internalSelectedIds = null;
+    if (selectionList && selectionList.items && selectionList.items.length >= 2) {
+      internalSelectedIds = selectionList.items.map(function(i) { return i.id; });
+
+      const fieldset = document.createElement('fieldset');
+      fieldset.style.border = '1px solid var(--border-color, #e5e7eb)';
+      fieldset.style.borderRadius = '6px';
+      fieldset.style.padding = '10px 14px';
+      fieldset.style.margin = '0';
+      fieldset.style.flexShrink = '0';
+      const legend = document.createElement('legend');
+      legend.style.padding = '0 6px';
+      legend.style.fontSize = '13px';
+      legend.style.color = 'var(--text-secondary, #666)';
+      legend.style.fontWeight = '600';
+      legend.textContent = 'קבצים לבקשה:';
+      fieldset.appendChild(legend);
+
+      // Parent "select all" checkbox
+      const parentLabel = document.createElement('label');
+      parentLabel.style.display = 'flex';
+      parentLabel.style.alignItems = 'center';
+      parentLabel.style.gap = '8px';
+      parentLabel.style.padding = '4px 0 8px';
+      parentLabel.style.cursor = 'pointer';
+      parentLabel.style.fontWeight = '600';
+      parentLabel.style.fontSize = '13px';
+      const parentCb = document.createElement('input');
+      parentCb.type = 'checkbox';
+      parentCb.style.width = '16px';
+      parentCb.style.height = '16px';
+      parentCb.style.cursor = 'pointer';
+      parentCb.checked = true;
+      const parentText = document.createTextNode('כל הקבצים'); // כל הקבצים
+      parentLabel.appendChild(parentCb);
+      parentLabel.appendChild(parentText);
+      fieldset.appendChild(parentLabel);
+
+      // Separator
+      const sep = document.createElement('hr');
+      sep.style.border = 'none';
+      sep.style.borderTop = '1px solid var(--border-color, #e5e7eb)';
+      sep.style.margin = '0 0 6px';
+      fieldset.appendChild(sep);
+
+      // Debounce timer for preview re-fetch
+      let debounceTimer = null;
+
+      function updateParentState() {
+        const allCbs = fieldset.querySelectorAll('input[data-file-id]');
+        const checkedCount = Array.from(allCbs).filter(function(c) { return c.checked; }).length;
+        if (checkedCount === 0) {
+          parentCb.checked = false;
+          parentCb.indeterminate = false;
+        } else if (checkedCount === allCbs.length) {
+          parentCb.checked = true;
+          parentCb.indeterminate = false;
+        } else {
+          parentCb.checked = false;
+          parentCb.indeterminate = true;
+        }
+      }
+
+      function onChildChange() {
+        const allCbs = fieldset.querySelectorAll('input[data-file-id]');
+        internalSelectedIds = Array.from(allCbs)
+          .filter(function(c) { return c.checked; })
+          .map(function(c) { return c.getAttribute('data-file-id'); });
+        updateParentState();
+        if (typeof selectionList.onChange === 'function') {
+          selectionList.onChange(internalSelectedIds);
+        }
+        // Debounced preview re-fetch
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(function() { loadPreview(); }, 250);
+      }
+
+      parentCb.addEventListener('change', function() {
+        const allCbs = fieldset.querySelectorAll('input[data-file-id]');
+        allCbs.forEach(function(c) { c.checked = parentCb.checked; });
+        internalSelectedIds = parentCb.checked
+          ? Array.from(allCbs).map(function(c) { return c.getAttribute('data-file-id'); })
+          : [];
+        if (typeof selectionList.onChange === 'function') {
+          selectionList.onChange(internalSelectedIds);
+        }
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(function() { loadPreview(); }, 250);
+      });
+
+      // Child checkboxes
+      selectionList.items.forEach(function(item) {
+        const childLabel = document.createElement('label');
+        childLabel.style.display = 'flex';
+        childLabel.style.alignItems = 'center';
+        childLabel.style.gap = '8px';
+        childLabel.style.padding = '3px 0';
+        childLabel.style.cursor = 'pointer';
+        childLabel.style.fontSize = '13px';
+        const childCb = document.createElement('input');
+        childCb.type = 'checkbox';
+        childCb.setAttribute('data-file-id', item.id);
+        childCb.style.width = '15px';
+        childCb.style.height = '15px';
+        childCb.style.cursor = 'pointer';
+        childCb.checked = item.checked !== false;
+        const childText = document.createTextNode(item.label || item.id);
+        childLabel.appendChild(childCb);
+        childLabel.appendChild(childText);
+        fieldset.appendChild(childLabel);
+        childCb.addEventListener('change', onChildChange);
+      });
+
+      body.appendChild(fieldset);
+    }
+
     body.appendChild(wrap);
 
     // Footer
@@ -264,39 +382,50 @@
     };
     document.addEventListener('keydown', window._emailPreviewKeyHandler);
 
-    // 3) Fetch + render
+    // 3) Fetch + render (named so checkbox changes can trigger a re-fetch)
     function renderError(msg) {
       wrap.innerHTML = `<div class="email-preview-error" style="padding:20px;color:var(--danger-600,#b91c1c)">שגיאה בטעינת התצוגה: ${msg}</div>`;
     }
 
-    try {
-      let resp;
-      if (extraPayload) {
-        resp = await fetch(endpoint, {
-          method: 'POST',
-          headers: { 'Authorization': `Bearer ${getToken()}`, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ report_id: reportId, preview: true, ...extraPayload }),
-        });
-      } else {
-        const sep = endpoint.indexOf('?') === -1 ? '?' : '&';
-        const url = `${endpoint}${sep}report_id=${encodeURIComponent(reportId)}&preview=1`;
-        resp = await fetch(url, {
-          headers: { Authorization: `Bearer ${getToken()}` },
-        });
-      }
-      let data = {};
-      try { data = await resp.json(); } catch (_) { data = {}; }
+    async function loadPreview() {
+      loading.style.display = '';
+      iframe.setAttribute('srcdoc', '');
+      try {
+        let resp;
+        if (extraPayload) {
+          // DL-382: if selectionList is active, override record_ids with current selection
+          const payload = { report_id: reportId, preview: true, ...extraPayload };
+          if (internalSelectedIds !== null) {
+            payload.record_ids = internalSelectedIds;
+          }
+          resp = await fetch(endpoint, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${getToken()}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+          });
+        } else {
+          const sep = endpoint.indexOf('?') === -1 ? '?' : '&';
+          const url = `${endpoint}${sep}report_id=${encodeURIComponent(reportId)}&preview=1`;
+          resp = await fetch(url, {
+            headers: { Authorization: `Bearer ${getToken()}` },
+          });
+        }
+        let data = {};
+        try { data = await resp.json(); } catch (_) { data = {}; }
 
-      if (!resp.ok || !data.ok) {
-        renderError(data.error || resp.status);
-        return;
-      }
+        if (!resp.ok || !data.ok) {
+          renderError(data.error || resp.status);
+          return;
+        }
 
-      subjectSpan.textContent = data.subject || '';
-      iframe.setAttribute('srcdoc', data.html || '');
-      loading.style.display = 'none';
-    } catch (err) {
-      wrap.innerHTML = `<div class="email-preview-error" style="padding:20px;color:var(--danger-600,#b91c1c)">שגיאה בתקשורת עם השרת</div>`;
+        subjectSpan.textContent = data.subject || '';
+        iframe.setAttribute('srcdoc', data.html || '');
+        loading.style.display = 'none';
+      } catch (err) {
+        wrap.innerHTML = `<div class="email-preview-error" style="padding:20px;color:var(--danger-600,#b91c1c)">שגיאה בתקשורת עם השרת</div>`;
+      }
     }
+
+    loadPreview();
   };
 })();

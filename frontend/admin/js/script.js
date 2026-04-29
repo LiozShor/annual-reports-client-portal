@@ -6398,34 +6398,58 @@ function renderOnHoldCard(item) {
     `;
 }
 
-// DL-086: Re-review — restore action buttons on a reviewed card
-// DL-380: Show email preview then POST /request-pdf-password for a password-protected PDF.
+// DL-380/DL-382: Show email preview then POST /request-pdf-password for a password-protected PDF.
+// DL-382: Collects all encrypted siblings for the same client and shows a pre-checked list.
 async function requestPdfPassword(recordId) {
-    const item = (aiClassificationsData || []).find(i => i.id === recordId);
-    if (!item) return;
+    const clicked = (aiClassificationsData || []).find(i => i.id === recordId);
+    if (!clicked) return;
     if (typeof window.showEmailPreviewModal !== 'function') {
         console.error('[DL-380] showEmailPreviewModal not loaded');
         showAIToast('שגיאה בטעינת התצוגה המקדימה', 'danger');
         return;
     }
+
+    // Collect all unsent encrypted PDFs for the same client (DL-382)
+    const ENCRYPTED_RX = /password[_\s]?protected|מוגן.*סיסמה/i;
+    const siblings = (aiClassificationsData || []).filter(i =>
+        i.client_id === clicked.client_id &&
+        i.ai_reason && ENCRYPTED_RX.test(i.ai_reason) &&
+        !i.password_request_sent_at &&
+        i.id !== recordId
+    );
+    // Clicked item first, siblings after
+    const ordered = [clicked, ...siblings];
+    let currentIds = ordered.map(i => i.id);
+
     window.showEmailPreviewModal({
-        recordId,
-        clientName: item.client_name || item.client_id || '',
+        reportId: recordId,
+        clientName: clicked.client_name || clicked.client_id || '',
         endpoint: ENDPOINTS.REQUEST_PDF_PASSWORD,
         getToken: () => authToken,
-        extraPayload: { record_id: recordId },
+        extraPayload: { record_ids: currentIds },
         actionLabel: 'שלח בקשת סיסמה',
         onAction: async () => {
             const res = await fetchWithTimeout(ENDPOINTS.REQUEST_PDF_PASSWORD, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
-                body: JSON.stringify({ record_id: recordId })
+                body: JSON.stringify({ record_ids: currentIds })
             }, FETCH_TIMEOUTS.quick);
             const data = await res.json();
             if (!data.ok) throw new Error(data.error === 'already_sent' ? 'בקשת הסיסמה כבר נשלחה ללקוח' : (data.error || 'שגיאה בשליחה'));
-            item.password_request_sent_at = new Date().toISOString();
-            refreshItemDom(item);
-        }
+            const now = new Date().toISOString();
+            currentIds.forEach(id => {
+                const it = (aiClassificationsData || []).find(i => i.id === id);
+                if (it) { it.password_request_sent_at = now; refreshItemDom(it); }
+            });
+        },
+        selectionList: ordered.length >= 2 ? {
+            items: ordered.map(i => ({
+                id: i.id,
+                label: i.attachment_name || i.expected_filename || 'document.pdf',
+                checked: true
+            })),
+            onChange: function(newIds) { currentIds = newIds; }
+        } : undefined
     });
 }
 

@@ -755,10 +755,10 @@ async function processAttachmentWithClassification(
 
 /**
  * Detect and handle emails that are replies to an encrypted-PDF password
- * request.  Subject must contain a [#PWD-<token>] tag matching a record in
- * pending_classifications.  If matched and the email has no attachments the
- * caller should stop processing; if attachments are present the normal
- * pipeline must also run to pick them up.
+ * request.  Matches [#PWD-token] in subject or body (DL-380/DL-382).
+ * DL-382: looks up by password_request_token field (fan-out to N records).
+ * If matched and the email has no attachments the caller should stop
+ * processing; if attachments are present the normal pipeline must also run.
  */
 async function tryHandlePasswordReply(
   subject: string,
@@ -767,39 +767,32 @@ async function tryHandlePasswordReply(
   emailEventId: string | undefined,
   airtable: AirtableClient,
 ): Promise<{ handled: boolean }> {
-  // 1. Match token — check subject first, then body (token moved to footer in DL-380)
+  // 1. Match token in subject first, then body (token lives in email body footer)
   const tokenMatch = subject.match(/\[#PWD-([A-Za-z0-9]{6,12})\]/i)
     || bodyText.match(/\[#PWD-([A-Za-z0-9]{6,12})\]/i);
   if (!tokenMatch) return { handled: false };
   const token = tokenMatch[1];
 
-  // 2. Look up pending_classifications by record ID containing the token
+  // 2. Look up pending_classifications by password_request_token field (DL-382)
   let records: AirtableRecord[];
   try {
     records = await airtable.listAllRecords(TABLES.PENDING_CLASSIFICATIONS, {
-      filterByFormula: `SEARCH("${token}", RECORD_ID()) > 0`,
+      filterByFormula: `{password_request_token}='${token.replace(/'/g, "\\'")}'`,
     });
   } catch (err) {
-    console.warn('[inbound][DL-380] pending_classifications lookup failed:', (err as Error).message);
+    console.warn('[inbound][DL-382] pending_classifications lookup failed:', (err as Error).message);
     return { handled: false };
   }
 
   if (records.length === 0) {
-    console.warn(`[inbound][DL-380] No pending_classifications record found for token ${token}`);
+    console.warn(`[inbound][DL-382] No pending_classifications record found for token ${token}`);
     return { handled: false };
   }
-  if (records.length > 1) {
-    console.warn(`[inbound][DL-380] Ambiguous token ${token}: ${records.length} records matched`);
-    return { handled: false };
-  }
-
-  const classRecord = records[0];
 
   // 3. Extract password candidate from body text
   const truncated = bodyText.substring(0, 1000);
   const stripped = truncated.replace(/<[^>]+>/g, '');
   const lines = stripped.split('\n');
-  // Remove quoted lines
   const cleanLines = lines
     .map((l) => l.trim())
     .filter(
@@ -811,50 +804,48 @@ async function tryHandlePasswordReply(
     );
 
   const hebrewRe = /[א-ת]/;
-  // Prefer: ≤32 chars, no Hebrew, no spaces
   let suggestedPassword =
     cleanLines.find((l) => l.length <= 32 && !hebrewRe.test(l) && !l.includes(' ')) ?? '';
-  // Fallback: first non-empty line ≤32 chars
   if (!suggestedPassword) {
     suggestedPassword = cleanLines.find((l) => l.length <= 32) ?? '';
   }
 
-  // 4. Truncate for safety
   suggestedPassword = suggestedPassword.substring(0, 64);
   const passwordReplyRaw = truncated.substring(0, 1000);
 
-  // 5. Update pending_classifications record
-  try {
-    await airtable.updateRecord(TABLES.PENDING_CLASSIFICATIONS, classRecord.id, {
-      suggested_password: suggestedPassword,
-      password_reply_raw: passwordReplyRaw,
-    });
-  } catch (err) {
-    console.warn('[inbound][DL-380] Failed to update pending_classifications:', (err as Error).message);
-    // swallow — still treat as handled so normal pipeline doesn't mis-classify the reply
-  }
+  // 4. Fan out: write suggested_password + raw reply to ALL matched records
+  await Promise.allSettled(
+    records.map(r =>
+      airtable.updateRecord(TABLES.PENDING_CLASSIFICATIONS, r.id, {
+        suggested_password: suggestedPassword,
+        password_reply_raw: passwordReplyRaw,
+      }).catch(err => {
+        console.warn(`[inbound][DL-382] Failed to update record ${r.id}:`, (err as Error).message);
+      }),
+    ),
+  );
 
-  // 6. Update email_events processing_status
+  // 5. Update email_events processing_status
   if (emailEventId) {
     try {
       await airtable.updateRecord(TABLES.EMAIL_EVENTS, emailEventId, {
         processing_status: 'PasswordReply',
       });
     } catch (err) {
-      console.warn('[inbound][DL-380] Failed to update email_events status:', (err as Error).message);
+      console.warn('[inbound][DL-382] Failed to update email_events status:', (err as Error).message);
     }
   }
 
-  // 7. Log activity event
+  // 6. Log activity event
   logEvent({
     event_type: 'pdf_password_reply_received',
     category: 'INBOUND',
-    details: { token, classRecordId: classRecord.id, hasAttachments },
+    details: { token, recordIds: records.map(r => r.id), count: records.length, hasAttachments },
   });
 
-  console.log(`[inbound][DL-380] Password reply handled for token ${token}, record ${classRecord.id}`);
+  console.log(`[inbound][DL-382] Password reply handled for token ${token}, ${records.length} record(s) updated`);
 
-  // 8. If email also has attachments, let the normal pipeline process them
+  // If email also has attachments, let the normal pipeline process them
   if (hasAttachments) {
     return { handled: false };
   }
