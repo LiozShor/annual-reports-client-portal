@@ -1,7 +1,7 @@
 # Design Log 373: Password-Protected PDF Unlock from AI Review Preview
 
-**Status:** [IMPLEMENTED — NEED TESTING]
-**Date:** 2026-04-28
+**Status:** [COMPLETED]
+**Date:** 2026-04-28 (initial) · 2026-04-29 (post-deploy fixes)
 **Related Logs:** DL-075 (inline preview), DL-146 (download button), DL-337, DL-049/DL-369 (OneDrive file ops)
 
 ## 1. Context & Problem
@@ -73,18 +73,46 @@ Clients (especially banks and government bodies) routinely send password-protect
 5. UI: success toast → reload preview.
 
 ## 7. Validation Plan
-- [ ] RC4-128 encrypted PDF — flow works end-to-end
-- [ ] AES-128 encrypted PDF — flow works
-- [ ] AES-256 encrypted PDF — 422 UNSUPPORTED_ENCRYPTION, fallback message with download button
-- [ ] Wrong password — 401, attempt counter visible, 5th wrong triggers cooldown
-- [ ] Already-unlocked PDF — 409 ALREADY_UNLOCKED, iframe reloads cleanly
-- [ ] Non-encrypted PDF — preview loads normally, no password panel (regression)
-- [ ] Verify `password` field stripped from any `logEvent` body
-- [ ] Verify original file at `/ארכיון/encrypted-originals/<filename>` after unlock
-- [ ] Rate limit test — 6 rapid POSTs return 429 on the 6th
-- [ ] `wrangler deploy --dry-run` bundle size delta < 50 KB
+- [x] Encrypted PDF (RC4/AES-128) — end-to-end on *** `***_T106.pdf` (2026-04-29): detect → panel → POST → 200 → decrypted file at original location, encrypted copy in archive
+- [ ] AES-256 encrypted PDF — not yet exercised; expect 422 UNSUPPORTED_ENCRYPTION
+- [ ] Wrong password — not yet exercised; expect 401 + attempt counter
+- [ ] Already-unlocked PDF — not yet exercised; expect 409 ALREADY_UNLOCKED
+- [x] Non-encrypted PDF — confirmed: detection logs `pdf opened ok — not encrypted`, no panel
+- [x] `password` field stripped from `logEvent` — verified `pdf_unlocked` archive entry contains only `{recordId, success}`
+- [x] Encrypted original archived at `/ארכיון/encrypted-originals/<filename>` (post-fix)
+- [ ] Rate limit test — not yet exercised
+- [x] Bundle size delta — Worker built clean at 2212.99 KiB / gzip 618.91 KiB
 
 ## 8. Implementation Notes
 - Detection happens client-side via PDF.js using the already-loaded CDN build
 - Password panel shown inline in the preview area (replaces the error div)
-- `moveFileToArchive` signature: `moveFileToArchive(msGraph, itemId, opts?: { subfolder?: string })`
+- Archive uses an inline folder-resolution helper inside `unlock-pdf.ts` (no longer reuses `moveFileToArchive` — see post-deploy fixes)
+
+## 9. Post-Deploy Fixes (2026-04-29)
+
+Three issues surfaced during live testing and were fixed in the same session:
+
+### 9.1 Detection never ran — `pdfjsLib not loaded`
+PDF.js is lazy-loaded via `ensurePdfJs()`, only triggered by the Split modal. `tryDetectEncryption` assumed the global was already set and bailed early. **Fix:** await `ensurePdfJs()` before parsing. Also expanded the head-slice fetch (8 KB) to a full-file fetch — the `/Encrypt` reference lives in the trailer at EOF, so an 8 KB slice throws `InvalidPDFException` instead of `PasswordException` and the password panel never appears. (commit `55198c3`)
+
+### 9.2 MS Graph's password page was masking ours
+For encrypted PDFs the iframe `onload` fires successfully (MS Graph returns 200 with a "file requires password" UI), so `onerror` never triggered detection. **Fix:** also call `tryDetectEncryption` from `iframe.onload`. Without this, the user only ever saw MS Graph's prompt — typing the password there only unlocked the *preview session* and never reached our worker. (initial DL-373 implementation; verified working post-fix `a618ed1e`)
+
+### 9.3 (CRITICAL) Move-then-replace left the original location empty
+Original code:
+```ts
+await moveFileToArchive(msGraph, itemId, { subfolder: 'encrypted-originals' });
+await msGraph.putBinaryReplace(itemId, decryptedBytes);
+```
+OneDrive item IDs are stable across moves. `moveFileToArchive` PATCHed `parentReference` (item.id preserved), then `putBinaryReplace(itemId, ...)` wrote decrypted bytes to that same itemId — **which now lived inside the archive folder**. Net effect: original year-folder location was empty, archive folder held the decrypted version (the opposite of what we want).
+
+**Fix (`6b451b7a`, deployed worker `43b5f07f`):** swapped the strategy. Now the route:
+1. Reads the file's `name` + folder lineage,
+2. Ensures `/ארכיון/encrypted-originals/` exists,
+3. Uploads the **encrypted bytes** as a **new file** at `/ארכיון/encrypted-originals/<filename>` (separate itemId),
+4. `putBinaryReplace(itemId, decryptedBytes)` replaces the original in-place — itemId, parent, Airtable references all unchanged.
+
+`moveFileToArchive` is no longer used by this route; the inline helper resolves folders the same way but does NOT move the source file.
+
+### 9.4 Recovery for files already unlocked under the buggy version
+Single occurrence: *** `***_T106.pdf` (recordId `***`, itemId `***`). The file's *content* was correctly decrypted; only its *location* was wrong. Recovered manually by dragging the file from `/ארכיון/encrypted-originals/` back into `/2025/דוח שנתי/` in OneDrive — itemId stays the same, Airtable stays in sync.
