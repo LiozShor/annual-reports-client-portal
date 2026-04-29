@@ -28,8 +28,13 @@ Write `.agent/insights-audits/YYYY-MM.md` (where YYYY-MM matches the issue's tag
    - Refers to a workflow ID / DL number that has been superseded.
    - Duplicates a now-codified rule in CLAUDE.md.
    List files to remove (do NOT remove them in this run — list and let the user approve).
-5. **One concrete proposal for next month.** Single highest-leverage gap. Include: design paragraph, files to modify, rollback, success metric.
-6. **Tracking signals delta.** Numeric: red-CI-runs, friction-commit count, new-memory-files count, etc., to feed the next month's audit.
+5. **Self-improvement signals.** Read Tier 1+2 telemetry surfaces and report:
+   - **Regression pass-rate trend** — count rows in `.claude/regressions/cases.md`; if `.claude/telemetry/regressions.ndjson` exists, report pass/fail/skip ratios for the audit window. If the run-history file does not yet exist, report `n/a` — do NOT invent numbers.
+   - **Top 5 rules that fired** — `grep -l <memory-basename>` against last-30d session transcripts in `C:/Users/liozm/.claude/projects/C--Users-liozm-Desktop-moshe-annual-reports/*.jsonl`; rank by hit count.
+   - **Top 5 rules never referenced in 30d** — inverse of above; decay candidates. If a `/consolidate-memory` audit exists for this window under `.agent/insights-audits/memory-consolidation-*.md`, cross-link it.
+   - **Retry-trap fire count** — `grep -c '\[retry-trap\]' ~/.claude/telemetry/bash-log.ndjson` filtered by audit window.
+6. **One concrete proposal for next month.** Single highest-leverage gap. Include: design paragraph, files to modify, rollback, success metric.
+7. **Tracking signals delta.** Numeric: red-CI-runs, friction-commit count, new-memory-files count, etc., to feed the next month's audit.
 
 ## Format anchor
 

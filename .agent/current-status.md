@@ -1,6 +1,6 @@
 # Annual Reports CRM - Current Status
 
-**Last Updated:** 2026-04-29 (Self-Improvement Infra Tiers 1+2 SHIPPED — Tier 1: regression scaffold (12 cases), MEMORY.md size guard, retry-detector hook, telemetry gitignore. Tier 2: memory timestamps backfilled (46 files), `.claude/workflows/` (deploy-worker.sh, merge-and-push.sh, close-design-log.sh), Stop-hook session telemetry, design-log skill wired to close-design-log.sh. Plan: `~/.claude/plans/snoopy-conjuring-blossom.md`. **TODO: Tier 3 still pending** — `/consolidate-memory` skill + `/monthly-insights` self-improvement section.)
+**Last Updated:** 2026-04-29 (Self-Improvement Infra Tiers 1+2 SHIPPED — Tier 1: regression scaffold (12 cases), MEMORY.md size guard, retry-detector hook, telemetry gitignore. Tier 2: memory timestamps backfilled (46 files), `.claude/workflows/` (deploy-worker.sh, merge-and-push.sh, close-design-log.sh), Stop-hook session telemetry, design-log skill wired to close-design-log.sh. Plan: `~/.claude/plans/snoopy-conjuring-blossom.md`. Tier 3 SHIPPED — `/consolidate-memory` skill at `.agent/skills/consolidate-memory/SKILL.md`, monthly-insights extended with self-improvement signals section.)
 **Last Updated:** 2026-04-29 (DL-379 COMPLETED — encrypted-PDF lock indicator on AI Review cards live.)
 **Last Updated:** 2026-04-29 (DL-377 COMPLETED — layered PII/secret defense: harness deny rules, CI pii-guard.yml + secret-scan.yml, pre-commit hook chain. Optional follow-up: enable GitHub branch-protection required status checks for pii-guard.yml.)
 **Last Updated:** 2026-04-29 (DL-376 COMPLETED — OneDrive approve-rename uses issuer_name before matched_doc_name. Orphan backfill rename: TODO below.)
@@ -52,10 +52,10 @@ Still need to set Worker secrets: `DEV_PASSWORD`, `PII_HASH_KEY` (`wrangler secr
 
 ---
 
-## OPEN: Self-Improvement Tier 3
+## SHIPPED: Self-Improvement Tier 3 (2026-04-29)
 
-- [ ] `/consolidate-memory` skill — reads all memory files, surfaces duplicates/contradictions/stale (>90d unused), outputs proposal to `.agent/insights-audits/memory-consolidation-YYYY-MM-DD.md`.
-- [ ] `/monthly-insights` self-improvement section — regression pass-rate trend, top 5 rules that fired, top 5 rules never referenced in 30d, retry-trap fire count.
+- [x] `/consolidate-memory` skill — reads all memory files, surfaces duplicates/contradictions/stale (>90d unused), outputs proposal to `.agent/insights-audits/memory-consolidation-YYYY-MM-DD.md`.
+- [x] `/monthly-insights` self-improvement section — regression pass-rate trend, top 5 rules that fired, top 5 rules never referenced in 30d, retry-trap fire count.
 
 Plan: `~/.claude/plans/snoopy-conjuring-blossom.md`
 
