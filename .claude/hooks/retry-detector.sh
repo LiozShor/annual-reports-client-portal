@@ -17,6 +17,11 @@ log_dir="$repo/.claude/telemetry"
 log_file="$log_dir/bash-log.ndjson"
 mkdir -p "$log_dir" 2>/dev/null || exit 0
 
+# Truncate cmd before escaping: retry detection only needs the prefix,
+# and the char-by-char loop is O(n) — capping at 400 chars keeps it fast
+# even for multi-line scripts that Claude Code sometimes emits (5000+ chars = ~1s).
+cmd="${cmd:0:400}"
+
 # Escape command for JSON: use printf to iterate char by char
 # (simpler than sed/awk and avoids shell escaping issues on MSYS)
 esc_cmd=""
@@ -30,7 +35,7 @@ while [ $i -lt ${#cmd} ]; do
     esac
     i=$((i + 1))
 done
-# Remove control chars
+# Remove control chars (incl. embedded newlines — keeps JSON on one line)
 esc_cmd=$(printf '%s\n' "$esc_cmd" | tr -d '\000-\037')
 
 # Append NDJSON entry
