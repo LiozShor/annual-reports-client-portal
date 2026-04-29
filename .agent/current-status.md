@@ -38,6 +38,11 @@ bash scripts/deploy-pages.sh "manual deploy"
 - [ ] CF API `source.config.repo_id` == `1222817442` after fix.
 
 Design log: `.agent/design-logs/infrastructure/368-cf-pages-git-integration-broken.md`
+
+## TODO: doc-manager open-file anchor has same staleness bug (follow-up to DL-374)
+
+`frontend/assets/js/document-manager.js:1149` builds the doc-manager "open file" anchor from raw `doc.file_url` — same Hebrew SharePoint path that 404s after OneDrive renames/moves. DL-374 only fixed the AI-review surface. Open a follow-up DL to route doc-manager's view (and the download anchor at lines ~284-289) through `getDocPreviewUrl` (itemId-based) so the same DL-356 self-heal + freshness applies. `doc.onedrive_item_id` is already on the row (per DL-051 §4 and `document-manager.js:3173`).
+
 ## DL-374: AI-review open-in-new-tab via itemId webUrl — IMPLEMENTED, NEED TESTING (2026-04-29)
 
 User reported the "פתח בלשונית" link on a CPA-728 pending classification 404'd because Airtable `file_url` was a stale Hebrew SharePoint path (file moved/renamed in OneDrive). Closed the gap left by DL-051 / DL-356 — inline preview already used itemId resolution, this anchor was the last surface still on the legacy URL.
