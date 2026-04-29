@@ -596,9 +596,10 @@ function loadMobileDocPreview(recordId) {
 
     // Set header info
     fileName.textContent = item.attachment_name || 'מסמך';
-    // DL-374: hide until webUrl arrives from /webhook/get-preview-url (see desktop counterpart).
-    openTab.href = '#';
-    openTab.style.display = 'none';
+    // DL-374: synchronous fallback so the button is visible immediately;
+    // upgraded to fresh webUrl when /webhook/get-preview-url resolves.
+    openTab.href = item.file_url || '#';
+    openTab.style.display = item.file_url ? '' : 'none';
 
     // Update navigation counter & arrow states
     updateMobilePreviewNav();
@@ -3813,11 +3814,12 @@ async function loadDocPreview(recordId) {
 
     // Update header
     fileName.textContent = item.attachment_name || 'מסמך';
-    // DL-374: hide open-tab button while preview fetch resolves; webUrl from
-    // /webhook/get-preview-url is the persistent OneDrive viewing URL (survives
-    // renames/moves). The legacy item.file_url 404s when staff renames in OneDrive.
-    openTab.href = '#';
-    openTab.style.display = 'none';
+    // DL-374: synchronous fallback to legacy file_url so the open-tab button
+    // is visible immediately. If the Worker returns a fresh webUrl below, we
+    // upgrade in place — solving the rename/move staleness without ever hiding
+    // the button mid-load.
+    openTab.href = item.file_url || '#';
+    openTab.style.display = item.file_url ? '' : 'none';
     header.style.display = '';
     applyPreviewReviewState(item.review_status || null);
 
