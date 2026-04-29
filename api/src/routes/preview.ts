@@ -59,7 +59,7 @@ const previewHandler = async (c: any) => {
   try {
     const [previewResponse, itemResponse] = await Promise.all([
       msGraph.post(`/me/drive/items/${itemId}/preview`, { viewer: 'onedrive', zoom: 0.75 }),
-      msGraph.get(`/me/drive/items/${itemId}?$select=@microsoft.graph.downloadUrl`),
+      msGraph.get(`/me/drive/items/${itemId}?$select=@microsoft.graph.downloadUrl,webUrl`),
     ]);
     const rawGetUrl: string = previewResponse?.getUrl ?? '';
     // DL-341: append &nb=true to hide the Microsoft banner in the embedded viewer
@@ -67,11 +67,14 @@ const previewHandler = async (c: any) => {
       ? `${rawGetUrl}${rawGetUrl.includes('?') ? '&' : '?'}nb=true`
       : '';
     const downloadUrl: string = itemResponse?.['@microsoft.graph.downloadUrl'] ?? '';
+    // DL-374: webUrl is the persistent OneDrive viewing URL — survives renames/moves.
+    // Used by AI-review "open in new tab" button instead of the stale Airtable file_url.
+    const webUrl: string = itemResponse?.webUrl ?? '';
     const totalMs = Date.now() - t0;
     const logFn = totalMs > 2000 ? console.warn : console.log;
     logFn('[get-preview-url] DONE', { itemId, total_ms: totalMs });
 
-    return c.json({ ok: true, previewUrl, downloadUrl });
+    return c.json({ ok: true, previewUrl, downloadUrl, webUrl });
   } catch (err: any) {
     const totalMs = Date.now() - t0;
     const message = err?.message ?? 'MS Graph request failed';
