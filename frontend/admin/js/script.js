@@ -3883,14 +3883,15 @@ async function tryDetectEncryption(downloadUrl, recordId, itemId) {
     console.log('[dl373:detect] start', { recordId, itemId, hasUrl: !!downloadUrl });
     if (!downloadUrl) return;
     try {
-        const resp = await fetch(downloadUrl, { headers: { Range: 'bytes=0-8191' } });
+        try { await ensurePdfJs(); } catch (e) { console.warn('[dl373:detect] ensurePdfJs failed', e); return; }
+        if (typeof pdfjsLib === 'undefined') { console.warn('[dl373:detect] pdfjsLib not loaded'); return; }
+        const resp = await fetch(downloadUrl);
         console.log('[dl373:detect] fetch done', { status: resp.status, ok: resp.ok });
         if (!resp.ok) return;
-        const chunk = await resp.arrayBuffer();
-        console.log('[dl373:detect] got bytes', chunk.byteLength);
-        if (typeof pdfjsLib === 'undefined') { console.warn('[dl373:detect] pdfjsLib not loaded'); return; }
+        const bytes = await resp.arrayBuffer();
+        console.log('[dl373:detect] got bytes', bytes.byteLength);
         try {
-            await pdfjsLib.getDocument({ data: chunk, password: '' }).promise;
+            await pdfjsLib.getDocument({ data: bytes, password: '' }).promise;
             console.log('[dl373:detect] pdf opened ok — not encrypted');
         } catch (pdfErr) {
             console.log('[dl373:detect] pdf error', pdfErr?.name, pdfErr?.message);
