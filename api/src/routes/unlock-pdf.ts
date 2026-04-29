@@ -14,7 +14,6 @@ import { tryDecryptPDF } from '../lib/pdf-decrypt-helper';
 import { logError } from '../lib/error-logger';
 import { logEvent } from '../lib/activity-logger';
 import { DRIVE_ID } from '../lib/classification-helpers';
-import { moveFileToArchive } from './classifications';
 import type { Env } from '../lib/types';
 
 const unlockPdf = new Hono<{ Bindings: Env }>();
@@ -83,10 +82,55 @@ unlockPdf.post('/unlock-pdf', async (c) => {
       return c.json({ ok: false, error: 'DECRYPT_FAILED', message: decryptResult.message }, 500);
     }
 
-    // Archive encrypted original first — abort if archive fails
-    await moveFileToArchive(msGraph, itemId, { subfolder: 'encrypted-originals' });
+    // Archive a COPY of the encrypted original to /ארכיון/encrypted-originals/<filename>
+    // (DO NOT move — moving would change the file's location while keeping its itemId,
+    //  and the subsequent putBinaryReplace would write to the moved file, leaving
+    //  the original year-folder location empty.)
+    try {
+      const fileInfo = await msGraph.get(`/drives/${DRIVE_ID}/items/${itemId}?$select=id,name,parentReference`);
+      const filename: string = fileInfo?.name ?? `unlock-${itemId}.pdf`;
+      const filingFolderId: string | undefined = fileInfo?.parentReference?.id;
+      if (filingFolderId) {
+        const filingFolderInfo = await msGraph.get(`/drives/${DRIVE_ID}/items/${filingFolderId}?$select=id,parentReference`);
+        const yearFolderId: string = filingFolderInfo?.parentReference?.id || filingFolderId;
 
-    // Replace with unlocked bytes at original path
+        const ensureChildFolder = async (parentId: string, name: string): Promise<string | null> => {
+          try {
+            const created = await msGraph.post(`/drives/${DRIVE_ID}/items/${parentId}/children`, {
+              name, folder: {}, '@microsoft.graph.conflictBehavior': 'fail',
+            });
+            return created?.id ?? null;
+          } catch {
+            try {
+              const existing = await msGraph.get(`/drives/${DRIVE_ID}/items/${parentId}:/${encodeURIComponent(name)}:`);
+              return existing?.id ?? null;
+            } catch (e) {
+              console.error('[unlock-pdf] ensureChildFolder failed:', name, (e as Error).message);
+              return null;
+            }
+          }
+        };
+
+        const archiveRootId = await ensureChildFolder(yearFolderId, 'ארכיון');
+        const archiveTargetId = archiveRootId
+          ? (await ensureChildFolder(archiveRootId, 'encrypted-originals')) ?? archiveRootId
+          : null;
+
+        if (archiveTargetId) {
+          await msGraph.putBinary(
+            `/drives/${DRIVE_ID}/items/${archiveTargetId}:/${encodeURIComponent(filename)}:/content?@microsoft.graph.conflictBehavior=rename`,
+            encryptedBytes,
+          );
+        } else {
+          console.error('[unlock-pdf] archive folder unresolved — proceeding without archive copy');
+        }
+      }
+    } catch (archiveErr) {
+      // Archive copy is best-effort — never block the unlock on it.
+      console.error('[unlock-pdf] archive copy failed:', (archiveErr as Error).message);
+    }
+
+    // Replace original file in-place with decrypted bytes (itemId + parent unchanged)
     await msGraph.putBinaryReplace(itemId, decryptResult.bytes);
 
     // Clear rate limit on success
