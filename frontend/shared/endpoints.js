@@ -49,7 +49,7 @@ const ENDPOINTS = {
     UPLOAD_DOCUMENT:           `${CF_BASE}/upload-document`,
     APPROVE_AND_SEND:          `${CF_BASE}/approve-and-send`,
     GET_PREVIEW_URL:           `${CF_BASE}/get-preview-url`,
-    REQUEST_PDF_PASSWORD:      `${CF_BASE}/webhook/request-pdf-password`, // DL-380
+    REQUEST_PDF_PASSWORD:      `${CF_BASE}/request-pdf-password`, // DL-380
 
     // --- Classification (migrated to Cloudflare Workers — DL-173) ---
     GET_PENDING_CLASSIFICATIONS: `${CF_BASE}/get-pending-classifications`,
