@@ -3844,10 +3844,12 @@ async function loadDocPreview(recordId) {
                 console.log(`[dl334:preview:iframeOnload] ${loadMs}ms · total=${totalMs}ms · id=${_perfId}`);
                 try { performance.measure(`dl334:preview:iframeOnload:${_perfId}`, { start: _perfUrlFetched, duration: loadMs }); } catch (e) {}
             }
+            console.log('[dl373:onload] gate', { hasDownloadUrl: !!downloadUrl, downloadUrlPrefix: downloadUrl ? String(downloadUrl).slice(0, 60) : null });
             if (downloadUrl) tryDetectEncryption(downloadUrl, recordId, item.onedrive_item_id);
         };
         iframe.onerror = () => {
             if (activePreviewItemId !== recordId) return;
+            console.log('[dl373:onerror] gate', { hasDownloadUrl: !!downloadUrl });
             if (downloadUrl) tryDetectEncryption(downloadUrl, recordId, item.onedrive_item_id);
         };
         iframe.src = previewUrl;
