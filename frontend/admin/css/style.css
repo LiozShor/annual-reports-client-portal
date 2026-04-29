@@ -2529,8 +2529,8 @@ tr:hover .client-view-link {
     flex-shrink: 0;
     white-space: nowrap;
 }
-.ai-review-done-primary:hover { background: var(--success-600); }
-.ai-review-done-primary:active { background: var(--success-700); }
+.ai-review-done-primary:hover { background: var(--success-600, #059669); }
+.ai-review-done-primary:active { background: var(--success-700, #047857); }
 .ai-review-done-primary:focus-visible {
     outline: 2px solid var(--success-700);
     outline-offset: 2px;
