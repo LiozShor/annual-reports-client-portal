@@ -21,7 +21,7 @@ auth.post('/admin-auth', async (c) => {
 
   // Verify password
   if (password !== c.env.ADMIN_PASSWORD) {
-    logSecurity(c.executionCtx, airtable, {
+    logSecurity(c.executionCtx, c.env, airtable, {
       timestamp: new Date().toISOString(),
       event_type: 'AUTH_FAIL',
       severity: 'WARNING',
@@ -38,7 +38,7 @@ auth.post('/admin-auth', async (c) => {
   // Generate token (8-hour expiry)
   const token = await generateAdminToken(c.env.SECRET_KEY);
 
-  logSecurity(c.executionCtx, airtable, {
+  logSecurity(c.executionCtx, c.env, airtable, {
     timestamp: new Date().toISOString(),
     event_type: 'AUTH_SUCCESS',
     severity: 'INFO',
@@ -67,7 +67,7 @@ auth.get('/admin-verify', async (c) => {
   if (!result.valid) {
     const eventType = result.reason === 'TOKEN_EXPIRED' ? 'TOKEN_EXPIRED' : 'TOKEN_INVALID';
 
-    logSecurity(c.executionCtx, airtable, {
+    logSecurity(c.executionCtx, c.env, airtable, {
       timestamp: new Date().toISOString(),
       event_type: eventType,
       severity: 'WARNING',

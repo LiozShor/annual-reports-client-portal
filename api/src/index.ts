@@ -47,6 +47,14 @@ app.use('*', async (c, next) => {
   return middleware(c, next);
 });
 
+// DL-365 Phase 2: thread a request_id through every request so chained activity
+// events (auth → business action → outbound email) correlate in CF Logs.
+app.use('*', async (c, next) => {
+  const incoming = c.req.header('x-request-id');
+  c.set('request_id' as never, (incoming && incoming.length <= 64 ? incoming : crypto.randomUUID()));
+  await next();
+});
+
 // Mount routes under /webhook
 app.route('/webhook', auth);
 app.route('/webhook', dashboard);

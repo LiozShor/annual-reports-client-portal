@@ -12,6 +12,10 @@ cpu_ms = 300000       # 5 min CPU — needed for multi-attachment AI classificat
 ALLOWED_ORIGIN = "https://docs.moshe-atsits.com,http://docs.moshe-atsits.com"
 AIRTABLE_BASE_ID = "appqBL5RWQN9cPOyh"
 ALERT_EMAIL = "liozshor1@gmail.com"
+# DL-365 Phase 2: dual-write security_logs to Airtable + activity-logger console.
+# Flip to "false" after the 2-week dual-write window to make activity-logger the
+# sole sink. Default kept truthy here to preserve current behavior.
+LEGACY_LOG_TO_AIRTABLE = "true"
 
 # Secrets (set via `wrangler secret put`):
 # - ADMIN_PASSWORD

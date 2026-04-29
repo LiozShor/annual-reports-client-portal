@@ -30,7 +30,7 @@ adminAssistedLink.post('/admin-assisted-link', async (c) => {
 
     const tokenResult = await verifyToken(adminToken, c.env.SECRET_KEY);
     if (!tokenResult.valid) {
-      logSecurity(c.executionCtx, airtable, {
+      logSecurity(c.executionCtx, c.env, airtable, {
         timestamp: new Date().toISOString(),
         event_type: tokenResult.reason === 'TOKEN_EXPIRED' ? 'TOKEN_EXPIRED' : 'TOKEN_INVALID',
         severity: 'WARNING',
@@ -74,7 +74,7 @@ adminAssistedLink.post('/admin-assisted-link', async (c) => {
     );
     const url = `${FRONTEND_BASE}/?report_id=${encodeURIComponent(reportId)}&token=${encodeURIComponent(clientToken)}&assisted=1`;
 
-    logSecurity(c.executionCtx, airtable, {
+    logSecurity(c.executionCtx, c.env, airtable, {
       timestamp: new Date().toISOString(),
       event_type: 'ADMIN_ASSISTED_OPEN',
       severity: 'INFO',

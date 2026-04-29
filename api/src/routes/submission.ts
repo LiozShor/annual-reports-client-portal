@@ -58,7 +58,7 @@ submission.get('/check-existing-submission', async (c) => {
 
   if (!tokenResult.valid) {
     const clientIp = getClientIp(c.req.raw.headers);
-    logSecurity(c.executionCtx, airtable, {
+    logSecurity(c.executionCtx, c.env, airtable, {
       timestamp: new Date().toISOString(),
       event_type: tokenResult.reason === 'TOKEN_EXPIRED' ? 'TOKEN_EXPIRED' : 'TOKEN_INVALID',
       severity: 'WARNING',

@@ -8,6 +8,7 @@ import { getCachedOrFetch, invalidateCache } from '../lib/cache';
 import { calcReminderNextDate } from '../lib/reminders';
 import { buildClientEmailHtml, buildClientEmailSubject } from '../lib/email-html';
 import { logError } from '../lib/error-logger';
+import { logEvent } from '../lib/activity-logger';
 import { isOffHours, getNext0800Israel } from '../lib/israel-time';
 import { checkAutoAdvanceToReview } from '../lib/auto-advance';
 import type { Env } from '../lib/types';
@@ -63,7 +64,7 @@ approveAndSend.get('/approve-and-send', async (c) => {
     if (authHeader.startsWith('Bearer ')) {
       const tokenResult = await verifyToken(authHeader.slice(7), c.env.SECRET_KEY);
       if (!tokenResult.valid) {
-        logSecurity(c.executionCtx, airtable, {
+        logSecurity(c.executionCtx, c.env, airtable, {
           timestamp: new Date().toISOString(),
           event_type: tokenResult.reason === 'TOKEN_EXPIRED' ? 'TOKEN_EXPIRED' : 'TOKEN_INVALID',
           severity: 'WARNING',
@@ -83,7 +84,7 @@ approveAndSend.get('/approve-and-send', async (c) => {
       }
       const expected = generateApprovalToken(reportId, c.env.APPROVAL_SECRET);
       if (hashToken !== expected) {
-        logSecurity(c.executionCtx, airtable, {
+        logSecurity(c.executionCtx, c.env, airtable, {
           timestamp: new Date().toISOString(),
           event_type: 'TOKEN_INVALID',
           severity: 'WARNING',
@@ -249,6 +250,24 @@ approveAndSend.get('/approve-and-send', async (c) => {
 
     // DL-254: Invalidate documents cache after approve changes doc statuses
     invalidateCache(c.env.CACHE_KV, 'cache:documents_non_waived_v2');
+
+    // DL-365 Phase 2: batch-send success event.
+    logEvent({
+      event_type: 'batch_send',
+      category: 'EMAIL',
+      source: 'admin-ui',
+      request_id: c.get('request_id' as never) as string | undefined,
+      actor: 'admin',
+      actor_ip: getClientIp(c.req.raw.headers),
+      client_id: first(report.fields.client_id) || undefined,
+      endpoint: '/webhook/approve-and-send',
+      details: {
+        report_id: reportId,
+        doc_count: documents.length,
+        deferred: offHours,
+        target_stage: targetStage,
+      },
+    });
 
     // Step 7: Respond
     if (offHours) {

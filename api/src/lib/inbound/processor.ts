@@ -10,6 +10,7 @@ import { MSGraphClient } from '../ms-graph';
 import { AirtableClient, type AirtableRecord } from '../airtable';
 import { logError } from '../error-logger';
 import { logSecurity } from '../security-log';
+import { logEvent } from '../activity-logger';
 import {
   type ProcessingContext,
   type EmailMetadata,
@@ -308,7 +309,7 @@ async function summarizeAndSaveNote(
 ): Promise<void> {
   const msgId = metadata.internetMessageId || '';
   const logSkip = (reason: 'dedup' | 'body_too_short' | 'llm_skip') => {
-    logSecurity(pCtx.ctx, pCtx.airtable, {
+    logSecurity(pCtx.ctx, pCtx.env, pCtx.airtable, {
       timestamp: new Date().toISOString(),
       event_type: 'INBOUND_NOTE_SKIPPED',
       severity: 'INFO',
@@ -441,6 +442,16 @@ Rules:
 
     await pCtx.airtable.updateRecord(TABLES.REPORTS, report.reportRecordId, {
       client_notes: JSON.stringify(notes),
+    });
+
+    // DL-365 Phase 2: success-path activity event for the inbound note pipeline.
+    logEvent({
+      event_type: 'inbound_note_saved',
+      category: 'INBOUND',
+      source: 'worker',
+      client_id: clientId,
+      endpoint: '/inbound/note-save',
+      details: { message_id: msgId, report_id: report.reportRecordId, note_count: notes.length },
     });
   } catch (err) {
     console.error('[inbound] summarizeAndSaveNote failed:', (err as Error).message);
@@ -720,6 +731,22 @@ async function processAttachmentWithClassification(
       },
     );
   }
+
+  // DL-365 Phase 2: classification + OneDrive upload success event.
+  logEvent({
+    event_type: 'attachment_classified',
+    category: 'AI',
+    source: 'worker',
+    client_id: clientMatch.clientId,
+    endpoint: '/inbound/process-attachment',
+    details: {
+      template_id: classification?.templateId ?? null,
+      confidence: classification?.confidence ?? null,
+      matched: Boolean(classification?.matchedDocRecordId),
+      duplicate: isDuplicate,
+      report_id: report.reportRecordId,
+    },
+  });
 }
 
 // ---------------------------------------------------------------------------

@@ -42,6 +42,8 @@ export interface Env {
 
   // Feature flags
   USE_QUEUE?: string;
+  /** DL-365 Phase 2: when 'false', skip Airtable security_logs dual-write. Default: dual-write enabled. */
+  LEGACY_LOG_TO_AIRTABLE?: string;
 }
 
 // Message shape for the inbound email queue. Mirrors InboundEmailRequest

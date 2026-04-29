@@ -9,6 +9,7 @@ import { AirtableClient } from '../lib/airtable';
 import { MSGraphClient } from '../lib/ms-graph';
 import { resolveOneDriveRoot, uploadToOneDrive } from '../lib/inbound/attachment-utils';
 import { logError } from '../lib/error-logger';
+import { logEvent } from '../lib/activity-logger';
 import { resolveOneDriveFilename } from '../lib/classification-helpers';
 import { buildTemplateMap } from '../lib/doc-builder';
 import { getCachedOrFetch } from '../lib/cache';
@@ -113,6 +114,27 @@ uploadDocument.post('/upload-document', async (c) => {
     if (onedriveItemId) airtableFields.onedrive_item_id = onedriveItemId;
 
     await airtable.updateRecord(TABLES.DOCUMENTS, docId, airtableFields);
+
+    // DL-365 Phase 2: doc upload success event.
+    const reportClientId = Array.isArray(report.fields.client_id)
+      ? (report.fields.client_id[0] as string | undefined)
+      : (report.fields.client_id as string | undefined);
+    logEvent({
+      event_type: 'doc_upload',
+      category: 'CLIENT',
+      source: 'admin-ui',
+      request_id: c.get('request_id' as never) as string | undefined,
+      actor: 'admin',
+      client_id: reportClientId,
+      endpoint: '/upload-document',
+      details: {
+        doc_id: docId,
+        report_id: reportId,
+        file_size: file.size,
+        ext,
+        skip_onedrive: skipOneDrive,
+      },
+    });
 
     return c.json({
       ok: true,

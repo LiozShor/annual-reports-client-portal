@@ -287,4 +287,20 @@ interface ActivityEvent {
 ## Implementation Notes
 
 - 2026-04-28 — Phase 1 (Foundation) implementation started. Tasks T1 (pii.ts), T2 (activity-logger.ts), T3 (Env types), T4 (events route), T5 (router mount), T6 (wrangler.toml R2+logpush), T7 (this file).
-- Phases 2-4 deferred to subsequent /subagent-driven-development invocations after Phase 1 is verified live.
+- 2026-04-29 — **Phase 2 (server-side instrumentation) implemented.** Plan: `~/.claude/plans/velvet-wandering-quasar.md`. Changes:
+  - `api/src/lib/security-log.ts` — `logSecurity()` now dual-writes: always emits a structured event via `logEvent()`, only POSTs to Airtable when `env.LEGACY_LOG_TO_AIRTABLE !== 'false'`. Added `mapCategory()` + `mapSeverity()` helpers.
+  - `api/src/lib/error-logger.ts` — `logError()` synchronously emits `event_type: 'worker_error'` via `logEvent()` BEFORE the existing `ctx.waitUntil()` Airtable+alert path. Added optional `request_id` to opts.
+  - `api/src/lib/types.ts` — added `LEGACY_LOG_TO_AIRTABLE?: string` to `Env`.
+  - `api/wrangler.toml` — added `LEGACY_LOG_TO_AIRTABLE = "true"` under `[vars]`.
+  - `api/src/index.ts` — Hono middleware threads `request_id` (from `x-request-id` header or new UUID) onto the context for every request.
+  - **Signature change:** `logSecurity(ctx, airtable, fields)` → `logSecurity(ctx, env, airtable, fields, request_id?)`. Updated all 24 call sites across 11 files (auth, approve-and-send, admin-assisted-link, edit-documents, documents, client-reports, submission, reset, classifications, reminders, processor).
+  - **New business-event sites:**
+    - `processor.ts` `summarizeAndSaveNote()` — `event_type: 'inbound_note_saved'`, `category: 'INBOUND'`.
+    - `processor.ts` `processAttachmentWithClassification()` end — `event_type: 'attachment_classified'`, `category: 'AI'`.
+    - `classifications.ts` `/get-client-classifications` — `event_type: 'classifications_listed'`, `category: 'AI'`, `duration_ms`.
+    - `classifications.ts` `/review-classification` — `event_type: 'doc_approve' | 'doc_reject' | 'doc_reassign'`, `category: 'ADMIN'`.
+    - `approve-and-send.ts` — `event_type: 'batch_send'`, `category: 'EMAIL'`, `details.doc_count`.
+    - `upload-document.ts` — `event_type: 'doc_upload'`, `category: 'CLIENT'`.
+  - `assign-unidentified` already covered via `logSecurity` dual-write (`INBOUND_DISCARDED` / `INBOUND_MANUAL_ASSIGN` event types).
+  - TypeScript typecheck clean (only pre-existing unrelated errors in `backfill.ts`, `classifications.ts:1085/2693`, `edit-documents.ts:18`).
+- Phases 3-4 deferred to subsequent /subagent-driven-development invocations after Phase 2 verified live (deploy + manual smoke per Section 7).
