@@ -56,6 +56,8 @@ Design log: `.agent/design-logs/security/377-pre-commit-pii-enforcement.md`.
 - [ ] No regression: `python3 .claude/hooks/agent-pii-guard.py --all` baseline 429 → post-DL 474 (45 new are real recIds/itemIds in grandfathered content; no new false positives)
 - [ ] Followup: enable GitHub branch-protection "required status checks" for `pii-guard.yml` (one-time UI step)
 
+**NEXT SESSION HANDOFF:** Before doing anything else next session, run through the entire test list above end-to-end and verify each item passes. Report each result (✓/✗) inline in this section so DL-377 can flip to COMPLETED. Don't merge to main until every test is green.
+
 ## DL-370: Move-classification edge cases — IMPLEMENTED, NEED TESTING (2026-04-28)
 
 Design log: `.agent/design-logs/ai-review/370-move-classification-edge-cases.md`.
