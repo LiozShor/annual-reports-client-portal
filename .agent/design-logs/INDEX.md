@@ -2,7 +2,7 @@
 
 Active and pending logs. For completed history, see [ARCHIVE-INDEX.md](ARCHIVE-INDEX.md).
 
-**Total logs:** 231 | **Active:** 133 | **Archived:** 98
+**Total logs:** 232 | **Active:** 134 | **Archived:** 98
 
 ## Folder Structure
 
@@ -21,6 +21,7 @@ Active and pending logs. For completed history, see [ARCHIVE-INDEX.md](ARCHIVE-I
 
 | # | File | Status | Summary |
 |---|------|--------|---------|
+| 380 | [380-encrypted-ask-password-email.md](ai-review/380-encrypted-ask-password-email.md) | IMPLEMENTED — NEED TESTING | One-click "request password" bilingual email from AI Review kebab (DL-373/379 follow-up). New Worker endpoint `POST /webhook/request-pdf-password` (preview + send modes, idempotency guard). Inbound processor auto-detects `[#PWD-TOKEN]` in reply subject → writes `suggested_password` to `pending_classifications` → surfaces chip in unlock panel. Schema: 3 new fields + `PasswordReply` status option. |
 | 379 | [379-encrypted-file-card-indicator.md](ai-review/379-encrypted-file-card-indicator.md) | IMPLEMENTED — NEED TESTING | Encrypted-PDF lock indicator on AI Review cards. Detects `ai_reason` containing "password protected" (Anthropic 400 error string already stored by inbound processor). Renders 🔒 "נעול" badge + amber card border tint on affected cards. Frontend-only: 3-line JS change in `renderAICard`, 2 CSS rules. No Worker, no schema change. Cache-bust `script.js?v=379`, `style.css?v=379`. |
 | 377 | [377-pre-commit-pii-enforcement.md](security/377-pre-commit-pii-enforcement.md) | IMPLEMENTED — NEED TESTING | Layered PII/secret defense after a session leaked client PII via `git commit --no-verify` to main. Harness `permissions.deny` blocks `--no-verify` and `--force` push variants; new CI workflow `pii-guard.yml` runs `agent-pii-guard.py --diff-range` + gitleaks on every push/PR; pre-commit gitleaks + ggshield wrapped in `timeout 30` so hung hooks fail fast instead of tempting bypass; PII guard regex extended with OneDrive itemIds, Airtable recIds (digit-required to skip camelCase words), and real-client email handles with allow-list for dev/office/example accounts. |
 | 375 | [375-restore-download-button.md](ai-review/375-restore-download-button.md) | COMPLETED — 2026-04-29 | "Download" (Hebrew) button vanished from AI-review preview header for ALL files after DL-374. Root cause: DL-374 added `webUrl` to `$select` on `/me/drive/items/{id}` — `@microsoft.graph.downloadUrl` is an instance annotation that MS Graph silently omits under `$select`, so Worker returned `downloadUrl:""`. Fix: drop `$select` entirely (~1-2 KB extra payload) so both fields always come back. No frontend change — existing reveal at `script.js:3873-3876` self-heals. |
