@@ -59,7 +59,11 @@ const previewHandler = async (c: any) => {
   try {
     const [previewResponse, itemResponse] = await Promise.all([
       msGraph.post(`/me/drive/items/${itemId}/preview`, { viewer: 'onedrive', zoom: 0.75 }),
-      msGraph.get(`/me/drive/items/${itemId}?$select=@microsoft.graph.downloadUrl,webUrl`),
+      // DL-375: drop $select — `@microsoft.graph.downloadUrl` is an instance
+      // annotation that MS Graph silently omits when $select is present. We
+      // need both the downloadUrl annotation AND webUrl, so request the full
+      // DriveItem (~1-2 KB extra payload, negligible).
+      msGraph.get(`/me/drive/items/${itemId}`),
     ]);
     const rawGetUrl: string = previewResponse?.getUrl ?? '';
     // DL-341: append &nb=true to hide the Microsoft banner in the embedded viewer
