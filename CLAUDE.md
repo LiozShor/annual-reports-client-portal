@@ -107,6 +107,7 @@ Anti-pattern: re-typing the same command in three sessions and never installing 
 **Airtable:** Base `appqBL5RWQN9cPOyh` — schema: `docs/airtable-schema.md`
 **Secrets:** `.env` at project root. Load: `source C:/Users/liozm/Desktop/moshe/annual-reports/.env`
 **Workflow IDs:** `docs/workflow-ids.md`
+**Workflows (repeat sequences):** `.claude/workflows/deploy-worker.sh` · `.claude/workflows/merge-and-push.sh` · `.claude/workflows/close-design-log.sh`
 
 **Architecture Diagrams:** `docs/architecture/system-overview.mmd` (full system Mermaid diagram) · `docs/architecture/document-processing-flow.mmd` (inbound + SSOT generation) · `docs/architecture/client-portal-flow.mmd` (8-stage pipeline + auth) · `docs/architecture/email-generation-flow.mmd` (all email types + triggers) · `docs/architecture/ARCHITECTURE-NOTES.md` (assumptions + gaps). When adding/removing workflows, endpoints, or pages — update the relevant `.mmd` diagram.
 
