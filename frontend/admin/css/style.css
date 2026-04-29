@@ -1960,6 +1960,22 @@ tr:hover .client-view-link {
     box-shadow: 0 0 0 1px var(--warning-200, #fed7aa) inset;
 }
 
+/* DL-379: Desktop thin-row encrypted indicator (DL-334 layout) */
+.ai-doc-row.is-encrypted {
+    background: var(--warning-50, #fff7ed);
+}
+.ai-doc-row.is-encrypted .ai-doc-row__filename {
+    color: var(--warning-800, #9a3412);
+    font-weight: 600;
+}
+.ai-doc-row__lock {
+    display: inline-flex;
+    align-items: center;
+    color: var(--warning-700, #c2410c);
+    flex-shrink: 0;
+    margin-inline-end: 4px;
+}
+
 /* DL-239: Filing type toggle inside combobox dropdown */
 .doc-combobox-ft-toggle {
     display: flex;

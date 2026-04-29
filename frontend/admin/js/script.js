@@ -4363,6 +4363,12 @@ function renderDocRow(item) {
         ? `<span class="ai-doc-row__flag-dot" title="${escapeAttr(flagLabels.join(' · '))}"></span>`
         : '';
 
+    // DL-379: Encrypted PDF indicator on desktop thin row
+    const isEncrypted = !!(item.ai_reason && /password\s*protected/i.test(item.ai_reason));
+    const lockIconHtml = isEncrypted
+        ? `<span class="ai-doc-row__lock" title="קובץ מוגן בסיסמה — לחצו לפתיחה">${icon('lock','icon-xs')}</span>`
+        : '';
+
     // DL-340: On reviewed rows, show a status chip (אושר/לתיקון/שויך) instead of the filing-type category.
     // The CSS above also dims + strikes the filename so the whole row reads as "done."
     const CHIP_LABELS = { approved: 'אושר', rejected: 'לתיקון', reassigned: 'שויך' };
@@ -4374,8 +4380,9 @@ function renderDocRow(item) {
     // DL-339: CSS handles bidi isolation via `unicode-bidi: plaintext` on
     // .ai-doc-row__filename. Earlier dir="auto" flipped flex alignment on
     // pure-Latin filenames — removed.
-    return `<div class="ai-doc-row ${stripeClass}" data-id="${escapeAttr(id)}" title="${escapeAttr(rawName)}" onclick="selectDocument('${escapeAttr(id)}')">
+    return `<div class="ai-doc-row ${stripeClass}${isEncrypted ? ' is-encrypted' : ''}" data-id="${escapeAttr(id)}" title="${escapeAttr(rawName)}" onclick="selectDocument('${escapeAttr(id)}')">
         <span class="ai-doc-row__stripe"></span>
+        ${lockIconHtml}
         <span class="ai-doc-row__filename">${escapeHtml(truncateKeepExtension(rawName))}</span>
         ${showQGlyph ? `<span class="ai-doc-row__question-glyph" title="${escapeAttr(qTitle)}">?</span>` : ''}
         ${endLabelHtml}
