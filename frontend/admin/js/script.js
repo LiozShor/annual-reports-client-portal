@@ -5839,7 +5839,8 @@ function renderAICard(item) {
     const confidencePercent = Math.round(rawConfidence * 100);
     const confidenceClass = rawConfidence >= 0.85 ? 'ai-confidence-high' :
                            rawConfidence >= 0.50 ? 'ai-confidence-medium' : 'ai-confidence-low';
-    const cardClass = 'match-' + state;
+    const isEncrypted = !!(item.ai_reason && /password\s*protected/i.test(item.ai_reason));
+    const cardClass = 'match-' + state + (isEncrypted ? ' is-encrypted' : '');
 
     const receivedAt = item.received_at ? formatAIDate(item.received_at) : '';
     const senderEmail = item.sender_email || '';
@@ -6089,6 +6090,7 @@ function renderAICard(item) {
                     ${item.is_duplicate ? '<span class="ai-duplicate-badge" title="קובץ כפול — אותו קובץ כבר קיים במערכת">כפול</span>' : ''}
                     ${item.is_unrequested && !item.pre_questionnaire ? '<span class="ai-unrequested-badge" title="מסמך שלא נדרש מהלקוח">לא נדרש</span>' : ''}
                     ${item.pre_questionnaire ? '<span class="ai-pre-questionnaire-badge" title="הלקוח טרם מילא את השאלון — הסיווג בוצע מול הקטלוג המלא">טרם מולא שאלון</span>' : ''}
+                    ${isEncrypted ? `<span class="ai-encrypted-badge" title="קובץ מוגן בסיסמה — לחצו לפתיחה">${icon('lock','icon-xs')} נעול</span>` : ''}
                 </div>
                 ${viewFileBtn}
             </div>
