@@ -13,6 +13,7 @@ import { classifyAttachment } from '../lib/inbound/document-classifier';
 import type { ProcessingContext, AttachmentInfo, ClassificationResult } from '../lib/inbound/types';
 import { getCachedOrFetch, invalidateCache } from '../lib/cache';
 import { logError } from '../lib/error-logger';
+import { logEvent } from '../lib/activity-logger';
 import { checkAutoAdvanceToReview } from '../lib/auto-advance';
 import { isLastReference, buildSharedRefMap } from '../lib/file-refcount';
 import { applyMissingStatusInvariant } from '../lib/doc-invariants';
@@ -121,7 +122,7 @@ classifications.get('/get-pending-classifications', async (c) => {
 
     const tokenResult = await verifyToken(bearerToken, c.env.SECRET_KEY);
     if (!tokenResult.valid) {
-      logSecurity(c.executionCtx, airtable, {
+      logSecurity(c.executionCtx, c.env, airtable, {
         timestamp: new Date().toISOString(),
         event_type: tokenResult.reason === 'TOKEN_EXPIRED' ? 'TOKEN_EXPIRED' : 'TOKEN_INVALID',
         severity: 'WARNING',
@@ -554,6 +555,16 @@ classifications.get('/get-pending-classifications', async (c) => {
     if (totalMs > 5000) {
       console.warn('[classifications] SLOW', { total_ms: totalMs, filing_type: filingType, marks });
     }
+    // DL-365 Phase 2: list-success event.
+    logEvent({
+      event_type: 'classifications_listed',
+      category: 'AI',
+      source: 'worker',
+      request_id: c.get('request_id' as never) as string | undefined,
+      endpoint: '/webhook/get-client-classifications',
+      duration_ms: totalMs,
+      details: { n_items: items.length, filing_type: filingType },
+    });
     return c.json({ ok: true, items, stats });
   } catch (err) {
     const totalMs = Date.now() - t0;
@@ -605,7 +616,7 @@ classifications.post('/review-classification', async (c) => {
     const tokenResult = await verifyToken(token, env.SECRET_KEY);
     if (!tokenResult.valid) {
       const clientIp = getClientIp(c.req.raw.headers);
-      logSecurity(c.executionCtx, airtable, {
+      logSecurity(c.executionCtx, c.env, airtable, {
         timestamp: new Date().toISOString(),
         event_type: tokenResult.reason === 'TOKEN_EXPIRED' ? 'TOKEN_EXPIRED' : 'TOKEN_INVALID',
         severity: 'WARNING',
@@ -2050,6 +2061,25 @@ classifications.post('/review-classification', async (c) => {
     // DL-254: Invalidate documents cache after approve/reject/reassign changes doc status
     invalidateCache(c.env.CACHE_KV, 'cache:documents_non_waived_v2');
 
+    // DL-365 Phase 2: emit ADMIN review action event (doc_approve / doc_reject / doc_reassign).
+    const reviewClientId = (Array.isArray(clsFields.client_id) ? clsFields.client_id[0] : clsFields.client_id) as string | undefined;
+    logEvent({
+      event_type: action === 'approve' ? 'doc_approve' : action === 'reject' ? 'doc_reject' : 'doc_reassign',
+      category: 'ADMIN',
+      source: 'admin-ui',
+      request_id: c.get('request_id' as never) as string | undefined,
+      actor: 'admin',
+      actor_ip: getClientIp(c.req.raw.headers),
+      client_id: reviewClientId,
+      endpoint: '/webhook/review-classification',
+      details: {
+        classification_id,
+        action,
+        doc_id: approveDocId || docId || targetDoc?.id || '',
+        report_record_id: reportId,
+      },
+    });
+
     return c.json({
       ok: true,
       action,
@@ -2157,7 +2187,7 @@ classifications.post('/move-classification-client', async (c) => {
   const bearer = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : '';
   const tokenResult = await verifyToken(body.token || bearer || '', env.SECRET_KEY);
   if (!tokenResult.valid) {
-    logSecurity(c.executionCtx, airtable, {
+    logSecurity(c.executionCtx, c.env, airtable, {
       timestamp: new Date().toISOString(),
       event_type: tokenResult.reason === 'TOKEN_EXPIRED' ? 'TOKEN_EXPIRED' : 'TOKEN_INVALID',
       severity: 'WARNING',
@@ -2393,7 +2423,7 @@ classifications.post('/move-classification-client', async (c) => {
     await checkAutoAdvanceToReview(airtable, targetReportId);
     invalidateCache(env.CACHE_KV, 'cache:documents_non_waived_v2', 'pending-classifications:annual_report', 'pending-classifications:capital_statements', 'pending-classifications:all');
 
-    logSecurity(c.executionCtx, airtable, {
+    logSecurity(c.executionCtx, c.env, airtable, {
       timestamp: new Date().toISOString(),
       event_type: 'CLASSIFICATION_MOVED_CLIENT',
       severity: 'INFO',
@@ -2418,7 +2448,7 @@ classifications.post('/move-classification-client', async (c) => {
     });
   } catch (err) {
     console.error('[move-classification-client] fatal', (err as Error).message);
-    logSecurity(c.executionCtx, airtable, {
+    logSecurity(c.executionCtx, c.env, airtable, {
       timestamp: new Date().toISOString(),
       event_type: 'API_ERROR',
       severity: 'ERROR',
@@ -2464,7 +2494,7 @@ classifications.post('/assign-unidentified', async (c) => {
   const bearer = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : '';
   const tokenResult = await verifyToken(bearer, env.SECRET_KEY);
   if (!tokenResult.valid) {
-    logSecurity(c.executionCtx, airtable, {
+    logSecurity(c.executionCtx, c.env, airtable, {
       timestamp: new Date().toISOString(),
       event_type: tokenResult.reason === 'TOKEN_EXPIRED' ? 'TOKEN_EXPIRED' : 'TOKEN_INVALID',
       severity: 'WARNING',
@@ -2547,7 +2577,7 @@ classifications.post('/assign-unidentified', async (c) => {
         'pending-classifications:all',
       );
 
-      logSecurity(c.executionCtx, airtable, {
+      logSecurity(c.executionCtx, c.env, airtable, {
         timestamp: new Date().toISOString(),
         event_type: 'INBOUND_DISCARDED',
         severity: 'INFO',
@@ -2746,7 +2776,7 @@ classifications.post('/assign-unidentified', async (c) => {
       'pending-classifications:all',
     );
 
-    logSecurity(c.executionCtx, airtable, {
+    logSecurity(c.executionCtx, c.env, airtable, {
       timestamp: new Date().toISOString(),
       event_type: 'INBOUND_MANUAL_ASSIGN',
       severity: 'INFO',

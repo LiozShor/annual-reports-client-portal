@@ -1,6 +1,7 @@
 import { AirtableClient } from './airtable';
 import { MSGraphClient } from './ms-graph';
 import { logSecurity } from './security-log';
+import { logEvent } from './activity-logger';
 import type { Env } from './types';
 
 export type ErrorCategory = 'DEPENDENCY' | 'VALIDATION' | 'INTERNAL';
@@ -30,17 +31,31 @@ export function logError(
     error: Error | unknown;
     category?: ErrorCategory;
     details?: string;
+    request_id?: string;
   }
 ): void {
   const category: ErrorCategory = opts.category ?? 'INTERNAL';
   const message = opts.error instanceof Error ? opts.error.message : String(opts.error);
+  const stack = opts.error instanceof Error ? opts.error.stack : undefined;
+
+  // DL-365 Phase 2: emit structured event synchronously (pure console.log, no I/O).
+  logEvent({
+    event_type: 'worker_error',
+    category: 'ERROR',
+    severity: 'ERROR',
+    source: 'worker',
+    request_id: opts.request_id,
+    endpoint: opts.endpoint,
+    error: { category, message, stack },
+    details: opts.details ? { details: opts.details } : undefined,
+  });
 
   ctx.waitUntil(
     (async () => {
       const airtable = new AirtableClient(env.AIRTABLE_PAT, env.AIRTABLE_BASE_ID);
 
-      // 1. Log to Airtable security_logs
-      await logSecurityError(ctx, airtable, opts.endpoint, message, category, opts.details);
+      // 1. Log to Airtable security_logs (gated by env.LEGACY_LOG_TO_AIRTABLE inside logSecurity)
+      await logSecurityError(ctx, env, airtable, opts.endpoint, message, category, opts.details, opts.request_id);
 
       // 2. Send throttled alert email
       await maybeSendAlert(ctx, env, opts.endpoint, message, category);
@@ -52,13 +67,15 @@ export function logError(
 
 async function logSecurityError(
   ctx: ExecutionContext,
+  env: Env,
   airtable: AirtableClient,
   endpoint: string,
   message: string,
   category: ErrorCategory,
-  details?: string
+  details?: string,
+  request_id?: string
 ): Promise<void> {
-  logSecurity(ctx, airtable, {
+  logSecurity(ctx, env, airtable, {
     timestamp: new Date().toISOString(),
     event_type: 'WORKER_ERROR',
     severity: 'ERROR',
@@ -68,7 +85,7 @@ async function logSecurityError(
     http_status: 500,
     error_message: message,
     details: details ?? category,
-  });
+  }, request_id);
 }
 
 async function maybeSendAlert(

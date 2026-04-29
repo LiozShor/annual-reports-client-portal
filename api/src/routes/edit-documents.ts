@@ -326,7 +326,7 @@ editDocuments.post('/edit-documents', async (c) => {
 
     const tokenResult = await verifyToken(bearerToken, c.env.SECRET_KEY);
     if (!tokenResult.valid) {
-      logSecurity(c.executionCtx, airtable, {
+      logSecurity(c.executionCtx, c.env, airtable, {
         timestamp: new Date().toISOString(),
         event_type: tokenResult.reason === 'TOKEN_EXPIRED' ? 'TOKEN_EXPIRED' : 'TOKEN_INVALID',
         severity: 'WARNING',
