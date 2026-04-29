@@ -246,13 +246,19 @@ Files: `api/src/lib/inbound/attachment-utils.ts`, `api/src/lib/inbound/processor
 Design log: `.agent/design-logs/email/367-gmail-drive-smart-links.md`
 
 
-## Design-log skill: Bright Data MCP swap (NEEDS VERIFICATION)
+## Design-log skill: Bright Data MCP swap — VERIFIED (2026-04-29)
 
-Bright Data MCP registered as SSE server `brightdata` in this project's local config (`.claude.json`). `claude mcp list` shows ✓ Connected. Token sourced from `.env` (`BRIGHT_DATA_API_KEY`) and embedded in the SSE URL.
+Bright Data MCP confirmed working in Phase B2 (DL-378 test run). Skill auto-invokes `mcp__brightdata__search_engine_batch` + `scrape_batch` — no WebSearch fallback. No permission prompts needed.
 
-Tool prefix `mcp__brightdata__` matches the four entries in `~/.claude/skills/design-log/SKILL.md` (`search_engine`, `scrape_as_markdown`, `search_engine_batch`, `scrape_batch`) — no rename needed.
-
-**Still to verify on next `/design-log` run:** Phase B2 actually calls the Bright Data tools (not WebSearch fallback). If permission prompts appear, allowlist the four tools in settings. **Notify Lioz once verified successful** (i.e., on the first `/design-log` after this, explicitly tell the user whether Bright Data MCP tools were called — confirm success or report fallback).
+**Skill improvements applied 2026-04-29:**
+- `Bash` added to `allowed-tools` → skill now runs `reserve-dl-number.sh` itself (no user interruption)
+- Worktree detection fixed: check `git rev-parse --git-dir` output for `/worktrees/` (was using `cat` on a dir, which errored)
+- Template extracted to `assets/design-log-template.md` (saves ~80 lines per load)
+- `research-sources.md` moved to `references/`
+- `tech-researcher` skill created (`~/.claude/skills/tech-researcher/`) — Bright Data-aligned, auto-triggers on "X vs Y", "which library", "is this maintained" questions; design-log Phase B delegates to it for fast-moving tech domains
+- Hard gate added: Phase C blocked until tech-researcher result is in hand
+- Pre-Phase-A check section corrected (skill does NOT auto-run at session start)
+- Skill-run evaluation checklist added
 
 **Last Updated:** 2026-04-27 (DL-364 — IMPLEMENTED, NEED TESTING; "מוכנים להכנה" v-button now advances Review→Moshe_Review + backend backfills docs_completed_at on manual stage→Review to fix 47 vs 49 count mismatch)
 **Last Updated:** 2026-04-27 (DL-363 — IDEA / BACKLOG; chat-bubble side misclassification for office-authored emails landing as client notes)
