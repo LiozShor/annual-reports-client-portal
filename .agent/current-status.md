@@ -1,5 +1,6 @@
 # Annual Reports CRM - Current Status
 
+**Last Updated:** 2026-04-29 (DL-374 — IMPLEMENTED, NEED TESTING; AI-review "open in new tab" anchor now uses fresh MS Graph `webUrl` from `/webhook/get-preview-url` instead of stale Airtable `file_url`. Worker `$select`s webUrl alongside downloadUrl — zero extra MS Graph calls. Cache-bust `script.js?v=382→383`. DL-356 self-heal still fires on permanent 404.)
 **Last Updated:** 2026-04-28 (DL-370 — COMPLETED; all three edge cases verified live: zero-missing-docs, no-AI-match, and already-Received-slot all land classification as `pending` under target; source-clear skips if doc already Required_Missing; script.js?v=377 deployed)
 **Last Updated:** 2026-04-28 (DL-370 — IMPLEMENTED, NEED TESTING; move-classification-client edge cases now land classification as `pending` on target (not `reassigned`); target-doc-Received conflict no longer 409s — file uploads, existing doc untouched, conflict toast shown; cache-bust `script.js?v=373`)
 **Last Updated:** 2026-04-28 (DL-371 — COMPLETED; edit-client modal full redesign live: new header, name field, icons, full-width inputs, modal closes on save; two post-deploy bugs fixed: missing `buildClientDetailChanges` fn + modal not closing; verified by user)
@@ -37,6 +38,28 @@ bash scripts/deploy-pages.sh "manual deploy"
 - [ ] CF API `source.config.repo_id` == `1222817442` after fix.
 
 Design log: `.agent/design-logs/infrastructure/368-cf-pages-git-integration-broken.md`
+## DL-374: AI-review open-in-new-tab via itemId webUrl — IMPLEMENTED, NEED TESTING (2026-04-29)
+
+User reported the "פתח בלשונית" link on a CPA-728 pending classification 404'd because Airtable `file_url` was a stale Hebrew SharePoint path (file moved/renamed in OneDrive). Closed the gap left by DL-051 / DL-356 — inline preview already used itemId resolution, this anchor was the last surface still on the legacy URL.
+
+Implemented:
+- `api/src/routes/preview.ts` — `$select=@microsoft.graph.downloadUrl,webUrl` and return `webUrl` in JSON.
+- `frontend/admin/js/script.js` — `getDocPreviewUrl()` plumbs `webUrl`; `loadDocPreview` (desktop) and `loadMobileDocPreview` (mobile) hide open-tab upfront, reveal with `webUrl || item.file_url || ''` after fetch resolves.
+- Cache-bust `script.js?v=382 → ?v=383` in `frontend/admin/index.html:1540`.
+- DL-356 self-heal path untouched: permanent 404 still nulls Airtable fields + Hebrew toast + button stays hidden.
+
+Phase E — testing handoff:
+- [ ] TS build clean: `./node_modules/.bin/tsc --noEmit` in `api/` (initial run OOM'd at default heap; re-verify with `NODE_OPTIONS=--max-old-space-size=4096`).
+- [ ] Healthy doc: AI-review → click pending classification → inline preview loads, "פתח בלשונית" opens current SharePoint file in a new tab.
+- [ ] Live stale doc (CPA-728, eventId `evt_TL2P290MB0240FA05027CF13C59A71224DE2E2`): click → DL-356 self-heal → Hebrew toast → open-tab hidden.
+- [ ] Manual rename in OneDrive then re-click → new tab opens at the renamed path (proves staleness fix).
+- [ ] Mobile (≤768px viewport) — same flow via `loadMobileDocPreview`.
+- [ ] Hard-reload admin → confirm `script.js?v=383` matches `index.html`.
+- [ ] No regression on inline iframe preview (`previewUrl`) or download (`downloadUrl`).
+- [ ] No regression on legacy rows missing `onedrive_item_id` — anchor falls back to `item.file_url`.
+
+Design log: `.agent/design-logs/ai-review/374-ai-review-open-tab-itemid.md`
+
 ## DL-370: Move-classification edge cases — IMPLEMENTED, NEED TESTING (2026-04-28)
 
 Design log: `.agent/design-logs/ai-review/370-move-classification-edge-cases.md`.

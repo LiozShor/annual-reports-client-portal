@@ -596,8 +596,9 @@ function loadMobileDocPreview(recordId) {
 
     // Set header info
     fileName.textContent = item.attachment_name || 'מסמך';
-    openTab.href = item.file_url || '#';
-    openTab.style.display = item.file_url ? '' : 'none';
+    // DL-374: hide until webUrl arrives from /webhook/get-preview-url (see desktop counterpart).
+    openTab.href = '#';
+    openTab.style.display = 'none';
 
     // Update navigation counter & arrow states
     updateMobilePreviewNav();
@@ -621,7 +622,7 @@ function loadMobileDocPreview(recordId) {
     // Show loading
     loading.style.display = '';
 
-    getDocPreviewUrl(item.onedrive_item_id, item.id).then(({ previewUrl, downloadUrl }) => {
+    getDocPreviewUrl(item.onedrive_item_id, item.id).then(({ previewUrl, downloadUrl, webUrl }) => {
         // Keep spinner until iframe actually loads
         iframe.onload = () => {
             loading.style.display = 'none';
@@ -631,6 +632,12 @@ function loadMobileDocPreview(recordId) {
         if (downloadUrl) {
             downloadBtn.href = downloadUrl;
             downloadBtn.style.display = '';
+        }
+        // DL-374: fresh persistent webUrl for open-in-new-tab.
+        const openTabHref = webUrl || item.file_url || '';
+        if (openTabHref) {
+            openTab.href = openTabHref;
+            openTab.style.display = '';
         }
     }).catch(err => {
         loading.style.display = 'none';
@@ -3678,7 +3685,7 @@ async function getDocPreviewUrl(itemId, recordId) {
         }
         throw new Error(data.error || 'Failed to get preview URL');
     }
-    return { previewUrl: data.previewUrl, downloadUrl: data.downloadUrl || null };
+    return { previewUrl: data.previewUrl, downloadUrl: data.downloadUrl || null, webUrl: data.webUrl || null };
 }
 
 // DL-340: Single source of truth for preview frame reviewed-state visuals
@@ -3806,8 +3813,11 @@ async function loadDocPreview(recordId) {
 
     // Update header
     fileName.textContent = item.attachment_name || 'מסמך';
-    openTab.href = item.file_url || '#';
-    openTab.style.display = item.file_url ? '' : 'none';
+    // DL-374: hide open-tab button while preview fetch resolves; webUrl from
+    // /webhook/get-preview-url is the persistent OneDrive viewing URL (survives
+    // renames/moves). The legacy item.file_url 404s when staff renames in OneDrive.
+    openTab.href = '#';
+    openTab.style.display = 'none';
     header.style.display = '';
     applyPreviewReviewState(item.review_status || null);
 
@@ -3822,7 +3832,7 @@ async function loadDocPreview(recordId) {
     let _perfUrlFetched = 0;
 
     try {
-        const { previewUrl, downloadUrl } = await getDocPreviewUrl(item.onedrive_item_id, item.id);
+        const { previewUrl, downloadUrl, webUrl } = await getDocPreviewUrl(item.onedrive_item_id, item.id);
         if (_perfOn) {
             _perfUrlFetched = performance.now();
             const urlMs = Math.round(_perfUrlFetched - _perfStart);
@@ -3831,6 +3841,13 @@ async function loadDocPreview(recordId) {
         }
         // Verify still the active card (user might have clicked another)
         if (activePreviewItemId !== recordId) return;
+        // DL-374: now that we have a fresh webUrl, wire up "open in new tab".
+        // Fall back to legacy file_url only if the Worker didn't return webUrl.
+        const openTabHref = webUrl || item.file_url || '';
+        if (openTabHref) {
+            openTab.href = openTabHref;
+            openTab.style.display = '';
+        }
         // DL-373: MS Graph returns HTTP 200 (with password-prompt HTML) for encrypted PDFs,
         // so onerror never fires. Detect on onload too — tryDetectEncryption fetches 8 KB
         // and checks for PasswordException; if clean it bails immediately.
