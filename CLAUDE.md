@@ -40,6 +40,7 @@ Expert n8n automation architect using **n8n-MCP tools** for **Moshe Atsits CPA F
 ## Git Rules (Project Override)
 
 - **Always push after committing — do NOT ask.** This overrides the global "ask before pushing" rule.
+- **MANDATORY: invoke `git-ship` skill before any git write op.** `commit`, `push`, `merge`, `rebase`, `reset`, `branch -d`, `checkout main` — all routed through the skill. Read-only ops (`status`, `diff`, `log`, `show`, `branch --show-current`) don't need it. The skill enforces multi-tab safety, worktree-aware merges (cd to canonical clone, never `checkout main` from a session worktree), and conflict-prone-file handling.
 
 ## Debugging — Autonomous Log Access
 
