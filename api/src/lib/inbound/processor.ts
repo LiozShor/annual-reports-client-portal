@@ -791,28 +791,32 @@ async function tryHandlePasswordReply(
     return { handled: false };
   }
 
-  // 3. Extract password candidate from body text
+  // 3. Extract password candidate from body text.
+  // Process line-by-line, stopping at the Gmail quote header so filenames
+  // from the original quoted email don't get mistaken for the password.
+  // Handles Unicode RTL control chars that Gmail/Outlook prepend to "בתאריך".
   const truncated = bodyText.substring(0, 1000);
-  // Strip everything from the Gmail quote header onward so filenames in the
-  // quoted original email don't get mistaken for the password.
-  const quoteHeaderRe = /(?:On .+?wrote:|בתאריך .+?מאת\s)/s;
-  const topOnly = truncated.split(quoteHeaderRe)[0];
-  const stripped = topOnly.replace(/<[^>]+>/g, '');
-  const lines = stripped.split('\n');
-  const cleanLines = lines
-    .map((l) => l.trim())
-    .filter(
-      (l) =>
-        l.length > 0 &&
-        !l.startsWith('>') &&
-        !/^---.*---$/.test(l),
-    );
+  const allLines = truncated.replace(/<[^>]+>/g, '').split('\n');
+  const replyLines: string[] = [];
+  for (const raw of allLines) {
+    const l = raw.trim();
+    if (!l) continue;
+    // Stop at Gmail quote header (Hebrew RTL-embedded or English)
+    if (/^[​-‏‪-‮]*בתאריך/.test(l) || /^On .+wrote:/.test(l) || l.startsWith('>')) break;
+    replyLines.push(l);
+  }
+  // Fall back to all clean lines for bottom-posted or unusual reply formats
+  const searchLines = replyLines.length > 0
+    ? replyLines
+    : allLines.map((l) => l.trim()).filter(
+        (l) => l.length > 0 && !l.startsWith('>') && !/^---.*---$/.test(l)
+      );
 
   const hebrewRe = /[א-ת]/;
   let suggestedPassword =
-    cleanLines.find((l) => l.length <= 32 && !hebrewRe.test(l) && !l.includes(' ')) ?? '';
+    searchLines.find((l) => l.length <= 32 && !hebrewRe.test(l) && !l.includes(' ')) ?? '';
   if (!suggestedPassword) {
-    suggestedPassword = cleanLines.find((l) => l.length <= 32) ?? '';
+    suggestedPassword = searchLines.find((l) => l.length <= 32) ?? '';
   }
 
   suggestedPassword = suggestedPassword.substring(0, 64);
