@@ -5020,11 +5020,6 @@ function _renderPanelAdditive(item, variant, reReviewing) {
         } else {
             secondaryBtns.push(renderContractPeriodBanner(rid, cp, year));
         }
-        // DL-385: One-click swap button T901↔T902
-        const swapTarget = item.matched_template_id === 'T901' ? 'T902' : 'T901';
-        const swapLabel = item.matched_template_id === 'T901' ? 'הכנסה→הוצאה' : 'הוצאה→הכנסה';
-        const swapTitle = `סיווג נוכחי: ${item.matched_template_id === 'T901' ? 'הכנסה' : 'הוצאה'} — לחץ להחלפה`;
-        secondaryBtns.push(`<button class="ai-ap-btn ai-ap-btn--ghost ai-ap-btn--small contract-swap-btn" data-record-id="${rid}" data-template-id="${item.matched_template_id}" onclick="event.stopPropagation(); swapClassification('${rid}', '${item.matched_template_id}')" title="${swapTitle}">⇄ ${swapLabel}</button>`);
     }
 
     // Overflow menu
@@ -5041,6 +5036,11 @@ function _renderPanelAdditive(item, variant, reReviewing) {
         overflowItems.push(`<button class="ai-ap-overflow__item" onclick="openAddQuestionDialog('${idA}'); _closePanelOverflow();">${qLabel}</button>`);
     }
     overflowItems.push(`<button class="ai-ap-overflow__item" onclick="showMoveClassificationClientModal('${idA}'); _closePanelOverflow();">העבר ללקוח אחר...</button>`);
+
+    // DL-385: T901↔T902 swap (kebab menu — only for rental contracts)
+    if (['T901', 'T902'].includes(item.matched_template_id)) {
+        overflowItems.push(`<button class="ai-ap-overflow__item" onclick="swapClassification('${idA}', '${item.matched_template_id}'); _closePanelOverflow();">החלף חוזה מהוצאה להכנסה (וההפך)</button>`);
+    }
 
     // DL-380: Encrypted PDF — password request kebab item
     const isEncrypted = !!(item.ai_reason && /password[_\s]?protected|מוגן.*סיסמה/i.test(item.ai_reason));
@@ -6990,18 +6990,13 @@ async function saveContractPeriod(recordId, startDate, endDate) {
     }
 }
 
-// DL-385: One-click swap T901↔T902 classification on review card
+// DL-385: Swap T901↔T902 classification (kebab menu action)
 async function swapClassification(recordId, currentTemplateId) {
     const targetId = currentTemplateId === 'T901' ? 'T902' : 'T901';
     const targetLabel = targetId === 'T901' ? 'חוזה שכירות (הכנסה)' : 'חוזה שכירות (הוצאה)';
 
-    // Optimistic update
     const item = aiClassificationsData.find(i => i.id === recordId);
     if (item) item.matched_template_id = targetId;
-
-    const btn = document.querySelector(`.contract-swap-btn[data-record-id="${recordId}"]`);
-    const prevHtml = btn ? btn.innerHTML : '';
-    if (btn) { btn.disabled = true; btn.innerHTML = `${icon('loader', 'icon-sm spin')} מחליף...`; safeCreateIcons(); }
 
     try {
         const response = await fetchWithTimeout(ENDPOINTS.REVIEW_CLASSIFICATION, {
@@ -7018,20 +7013,23 @@ async function swapClassification(recordId, currentTemplateId) {
         const data = await response.json();
         if (!data.ok) {
             if (item) item.matched_template_id = currentTemplateId;
-            if (btn) { btn.disabled = false; btn.innerHTML = prevHtml; }
             showAIToast(data.error || 'שגיאה בהחלפת סיווג', 'error');
             return;
         }
 
-        // Update swap button for the new state
-        if (btn) {
-            const nextTarget = targetId === 'T901' ? 'T902' : 'T901';
-            const nextLabel = targetId === 'T901' ? 'הכנסה→הוצאה' : 'הוצאה→הכנסה';
-            btn.disabled = false;
-            btn.dataset.templateId = targetId;
-            btn.setAttribute('onclick', `event.stopPropagation(); swapClassification('${recordId}', '${targetId}')`);
-            btn.innerHTML = `⇄ ${nextLabel}`;
-            btn.title = `סיווג נוכחי: ${targetLabel} — לחץ להחלפה`;
+        // Re-render card to reflect new classification badge + matched-doc-name
+        if (item) {
+            if (isAIReviewMobileLayout()) {
+                const card = document.querySelector(`.ai-review-card[data-id="${recordId}"]`);
+                if (card) {
+                    const isReviewed = item.review_status && item.review_status !== 'pending';
+                    const tmpDiv = document.createElement('div');
+                    tmpDiv.innerHTML = isReviewed ? renderReviewedCard(item, item.review_status) : renderAICard(item);
+                    if (tmpDiv.firstElementChild) card.replaceWith(tmpDiv.firstElementChild);
+                }
+            } else {
+                refreshItemDom(item);
+            }
         }
 
         showAIToast(`הוחלף ל-${targetId} — ${targetLabel}`, 'success', {
@@ -7040,7 +7038,6 @@ async function swapClassification(recordId, currentTemplateId) {
         });
     } catch (error) {
         if (item) item.matched_template_id = currentTemplateId;
-        if (btn) { btn.disabled = false; btn.innerHTML = prevHtml; }
         showAIToast(error.message, 'error');
     }
 }
