@@ -73,6 +73,10 @@ const SEVERITY_COLORS: Record<string, string> = {
 
 function isoNow(): string { return new Date().toISOString() }
 function isoHoursAgo(h: number): string { return new Date(Date.now() - h * 60 * 60 * 1000).toISOString() }
+function toLocalInput(isoUtc: string): string {
+  const d = new Date(isoUtc);
+  return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+}
 
 // ─── Dev Password Gate ────────────────────────────────────────────────────────
 
@@ -161,10 +165,10 @@ function FilterBar({ filters, onChange }: { filters: Filters; onChange: (f: Part
           </button>
         ))}
       </div>
-      <input type="datetime-local" value={filters.since.slice(0, 16)} onChange={e => onChange({ since: new Date(e.target.value).toISOString() })}
+      <input type="datetime-local" value={toLocalInput(filters.since)} onChange={e => onChange({ since: new Date(e.target.value).toISOString() })}
         style={{ padding: '4px 8px', border: '1px solid #d1d5db', borderRadius: 6, fontSize: 12 }} />
       <span style={{ color: '#9ca3af' }}>→</span>
-      <input type="datetime-local" value={filters.until.slice(0, 16)} onChange={e => onChange({ until: new Date(e.target.value).toISOString() })}
+      <input type="datetime-local" value={toLocalInput(filters.until)} onChange={e => onChange({ until: new Date(e.target.value).toISOString() })}
         style={{ padding: '4px 8px', border: '1px solid #d1d5db', borderRadius: 6, fontSize: 12 }} />
       <select value={filters.event_type} onChange={e => onChange({ event_type: e.target.value })}
         style={{ padding: '4px 8px', border: '1px solid #d1d5db', borderRadius: 6, fontSize: 12 }}>
