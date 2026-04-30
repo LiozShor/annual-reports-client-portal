@@ -1,5 +1,5 @@
 # Design Log 385: Partial-Contract T901↔T902 Swap + Lenient Date Input + QA Test View
-**Status:** [IMPLEMENTED — NEED TESTING]
+**Status:** [COMPLETED — 2026-04-30]
 **Date:** 2026-04-30
 **Related Logs:** DL-269 (partial rental detection), DL-270 (editable contract period dates), DL-359 (edit full-year contract dates), DL-314 (rental contract templates T901/T902)
 
