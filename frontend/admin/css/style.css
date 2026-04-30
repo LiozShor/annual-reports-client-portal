@@ -2677,6 +2677,33 @@ tr:hover .client-view-link {
 
 .ai-doc-tag-waived:hover { opacity: 0.85; background: var(--gray-200); }
 
+/* DL-386: trailing "+ הוסף מסמך" chip in the AI review מסמכים נדרשים section */
+.ai-missing-add-doc-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    padding: 1px var(--sp-2);
+    border-radius: var(--radius-sm);
+    margin: 1px;
+    font-size: 11px;
+    cursor: pointer;
+    background: transparent;
+    color: var(--primary-600, #4f46e5);
+    border: 1px dashed var(--primary-300, #a5b4fc);
+    transition: background var(--transition-fast), color var(--transition-fast), border-color var(--transition-fast);
+    user-select: none;
+}
+.ai-missing-add-doc-chip:hover {
+    background: var(--primary-50, #eef2ff);
+    color: var(--primary-700, #4338ca);
+    border-color: var(--primary-500, #6366f1);
+}
+.ai-missing-add-doc-chip:focus-visible {
+    outline: 2px solid var(--primary-500, #6366f1);
+    outline-offset: 1px;
+}
+.ai-missing-add-doc-chip .icon-xs { width: 12px; height: 12px; }
+
 .ai-doc-tag-received {
     background: var(--success-50);
     color: var(--success-700);

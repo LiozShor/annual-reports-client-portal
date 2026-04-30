@@ -4535,7 +4535,9 @@ function buildDesktopClientDocsHtml(clientName, items) {
     const hasStatusVariation = allDocs.length > 0 && docsReceivedCount > 0;
     if (displayDocs.length > 0) {
         // DL-349: shared helper keeps initial render and refresher in lock-step
-        const categoriesHtml = buildDocCategoryTagsHtml(displayDocs);
+        // DL-386: trailing "+ הוסף מסמך" chip
+        const addCtx = items[0].report_id ? { reportId: items[0].report_id, person: 'client' } : null;
+        const categoriesHtml = buildDocCategoryTagsHtml(displayDocs, addCtx);
         const label = hasStatusVariation
             ? `📄 מסמכים נדרשים (${docsReceivedCount}/${docsTotalCount} התקבלו)`
             : `📄 מסמכים חסרים (${groupMissingDocs.length})`;
@@ -5334,7 +5336,9 @@ function buildClientAccordionHtml(clientName, clientItems, open) {
 
     if (displayDocs.length > 0) {
         // DL-349: shared helper keeps initial render and refresher in lock-step
-        const categoriesHtml = buildDocCategoryTagsHtml(displayDocs);
+        // DL-386: trailing "+ הוסף מסמך" chip
+        const addCtx = clientItems[0].report_id ? { reportId: clientItems[0].report_id, person: 'client' } : null;
+        const categoriesHtml = buildDocCategoryTagsHtml(displayDocs, addCtx);
 
         const toggleLabel = hasStatusVariation
             ? `מסמכים נדרשים (${docsReceivedCount}/${docsTotalCount} התקבלו)`
@@ -9432,7 +9436,9 @@ function applyDocStatusChange(clientName, docRecordId, newStatus) {
 
 // DL-349: shared category-tag HTML builder. Used by initial render paths
 // (buildDesktopClientDocsHtml, buildClientAccordionHtml) and by the refresher.
-function buildDocCategoryTagsHtml(displayDocs) {
+// DL-386: optional addCtx renders a trailing "+ הוסף מסמך" chip that opens the
+// shared PA add-doc popover (DL-301/336) without leaving the AI review tab.
+function buildDocCategoryTagsHtml(displayDocs, addCtx) {
     const catGroups = [];
     let currentCat = null;
     for (const d of (displayDocs || [])) {
@@ -9445,6 +9451,16 @@ function buildDocCategoryTagsHtml(displayDocs) {
     }
     let html = '<div class="ai-missing-category-tags">';
     for (const g of catGroups) html += g.docs.map(d => renderDocTag(d)).join('');
+    if (addCtx && addCtx.reportId) {
+        const person = addCtx.person || 'client';
+        html += `<span class="ai-missing-add-doc-chip"
+            data-report-id="${escapeAttr(addCtx.reportId)}"
+            data-person="${escapeAttr(person)}"
+            role="button" tabindex="0"
+            title="הוסף מסמך נדרש"
+            onclick="event.stopPropagation();openPaAddDocPopover(event, this)"
+            onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();event.stopPropagation();openPaAddDocPopover(event, this);}">${icon('plus', 'icon-xs')} הוסף מסמך</span>`;
+    }
     html += '</div>';
     return html;
 }
@@ -9466,7 +9482,9 @@ function refreshClientDocTags(clientName) {
     const docsReceivedCount = representative.docs_received_count || 0;
     const docsTotalCount = representative.docs_total_count || displayDocs.length;
     const hasStatusVariation = allDocs.length > 0 && docsReceivedCount > 0;
-    const tagsHtml = buildDocCategoryTagsHtml(displayDocs);
+    // DL-386: keep "+ הוסף מסמך" chip across silent re-renders
+    const addCtx = representative.report_id ? { reportId: representative.report_id, person: 'client' } : null;
+    const tagsHtml = buildDocCategoryTagsHtml(displayDocs, addCtx);
 
     // --- Desktop 3-pane (DL-330) ---
     const docsPane = document.getElementById('aiDocsPane');
@@ -10628,29 +10646,39 @@ function _paComputeIssuerKey(collectedValues) {
 }
 
 function paDocIsDuplicate(item, pendingDoc) {
-    const groups = Array.isArray(item.doc_groups) ? item.doc_groups : [];
     const targetTpl = (pendingDoc.template_id || '').toLowerCase();
     const targetKey = (pendingDoc.issuer_key || '').toLowerCase();
     const targetName = (pendingDoc.issuer_name || '').toLowerCase().trim();
+
+    const matchDoc = (d) => {
+        if (!d || d.status === 'Waived') return false;
+        const dType = (d.type || d.template_id || '').toLowerCase();
+        if (targetTpl === 'general_doc') {
+            if (dType !== 'general_doc') return false;
+            const dName = ((d.issuer_name || d.name || '') + '').toLowerCase().trim();
+            return dName === targetName;
+        }
+        if (dType !== targetTpl) return false;
+        const dKey = ((d.issuer_key || '') + '').toLowerCase();
+        return dKey === targetKey;
+    };
+
+    // PA shape: nested doc_groups → categories → docs
+    const groups = Array.isArray(item.doc_groups) ? item.doc_groups : [];
     for (const g of groups) {
         for (const cat of (g.categories || [])) {
             for (const d of (cat.docs || [])) {
-                if (d.status === 'Waived') continue;
-                const dType = (d.type || '').toLowerCase();
-                if (targetTpl === 'general_doc') {
-                    // Custom: match on general_doc name case-insensitive
-                    if (dType === 'general_doc') {
-                        const dName = ((d.issuer_name || d.name || '') + '').toLowerCase().trim();
-                        if (dName === targetName) return true;
-                    }
-                } else {
-                    if (dType !== targetTpl) continue;
-                    const dKey = ((d.issuer_key || '') + '').toLowerCase();
-                    if (dKey === targetKey) return true;
-                }
+                if (matchDoc(d)) return true;
             }
         }
     }
+
+    // DL-386: AI shape — flat all_docs / missing_docs
+    const flat = []
+        .concat(Array.isArray(item.all_docs) ? item.all_docs : [])
+        .concat(Array.isArray(item.missing_docs) ? item.missing_docs : []);
+    for (const d of flat) if (matchDoc(d)) return true;
+
     return false;
 }
 
@@ -10668,14 +10696,44 @@ function closePaAddDocPopover() {
     _paAddDocState = null;
 }
 
+// DL-386: resolve a popover item from PA list first, then fall back to AI
+// classifications data. AI fallback flips an `aiMode` flag so the optimistic
+// .pa-card update path is skipped and silent refresh / optional reassign is
+// run instead.
+function _paResolveAddDocItem(reportId) {
+    const pa = (typeof pendingApprovalData !== 'undefined')
+        ? pendingApprovalData.find(i => i.report_id === reportId)
+        : null;
+    if (pa) return { item: pa, aiMode: false };
+    const ai = (typeof aiClassificationsData !== 'undefined')
+        ? aiClassificationsData.find(i => i.report_id === reportId)
+        : null;
+    if (ai) return { item: ai, aiMode: true };
+    return { item: null, aiMode: false };
+}
+
 function openPaAddDocPopover(event, rowEl) {
     if (event) event.stopPropagation();
     if (_paAddDocState) { closePaAddDocPopover(); }
 
     const reportId = rowEl.dataset.reportId;
     const person = rowEl.dataset.person || 'client';
-    const item = pendingApprovalData.find(i => i.report_id === reportId);
+    const resolved = _paResolveAddDocItem(reportId);
+    const item = resolved.item;
     if (!item) return;
+
+    // DL-386: when triggered from the AI review tab, capture the currently
+    // expanded card (if exactly one) so we can offer a reassign prompt after
+    // the new doc is created.
+    let aiActiveCard = null;
+    if (resolved.aiMode) {
+        const activeEls = document.querySelectorAll('.ai-review-card.preview-active');
+        if (activeEls.length === 1) {
+            const cardId = activeEls[0].dataset.id;
+            const cardItem = aiClassificationsData.find(i => i.id === cardId);
+            if (cardItem) aiActiveCard = { cardId, cardItem };
+        }
+    }
 
     _paAddDocState = {
         reportId, person,
@@ -10683,7 +10741,9 @@ function openPaAddDocPopover(event, rowEl) {
         selectedTpl: null,
         collectedValues: null,
         pendingDoc: null,
-        loaded: false
+        loaded: false,
+        aiMode: resolved.aiMode,
+        aiActiveCard
     };
 
     const pop = document.createElement('div');
@@ -10732,7 +10792,7 @@ function openPaAddDocPopover(event, rowEl) {
     });
 
     // Fetch + render
-    ensurePaTemplatesLoaded(item.client_id, item.report_id, item.filing_type)
+    ensurePaTemplatesLoaded(item.client_id, item.report_id, item.filing_type || 'annual_report')
         .then(() => {
             if (!_paAddDocState) return;
             _paAddDocState.loaded = true;
@@ -10750,7 +10810,7 @@ function _paRenderAddDocPick() {
     if (!st) return;
     const pop = document.getElementById('paAddDocPopover');
     if (!pop) return;
-    const item = pendingApprovalData.find(i => i.report_id === st.reportId);
+    const item = _paResolveAddDocItem(st.reportId).item;
     if (!item) return;
     const cached = _paTemplateCache.get(item.client_id);
     if (!cached) return;
@@ -10859,7 +10919,7 @@ function paAddDocFilter(query) {
 function paAddDocPickTemplate(templateId) {
     const st = _paAddDocState;
     if (!st) return;
-    const item = pendingApprovalData.find(i => i.report_id === st.reportId);
+    const item = _paResolveAddDocItem(st.reportId).item;
     if (!item) return;
     const cached = _paTemplateCache.get(item.client_id);
     const tpl = cached && cached.apiTemplates.find(t => t.template_id === templateId);
@@ -10932,7 +10992,7 @@ function _paRenderAddDocVariables(userVars) {
     const st = _paAddDocState;
     const pop = document.getElementById('paAddDocPopover');
     if (!pop || !st || !st.selectedTpl) return;
-    const item = pendingApprovalData.find(i => i.report_id === st.reportId);
+    const item = _paResolveAddDocItem(st.reportId).item;
     const initialTitle = _paFormatTemplateTitle(st.selectedTpl, item, null);
     const body = document.getElementById('paAddDocBody') || pop;
 
@@ -11048,7 +11108,7 @@ function _paShowAddDocWarning(msg) {
 function _paEnterPreview() {
     const st = _paAddDocState;
     if (!st) return;
-    const item = pendingApprovalData.find(i => i.report_id === st.reportId);
+    const item = _paResolveAddDocItem(st.reportId).item;
     if (!item) return;
 
     let pendingDoc;
@@ -11178,7 +11238,7 @@ function _paRollbackOptimisticAdd(item, placeholderId) {
 async function paAddDocConfirm() {
     const st = _paAddDocState;
     if (!st || !st.pendingDoc) return;
-    const item = pendingApprovalData.find(i => i.report_id === st.reportId);
+    const item = _paResolveAddDocItem(st.reportId).item;
     if (!item) return;
 
     // Re-check duplicate (state may have changed)
@@ -11191,16 +11251,21 @@ async function paAddDocConfirm() {
 
     const pendingDoc = { ...st.pendingDoc, person: st.person };
     const placeholderId = `pa-new-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+    const aiMode = !!st.aiMode;
+    const aiActiveCard = st.aiActiveCard;
 
     // Close popover first
     closePaAddDocPopover();
 
-    // Optimistic local update + re-render
-    _paApplyOptimisticAdd(item, pendingDoc, placeholderId);
-    const card = document.querySelector(`.pa-card[data-report-id="${CSS.escape(item.report_id)}"]`);
-    if (card) {
-        card.outerHTML = buildPaCard(item);
-        safeCreateIcons(document.getElementById('paCardsContainer') || document);
+    // Optimistic local update + re-render — PA mode only (AI tab uses silent
+    // refresh via loadAIClassifications instead).
+    if (!aiMode) {
+        _paApplyOptimisticAdd(item, pendingDoc, placeholderId);
+        const card = document.querySelector(`.pa-card[data-report-id="${CSS.escape(item.report_id)}"]`);
+        if (card) {
+            card.outerHTML = buildPaCard(item);
+            safeCreateIcons(document.getElementById('paCardsContainer') || document);
+        }
     }
 
     const payload = {
@@ -11239,16 +11304,73 @@ async function paAddDocConfirm() {
         }, FETCH_TIMEOUTS.mutate);
         if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
         showAIToast('המסמך נוסף בהצלחה', 'success');
+
+        if (aiMode) {
+            // DL-386: silent refresh of AI review tab so the new chip shows up
+            try {
+                await loadAIClassifications(true);
+            } catch (e) { console.warn('DL-386: silent refresh failed', e); }
+            refreshClientDocTags(item.client_name);
+
+            // DL-386: if exactly one card was active at click time, offer to
+            // reassign that card's file to the just-created doc.
+            if (aiActiveCard) {
+                const refreshedItem = aiClassificationsData.find(i => i.report_id === item.report_id);
+                const newDoc = _findJustCreatedDoc(refreshedItem, pendingDoc);
+                if (newDoc && newDoc.doc_record_id) {
+                    showConfirmDialog(
+                        'האם לשייך את הקובץ למסמך זה?',
+                        () => {
+                            submitAIReassign(
+                                aiActiveCard.cardId,
+                                pendingDoc.template_id,
+                                newDoc.doc_record_id
+                            );
+                        },
+                        'שייך',
+                        false
+                    );
+                }
+            }
+        }
     } catch (err) {
         console.error('DL-301: add-doc failed', err);
-        _paRollbackOptimisticAdd(item, placeholderId);
-        const card2 = document.querySelector(`.pa-card[data-report-id="${CSS.escape(item.report_id)}"]`);
-        if (card2) {
-            card2.outerHTML = buildPaCard(item);
-            safeCreateIcons(document.getElementById('paCardsContainer') || document);
+        if (!aiMode) {
+            _paRollbackOptimisticAdd(item, placeholderId);
+            const card2 = document.querySelector(`.pa-card[data-report-id="${CSS.escape(item.report_id)}"]`);
+            if (card2) {
+                card2.outerHTML = buildPaCard(item);
+                safeCreateIcons(document.getElementById('paCardsContainer') || document);
+            }
         }
         showAIToast('שגיאה בהוספת המסמך', 'danger');
     }
+}
+
+// DL-386: locate the freshly-created doc in the refreshed AI item so we can
+// reassign against its `doc_record_id`. Match by template_id + issuer_key
+// (general_doc falls back to case-insensitive issuer_name).
+function _findJustCreatedDoc(item, pendingDoc) {
+    if (!item) return null;
+    const tpl = (pendingDoc.template_id || '').toLowerCase();
+    const key = (pendingDoc.issuer_key || '').toLowerCase();
+    const name = (pendingDoc.issuer_name || '').toLowerCase().trim();
+    const flat = []
+        .concat(Array.isArray(item.all_docs) ? item.all_docs : [])
+        .concat(Array.isArray(item.missing_docs) ? item.missing_docs : []);
+    for (const d of flat) {
+        const dType = (d.type || d.template_id || '').toLowerCase();
+        if (tpl === 'general_doc') {
+            if (dType !== 'general_doc') continue;
+            const dName = ((d.issuer_name || d.name || '') + '').toLowerCase().trim();
+            if (dName === name) return d;
+        } else {
+            if (dType !== tpl) continue;
+            const dKey = ((d.issuer_key || '') + '').toLowerCase();
+            if (dKey === key) return d;
+        }
+    }
+    return null;
 }
 
 // ==================== /DL-301 ====================
