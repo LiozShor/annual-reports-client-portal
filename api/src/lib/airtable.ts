@@ -214,6 +214,33 @@ export class AirtableClient {
     return all;
   }
 
+  /**
+   * Fetch up to 200 records by their Airtable record IDs.
+   * Uses RECORD_ID() formula chunks of 10 to stay within filter limits.
+   * Returns a map of recordId → fields.
+   */
+  async batchGetRecords<T = Record<string, unknown>>(
+    table: string,
+    ids: string[],
+    fields?: string[]
+  ): Promise<Map<string, T>> {
+    const result = new Map<string, T>();
+    const unique = [...new Set(ids)].slice(0, 200);
+    for (let i = 0; i < unique.length; i += 10) {
+      const chunk = unique.slice(i, i + 10);
+      const orParts = chunk.map(id => `RECORD_ID()='${id}'`).join(', ');
+      const formula = chunk.length === 1 ? `RECORD_ID()='${chunk[0]}'` : `OR(${orParts})`;
+      const records = await this.listAllRecords<T>(table, {
+        filterByFormula: formula,
+        ...(fields ? { fields } : {}),
+      });
+      for (const r of records) {
+        result.set(r.id, r.fields);
+      }
+    }
+    return result;
+  }
+
   /** Batch delete records in chunks of 10 (Airtable limit). */
   async deleteRecords(table: string, ids: string[]): Promise<void> {
     for (let i = 0; i < ids.length; i += 10) {

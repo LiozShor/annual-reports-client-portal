@@ -1,7 +1,7 @@
 # Design Log 365: Activity Logger — Cloudflare-Native Replacement for Airtable security_logs
 
 **Branch:** `DL-365-activity-logger`
-**Status:** [BEING IMPLEMENTED — DL-365] (Phase 1 COMPLETE — smoke test passed 2026-04-28; Phase 2-4 pending)
+**Status:** [BEING IMPLEMENTED — DL-365] (Phases 1+2 COMPLETE — verified live 2026-04-29; Phase 3 implemented 2026-04-30 — needs deploy + smoke test; Phase 4 pending)
 **Date:** 2026-04-28
 **Related:** DL-094 (existing security_logs, to deprecate), DL-180 (observability research, reused)
 
@@ -303,4 +303,20 @@ interface ActivityEvent {
     - `upload-document.ts` — `event_type: 'doc_upload'`, `category: 'CLIENT'`.
   - `assign-unidentified` already covered via `logSecurity` dual-write (`INBOUND_DISCARDED` / `INBOUND_MANUAL_ASSIGN` event types).
   - TypeScript typecheck clean (only pre-existing unrelated errors in `backfill.ts`, `classifications.ts:1085/2693`, `edit-documents.ts:18`).
-- Phases 3-4 deferred to subsequent /subagent-driven-development invocations after Phase 2 verified live (deploy + manual smoke per Section 7).
+- 2026-04-30 — **Phase 3 (admin UI telemetry + dev viewer) implemented.** Plan: `~/.claude/plans/immutable-jingling-clarke.md`. Changes:
+  - `api/src/routes/admin-dev-activity.ts` — **NEW**. Three endpoints: `POST /webhook/admin-dev-verify` (DEV_PASSWORD → 30-min HMAC dev-token signed with PII_HASH_KEY), `GET /webhook/admin-dev-activity` (CF Logs API hot-tier + R2 archive fallback, filters: since/until/event_type/client_id/actor/limit), `POST /webhook/admin-clients-lookup` (batch Airtable fetch → `{name, email_masked, phone_hash}` for viewer-side PII join). All three emit their own `dev_login`/`dev_query`/`dev_lookup` events (audit-the-auditor).
+  - `api/src/lib/pii.ts` — added `maskEmail()` and `hashPhone()` helpers used by the lookup endpoint.
+  - `api/src/lib/airtable.ts` — added `batchGetRecords()`: fetches up to 200 records by ID using `RECORD_ID()` formula chunks of 10.
+  - `api/src/lib/types.ts` — added `CF_ACCOUNT_ID?: string` and `CF_API_TOKEN?: string` to `Env`.
+  - `api/src/index.ts` — mounted `adminDevActivity` router under `/webhook`.
+  - `frontend/shared/telemetry.js` — **NEW**. `window.logUiEvent(type, details)` queues events, flushes via `fetch keepalive` to `/webhook/events` with admin Bearer token. Auto-flushes on `visibilitychange=hidden`.
+  - `frontend/admin/js/script.js` — telemetry hooks added to `switchTab()` (`tab_switch`), `approveAIClassification()` (`doc_approve_click`), `approveAndSendFromQueue()` (`batch_send_click`), `sendDashboardReminder()` (`reminder_send_click`). Added `_mountActivityViewer()` helper + `initDevTab` IIFE that reveals the hidden tab when `?dev=1` is in the URL. Cache-busted v381→v382.
+  - `frontend/admin/index.html` — added hidden `<button id="dev-activity-tab-btn">` tab, `<div id="tab-dev_activity">` content div with `<div id="activity-viewer-root">`, `<script>` tags for telemetry.js and activity-viewer.js (both v=1).
+  - `frontend/admin/react/src/islands/activity-viewer.tsx` — **NEW** React island (`window.mountActivityViewer` / `window.unmountActivityViewer`). Components: DevPasswordGate, FilterBar (presets + datetime/event_type/client_id/actor/live-tail toggle), Timeline (5s poll when live=true + visible), EventRow (expand to JSON). Viewer-side PII join via `/admin-clients-lookup`.
+  - `frontend/admin/react/vite.config.ts` — reverted to single-entry (client-detail.tsx). Multi-entry IIFE not supported by Vite lib mode.
+  - `frontend/admin/react/vite.config.activity.ts` — **NEW** second config for activity-viewer island (emptyOutDir:false).
+  - `frontend/admin/react/package.json` — `build` script now runs both Vite configs sequentially.
+  - `frontend/admin/react/src/types/globals.d.ts` — added `mountActivityViewer`, `unmountActivityViewer`, `logUiEvent`, `_telemetryFlush` to Window interface.
+  - Both islands build clean: client-detail.js 190KB, activity-viewer.js 152KB.
+  - **Pending before deploy:** `wrangler secret put DEV_PASSWORD` + `wrangler secret put PII_HASH_KEY` (if not already set). Optionally also `wrangler secret put CF_ACCOUNT_ID` + `wrangler secret put CF_API_TOKEN` for hot-tier query (endpoint falls back to R2-only if absent).
+- Phase 4 deferred (client portal hooks + n8n workflow updates).

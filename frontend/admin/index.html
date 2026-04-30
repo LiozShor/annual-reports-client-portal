@@ -395,6 +395,8 @@
                 <svg class="icon icon-sm" aria-hidden="true" focusable="false" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"><use href="#icon-bell"/></svg> תזכורות חודשיות
             </button>
             <button class="tab-item" onclick="switchTab('import', event)"><svg class="icon icon-sm" aria-hidden="true" focusable="false" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"><use href="#icon-upload"/></svg> הוספת לקוחות</button>
+            <!-- DL-365 Phase 3: hidden dev tab — revealed by ?dev=1 in URL -->
+            <button id="dev-activity-tab-btn" class="tab-item" onclick="switchTab('dev_activity', event)" style="display:none;"><svg class="icon icon-sm" aria-hidden="true" focusable="false" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"><use href="#icon-bar-chart-3"/></svg> Activity Log</button>
         </div>
 
         <div class="content">
@@ -1169,6 +1171,11 @@
                 <div id="questionnairePagination"></div>
             </div>
 
+            <!-- DL-365 Phase 3: hidden dev activity viewer tab (visible via ?dev=1) -->
+            <div id="tab-dev_activity" class="tab-content" style="height:calc(100vh - 120px);padding:0;">
+                <div id="activity-viewer-root" style="height:100%;"></div>
+            </div>
+
         </div>
     </div>
 
@@ -1537,11 +1544,13 @@
     <script src="../shared/print-questionnaire.js"></script>
     <script src="../shared/email-preview-modal.js"></script>
 
+    <script src="../shared/telemetry.js?v=1"></script>
     <script src="js/script.js?v=382"></script>
     <script src="../assets/js/idle-refresh.js?v=281" defer></script>
     <script src="js/chatbot.js"></script>
-    <!-- React island: Client Detail Modal (loads after shared scripts) -->
+    <!-- React islands (loads after shared scripts) -->
     <script src="react-dist/client-detail.js?v=372"></script>
+    <script src="react-dist/activity-viewer.js?v=1"></script>
     <script>
       // DL-321: Bootstrap idle-refresh — fires after DOM + deferred scripts are ready
       document.addEventListener('DOMContentLoaded', function () {

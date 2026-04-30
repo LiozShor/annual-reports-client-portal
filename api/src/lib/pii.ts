@@ -69,6 +69,38 @@ export function scrubText(input: string | undefined): string | undefined {
   return result;
 }
 
+/**
+ * Mask an email address: keep first char and domain, e.g. "john@example.com" → "j***@example.com".
+ * Returns empty string for blank input.
+ */
+export function maskEmail(email: string): string {
+  if (!email) return '';
+  const at = email.indexOf('@');
+  if (at < 1) return email; // not a valid email, return as-is
+  const local = email.substring(0, at);
+  const domain = email.substring(at); // includes '@'
+  const visible = local.length > 1 ? local[0] : local;
+  return `${visible}***${domain}`;
+}
+
+/**
+ * HMAC-SHA256 hash of a phone number for stable pseudonymous logging.
+ * Truncated to 12 hex chars. Returns empty string for blank input.
+ */
+export async function hashPhone(phone: string): Promise<string> {
+  if (!phone) return '';
+  try {
+    const key = await crypto.subtle.importKey(
+      'raw', encoder.encode('phone_hash_key'),
+      { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']
+    );
+    const sig = await crypto.subtle.sign('HMAC', key, encoder.encode(phone.replace(/\D/g, '')));
+    return Array.from(new Uint8Array(sig)).map(b => b.toString(16).padStart(2, '0')).join('').substring(0, 12);
+  } catch {
+    return '';
+  }
+}
+
 export const DROPPED_KEYS: readonly string[] = [
   'email',
   'phone',

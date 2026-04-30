@@ -59,5 +59,11 @@ declare global {
       props: { reportId: string; ctx?: import('./client').ClientDetailContext }
     ) => void
     unmountClientDetail: (element: HTMLElement) => void
+    // DL-365 Phase 3: activity viewer island bridge
+    mountActivityViewer: (element: HTMLElement, props: { adminToken: string }) => void
+    unmountActivityViewer: (element: HTMLElement) => void
+    // DL-365 Phase 3: telemetry
+    logUiEvent: (type: string, details?: Record<string, unknown>) => void
+    _telemetryFlush: () => void
   }
 }

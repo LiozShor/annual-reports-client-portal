@@ -28,6 +28,9 @@ export interface Env {
   ACTIVITY_LOGS: R2Bucket;
   DEV_PASSWORD: string;
   PII_HASH_KEY: string;
+  // DL-365 Phase 3: CF Logs Analytics API (Workers Logs:Read scope)
+  CF_ACCOUNT_ID?: string;
+  CF_API_TOKEN?: string;
 
   // KV namespaces
   TOKEN_CACHE: KVNamespace;

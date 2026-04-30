@@ -331,6 +331,8 @@ function switchTab(tabName, evt) {
     if (tabName === _lastSwitchTabName && (now - _lastSwitchTabAt) < 150) return;
     _lastSwitchTabAt = now;
     _lastSwitchTabName = tabName;
+    // DL-365 Phase 3: emit telemetry
+    if (typeof window.logUiEvent === 'function') window.logUiEvent('tab_switch', { tab: tabName });
     const _tSwitch = perfStart();
     document.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'));
     document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
@@ -378,6 +380,8 @@ function switchTab(tabName, evt) {
         loadReminders(true);
     } else if (tabName === 'questionnaires') {
         loadQuestionnaires(true);
+    } else if (tabName === 'dev_activity') {
+        _mountActivityViewer();
     }
     perfEnd('switchTab:' + tabName, _tSwitch);
 }
@@ -6676,6 +6680,7 @@ function clearCardLoading(recordId) {
 }
 
 async function approveAIClassification(recordId) {
+    if (typeof window.logUiEvent === 'function') window.logUiEvent('doc_approve_click', { classification_id: recordId });
     showInlineConfirm(recordId, 'לאשר את הסיווג?', async () => {
         setCardLoading(recordId, 'מאשר סיווג...');
 
@@ -11217,6 +11222,7 @@ function previewApproveEmail(reportId, clientName) {
 }
 
 async function approveAndSendFromQueue(reportId, clientName) {
+    if (typeof window.logUiEvent === 'function') window.logUiEvent('batch_send_click', { report_id: reportId });
     const item = pendingApprovalData.find(i => i.report_id === reportId);
     if (!item) return;
 
@@ -12587,6 +12593,7 @@ function setManualReminder(reportId, clientName) {
 }
 
 async function sendDashboardReminder(reportId, clientName) {
+    if (typeof window.logUiEvent === 'function') window.logUiEvent('reminder_send_click', { report_id: reportId });
     if (!reminderLoaded) {
         try {
             await loadReminders(true);
@@ -15355,4 +15362,22 @@ function handlePreviewKeydown(e) {
         if (container) container.classList.remove('dragging');
         applyPreviewTransform(); // Re-enable transition
     });
+})();
+
+// DL-365 Phase 3: mount/unmount the activity-viewer React island on the hidden dev tab.
+let _activityViewerMounted = false;
+function _mountActivityViewer() {
+    const root = document.getElementById('activity-viewer-root');
+    if (!root || typeof window.mountActivityViewer !== 'function') return;
+    if (_activityViewerMounted) return;
+    _activityViewerMounted = true;
+    window.mountActivityViewer(root, { adminToken: authToken || '' });
+}
+
+// DL-365 Phase 3: reveal hidden dev tab when ?dev=1 is in the URL.
+(function initDevTab() {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('dev') !== '1') return;
+    const btn = document.getElementById('dev-activity-tab-btn');
+    if (btn) btn.style.removeProperty('display');
 })();

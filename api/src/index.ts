@@ -35,6 +35,7 @@ import sendBatchQuestions from './routes/send-batch-questions';
 import auditStaleItemIds from './routes/audit-stale-itemids'; // DL-356
 import unlockPdf from './routes/unlock-pdf'; // DL-373
 import { handleRequestPdfPassword } from './routes/request-pdf-password'; // DL-380
+import adminDevActivity from './routes/admin-dev-activity'; // DL-365 Phase 3
 import { logError } from './lib/error-logger';
 import { handleInboundQueue } from './lib/inbound/queue-consumer';
 import { handleInboundDLQ } from './lib/inbound/dlq-consumer';
@@ -92,6 +93,7 @@ app.route('/webhook', sendBatchQuestions);
 app.route('/webhook', auditStaleItemIds); // DL-356
 app.route('/webhook', unlockPdf); // DL-373
 app.post('/webhook/request-pdf-password', handleRequestPdfPassword); // DL-380
+app.route('/webhook', adminDevActivity); // DL-365 Phase 3
 
 // Health check
 app.get('/health', (c) => c.json({ ok: true, service: 'annual-reports-api' }));
