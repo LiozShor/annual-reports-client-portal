@@ -11,7 +11,7 @@ export function corsMiddleware(allowedOrigins: string) {
   return cors({
     origin: origins,
     allowMethods: ['GET', 'POST', 'OPTIONS'],
-    allowHeaders: ['Content-Type', 'Authorization'],
+    allowHeaders: ['Content-Type', 'Authorization', 'X-Dev-Token', 'X-N8N-Key', 'X-Request-Id'],
     maxAge: 86400, // Cache preflight for 24 hours
   });
 }
