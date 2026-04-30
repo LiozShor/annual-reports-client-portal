@@ -28,7 +28,7 @@ source ./.env
 if $DRY_RUN; then
   echo "[dry-run] Would run from: $REPO_ROOT/api"
   echo "[dry-run] CLOUDFLARE_API_TOKEN=\"\" npx wrangler deploy -c wrangler.toml"
-  echo "[dry-run] Then verify: curl https://annual-reports-api.liozshor1.workers.dev/webhook/health"
+  echo "[dry-run] Then verify: curl https://annual-reports-api.liozshor1.workers.dev/health"
   exit 0
 fi
 
@@ -38,7 +38,7 @@ cd "$REPO_ROOT/api"
 CLOUDFLARE_API_TOKEN="" npx wrangler deploy -c wrangler.toml
 
 echo "→ Verifying health endpoint..."
-HTTP_STATUS="$(curl -s -o /dev/null -w "%{http_code}" https://annual-reports-api.liozshor1.workers.dev/webhook/health)"
+HTTP_STATUS="$(curl -s -o /dev/null -w "%{http_code}" https://annual-reports-api.liozshor1.workers.dev/health)"
 if [ "$HTTP_STATUS" = "200" ]; then
   echo "✅ Worker live (health endpoint: 200)"
 else
