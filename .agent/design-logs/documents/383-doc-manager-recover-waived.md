@@ -1,5 +1,5 @@
 # Design Log 383: Doc Manager — Recover Waived Docs (Waived ↔ Required) Reliability + UX
-**Status:** [IMPLEMENTED — NEED TESTING]
+**Status:** [COMPLETED — 2026-04-30]
 **Date:** 2026-04-30
 **Related Logs:** [DL-205](205-clear-file-fields-on-status-revert.md) (scoped by this DL), [DL-244](244-rejected-uploads-visibility.md), [DL-356](../infrastructure/356-preview-url-stale-itemid-self-heal.md)
 
