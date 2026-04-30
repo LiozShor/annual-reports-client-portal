@@ -489,6 +489,10 @@ classifications.get('/get-pending-classifications', async (c) => {
             other_report_docs: siblingDocs?.all || [],
           };
         })(),
+        // DL-380/382: encrypted PDF password fields
+        suggested_password: (f.suggested_password as string) || '',
+        password_request_sent_at: (f.password_request_sent_at as string) || '',
+        password_reply_raw: (f.password_reply_raw as string) || '',
         // DL-328: office-saved question for this classification (cleared after batch send)
         pending_question: (f.pending_question as string) || '',
         // DL-361: surface email_event link + subject so frontend can group
