@@ -1124,11 +1124,11 @@ function displayDocuments() {
                 html += `
                     <div class="document-item ${isWaived ? 'waived-item' : ''} ${!isWaived && effectiveStatus === 'Received' ? 'status-received' : ''} ${isRestoreMarked ? 'marked-for-restore' : ''} ${isStatusChanged ? 'status-changed' : ''} ${isNameChanged ? 'name-changed' : ''} ${markedForRemoval.has(doc.id) ? 'marked-for-removal' : ''}" id="doc-${doc.id}">
                         ${isWaived
-                            ? `<input type="checkbox" class="restore-checkbox"
-                                onchange="toggleRestore('${doc.id}')"
-                                id="restore-${doc.id}"
-                                ${isRestoreMarked ? 'checked' : ''}
-                                aria-label="שחזר מסמך">`
+                            ? `<button type="button" class="restore-btn${isRestoreMarked ? ' active' : ''}"
+                                onclick="toggleRestore('${doc.id}')"
+                                id="restore-btn-${doc.id}"
+                                aria-label="שחזר מסמך"
+                                title="שחזר מסמך לרשימת הדרושים">${icon('rotate-ccw', 'icon-sm')}</button>`
                             : ''
                         }
                         <div class="doc-name-group">
@@ -1154,8 +1154,8 @@ function displayDocuments() {
                             ${!isWaived ? `<button type="button" class="file-action-btn upload-btn" id="upload-btn-${doc.id}"
                                 onclick="triggerUpload('${doc.id}')" title="העלה קובץ" aria-label="העלה קובץ"><i data-lucide="upload" class="icon-sm"></i></button>` : ''}
                             <span id="file-clear-warning-${doc.id}" class="file-clear-warning"
-                                style="display:${doc.file_url && effectiveStatus === 'Required_Missing' && doc.status !== 'Required_Missing' ? 'inline-flex' : 'none'}">
-                                <i data-lucide="triangle-alert" class="icon-xs"></i> קישור הקובץ יימחק
+                                style="display:${doc.file_url && effectiveStatus === 'Required_Missing' && doc.status !== 'Required_Missing' && doc.status !== 'Waived' ? 'inline-flex' : 'none'}">
+                                ${icon('triangle-alert', 'icon-xs')} קישור הקובץ יימחק
                             </span>
                         </div>
                         <button type="button" class="delete-toggle${isWaived ? ' action-hidden' : ''} ${!isWaived && markedForRemoval.has(doc.id) ? 'active' : ''}"
@@ -1246,22 +1246,26 @@ function toggleRemoval(id) {
 
 // Toggle restore (un-waive)
 function toggleRestore(id) {
-    const checkbox = document.getElementById(`restore-${id}`);
+    const btn = document.getElementById(`restore-btn-${id}`);
     const item = document.getElementById(`doc-${id}`);
 
-    if (checkbox.checked) {
-        markedForRestore.add(id);
-        item.classList.add('marked-for-restore');
-    } else {
+    if (markedForRestore.has(id)) {
         markedForRestore.delete(id);
         item.classList.remove('marked-for-restore');
+        if (btn) btn.classList.remove('active');
+    } else {
+        markedForRestore.add(id);
+        item.classList.add('marked-for-restore');
+        if (btn) btn.classList.add('active');
     }
 
-    // DL-205: Show/hide file-clear warning for restored docs with files
+    // DL-383: file-clear warning only when source doc has a file AND is not Waived
+    // (Waived docs have no file by definition — nulling file fields is unnecessary)
     const doc = currentDocuments.find(d => d.id === id);
     const warningEl = document.getElementById(`file-clear-warning-${id}`);
     if (warningEl && doc) {
-        warningEl.style.display = (checkbox.checked && doc.file_url) ? 'inline-flex' : 'none';
+        const sourceIsFileState = doc.status === 'Received' || doc.status === 'Requires_Fix';
+        warningEl.style.display = (markedForRestore.has(id) && sourceIsFileState && doc.file_url) ? 'inline-flex' : 'none';
     }
 
     updateStats();
@@ -2175,7 +2179,9 @@ function openConfirmation() {
         summary += `<h4 class="text-brand"><i data-lucide="refresh-cw" class="icon-sm" style="display:inline;vertical-align:middle;"></i> מסמכים שישוחזרו (${restoreDocs.length}):</h4>`;
         summary += '<ul class="changes-list">';
         restoreDocs.forEach(doc => {
-            const fileClearNote = doc.file_url ? ' <span class="file-clear-warning-summary">⚠ קישור הקובץ יימחק</span>' : '';
+            // DL-383: file-clear note only when source has a file and is not Waived
+            const sourceIsFileState = doc.status === 'Received' || doc.status === 'Requires_Fix';
+            const fileClearNote = (sourceIsFileState && doc.file_url) ? ' <span class="file-clear-warning-summary">⚠ קישור הקובץ יימחק</span>' : '';
             summary += `<li class="change-restore">${stripHtml(doc.name)}${fileClearNote}</li>`;
         });
         summary += '</ul>';
@@ -2461,15 +2467,16 @@ async function confirmSubmit() {
             _skipQuestionsReload = true;
 
             setBtnState(saveBtn, 'success', 'נשמר!');
-            setTimeout(() => {
-                setBtnState(saveBtn, 'idle');
-                loadDocuments(REPORT_ID);
-            }, 1500);
+            loadDocuments(REPORT_ID); // refresh row state immediately; badge clears after 1.5s
+            setTimeout(() => setBtnState(saveBtn, 'idle'), 1500);
         } else {
-            throw new Error('Server error');
+            // DL-383: parse error body so admin sees the real cause, not a generic toast
+            const errBody = await response.json().catch(() => null);
+            const msg = errBody?.error || 'Server error';
+            throw Object.assign(new Error(msg), { code: errBody?.error_code });
         }
     } catch (error) {
-        console.error('Save operation failed');
+        console.error('Save operation failed', error);
         setBtnState(saveBtn, 'idle');
         showAlert(getErrorMessage(error, 'he'), 'error');
     } finally {

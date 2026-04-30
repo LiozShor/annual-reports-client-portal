@@ -27,7 +27,7 @@ const OFFICE_DOMAIN = '@moshe-atsits.co.il';
 
 backfill.post('/backfill-note-sender', async (c) => {
   const token = c.req.header('Authorization')?.replace('Bearer ', '') || c.req.query('token') || '';
-  if (!verifyToken(token, c.env.ADMIN_SECRET)) {
+  if (!verifyToken(token, c.env.SECRET_KEY)) {
     return c.json({ ok: false, error: 'Unauthorized' }, 401);
   }
 
@@ -253,7 +253,7 @@ const MAILBOX = 'reports@moshe-atsits.co.il';
 
 backfill.post('/backfill-conversation-ids', async (c) => {
   const token = c.req.header('Authorization')?.replace('Bearer ', '') || c.req.query('token') || '';
-  if (!verifyToken(token, c.env.ADMIN_SECRET)) {
+  if (!verifyToken(token, c.env.SECRET_KEY)) {
     return c.json({ ok: false, error: 'Unauthorized' }, 401);
   }
 

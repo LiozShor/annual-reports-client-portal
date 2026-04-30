@@ -153,6 +153,8 @@ export interface ClassificationResult {
   isDocument?: boolean;
   /** DL-321: category when isDocument=false; 'not_applicable' when isDocument=true */
   nonDocumentReason?: 'decorative' | 'signature' | 'blank_page' | 'not_applicable';
+  /** Number of pages detected in the classified document */
+  pageCount?: number;
 }
 
 // ---------------------------------------------------------------------------

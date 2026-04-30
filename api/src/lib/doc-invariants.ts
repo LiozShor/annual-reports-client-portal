@@ -47,9 +47,20 @@ export const MISSING_STATE_NULL_FIELDS = [
  * `MISSING_STATE_NULL_FIELDS` to `null` on the same object. Mutates
  * and returns `fields` for fluent use. Safe to call when status is
  * something else — it's a no-op then.
+ *
+ * DL-383: `opts.previousStatus` lets callers skip the null sweep for
+ * transitions originating from `Waived` — a Waived doc has no file by
+ * definition, so clearing file fields would wastefully null `document_uid`
+ * and risk Airtable 422s. Sweep still runs for Received / Requires_Fix
+ * sources (DL-205 preserved).
  */
-export function applyMissingStatusInvariant<T extends Record<string, unknown>>(fields: T): T {
+export function applyMissingStatusInvariant<T extends Record<string, unknown>>(
+  fields: T,
+  opts?: { previousStatus?: string }
+): T {
   if (fields.status !== 'Required_Missing') return fields;
+  // Skip the sweep when restoring from Waived — no file was ever linked.
+  if (opts?.previousStatus === 'Waived') return fields;
   for (const f of MISSING_STATE_NULL_FIELDS) {
     (fields as Record<string, unknown>)[f] = null;
   }

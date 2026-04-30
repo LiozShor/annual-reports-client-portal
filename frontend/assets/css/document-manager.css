@@ -613,17 +613,30 @@ body {
     color: var(--danger-700);
 }
 
-/* Restore checkbox (waived items) */
-.document-item input[type="checkbox"] {
-    width: 20px;
-    height: 20px;
-    margin-inline-end: var(--sp-3);
+/* Restore button (waived items) — DL-383: replaces checkbox affordance */
+.restore-btn {
+    background: none;
+    border: 1px solid transparent;
     cursor: pointer;
+    padding: var(--sp-1) var(--sp-2);
+    border-radius: var(--radius-md);
+    transition: all var(--transition-fast);
+    display: flex;
+    align-items: center;
+    color: var(--info-400);
     flex-shrink: 0;
+    margin-inline-end: var(--sp-2);
 }
 
-.restore-checkbox {
-    accent-color: var(--info-500) !important;
+.restore-btn:hover {
+    background: var(--info-50);
+    color: var(--info-600);
+}
+
+.restore-btn.active {
+    background: var(--info-100);
+    border-color: var(--info-300);
+    color: var(--info-700);
 }
 
 .doc-name-group {
