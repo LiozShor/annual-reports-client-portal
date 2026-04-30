@@ -15,7 +15,7 @@ import { logError } from '../lib/error-logger';
 import { checkAutoAdvanceToReview } from '../lib/auto-advance';
 import { isLastReference } from '../lib/file-refcount';
 import { DRIVE_ID } from '../lib/classification-helpers';
-import { sanitizeBatchUpdates } from '../lib/batch-sanitize.mjs';
+import { sanitizeBatchUpdates } from '../lib/batch-sanitize';
 import { applyMissingStatusInvariant } from '../lib/doc-invariants';
 import type { Env } from '../lib/types';
 
@@ -237,8 +237,12 @@ function extractAndValidate(body: Record<string, unknown>): ExtractedData {
 }
 
 /** Build update map from all change types (waive, restore, status, notes, names) */
-function buildUpdateMap(data: ExtractedData): Map<string, Record<string, unknown>> {
+function buildUpdateMap(
+  data: ExtractedData,
+  previousStatuses?: Map<string, string>
+): Map<string, Record<string, unknown>> {
   const updateMap = new Map<string, Record<string, unknown>>();
+  const waiveSet = new Set(data.docs_to_waive_ids);
 
   for (const id of data.docs_to_waive_ids) {
     if (!updateMap.has(id)) updateMap.set(id, { id });
@@ -247,8 +251,17 @@ function buildUpdateMap(data: ExtractedData): Map<string, Record<string, unknown
 
   for (const doc of data.docs_to_restore) {
     if (!doc.id) continue;
+    // DL-383: waive wins when same id appears in both sets (frontend guard mirrors filteredStatusChanges)
+    if (waiveSet.has(doc.id)) {
+      console.warn('[edit-documents] waive+restore conflict on same id — waive wins:', doc.id);
+      continue;
+    }
     if (!updateMap.has(doc.id)) updateMap.set(doc.id, { id: doc.id });
     updateMap.get(doc.id)!.status = 'Required_Missing';
+    // Store previous status so applyMissingStatusInvariant can skip the null sweep for Waived sources.
+    // _previousStatus is filtered out before the Airtable PATCH.
+    const prev = previousStatuses?.get(doc.id);
+    if (prev) updateMap.get(doc.id)!._previousStatus = prev;
   }
 
   for (const change of data.status_changes) {
@@ -272,9 +285,10 @@ function buildUpdateMap(data: ExtractedData): Map<string, Record<string, unknown
   }
 
   // DL-205 / DL-356: Clear file fields for any doc reverting to Missing.
-  // Centralized invariant — see api/src/lib/doc-invariants.ts.
+  // DL-383: pass previousStatus so Waived → Missing restores skip the sweep
+  // (Waived docs have no file; nulling document_uid risks Airtable 422s).
   for (const entry of updateMap.values()) {
-    applyMissingStatusInvariant(entry);
+    applyMissingStatusInvariant(entry, { previousStatus: entry._previousStatus as string | undefined });
   }
 
   return updateMap;
@@ -360,7 +374,21 @@ editDocuments.post('/edit-documents', async (c) => {
     }
 
     // ---- Batch update existing docs (waive, restore, status, notes, names) ----
-    const updateMap = buildUpdateMap(data);
+    // DL-383: pre-fetch current status for restore targets so the invariant can
+    // skip file-field clearing on Waived → Missing transitions (Waived docs have
+    // no file; nulling document_uid would risk Airtable 422s).
+    const previousStatuses = new Map<string, string>();
+    for (const doc of data.docs_to_restore) {
+      if (!doc.id) continue;
+      try {
+        const rec = await airtable.getRecord(TABLES.DOCUMENTS, doc.id);
+        const s = (rec.fields as Record<string, unknown>).status as string;
+        if (s) previousStatuses.set(doc.id, s);
+      } catch {
+        // non-fatal — invariant will fall through to default (safe) behaviour
+      }
+    }
+    const updateMap = buildUpdateMap(data, previousStatuses);
     const updates = Array.from(updateMap.values());
 
     // DL-314: identify docs losing their file reference — if this was the LAST
@@ -382,7 +410,8 @@ editDocuments.post('/edit-documents', async (c) => {
       const airtableUpdates = updates.map(u => ({
         id: u.id as string,
         fields: Object.fromEntries(
-          Object.entries(u).filter(([k]) => k !== 'id')
+          // _previousStatus is internal metadata — never sent to Airtable
+          Object.entries(u).filter(([k]) => k !== 'id' && k !== '_previousStatus')
         ),
       }));
 

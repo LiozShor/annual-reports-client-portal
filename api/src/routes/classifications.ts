@@ -2690,7 +2690,7 @@ classifications.post('/assign-unidentified', async (c) => {
         // ---- Re-classify ----
         let classification: ClassificationResult | null = null;
         try {
-          classification = await classifyAttachment(pCtx, att, requiredDocs, clientName, {
+          classification = await classifyAttachment(pCtx, att, requiredDocs as any, clientName, {
             subject: (f.email_body_text as string) || '',
             bodyPreview: (f.email_body_text as string) || '',
             senderName: (f.sender_name as string) || '',
