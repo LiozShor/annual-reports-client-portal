@@ -4535,8 +4535,9 @@ function buildDesktopClientDocsHtml(clientName, items) {
     const hasStatusVariation = allDocs.length > 0 && docsReceivedCount > 0;
     if (displayDocs.length > 0) {
         // DL-349: shared helper keeps initial render and refresher in lock-step
-        // DL-386: trailing "+ הוסף מסמך" chip
-        const addCtx = items[0].report_id ? { reportId: items[0].report_id, person: 'client' } : null;
+        // DL-386: trailing "+ הוסף מסמך" chip (AI items use report_record_id; PA uses report_id)
+        const reportIdForAdd = items[0].report_record_id || items[0].report_id;
+        const addCtx = reportIdForAdd ? { reportId: reportIdForAdd, person: 'client' } : null;
         const categoriesHtml = buildDocCategoryTagsHtml(displayDocs, addCtx);
         const label = hasStatusVariation
             ? `📄 מסמכים נדרשים (${docsReceivedCount}/${docsTotalCount} התקבלו)`
@@ -5336,8 +5337,9 @@ function buildClientAccordionHtml(clientName, clientItems, open) {
 
     if (displayDocs.length > 0) {
         // DL-349: shared helper keeps initial render and refresher in lock-step
-        // DL-386: trailing "+ הוסף מסמך" chip
-        const addCtx = clientItems[0].report_id ? { reportId: clientItems[0].report_id, person: 'client' } : null;
+        // DL-386: trailing "+ הוסף מסמך" chip (AI items use report_record_id; PA uses report_id)
+        const reportIdForAdd = clientItems[0].report_record_id || clientItems[0].report_id;
+        const addCtx = reportIdForAdd ? { reportId: reportIdForAdd, person: 'client' } : null;
         const categoriesHtml = buildDocCategoryTagsHtml(displayDocs, addCtx);
 
         const toggleLabel = hasStatusVariation
@@ -9490,8 +9492,9 @@ function refreshClientDocTags(clientName) {
     const docsReceivedCount = representative.docs_received_count || 0;
     const docsTotalCount = representative.docs_total_count || displayDocs.length;
     const hasStatusVariation = allDocs.length > 0 && docsReceivedCount > 0;
-    // DL-386: keep "+ הוסף מסמך" chip across silent re-renders
-    const addCtx = representative.report_id ? { reportId: representative.report_id, person: 'client' } : null;
+    // DL-386: keep "+ הוסף מסמך" chip across silent re-renders (AI items use report_record_id)
+    const reportIdForAdd = representative.report_record_id || representative.report_id;
+    const addCtx = reportIdForAdd ? { reportId: reportIdForAdd, person: 'client' } : null;
     const tagsHtml = buildDocCategoryTagsHtml(displayDocs, addCtx);
 
     // --- Desktop 3-pane (DL-330) ---
@@ -10713,10 +10716,15 @@ function _paResolveAddDocItem(reportId) {
         ? pendingApprovalData.find(i => i.report_id === reportId)
         : null;
     if (pa) return { item: pa, aiMode: false };
+    // AI tab items expose the report record id as `report_record_id`
     const ai = (typeof aiClassificationsData !== 'undefined')
-        ? aiClassificationsData.find(i => i.report_id === reportId)
+        ? aiClassificationsData.find(i => (i.report_record_id || i.report_id) === reportId)
         : null;
-    if (ai) return { item: ai, aiMode: true };
+    if (ai) {
+        // Normalize so downstream code (which reads item.report_id) works.
+        if (!ai.report_id && ai.report_record_id) ai.report_id = ai.report_record_id;
+        return { item: ai, aiMode: true };
+    }
     return { item: null, aiMode: false };
 }
 
@@ -11323,7 +11331,7 @@ async function paAddDocConfirm() {
             // DL-386: if exactly one card was active at click time, offer to
             // reassign that card's file to the just-created doc.
             if (aiActiveCard) {
-                const refreshedItem = aiClassificationsData.find(i => i.report_id === item.report_id);
+                const refreshedItem = aiClassificationsData.find(i => (i.report_record_id || i.report_id) === item.report_id);
                 const newDoc = _findJustCreatedDoc(refreshedItem, pendingDoc);
                 if (newDoc && newDoc.doc_record_id) {
                     showConfirmDialog(
