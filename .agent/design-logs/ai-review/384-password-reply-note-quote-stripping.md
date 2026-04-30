@@ -1,5 +1,5 @@
 # Design Log 384: Strip Quoted Body From Password-Reply client_note
-**Status:** [BEING IMPLEMENTED — DL-384]
+**Status:** COMPLETED — 2026-04-30
 **Date:** 2026-04-30
 **Related Logs:** DL-382 (batch password request — introduced the client_note write), DL-380 (request-password email + auto-detect reply), DL-298 (PA queue redesign — origin of dead notesText concat), DL-282 (forwarded-email note recurrence)
 
