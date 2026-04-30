@@ -330,25 +330,30 @@ async function queryR2Archive(
         const r2Obj = await bucket.get(obj.key);
         if (!r2Obj) continue;
 
-        // Decompress gzip
-        const compressed = await r2Obj.arrayBuffer();
-        const ds = new DecompressionStream('gzip');
-        const writer = ds.writable.getWriter();
-        writer.write(compressed);
-        writer.close();
-        const reader = ds.readable.getReader();
-        const chunks: Uint8Array[] = [];
-        let done = false;
-        while (!done) {
-          const { value, done: d } = await reader.read();
-          if (d) { done = true; break; }
-          if (value) chunks.push(value);
+        const isGzip = obj.key.endsWith('.gz');
+        let text: string;
+        if (isGzip) {
+          const compressed = await r2Obj.arrayBuffer();
+          const ds = new DecompressionStream('gzip');
+          const writer = ds.writable.getWriter();
+          writer.write(compressed);
+          writer.close();
+          const reader = ds.readable.getReader();
+          const chunks: Uint8Array[] = [];
+          let done = false;
+          while (!done) {
+            const { value, done: d } = await reader.read();
+            if (d) { done = true; break; }
+            if (value) chunks.push(value);
+          }
+          const total = chunks.reduce((s, c) => s + c.length, 0);
+          const combined = new Uint8Array(total);
+          let off = 0;
+          for (const chunk of chunks) { combined.set(chunk, off); off += chunk.length; }
+          text = new TextDecoder().decode(combined);
+        } else {
+          text = await r2Obj.text();
         }
-        const total = chunks.reduce((s, c) => s + c.length, 0);
-        const combined = new Uint8Array(total);
-        let offset = 0;
-        for (const chunk of chunks) { combined.set(chunk, offset); offset += chunk.length; }
-        const text = new TextDecoder().decode(combined);
 
         for (const line of text.split('\n')) {
           if (allEvents.length >= limit) break;
