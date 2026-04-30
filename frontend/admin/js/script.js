@@ -6785,15 +6785,28 @@ async function approveAIClassificationAddRequired(recordId, templateId) {
 }
 
 // DL-385: Parse lenient month/year strings into { month, year } or null
-// Accepts: MM.YYYY, M.YY, M/YYYY, MM/YY, M-YYYY, MM-YYYY etc.
+// Accepts (with separator):    MM.YYYY, M.YY, M/YYYY, MM/YY, M-YYYY, MM-YYYY
+// Accepts (no separator):      MMYYYY (012025), MYYYY (12025), MMYY (0125), MYY (125)
 function parseLenientMonthYear(str) {
     if (!str) return null;
     const s = str.trim();
-    const m = s.match(/^(\d{1,2})[./\-](\d{2,4})$/);
-    if (!m) return null;
-    const month = parseInt(m[1], 10);
-    let year = parseInt(m[2], 10);
-    if (m[2].length === 2) year = year <= 79 ? 2000 + year : 1900 + year;
+    let mm, yy;
+    const sep = s.match(/^(\d{1,2})[./\-](\d{2,4})$/);
+    if (sep) {
+        mm = sep[1]; yy = sep[2];
+    } else if (/^\d+$/.test(s)) {
+        // No separator — split by length
+        if (s.length === 6)      { mm = s.slice(0, 2); yy = s.slice(2); } // MMYYYY: 012025 → 01/2025
+        else if (s.length === 5) { mm = s.slice(0, 1); yy = s.slice(1); } // MYYYY:  52025  → 5/2025
+        else if (s.length === 4) { mm = s.slice(0, 2); yy = s.slice(2); } // MMYY:   0125   → 01/25
+        else if (s.length === 3) { mm = s.slice(0, 1); yy = s.slice(1); } // MYY:    525    → 5/25
+        else return null;
+    } else {
+        return null;
+    }
+    const month = parseInt(mm, 10);
+    let year = parseInt(yy, 10);
+    if (yy.length === 2) year = year <= 79 ? 2000 + year : 1900 + year;
     if (month < 1 || month > 12) return null;
     if (year < 2000 || year > 2100) return null;
     return { month, year };
