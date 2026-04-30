@@ -1,5 +1,5 @@
 # Design Log 387: Reassign Modal — Single-Click Custom Doc Submit
-**Status:** [IMPLEMENTED — NEED TESTING]
+**Status:** [COMPLETED — 2026-04-30]
 **Date:** 2026-04-30
 **Related Logs:** DL-301 (pa-add-doc-affordance), DL-336 (template picker UI), DL-350 (commit-then-assign actionsContainer)
 
