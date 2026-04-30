@@ -62,3 +62,7 @@ When Moshe sees an encrypted PDF in AI Review, getting the password from the cli
 - [ ] Reply with attachments + password → pipeline processes attachment AND stores password
 - [ ] Reply with no PWD token in subject → normal pipeline (regression)
 - [ ] Worker deploy + Pages deploy before live test
+
+## Follow-up Tweaks
+
+- **2026-04-30:** Hebrew copy rewritten to be gender-neutral via impersonal/passive forms (no `gender` field on clients, avoiding awkward slash forms). `ששלחת` → `שנשלח/ו אלינו`; `אנא השב` → `יש להשיב`; `ציין` → `נא לציין`. Applies to both single-file and batch variants in `buildPasswordRequestEmailHtml`.

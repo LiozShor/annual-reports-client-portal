@@ -839,8 +839,8 @@ export function buildPasswordRequestEmailHtml({
     : '';
 
   const heBody = isBatch
-    ? `שלום ${safeFirst}, ניסינו לפתוח את הקבצים הבאים ששלחת לנו, אך הם מוגנים בסיסמה:${heBulletList}אנא השב במייל זה עם הסיסמה. אם לכל קובץ סיסמה נפרדת, ציין זאת בתשובה — צוות המשרד יטפל בכך.`
-    : `שלום ${safeFirst}, ניסינו לפתוח את הקובץ <strong>${safeFilenames[0]}</strong> ששלחת לנו, אך הוא מוגן בסיסמה. אנא השב במייל זה עם הסיסמה.`;
+    ? `שלום ${safeFirst}, ניסינו לפתוח את הקבצים הבאים שנשלחו אלינו, אך הם מוגנים בסיסמה:${heBulletList}יש להשיב למייל זה עם הסיסמה. אם לכל קובץ סיסמה נפרדת, נא לציין זאת בתשובה — צוות המשרד יטפל בכך.`
+    : `שלום ${safeFirst}, ניסינו לפתוח את הקובץ <strong>${safeFilenames[0]}</strong> שנשלח אלינו, אך הוא מוגן בסיסמה. יש להשיב למייל זה עם הסיסמה.`;
 
   const enBody = isBatch
     ? `Hi ${safeFirst}, we tried to open the following files you sent us, but they are password-protected:${enBulletList}Please reply to this email with the password(s). If different files have different passwords, please note which is which.`
