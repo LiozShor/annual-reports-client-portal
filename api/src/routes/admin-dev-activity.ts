@@ -313,7 +313,7 @@ async function queryR2Archive(
     const y = cursor.getUTCFullYear();
     const m = String(cursor.getUTCMonth() + 1).padStart(2, '0');
     const d = String(cursor.getUTCDate()).padStart(2, '0');
-    prefixes.push(`year=${y}/month=${m}/day=${d}/`);
+    prefixes.push(`${y}-${m}-${d}/`);
     cursor.setUTCDate(cursor.getUTCDate() + 1);
   }
 

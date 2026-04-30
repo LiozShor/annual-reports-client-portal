@@ -37,9 +37,20 @@ import unlockPdf from './routes/unlock-pdf'; // DL-373
 import { handleRequestPdfPassword } from './routes/request-pdf-password'; // DL-380
 import adminDevActivity from './routes/admin-dev-activity'; // DL-365 Phase 3
 import { logError } from './lib/error-logger';
+import { withEventBuffer } from './lib/activity-logger';
 import { handleInboundQueue } from './lib/inbound/queue-consumer';
 import { handleInboundDLQ } from './lib/inbound/dlq-consumer';
 import type { Env, InboundQueueMessage } from './lib/types';
+import type { ActivityEvent } from './lib/activity-logger';
+
+async function flushEventsToR2(events: ActivityEvent[], bucket: R2Bucket): Promise<void> {
+  if (events.length === 0) return;
+  const now = new Date();
+  const date = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, '0')}-${String(now.getUTCDate()).padStart(2, '0')}`;
+  const key = `${date}/${now.toISOString().replace(/[:.]/g, '-')}_${crypto.randomUUID().slice(0, 8)}.ndjson`;
+  const body = events.map(e => JSON.stringify(e)).join('\n');
+  await bucket.put(key, body, { httpMetadata: { contentType: 'application/x-ndjson' } });
+}
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -113,7 +124,13 @@ app.onError((err, c) => {
 });
 
 export default {
-  fetch: app.fetch,
+  async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+    const { result: response, events } = await withEventBuffer(() => app.fetch(request, env, ctx));
+    if (events.length > 0 && env.ACTIVITY_LOGS) {
+      ctx.waitUntil(flushEventsToR2(events, env.ACTIVITY_LOGS));
+    }
+    return response;
+  },
   async queue(batch: MessageBatch<InboundQueueMessage>, env: Env, ctx: ExecutionContext) {
     if (batch.queue === 'inbound-email') {
       return handleInboundQueue(batch, env, ctx);

@@ -13,7 +13,19 @@
  * MUST NOT throw — any internal failure falls back to a minimal console.error line.
  */
 
+import { AsyncLocalStorage } from 'node:async_hooks';
 import { redactIp, sanitizeDetails, scrubText } from './pii';
+
+// ─── Request-scoped R2 buffer (AsyncLocalStorage) ────────────────────────────
+
+const _als = new AsyncLocalStorage<ActivityEvent[]>();
+
+/** Run fn inside a fresh event buffer. Returns the buffer after fn resolves. */
+export async function withEventBuffer<T>(fn: () => Promise<T>): Promise<{ result: T; events: ActivityEvent[] }> {
+  const buf: ActivityEvent[] = [];
+  const result = await _als.run(buf, fn);
+  return { result, events: buf };
+}
 
 // ─── Public types ────────────────────────────────────────────────────────────
 
@@ -159,6 +171,9 @@ export function logEvent(input: ActivityEventInput): ActivityEvent {
     } else {
       console.log(line);
     }
+
+    // Push into the per-request buffer if one is active
+    _als.getStore()?.push(event);
 
     return event;
   } catch (err: unknown) {
