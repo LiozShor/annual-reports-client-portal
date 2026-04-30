@@ -10723,6 +10723,16 @@ function _paResolveAddDocItem(reportId) {
     if (ai) {
         // Normalize so downstream code (which reads item.report_id) works.
         if (!ai.report_id && ai.report_record_id) ai.report_id = ai.report_record_id;
+        // AI payload doesn't include spouse_name; enrich from clientsData (admin
+        // dashboard cache) so the popover's person selector renders for couples.
+        if (!ai.spouse_name && typeof clientsData !== 'undefined' && Array.isArray(clientsData)) {
+            const c = clientsData.find(c => c && (c.report_id === reportId || c.client_id === ai.client_id));
+            if (c) {
+                if (c.spouse_name) ai.spouse_name = c.spouse_name;
+                if (!ai.year && c.year) ai.year = c.year;
+                if (!ai.filing_type && c.filing_type) ai.filing_type = c.filing_type;
+            }
+        }
         return { item: ai, aiMode: true };
     }
     return { item: null, aiMode: false };
@@ -10733,21 +10743,27 @@ function openPaAddDocPopover(event, rowEl) {
     if (_paAddDocState) { closePaAddDocPopover(); }
 
     const reportId = rowEl.dataset.reportId;
-    const person = rowEl.dataset.person || 'client';
+    let person = rowEl.dataset.person || 'client';
     const resolved = _paResolveAddDocItem(reportId);
     const item = resolved.item;
     if (!item) return;
 
-    // DL-386: when triggered from the AI review tab, capture the currently
-    // expanded card (if exactly one) so we can offer a reassign prompt after
-    // the new doc is created.
+    // DL-386: when triggered from the AI review tab, capture the cockpit's
+    // currently-selected card (window.activePreviewItemId) so we can offer a
+    // reassign prompt after the new doc is created. Also use that card's
+    // template scope to default the popover person.
     let aiActiveCard = null;
     if (resolved.aiMode) {
-        const activeEls = document.querySelectorAll('.ai-review-card.preview-active');
-        if (activeEls.length === 1) {
-            const cardId = activeEls[0].dataset.id;
-            const cardItem = aiClassificationsData.find(i => i.id === cardId);
-            if (cardItem) aiActiveCard = { cardId, cardItem };
+        const activeId = window.activePreviewItemId;
+        if (activeId) {
+            const cardItem = aiClassificationsData.find(i => String(i.id) === String(activeId));
+            if (cardItem) {
+                aiActiveCard = { cardId: cardItem.id, cardItem };
+                // Default person to the active card's matched-doc person when present
+                const matched = (cardItem.all_docs || []).concat(cardItem.missing_docs || [])
+                    .find(d => d.doc_record_id && d.doc_record_id === cardItem.matched_doc_record_id);
+                if (matched && matched.person === 'spouse') person = 'spouse';
+            }
         }
     }
 
@@ -11322,14 +11338,17 @@ async function paAddDocConfirm() {
         showAIToast('המסמך נוסף בהצלחה', 'success');
 
         if (aiMode) {
-            // DL-386: silent refresh of AI review tab so the new chip shows up
+            // DL-386: targeted refresh — bypass loadAIClassifications' SWR
+            // fingerprint (which is keyed on classification id+status, not on
+            // missing_docs) and patch all_docs / missing_docs / docs_*_count
+            // directly on every aiClassificationsData item for this report.
             try {
-                await loadAIClassifications(true);
-            } catch (e) { console.warn('DL-386: silent refresh failed', e); }
+                await _refreshAIMissingDocsForReport(item.report_id);
+            } catch (e) { console.warn('DL-386: targeted refresh failed', e); }
             refreshClientDocTags(item.client_name);
 
-            // DL-386: if exactly one card was active at click time, offer to
-            // reassign that card's file to the just-created doc.
+            // DL-386: if a card was active at click time, offer to reassign
+            // that card's file to the just-created doc.
             if (aiActiveCard) {
                 const refreshedItem = aiClassificationsData.find(i => (i.report_record_id || i.report_id) === item.report_id);
                 const newDoc = _findJustCreatedDoc(refreshedItem, pendingDoc);
@@ -11360,6 +11379,35 @@ async function paAddDocConfirm() {
             }
         }
         showAIToast('שגיאה בהוספת המסמך', 'danger');
+    }
+}
+
+// DL-386: pull a fresh GET_PENDING_CLASSIFICATIONS snapshot and patch the
+// doc-related fields on every aiClassificationsData item belonging to this
+// report. Bypasses loadAIClassifications' SWR fingerprint (keyed on
+// classification id+status only) so a newly-added required doc shows up
+// immediately after EDIT_DOCUMENTS resolves.
+async function _refreshAIMissingDocsForReport(reportId) {
+    if (!reportId || typeof aiClassificationsData === 'undefined') return;
+    const resp = await fetchWithTimeout(
+        `${ENDPOINTS.GET_PENDING_CLASSIFICATIONS}?filing_type=all&_t=${Date.now()}`,
+        { headers: { 'Authorization': `Bearer ${authToken}` } },
+        FETCH_TIMEOUTS.slow
+    );
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    const data = await resp.json();
+    if (!data.ok) throw new Error(data.error || 'fetch failed');
+    const fresh = (data.items || []).filter(i => (i.report_record_id || i.report_id) === reportId);
+    if (!fresh.length) return;
+    const freshById = new Map(fresh.map(i => [String(i.id), i]));
+    for (const local of aiClassificationsData) {
+        const localKey = String(local.id);
+        if (!freshById.has(localKey)) continue;
+        const f = freshById.get(localKey);
+        if (Array.isArray(f.all_docs)) local.all_docs = f.all_docs;
+        if (Array.isArray(f.missing_docs)) local.missing_docs = f.missing_docs;
+        if (typeof f.docs_received_count === 'number') local.docs_received_count = f.docs_received_count;
+        if (typeof f.docs_total_count === 'number') local.docs_total_count = f.docs_total_count;
     }
 }
 
