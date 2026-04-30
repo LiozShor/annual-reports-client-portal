@@ -6818,22 +6818,26 @@ function renderFullYearBadge(rid, year) {
 }
 
 // DL-359: Render partial-mode contract-period banner (extracted from inline render)
+// DL-385 Bug #3: pull year per-side from cp.startDate/cp.endDate; fall back to passed `year`
+// only when no date is set (so cross-year contracts render their actual stored year).
 function renderContractPeriodBanner(rid, cp, year) {
     const hasStart = cp && cp.startDate;
     const hasEnd = cp && cp.endDate;
     const startMonth = hasStart ? new Date(cp.startDate).getMonth() + 1 : null;
     const endMonth = hasEnd ? new Date(cp.endDate).getMonth() + 1 : null;
+    const startYear = hasStart ? parseInt(cp.startDate.slice(0, 4), 10) : year;
+    const endYear = hasEnd ? parseInt(cp.endDate.slice(0, 4), 10) : year;
     const startVal = hasStart ? cp.startDate.substring(0, 7) : '';
     const endVal = hasEnd ? cp.endDate.substring(0, 7) : '';
-    const startLabel = startMonth ? `${String(startMonth).padStart(2, '0')}.${year}` : '__.__';
-    const endLabel = endMonth ? `${String(endMonth).padStart(2, '0')}.${year}` : '__.__';
+    const startLabel = startMonth ? `${String(startMonth).padStart(2, '0')}.${startYear}` : '__.__';
+    const endLabel = endMonth ? `${String(endMonth).padStart(2, '0')}.${endYear}` : '__.__';
     const statusText = cp ? 'חוזה חלקי' : 'לא זוהו תאריכים';
     let reqBtns = '';
     if (startMonth && startMonth > 1) {
-        reqBtns += `<button class="ai-ap-btn ai-ap-btn--ghost ai-ap-btn--small btn-request-period" data-record-id="${rid}" data-gap="before" onclick="event.stopPropagation(); requestMissingPeriod('${rid}', 1, ${startMonth - 1}, this)">+ בקש חוזה ${formatPeriodLabel(1, startMonth - 1, year)}</button>`;
+        reqBtns += `<button class="ai-ap-btn ai-ap-btn--ghost ai-ap-btn--small btn-request-period" data-record-id="${rid}" data-gap="before" onclick="event.stopPropagation(); requestMissingPeriod('${rid}', 1, ${startMonth - 1}, this)">+ בקש חוזה ${formatPeriodLabel(1, startMonth - 1, startYear)}</button>`;
     }
     if (endMonth && endMonth < 12) {
-        reqBtns += `<button class="ai-ap-btn ai-ap-btn--ghost ai-ap-btn--small btn-request-period" data-record-id="${rid}" data-gap="after" onclick="event.stopPropagation(); requestMissingPeriod('${rid}', ${endMonth + 1}, 12, this)">+ בקש חוזה ${formatPeriodLabel(endMonth + 1, 12, year)}</button>`;
+        reqBtns += `<button class="ai-ap-btn ai-ap-btn--ghost ai-ap-btn--small btn-request-period" data-record-id="${rid}" data-gap="after" onclick="event.stopPropagation(); requestMissingPeriod('${rid}', ${endMonth + 1}, 12, this)">+ בקש חוזה ${formatPeriodLabel(endMonth + 1, 12, endYear)}</button>`;
     }
     return `<span class="ai-ap-contract-partial ai-contract-period-banner" data-record-id="${rid}" data-year="${year}" style="font-size: 11px;">📅 ${statusText}:
                 מ <span class="contract-date-editable" data-field="start" data-value="${escapeAttr(startVal)}" onclick="event.stopPropagation(); editContractDate('${rid}', 'start', this)" title="לחץ לעריכה">${startLabel}</span>
@@ -6984,6 +6988,22 @@ async function saveContractPeriod(recordId, startDate, endDate) {
             safeCreateIcons();
         }
 
+        // DL-385 Bug #2: also refresh adjacent surfaces (doc-row + actions panel header)
+        // so the matched-doc-name "AI חושב שזה" pill (which calls appendContractPeriod) updates.
+        if (item) {
+            if (isAIReviewMobileLayout()) {
+                const card = document.querySelector(`.ai-review-card[data-id="${recordId}"]`);
+                if (card) {
+                    const isReviewed = item.review_status && item.review_status !== 'pending';
+                    const tmpDiv = document.createElement('div');
+                    tmpDiv.innerHTML = isReviewed ? renderReviewedCard(item, item.review_status) : renderAICard(item);
+                    if (tmpDiv.firstElementChild) card.replaceWith(tmpDiv.firstElementChild);
+                }
+            } else {
+                refreshItemDom(item);
+            }
+        }
+
         showAIToast('תאריכי חוזה עודכנו', 'success');
     } catch (error) {
         showAIToast(error.message, 'error');
@@ -6996,7 +7016,15 @@ async function swapClassification(recordId, currentTemplateId) {
     const targetLabel = targetId === 'T901' ? 'חוזה שכירות (הכנסה)' : 'חוזה שכירות (הוצאה)';
 
     const item = aiClassificationsData.find(i => i.id === recordId);
-    if (item) item.matched_template_id = targetId;
+    // DL-385 Bug #1: also flip the cached label fields so re-render shows the new badge.
+    let prevName, prevShortName;
+    if (item) {
+        prevName = item.matched_template_name;
+        prevShortName = item.matched_short_name;
+        item.matched_template_id = targetId;
+        item.matched_template_name = targetLabel;
+        item.matched_short_name = targetLabel;
+    }
 
     try {
         const response = await fetchWithTimeout(ENDPOINTS.REVIEW_CLASSIFICATION, {
@@ -7012,7 +7040,11 @@ async function swapClassification(recordId, currentTemplateId) {
 
         const data = await response.json();
         if (!data.ok) {
-            if (item) item.matched_template_id = currentTemplateId;
+            if (item) {
+                item.matched_template_id = currentTemplateId;
+                item.matched_template_name = prevName;
+                item.matched_short_name = prevShortName;
+            }
             showAIToast(data.error || 'שגיאה בהחלפת סיווג', 'error');
             return;
         }
@@ -7037,7 +7069,11 @@ async function swapClassification(recordId, currentTemplateId) {
             onClick: () => swapClassification(recordId, targetId),
         });
     } catch (error) {
-        if (item) item.matched_template_id = currentTemplateId;
+        if (item) {
+            item.matched_template_id = currentTemplateId;
+            item.matched_template_name = prevName;
+            item.matched_short_name = prevShortName;
+        }
         showAIToast(error.message, 'error');
     }
 }
