@@ -9703,7 +9703,6 @@ function buildPaCard(item) {
     const docs = Array.isArray(item.doc_chips) ? item.doc_chips : (Array.isArray(item.docs) ? item.docs : []);
     const questions = Array.isArray(item.client_questions) ? item.client_questions.filter(q => q && (q.text || '').trim()) : [];
     const qCount = questions.length;
-    const notesText = [(item.notes || '').trim(), (item.client_notes || '').trim()].filter(Boolean).join('\n\n');
     // DL-300 follow-up: ✨ issuer suggestion feature disabled pending UX rework
     // (accept flow clobbered full doc-row labels instead of re-composing with template prefix).
     const suggestionCount = 0;
@@ -9837,7 +9836,6 @@ function buildPaPreviewHeader(item) {
 function buildPaPreviewBody(item) {
     const answersAll = Array.isArray(item.answers_all) ? item.answers_all
         : (Array.isArray(item.answers_summary) ? item.answers_summary : []);
-    const notesText = [(item.notes || '').trim(), (item.client_notes || '').trim()].filter(Boolean).join('\n\n');
     const questions = Array.isArray(item.client_questions) ? item.client_questions.filter(q => q && (q.text || '').trim()) : [];
     const docGroups = Array.isArray(item.doc_groups) ? item.doc_groups : [];
     const showNo = _paShowNoAnswers.has(item.report_id);
@@ -11789,7 +11787,19 @@ function printPaQuestionnaire(reportId) {
     const FILING_TYPE_LABELS_LOCAL = { annual_report: 'דוח שנתי', capital_statement: 'הצהרת הון' };
     const answers = Array.isArray(item.answers_all) ? item.answers_all
                   : (Array.isArray(item.answers_summary) ? item.answers_summary : []);
-    const notesText = [(item.notes || '').trim(), (item.client_notes || '').trim()].filter(Boolean).join('\n\n');
+    // DL-384: only the office free-text notes belong on the print sheet. The
+    // client_notes JSON thread (chat history) is rendered in the admin UI, not
+    // here — concatenating it as a string used to leak the raw [{...}] array.
+    const officeNotesRaw = (item.notes || '').trim();
+    let reportNotes = '';
+    if (officeNotesRaw) {
+        try {
+            const parsed = JSON.parse(officeNotesRaw);
+            reportNotes = (parsed && typeof parsed.text === 'string') ? parsed.text : '';
+        } catch {
+            reportNotes = officeNotesRaw;
+        }
+    }
     window.printQuestionnaireSheet({
         clientName: item.client_name || '',
         year: item.year || '',
@@ -11799,7 +11809,7 @@ function printPaQuestionnaire(reportId) {
         filingTypeLabel: FILING_TYPE_LABELS_LOCAL[item.filing_type] || item.filing_type || 'דוח שנתי',
         answers,
         clientQuestions: Array.isArray(item.client_questions) ? item.client_questions : [],
-        reportNotes: notesText,
+        reportNotes,
     });
 }
 

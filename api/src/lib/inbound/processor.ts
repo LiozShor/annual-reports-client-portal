@@ -820,7 +820,11 @@ async function tryHandlePasswordReply(
   }
 
   suggestedPassword = suggestedPassword.substring(0, 64);
-  const passwordReplyRaw = truncated.substring(0, 1000);
+  // DL-384: persist the stripped reply (not the quoted original PWD request),
+  // so admin surfaces render only the client's actual message. Falls back to
+  // searchLines for bottom-posted replies so the field is never empty.
+  const strippedReply = (replyLines.length > 0 ? replyLines : searchLines).join('\n');
+  const passwordReplyRaw = strippedReply.substring(0, 1000);
 
   // 4. Fan out: write suggested_password + raw reply to ALL matched records
   await Promise.allSettled(
