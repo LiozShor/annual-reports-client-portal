@@ -1,5 +1,5 @@
 # Design Log 382: Batch Password Request Emails
-**Status:** IMPLEMENTED — NEED TESTING
+**Status:** COMPLETED — 2026-04-30
 **Date:** 2026-04-29
 **Related Logs:** DL-380 (one-click request-password email + auto-detect reply), DL-379 (lock indicator badge)
 
