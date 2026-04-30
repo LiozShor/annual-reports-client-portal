@@ -791,7 +791,11 @@ async function tryHandlePasswordReply(
 
   // 3. Extract password candidate from body text
   const truncated = bodyText.substring(0, 1000);
-  const stripped = truncated.replace(/<[^>]+>/g, '');
+  // Strip everything from the Gmail quote header onward so filenames in the
+  // quoted original email don't get mistaken for the password.
+  const quoteHeaderRe = /(?:On .+?wrote:|בתאריך .+?מאת\s)/s;
+  const topOnly = truncated.split(quoteHeaderRe)[0];
+  const stripped = topOnly.replace(/<[^>]+>/g, '');
   const lines = stripped.split('\n');
   const cleanLines = lines
     .map((l) => l.trim())
@@ -799,7 +803,6 @@ async function tryHandlePasswordReply(
       (l) =>
         l.length > 0 &&
         !l.startsWith('>') &&
-        !/^On .+ wrote:/.test(l) &&
         !/^---.*---$/.test(l),
     );
 
@@ -844,6 +847,30 @@ async function tryHandlePasswordReply(
   });
 
   console.log(`[inbound][DL-382] Password reply handled for token ${token}, ${records.length} record(s) updated`);
+
+  // 7. Write a client_notes entry on the linked annual_report so the reply
+  //    appears in the admin panel notes — same JSON format as summarizeAndSaveNote.
+  const reportIds = [...new Set(
+    records.flatMap(r => (r.fields.report as string[] | undefined) ?? [])
+  )];
+  for (const reportId of reportIds) {
+    try {
+      const reportRec = await airtable.getRecord(TABLES.REPORTS, reportId);
+      const existing = (reportRec.fields.client_notes as string | undefined) ?? '[]';
+      let notes: Array<Record<string, unknown>> = [];
+      try { notes = JSON.parse(existing); if (!Array.isArray(notes)) notes = []; } catch { notes = []; }
+      notes.push({
+        id: `cn_${Date.now()}`,
+        date: new Date().toISOString(),
+        summary: 'תגובת לקוח לבקשת סיסמה',
+        source: 'email',
+        raw_snippet: passwordReplyRaw,
+      });
+      await airtable.updateRecord(TABLES.REPORTS, reportId, { client_notes: JSON.stringify(notes) });
+    } catch (err) {
+      console.warn(`[inbound][DL-382] Failed to write client_note for report ${reportId}:`, (err as Error).message);
+    }
+  }
 
   // If email also has attachments, let the normal pipeline process them
   if (hasAttachments) {
