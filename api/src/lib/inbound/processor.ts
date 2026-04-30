@@ -766,6 +766,8 @@ async function tryHandlePasswordReply(
   hasAttachments: boolean,
   emailEventId: string | undefined,
   airtable: AirtableClient,
+  senderEmail?: string,
+  internetMessageId?: string,
 ): Promise<{ handled: boolean }> {
   // 1. Match token in subject first, then body (token lives in email body footer)
   const tokenMatch = subject.match(/\[#PWD-([A-Za-z0-9]{6,12})\]/i)
@@ -864,6 +866,9 @@ async function tryHandlePasswordReply(
         date: new Date().toISOString(),
         summary: 'תגובת לקוח לבקשת סיסמה',
         source: 'email',
+        message_id: internetMessageId ?? null,
+        sender_email: senderEmail ?? null,
+        conversation_id: null,
         raw_snippet: passwordReplyRaw,
       });
       await airtable.updateRecord(TABLES.REPORTS, reportId, { client_notes: JSON.stringify(notes) });
@@ -987,6 +992,8 @@ export async function processInboundEmail(
       metadata.hasAttachments,
       emailEventId,
       airtable,
+      metadata.senderEmail,
+      metadata.internetMessageId,
     );
     if (pwdResult.handled) {
       return;
