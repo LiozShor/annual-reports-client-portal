@@ -5020,6 +5020,11 @@ function _renderPanelAdditive(item, variant, reReviewing) {
         } else {
             secondaryBtns.push(renderContractPeriodBanner(rid, cp, year));
         }
+        // DL-385: One-click swap button T901↔T902
+        const swapTarget = item.matched_template_id === 'T901' ? 'T902' : 'T901';
+        const swapLabel = item.matched_template_id === 'T901' ? 'הכנסה→הוצאה' : 'הוצאה→הכנסה';
+        const swapTitle = `סיווג נוכחי: ${item.matched_template_id === 'T901' ? 'הכנסה' : 'הוצאה'} — לחץ להחלפה`;
+        secondaryBtns.push(`<button class="ai-ap-btn ai-ap-btn--ghost ai-ap-btn--small contract-swap-btn" data-record-id="${rid}" data-template-id="${item.matched_template_id}" onclick="event.stopPropagation(); swapClassification('${rid}', '${item.matched_template_id}')" title="${swapTitle}">⇄ ${swapLabel}</button>`);
     }
 
     // Overflow menu
@@ -6779,6 +6784,21 @@ async function approveAIClassificationAddRequired(recordId, templateId) {
     }, { confirmText: 'נכון - הוסף', btnClass: 'btn-success' });
 }
 
+// DL-385: Parse lenient month/year strings into { month, year } or null
+// Accepts: MM.YYYY, M.YY, M/YYYY, MM/YY, M-YYYY, MM-YYYY etc.
+function parseLenientMonthYear(str) {
+    if (!str) return null;
+    const s = str.trim();
+    const m = s.match(/^(\d{1,2})[./\-](\d{2,4})$/);
+    if (!m) return null;
+    const month = parseInt(m[1], 10);
+    let year = parseInt(m[2], 10);
+    if (m[2].length === 2) year = year <= 79 ? 2000 + year : 1900 + year;
+    if (month < 1 || month > 12) return null;
+    if (year < 2000 || year > 2100) return null;
+    return { month, year };
+}
+
 // DL-359: Render full-year contract badge (clickable to edit)
 function renderFullYearBadge(rid, year) {
     return `<span class="ai-ap-contract-full" data-record-id="${rid}" data-year="${year}" onclick="event.stopPropagation(); expandFullYearBadgeToEdit('${rid}', this)" style="background: var(--success-50); color: var(--success-700); padding: 4px 8px; border-radius: 3px; font-size: 11px; cursor: pointer;" title="לחץ לעריכה — תאריכי החוזה לא נכונים?">📅 חוזה שנתי מלא ✓ <span style="opacity: 0.6; font-size: 10px;">✏️</span></span>`;
@@ -6824,20 +6844,14 @@ function expandFullYearBadgeToEdit(rid, badgeEl) {
     safeCreateIcons();
 }
 
-// DL-270: Inline click-to-edit contract period dates
+// DL-270/DL-385: Inline click-to-edit contract period dates (dual input: free-text + native calendar)
 function editContractDate(recordId, field, el) {
     if (el.querySelector('input')) return; // already editing
-    const currentVal = el.dataset.value || '';
-    const input = document.createElement('input');
-    input.type = 'month';
-    input.value = currentVal;
-    input.className = 'contract-date-input';
-    input.onclick = (e) => e.stopPropagation();
+    const currentVal = el.dataset.value || ''; // YYYY-MM
 
     const finishEdit = () => {
-        const newVal = input.value; // YYYY-MM
+        const newVal = monthInput.value; // YYYY-MM
         if (!newVal) {
-            // Cancelled — restore original text
             el.textContent = currentVal ? `${new Date(currentVal + '-01').getMonth() + 1}/${new Date(currentVal + '-01').getFullYear()}` : '__/__';
             return;
         }
@@ -6846,7 +6860,6 @@ function editContractDate(recordId, field, el) {
         const y = new Date(newVal + '-01').getFullYear();
         el.textContent = `${m}/${y}`;
 
-        // Get both dates from the banner
         const banner = el.closest('.ai-contract-period-banner');
         if (!banner) return;
         const spans = banner.querySelectorAll('.contract-date-editable');
@@ -6854,17 +6867,63 @@ function editContractDate(recordId, field, el) {
         const endSpan = [...spans].find(s => s.dataset.field === 'end');
         const startVal = startSpan?.dataset.value || '';
         const endVal = endSpan?.dataset.value || '';
-
         if (startVal && endVal) {
-            saveContractPeriod(recordId, startVal + '-01', endVal + '-28'); // day doesn't matter much, backend uses month
+            saveContractPeriod(recordId, startVal + '-01', endVal + '-28');
         }
     };
 
-    input.addEventListener('change', finishEdit);
-    input.addEventListener('blur', () => { if (!input.value && !currentVal) el.textContent = '__/__'; });
+    // DL-385: Free-text MM.YYYY input (above calendar)
+    const textInput = document.createElement('input');
+    textInput.type = 'text';
+    textInput.placeholder = 'MM.YYYY';
+    textInput.title = 'לדוגמה: 05.2026 או 5.26';
+    textInput.className = 'contract-date-text-input';
+    textInput.style.cssText = 'width:72px;font-size:11px;padding:2px 4px;border:1px solid var(--neutral-300,#d1d5db);border-radius:3px;';
+    if (currentVal) {
+        const [y, m] = currentVal.split('-');
+        textInput.value = `${m}.${y}`;
+    }
+    textInput.onclick = (e) => e.stopPropagation();
+    textInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') textInput.blur(); });
+    textInput.addEventListener('blur', () => {
+        const parsed = parseLenientMonthYear(textInput.value);
+        if (parsed) {
+            monthInput.value = `${parsed.year}-${String(parsed.month).padStart(2, '0')}`;
+            textInput.style.borderColor = '';
+            textInput.title = 'לדוגמה: 05.2026 או 5.26';
+            finishEdit();
+        } else if (textInput.value.trim()) {
+            textInput.style.borderColor = 'var(--error-400,#f87171)';
+            textInput.title = 'פורמט לא תקין — נסו 05.2026';
+        }
+    });
+
+    // Native month calendar
+    const monthInput = document.createElement('input');
+    monthInput.type = 'month';
+    monthInput.value = currentVal;
+    monthInput.className = 'contract-date-input';
+    monthInput.onclick = (e) => e.stopPropagation();
+    monthInput.addEventListener('change', () => {
+        if (monthInput.value) {
+            const [y, m] = monthInput.value.split('-');
+            textInput.value = `${m}.${y}`;
+            textInput.style.borderColor = '';
+        }
+        finishEdit();
+    });
+    monthInput.addEventListener('blur', () => { if (!monthInput.value && !currentVal) el.textContent = '__/__'; });
+
+    const wrapper = document.createElement('span');
+    wrapper.style.cssText = 'display:inline-flex;flex-direction:column;align-items:flex-start;gap:2px;vertical-align:top;';
+    wrapper.onclick = (e) => e.stopPropagation();
+    wrapper.appendChild(textInput);
+    wrapper.appendChild(monthInput);
+
     el.textContent = '';
-    el.appendChild(input);
-    input.focus();
+    el.appendChild(wrapper);
+    textInput.focus();
+    textInput.select();
 }
 
 async function saveContractPeriod(recordId, startDate, endDate) {
@@ -6914,6 +6973,61 @@ async function saveContractPeriod(recordId, startDate, endDate) {
 
         showAIToast('תאריכי חוזה עודכנו', 'success');
     } catch (error) {
+        showAIToast(error.message, 'error');
+    }
+}
+
+// DL-385: One-click swap T901↔T902 classification on review card
+async function swapClassification(recordId, currentTemplateId) {
+    const targetId = currentTemplateId === 'T901' ? 'T902' : 'T901';
+    const targetLabel = targetId === 'T901' ? 'חוזה שכירות (הכנסה)' : 'חוזה שכירות (הוצאה)';
+
+    // Optimistic update
+    const item = aiClassificationsData.find(i => i.id === recordId);
+    if (item) item.matched_template_id = targetId;
+
+    const btn = document.querySelector(`.contract-swap-btn[data-record-id="${recordId}"]`);
+    const prevHtml = btn ? btn.innerHTML : '';
+    if (btn) { btn.disabled = true; btn.innerHTML = `${icon('loader', 'icon-sm spin')} מחליף...`; safeCreateIcons(); }
+
+    try {
+        const response = await fetchWithTimeout(ENDPOINTS.REVIEW_CLASSIFICATION, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                token: authToken,
+                classification_id: recordId,
+                action: 'swap-classification',
+                target_template_id: targetId,
+            })
+        }, FETCH_TIMEOUTS.mutate);
+
+        const data = await response.json();
+        if (!data.ok) {
+            if (item) item.matched_template_id = currentTemplateId;
+            if (btn) { btn.disabled = false; btn.innerHTML = prevHtml; }
+            showAIToast(data.error || 'שגיאה בהחלפת סיווג', 'error');
+            return;
+        }
+
+        // Update swap button for the new state
+        if (btn) {
+            const nextTarget = targetId === 'T901' ? 'T902' : 'T901';
+            const nextLabel = targetId === 'T901' ? 'הכנסה→הוצאה' : 'הוצאה→הכנסה';
+            btn.disabled = false;
+            btn.dataset.templateId = targetId;
+            btn.setAttribute('onclick', `event.stopPropagation(); swapClassification('${recordId}', '${targetId}')`);
+            btn.innerHTML = `⇄ ${nextLabel}`;
+            btn.title = `סיווג נוכחי: ${targetLabel} — לחץ להחלפה`;
+        }
+
+        showAIToast(`הוחלף ל-${targetId} — ${targetLabel}`, 'success', {
+            label: 'בטל',
+            onClick: () => swapClassification(recordId, targetId),
+        });
+    } catch (error) {
+        if (item) item.matched_template_id = currentTemplateId;
+        if (btn) { btn.disabled = false; btn.innerHTML = prevHtml; }
         showAIToast(error.message, 'error');
     }
 }

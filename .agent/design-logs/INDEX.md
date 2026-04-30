@@ -2,7 +2,7 @@
 
 Active and pending logs. For completed history, see [ARCHIVE-INDEX.md](ARCHIVE-INDEX.md).
 
-**Total logs:** 235 | **Active:** 137 | **Archived:** 98
+**Total logs:** 236 | **Active:** 138 | **Archived:** 98
 
 ## Folder Structure
 
@@ -22,6 +22,8 @@ Active and pending logs. For completed history, see [ARCHIVE-INDEX.md](ARCHIVE-I
 | # | File | Status | Summary |
 |---|------|--------|---------|
 | 384 | [384-password-reply-note-quote-stripping.md](ai-review/384-password-reply-note-quote-stripping.md) | COMPLETED — 2026-04-30 | Password-reply client_note shows the entire forwarded original PWD email instead of just the client's reply. Fix: persist the already-built `replyLines` (with `searchLines` fallback) to `password_reply_raw` + `client_notes[].raw_snippet` in `handlePasswordReplyEmail`. Also remove 2 dead `notesText = item.notes + item.client_notes` concats in admin script.js and stop dumping the JSON array onto the print sheet. DL-382 follow-up. |
+| 385 | [385-partial-contract-swap-and-date-input.md](ai-review/385-partial-contract-swap-and-date-input.md) | IMPLEMENTED — NEED TESTING | T901↔T902 one-click swap button on AI-Review card (optimistic flip + undo toast); free-text MM.YYYY input above native month calendar in partial-contract date editor; 6-scenario QA Airtable view. |
+| 384 | [384-password-reply-note-quote-stripping.md](ai-review/384-password-reply-note-quote-stripping.md) | BEING IMPLEMENTED | Password-reply client_note shows the entire forwarded original PWD email instead of just the client's reply. Fix: persist the already-built `replyLines` (with `searchLines` fallback) to `password_reply_raw` + `client_notes[].raw_snippet` in `handlePasswordReplyEmail`. Also remove 2 dead `notesText = item.notes + item.client_notes` concats in admin script.js and stop dumping the JSON array onto the print sheet. DL-382 follow-up. |
 | 382 | [382-batch-password-request.md](ai-review/382-batch-password-request.md) | COMPLETED — 2026-04-30 | Batch password request: one email for all encrypted PDFs of a client. Pre-checked nested checkbox list in preview modal. One shared token written to all selected records; inbound reply fans out to all matched rows. DL-380 follow-up. |
 | 383 | [383-doc-manager-recover-waived.md](documents/383-doc-manager-recover-waived.md) | COMPLETED — 2026-04-30 | Doc-manager Waived↔Required reliability + UX: fix 500 on restore (doc-invariants skips file-field nulling for Waived sources, document_uid preserved); waive-wins guard in buildUpdateMap; real error body surfaced in admin toast; restore-checkbox → restore-btn; file-clear warning gated on non-Waived sources; immediate row refresh on save success. Also: 4 pre-existing TS errors fixed; hook path fixed with git rev-parse. |
 | 382 | [382-batch-password-request.md](ai-review/382-batch-password-request.md) | IMPLEMENTED — NEED TESTING | Batch password request: one email for all encrypted PDFs of a client. Pre-checked nested checkbox list in preview modal. One shared token written to all selected records; inbound reply fans out to all matched rows. DL-380 follow-up. |

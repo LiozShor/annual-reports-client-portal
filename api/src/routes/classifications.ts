@@ -637,7 +637,7 @@ classifications.post('/review-classification', async (c) => {
       return c.json({ ok: false, error: 'Missing classification_id or action' }, 400);
     }
 
-    if (!['approve', 'reject', 'reassign', 'split', 'classify-segment', 'finalize-split', 'request-remaining-contract', 'update-contract-period', 're-classify', 'also_match', 'revert_cascade'].includes(action)) {
+    if (!['approve', 'reject', 'reassign', 'split', 'classify-segment', 'finalize-split', 'request-remaining-contract', 'update-contract-period', 're-classify', 'also_match', 'revert_cascade', 'swap-classification'].includes(action)) {
       return c.json({ ok: false, error: `Invalid action: ${action}` }, 400);
     }
 
@@ -708,6 +708,30 @@ classifications.post('/review-classification', async (c) => {
       });
 
       return c.json({ ok: true, action: 'update-contract-period', contract_period: contractPeriod });
+    }
+
+    // ---- DL-385: Swap T901↔T902 classification — early return ----
+    if (action === 'swap-classification') {
+      const { target_template_id } = body as { target_template_id?: string };
+      if (!target_template_id || !['T901', 'T902'].includes(target_template_id)) {
+        return c.json({ ok: false, error: 'target_template_id must be T901 or T902' }, 400);
+      }
+      await airtable.updateRecord(TABLES.CLASSIFICATIONS, classification_id, {
+        matched_template_id: target_template_id,
+      });
+      logEvent({
+        event_type: 'classification_swap',
+        category: 'ADMIN',
+        source: 'worker',
+        endpoint: '/webhook/review-classification',
+        details: {
+          from: String(clsFields.matched_template_id || ''),
+          to: target_template_id,
+          classification_id,
+          client_id: String(clsFields.client_id || ''),
+        },
+      });
+      return c.json({ ok: true, action: 'swap-classification', matched_template_id: target_template_id });
     }
 
     // ---- DL-268/271: Request missing contract period — early return ----
