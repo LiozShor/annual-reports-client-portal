@@ -57,7 +57,10 @@ interface Filters {
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const DEV_TOKEN_KEY = 'dev_activity_token'
-const API_PREFIX = '/webhook'
+// Use the Worker base set by shared/endpoints.js (CF_BASE), fall back to absolute URL
+const API_PREFIX: string = (typeof window !== 'undefined' && window.API_BASE)
+  ? window.API_BASE
+  : 'https://annual-reports-api.liozshor1.workers.dev/webhook'
 const POLL_INTERVAL_MS = 5000
 const CATEGORY_COLORS: Record<string, string> = {
   AUTH: '#6366f1', INBOUND: '#0ea5e9', AI: '#8b5cf6',
