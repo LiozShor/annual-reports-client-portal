@@ -1128,7 +1128,7 @@ function displayDocuments() {
                                 onclick="toggleRestore('${doc.id}')"
                                 id="restore-btn-${doc.id}"
                                 aria-label="שחזר מסמך"
-                                title="שחזר מסמך לרשימת הדרושים">${icon('rotate-ccw', 'icon-sm')}</button>`
+                                title="שחזר מסמך לרשימת הדרושים"><i data-lucide="rotate-ccw" class="icon-sm"></i></button>`
                             : ''
                         }
                         <div class="doc-name-group">
@@ -1155,7 +1155,7 @@ function displayDocuments() {
                                 onclick="triggerUpload('${doc.id}')" title="העלה קובץ" aria-label="העלה קובץ"><i data-lucide="upload" class="icon-sm"></i></button>` : ''}
                             <span id="file-clear-warning-${doc.id}" class="file-clear-warning"
                                 style="display:${doc.file_url && effectiveStatus === 'Required_Missing' && doc.status !== 'Required_Missing' && doc.status !== 'Waived' ? 'inline-flex' : 'none'}">
-                                ${icon('triangle-alert', 'icon-xs')} קישור הקובץ יימחק
+                                <i data-lucide="triangle-alert" class="icon-xs"></i> קישור הקובץ יימחק
                             </span>
                         </div>
                         <button type="button" class="delete-toggle${isWaived ? ' action-hidden' : ''} ${!isWaived && markedForRemoval.has(doc.id) ? 'active' : ''}"
