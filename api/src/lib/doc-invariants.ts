@@ -26,7 +26,6 @@ export const MISSING_STATE_NULL_FIELDS = [
   'expected_filename',
   'file_hash',
   'uploaded_at',
-  'attachment_name',
   'document_uid',
   // source email metadata
   'source_attachment_name',
