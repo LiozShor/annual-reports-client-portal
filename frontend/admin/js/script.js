@@ -7896,6 +7896,14 @@ function _buildDocTemplatePicker(container, item, opts) {
         };
         customBtn.addEventListener('click', submitCustom);
         customInput.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); submitCustom(); } });
+        // DL-387: keep the confirm button enabled while user is typing a custom
+        // name so a single click on "שייך" suffices. The actual commit-on-assign
+        // path is the existing DL-350 branch in confirmAIReassign() which reads
+        // .ai-tpl-custom-input directly and submits as 'general_doc'.
+        customInput.addEventListener('input', () => {
+            const name = customInput.value.trim();
+            onPick(name ? { template_id: 'general_doc', new_doc_name: name, _pending: true } : null);
+        });
     }
 
     function pickTemplate(templateId, cached) {
