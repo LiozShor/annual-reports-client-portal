@@ -1,7 +1,7 @@
 # Design Log 365: Activity Logger — Cloudflare-Native Replacement for Airtable security_logs
 
 **Branch:** `DL-365-activity-logger`
-**Status:** [BEING IMPLEMENTED — DL-365] (Phases 1+2 COMPLETE — verified live 2026-04-29; Phase 3 implemented 2026-04-30 — needs deploy + smoke test; Phase 4 pending)
+**Status:** [IMPLEMENTED — NEED TESTING] (Phases 1+2+3 COMPLETE — verified live 2026-04-30; Phase 4 pending)
 **Date:** 2026-04-28
 **Related:** DL-094 (existing security_logs, to deprecate), DL-180 (observability research, reused)
 
@@ -263,8 +263,8 @@ interface ActivityEvent {
 - [ ] Phase 2: Confirm dual-write — Airtable `security_logs` still receives auth events.
 - [ ] Phase 3: PII check — trigger an event involving a known client; confirm CF Logs entry contains `client_id: rec...` only (no email, no name, no phone). Inspect a downloaded R2 archive file and grep for the email/name — must return zero hits.
 - [ ] Phase 3: Viewer renders human names — open `/admin/dev/activity`, confirm rows show "Moshe Cohen <moshe@...>" pulled via `/admin-clients-lookup`. Block: revoke admin token → lookup endpoint returns 401.
-- [ ] Phase 3: Open `/admin/dev/activity` without dev password → blocked. With dev password → loads timeline.
-- [ ] Phase 3: Tab switches in admin panel produce `tab_switch` events visible in viewer within 5s.
+- [x] Phase 3: Open `/admin/dev/activity` without dev password → blocked. With dev password → loads timeline. (verified 2026-04-30)
+- [x] Phase 3: Tab switches in admin panel produce `tab_switch` events visible in viewer within 5s. (verified 2026-04-30 — tab_switch events confirmed in viewer)
 - [ ] Phase 3: Approve a client batch → see chained events `doc_approve` → `email_send` correlated by `request_id`.
 - [ ] Phase 4: Client portal login → `portal_login` event appears.
 - [ ] Phase 4: n8n workflow run → `n8n_run_start` + `n8n_run_done` events.
