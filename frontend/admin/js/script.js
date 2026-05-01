@@ -4994,8 +4994,12 @@ function _renderPanelAdditive(item, variant, reReviewing) {
             <button class="ai-ap-btn ai-ap-btn--warning ai-ap-btn--full" onclick="startReReview('${idA}')">סיים את ההמתנה</button>
         </div>`;
     } else if (variant === 'approved' || variant === 'rejected' || variant === 'reassigned') {
-        // Neutral "change my mind" + (approved only) neutral "also matches" — both gray, not destructive.
-        const alsoMatch = variant === 'approved'
+        // Neutral "change my mind" + (approved/reassigned, with file) neutral "also matches" — both gray, not destructive.
+        // DL-391 follow-up: extend also-match to reassigned cards in the cockpit actions panel
+        // (mirrors DL-388 follow-up `7e990274` which fixed only renderReviewedCard).
+        const hasShareableFile = !!(item.onedrive_item_id && item.file_url);
+        const showAlsoMatch = (variant === 'approved' || variant === 'reassigned') && hasShareableFile;
+        const alsoMatch = showAlsoMatch
             ? `<button class="ai-ap-btn ai-ap-btn--neutral ai-ap-btn--full ai-ap-primary-actions__tier2" onclick="showAIAlsoMatchModal('${idA}')">📋 הקובץ תואם למסמך נוסף</button>`
             : '';
         primaryHtml = `<div class="ai-ap-primary-actions">
@@ -5030,7 +5034,9 @@ function _renderPanelAdditive(item, variant, reReviewing) {
     const overflowItems = [];
     if (variant === 'approved' || variant === 'rejected' || variant === 'reassigned') {
         overflowItems.push(`<button class="ai-ap-overflow__item" onclick="startReReview('${idA}'); _closePanelOverflow();">שנה החלטה</button>`);
-        if (variant === 'approved') {
+        // DL-391 follow-up: also-match available on reassigned too (mirrors primary-action gate above).
+        const _hasShareable = !!(item.onedrive_item_id && item.file_url);
+        if ((variant === 'approved' || variant === 'reassigned') && _hasShareable) {
             overflowItems.push(`<button class="ai-ap-overflow__item" onclick="showAIAlsoMatchModal('${idA}'); _closePanelOverflow();">הקובץ תואם למסמך נוסף</button>`);
         }
         overflowItems.push(`<button class="ai-ap-overflow__item" onclick="openAddQuestionDialog('${idA}'); _closePanelOverflow();">${qLabel}</button>`);
@@ -9114,7 +9120,8 @@ function renderDocTag(d) {
     const prefix = prefixes[status] || '';
 
     const templateIdAttr = d.template_id ? ` data-template-id="${escapeAttr(d.template_id)}"` : '';
-    return `<span class="${tagClass}" data-doc-record-id="${escapeAttr(docId)}" data-status="${escapeAttr(status)}"${templateIdAttr} onclick="openDocTagMenu(event, this)">${prefix}${renderDocLabel(label)}</span>`;
+    // DL-391 follow-up: double-click on the chip closes its open menu (toggle-off affordance).
+    return `<span class="${tagClass}" data-doc-record-id="${escapeAttr(docId)}" data-status="${escapeAttr(status)}"${templateIdAttr} onclick="openDocTagMenu(event, this)" ondblclick="closeDocTagMenuFromChip(event)">${prefix}${renderDocLabel(label)}</span>`;
 }
 
 function openDocTagMenu(event, tagEl) {
@@ -9222,6 +9229,13 @@ async function selectDocTagAssignToCard(event, btnEl) {
     const activeItemId = document.getElementById('aiActionsPanel')?.dataset?.itemId || '';
     if (!activeItemId) return;
     await submitAIReassign(activeItemId, templateId, docRecordId);
+}
+
+// DL-391 follow-up: dblclick on the chip closes any open menu without reopening.
+// stopPropagation + preventDefault prevent text-selection and the synthetic click from rebuilding the menu.
+function closeDocTagMenuFromChip(event) {
+    if (event) { event.stopPropagation(); event.preventDefault(); }
+    closeDocTagMenu();
 }
 
 function closeDocTagMenu() {
