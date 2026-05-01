@@ -10798,22 +10798,22 @@ function openPaAddDocPopover(event, rowEl) {
     const item = resolved.item;
     if (!item) return;
 
-    // DL-386: when triggered from the AI review tab, capture the cockpit's
-    // currently-selected card (window.activePreviewItemId) so we can offer a
-    // reassign prompt after the new doc is created. Also use that card's
-    // template scope to default the popover person.
+    // DL-386: capture the AI cockpit's currently-selected card so we can offer
+    // a reassign prompt after the new doc is created. Read the action panel's
+    // data-item-id (most reliable — set whenever the cockpit shows a card),
+    // falling back to window.activePreviewItemId. Active even when the resolver
+    // matched in PA mode, because the AI tab is what's visible.
     let aiActiveCard = null;
-    if (resolved.aiMode) {
-        const activeId = window.activePreviewItemId;
-        if (activeId) {
-            const cardItem = aiClassificationsData.find(i => String(i.id) === String(activeId));
-            if (cardItem) {
-                aiActiveCard = { cardId: cardItem.id, cardItem };
-                // Default person to the active card's matched-doc person when present
-                const matched = (cardItem.all_docs || []).concat(cardItem.missing_docs || [])
-                    .find(d => d.doc_record_id && d.doc_record_id === cardItem.matched_doc_record_id);
-                if (matched && matched.person === 'spouse') person = 'spouse';
-            }
+    const cockpitId = document.getElementById('aiActionsPanel')?.dataset?.itemId
+        || window.activePreviewItemId;
+    if (cockpitId && typeof aiClassificationsData !== 'undefined') {
+        const cardItem = aiClassificationsData.find(i => String(i.id) === String(cockpitId));
+        if (cardItem) {
+            aiActiveCard = { cardId: cardItem.id, cardItem };
+            // Default person to the active card's matched-doc person when present
+            const matched = (cardItem.all_docs || []).concat(cardItem.missing_docs || [])
+                .find(d => d.doc_record_id && d.doc_record_id === cardItem.matched_doc_record_id);
+            if (matched && matched.person === 'spouse') person = 'spouse';
         }
     }
 
@@ -11387,7 +11387,11 @@ async function paAddDocConfirm() {
         if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
         showAIToast('המסמך נוסף בהצלחה', 'success');
 
-        if (aiMode) {
+        // DL-386: refresh AI tab + offer reassign when the cockpit had a card
+        // open at click time. Run regardless of aiMode (PA cache may have won
+        // the resolver lookup, but the AI tab is what's visible).
+        const aiTabVisible = !!document.getElementById('aiDocsPane');
+        if (aiMode || aiTabVisible) {
             // DL-386: targeted refresh — bypass loadAIClassifications' SWR
             // fingerprint (which is keyed on classification id+status, not on
             // missing_docs) and patch all_docs / missing_docs / docs_*_count
