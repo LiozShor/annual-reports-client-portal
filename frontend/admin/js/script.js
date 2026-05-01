@@ -8324,19 +8324,11 @@ function transitionCardToReviewed(recordId, newReviewStatus, responseData) {
         const nextCross = globalPending.find(i => i.client_name !== clientName);
 
         if (sameClientPending.length === 0 && clientItems.length > 0) {
-            // Client done → existing scroll-to-confirm prompt.
+            // Client done → stay on the current client and show the done-prompt
+            // (DL-388 follow-up: do NOT auto-jump to the next client; the operator
+            // should see the celebratory state for the just-finished client and
+            // pick the next one when ready).
             showClientReviewDonePrompt(clientName, true);
-            // DL-388: also auto-advance to the next client's first pending so the
-            // operator never lands on a "done" client with nothing to do next.
-            if (nextCross) {
-                if (isAIReviewMobileLayout()) {
-                    document.querySelector(`.ai-review-card[data-id="${nextCross.id}"]`)
-                        ?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                } else {
-                    try { if (typeof selectClient === 'function') selectClient(nextCross.client_name); } catch {}
-                    try { selectDocument(nextCross.id); } catch {}
-                }
-            }
         } else if (nextSame) {
             // Same-client auto-advance (preserves DL-341 behavior).
             if (isAIReviewMobileLayout()) {
