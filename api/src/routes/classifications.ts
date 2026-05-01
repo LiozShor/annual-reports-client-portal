@@ -1225,7 +1225,14 @@ classifications.post('/review-classification', async (c) => {
       const sharedFileUrl = clsFields.file_url as string;
       const sharedFileHash = clsFields.file_hash as string;
       if (!sharedItemId || !sharedFileUrl) {
-        return c.json({ ok: false, error: 'Classification has no file to share' }, 400);
+        // DL-388: structured code so the client can humanize even if the
+        // English message slips past — see formatAIResponseError mapping.
+        return c.json({
+          ok: false,
+          code: 'no_file_to_share',
+          error: 'Classification has no file to share',
+          message: 'לסיווג זה אין קובץ זמין לשיתוף',
+        }, 400);
       }
 
       const sourceReportId = getField(clsFields.report) as string;

@@ -6646,7 +6646,11 @@ async function parseAIResponse(response) {
 }
 
 function formatAIResponseError(data) {
-    if (!data.errors || data.errors.length === 0) return data.error || 'שגיאה לא ידועה';
+    // DL-388: map known server codes to actionable Hebrew copy.
+    if (data && data.code === 'no_file_to_share') {
+        return 'לסיווג זה אין קובץ זמין לשיתוף. רענני את הרשימה או בדקי שהקובץ לא נמחק.';
+    }
+    if (!data.errors || data.errors.length === 0) return data.message || data.error || 'שגיאה לא ידועה';
     return data.errors.map(e => `${e.node}: ${e.message}`).join('\n');
 }
 
@@ -7618,6 +7622,14 @@ function confirmMoveClassificationClient(classificationId, targetClientId, targe
 }
 
 async function moveClassificationClient(classificationId, targetClientId, targetClientName) {
+    // DL-388: precondition guard — the server requires the source classification
+    // to have a file (onedrive_item_id + file_url) so it can be re-shared into
+    // the target client's OneDrive folder. Bail with an actionable toast.
+    const _src = aiClassificationsData.find(i => i.id === classificationId);
+    if (_src && (!_src.onedrive_item_id || !_src.file_url)) {
+        showAIToast('לא ניתן להעביר — לסיווג זה אין קובץ זמין. רענני או בדקי שהקובץ לא נמחק.', 'danger');
+        return;
+    }
     setCardLoading(classificationId, 'מעביר ללקוח אחר...');
     try {
         const response = await fetchWithTimeout(ENDPOINTS.MOVE_CLASSIFICATION_CLIENT, {
@@ -7898,7 +7910,7 @@ function _buildDocTemplatePicker(container, item, opts) {
         };
         customBtn.addEventListener('click', submitCustom);
         customInput.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); submitCustom(); } });
-        // DL-387: keep the confirm button enabled while user is typing a custom
+        // DL-388: keep the confirm button enabled while user is typing a custom
         // name so a single click on "שייך" suffices. The actual commit-on-assign
         // path is the existing DL-350 branch in confirmAIReassign() which reads
         // .ai-tpl-custom-input directly and submits as 'general_doc'.
@@ -8011,6 +8023,15 @@ function _buildDocTemplatePicker(container, item, opts) {
 function showAIAlsoMatchModal(recordId) {
     const item = aiClassificationsData.find(i => i.id === recordId);
     if (!item) return;
+
+    // DL-388: precondition guard — the also_match server path requires
+    // onedrive_item_id + file_url; without them every submit dead-ends in a
+    // generic "Classification has no file to share" modal. Surface an
+    // actionable Hebrew toast instead and bail before the modal opens.
+    if (!item.onedrive_item_id || !item.file_url) {
+        showAIToast('לא ניתן לשייך — לסיווג זה אין קובץ זמין לשיתוף. רענני או בדקי שהקובץ לא נמחק.', 'danger');
+        return;
+    }
 
     const ownDocs = item.all_docs || item.missing_docs || [];
     const otherDocs = item.other_report_docs || [];
@@ -8282,22 +8303,51 @@ function transitionCardToReviewed(recordId, newReviewStatus, responseData) {
         applyPreviewReviewState(newReviewStatus);
     }
 
-    // DL-210: Check if all items for this client are now reviewed
+    // DL-210/341/387: post-action navigation.
+    // Same-client preference, cross-client fallback, and mobile scroll-into-view.
     if (item) {
         const clientName = item.client_name;
         const clientItems = aiClassificationsData.filter(i => i.client_name === clientName);
-        const pendingItems = clientItems.filter(i => (i.review_status || 'pending') === 'pending');
-        if (pendingItems.length === 0 && clientItems.length > 0) {
-            // DL-323: user just took an action on this client → scroll to confirm
+        const sameClientPending = clientItems.filter(i => (i.review_status || 'pending') === 'pending');
+        const globalPending = aiClassificationsData
+            .filter(i => (i.review_status || 'pending') === 'pending' && String(i.id) !== String(recordId))
+            .slice()
+            .sort(compareDocRows);
+        const nextSame = sameClientPending.slice().sort(compareDocRows)
+            .find(i => String(i.id) !== String(recordId));
+        const nextCross = globalPending.find(i => i.client_name !== clientName);
+
+        if (sameClientPending.length === 0 && clientItems.length > 0) {
+            // Client done → existing scroll-to-confirm prompt.
             showClientReviewDonePrompt(clientName, true);
-        } else if (!isAIReviewMobileLayout() && pendingItems.length > 0) {
-            // DL-341: auto-advance to next pending doc in same client (desktop only;
-            // mobile keeps the fat-card in-place swap metaphor).
-            const nextPending = pendingItems.slice().sort(compareDocRows)[0];
-            if (nextPending && String(nextPending.id) !== String(recordId)) {
-                selectDocument(nextPending.id);
+            // DL-388: also auto-advance to the next client's first pending so the
+            // operator never lands on a "done" client with nothing to do next.
+            if (nextCross) {
+                if (isAIReviewMobileLayout()) {
+                    document.querySelector(`.ai-review-card[data-id="${nextCross.id}"]`)
+                        ?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                } else {
+                    try { if (typeof selectClient === 'function') selectClient(nextCross.client_name); } catch {}
+                    try { selectDocument(nextCross.id); } catch {}
+                }
+            }
+        } else if (nextSame) {
+            // Same-client auto-advance (preserves DL-341 behavior).
+            if (isAIReviewMobileLayout()) {
+                document.querySelector(`.ai-review-card[data-id="${nextSame.id}"]`)
+                    ?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            } else {
+                selectDocument(nextSame.id);
             }
         }
+        // else: nothing pending anywhere — recalcAIStats already toggled the
+        // empty-state surface; the silent reconcile below will repaint if needed.
+    }
+
+    // DL-388: silent reconcile with server truth after every mutation.
+    // SWR fingerprint short-circuit in loadAIClassifications keeps this cheap.
+    if (typeof loadAIClassifications === 'function') {
+        queueMicrotask(() => { try { loadAIClassifications(true).catch(() => {}); } catch {} });
     }
 }
 
