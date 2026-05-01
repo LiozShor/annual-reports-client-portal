@@ -1,5 +1,5 @@
 # Design Log 386: Add Required Doc from AI Review Tab
-**Status:** [IMPLEMENTED — NEED TESTING]
+**Status:** [COMPLETED — 2026-05-01]
 **Date:** 2026-04-30
 **Related Logs:** DL-058 (add new custom doc from AI review reassign), DL-053 (silent refresh), DL-330 (AI review 3-pane), DL-336 (template picker UI), DL-301 (PA add-doc popover), DL-349 (doc-tags-header-refresh)
 
