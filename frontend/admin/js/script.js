@@ -9113,7 +9113,8 @@ function renderDocTag(d) {
     const prefixes = { 'Received': '&#x2713; ', 'Waived': '&mdash; ', 'Requires_Fix': '&#x26A0; ' };
     const prefix = prefixes[status] || '';
 
-    return `<span class="${tagClass}" data-doc-record-id="${escapeAttr(docId)}" data-status="${escapeAttr(status)}" onclick="openDocTagMenu(event, this)">${prefix}${renderDocLabel(label)}</span>`;
+    const templateIdAttr = d.template_id ? ` data-template-id="${escapeAttr(d.template_id)}"` : '';
+    return `<span class="${tagClass}" data-doc-record-id="${escapeAttr(docId)}" data-status="${escapeAttr(status)}"${templateIdAttr} onclick="openDocTagMenu(event, this)">${prefix}${renderDocLabel(label)}</span>`;
 }
 
 function openDocTagMenu(event, tagEl) {
@@ -9139,6 +9140,24 @@ function openDocTagMenu(event, tagEl) {
             <span class="ai-doc-tag-menu-icon">${o.icon}</span> ${o.label}
         </button>`
     ).join('');
+    // DL-391: "Assign active preview to this doc" — first item, gated on
+    // (a) active AI cockpit card, (b) Required_Missing chip, (c) chip not
+    // already linked to that card. One-click; reuses submitAIReassign.
+    const activeItemId = document.getElementById('aiActionsPanel')?.dataset?.itemId || '';
+    const templateId = tagEl.dataset.templateId || '';
+    let assignItemHtml = '';
+    if (activeItemId && currentStatus === 'Required_Missing' && templateId) {
+        const activeItem = (aiClassificationsData || []).find(x => String(x.id) === String(activeItemId));
+        const activeDocId = activeItem?.matched_doc_record_id || '';
+        if (activeDocId !== docRecordId) {
+            assignItemHtml = `
+                <button class="ai-doc-tag-menu-item" data-action="assign-to-card" data-template-id="${escapeAttr(templateId)}" onclick="selectDocTagAssignToCard(event, this)">
+                    <span class="ai-doc-tag-menu-icon">📎</span> שייך את התצוגה הפעילה למסמך זה
+                </button>
+                <div class="ai-doc-tag-menu-divider"></div>
+            `;
+        }
+    }
     // DL-351: Edit action below status options, separated by divider (Delete removed — same as Waive)
     const editHtml = `
         <div class="ai-doc-tag-menu-divider"></div>
@@ -9146,7 +9165,7 @@ function openDocTagMenu(event, tagEl) {
             <span class="ai-doc-tag-menu-icon">✏️</span> ערוך שם
         </button>
     `;
-    menu.innerHTML = statusItemsHtml + editHtml;
+    menu.innerHTML = assignItemHtml + statusItemsHtml + editHtml;
 
     // Position relative to tag
     const rect = tagEl.getBoundingClientRect();
@@ -9188,6 +9207,21 @@ function selectDocTagStatus(event, btnEl) {
     if (!clientName) return;
 
     updateDocStatusInline(clientName, docRecordId, newStatus);
+}
+
+// DL-391: Reassign the active AI cockpit card's file to this chip's doc slot.
+// Mirrors selectDocTagStatus shape; menu visibility is already gated in
+// openDocTagMenu (active card present, Required_Missing chip, not same doc).
+async function selectDocTagAssignToCard(event, btnEl) {
+    event.stopPropagation();
+    const menu = btnEl.closest('.ai-doc-tag-menu');
+    const docRecordId = menu?.dataset?.docRecordId || '';
+    const templateId = btnEl.dataset.templateId || '';
+    closeDocTagMenu();
+    if (!docRecordId || !templateId) return;
+    const activeItemId = document.getElementById('aiActionsPanel')?.dataset?.itemId || '';
+    if (!activeItemId) return;
+    await submitAIReassign(activeItemId, templateId, docRecordId);
 }
 
 function closeDocTagMenu() {
