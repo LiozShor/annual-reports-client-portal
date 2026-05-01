@@ -11466,29 +11466,29 @@ async function _refreshAIMissingDocsForReport(reportId) {
 }
 
 // DL-386: locate the freshly-created doc in the refreshed AI item so we can
-// reassign against its `doc_record_id`. Match by template_id + issuer_key
-// (general_doc falls back to case-insensitive issuer_name).
+// reassign against its `doc_record_id`. The Worker's missing_docs/all_docs
+// shape exposes only `template_id` + `name` (no `issuer_key` or
+// `issuer_name`), so match by template_id + name (case-insensitive, bold-
+// stripped, fuzzy contains). Prefer the trailing match — Airtable returns
+// docs in created order, so a freshly-added doc is the last hit.
 function _findJustCreatedDoc(item, pendingDoc) {
     if (!item) return null;
     const tpl = (pendingDoc.template_id || '').toLowerCase();
-    const key = (pendingDoc.issuer_key || '').toLowerCase();
-    const name = (pendingDoc.issuer_name || '').toLowerCase().trim();
+    const targetName = (pendingDoc.issuer_name || '').toLowerCase().trim();
+    const stripBold = (s) => (s || '').replace(/<\/?b>/g, '').replace(/\s+/g, ' ').trim();
     const flat = []
         .concat(Array.isArray(item.all_docs) ? item.all_docs : [])
         .concat(Array.isArray(item.missing_docs) ? item.missing_docs : []);
+    let last = null;
     for (const d of flat) {
         const dType = (d.type || d.template_id || '').toLowerCase();
-        if (tpl === 'general_doc') {
-            if (dType !== 'general_doc') continue;
-            const dName = ((d.issuer_name || d.name || '') + '').toLowerCase().trim();
-            if (dName === name) return d;
-        } else {
-            if (dType !== tpl) continue;
-            const dKey = ((d.issuer_key || '') + '').toLowerCase();
-            if (dKey === key) return d;
+        if (dType !== tpl) continue;
+        const dName = stripBold((d.issuer_name || d.name || d.name_short || '') + '').toLowerCase();
+        if (!targetName || dName === targetName || dName.includes(targetName) || (dName && targetName.includes(dName))) {
+            last = d;
         }
     }
-    return null;
+    return last;
 }
 
 // ==================== /DL-301 ====================
