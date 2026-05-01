@@ -1,5 +1,5 @@
 # Design Log 388: AI Review Tab — Action-Flow Fixes (silent refresh + auto-advance + match-error guard)
-**Status:** [IMPLEMENTED — NEED TESTING]
+**Status:** [COMPLETED — 2026-05-01]
 **Date:** 2026-05-01
 **Related Logs:** DL-341 (preview zoom + first auto-advance), DL-369 (move-to-client refresh path), DL-370 (move edge cases), DL-374 (open-tab itemId), DL-373/379/380/382 (encrypted-file flow that may produce file-less classification rows).
 
