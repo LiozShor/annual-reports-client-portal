@@ -6282,10 +6282,16 @@ function renderReviewedCard(item, reviewStatus) {
 
     // DL-320: post-approve "הקובץ תואם למסמך נוסף" button — multi-match entry point
     // (moved from pre-approve cards; reuses DL-314 showAIAlsoMatchModal as-is)
+    // DL-388 follow-up: also surface on reassigned cards (user can realize after
+    // assigning that the same file matches an additional doc). Gate on file
+    // presence so file-less rows don't dead-end into the modal pre-check toast.
     const isApproved = reviewStatus === 'approved';
+    const isReassigned = reviewStatus === 'reassigned';
+    const hasShareableFile = !!(item.onedrive_item_id && item.file_url);
+    const canAlsoMatch = (isApproved || isReassigned) && hasShareableFile;
 
 
-    const alsoMatchBtn = isApproved
+    const alsoMatchBtn = canAlsoMatch
         ? `<button class="btn btn-outline btn-sm ai-also-match-btn" onclick="showAIAlsoMatchModal('${escapeAttr(item.id)}')">
                ${icon('copy-plus', 'icon-sm')} הקובץ תואם למסמך נוסף
            </button>`
@@ -6324,7 +6330,7 @@ function renderReviewedCard(item, reviewStatus) {
                     <button class="action-btn overflow" onclick="toggleRowMenu(this, event)" title="פעולות נוספות">⋮</button>
                     <div class="row-menu">
                         ${canChangeDecision ? `<button onclick="closeAllRowMenus(); startReReview('${escapeAttr(item.id)}')">${icon('rotate-ccw', 'icon-sm')} שנה החלטה</button>` : ''}
-                        ${isApproved ? `<button onclick="closeAllRowMenus(); showAIAlsoMatchModal('${escapeAttr(item.id)}')">${icon('copy-plus', 'icon-sm')} הקובץ תואם למסמך נוסף</button>` : ''}
+                        ${canAlsoMatch ? `<button onclick="closeAllRowMenus(); showAIAlsoMatchModal('${escapeAttr(item.id)}')">${icon('copy-plus', 'icon-sm')} הקובץ תואם למסמך נוסף</button>` : ''}
                         <button onclick="closeAllRowMenus(); openAddQuestionDialog('${escapeAttr(item.id)}')">${icon('message-circle', 'icon-sm')} ${item.pending_question ? 'ערוך שאלה' : 'הוסף שאלה'}</button>
                     </div>
                 </div>
