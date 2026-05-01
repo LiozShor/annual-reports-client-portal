@@ -11401,23 +11401,18 @@ async function paAddDocConfirm() {
             } catch (e) { console.warn('DL-386: targeted refresh failed', e); }
             refreshClientDocTags(item.client_name);
 
-            // DL-386: if a card was active at click time, offer to reassign
-            // that card's file to the just-created doc.
+            // DL-386: if a card was active at click time, anchor an inline
+            // prompt to the just-added chip — feels less invasive than a
+            // center-screen confirm dialog and visually links the action to
+            // the new chip.
             if (aiActiveCard) {
                 const refreshedItem = aiClassificationsData.find(i => (i.report_record_id || i.report_id) === item.report_id);
                 const newDoc = _findJustCreatedDoc(refreshedItem, pendingDoc);
                 if (newDoc && newDoc.doc_record_id) {
-                    showConfirmDialog(
-                        'האם לשייך את הקובץ למסמך זה?',
-                        () => {
-                            submitAIReassign(
-                                aiActiveCard.cardId,
-                                pendingDoc.template_id,
-                                newDoc.doc_record_id
-                            );
-                        },
-                        'שייך',
-                        false
+                    _showInlineAssignToNewDocPrompt(
+                        newDoc.doc_record_id,
+                        aiActiveCard.cardId,
+                        pendingDoc.template_id
                     );
                 }
             }
@@ -11463,6 +11458,80 @@ async function _refreshAIMissingDocsForReport(reportId) {
         if (typeof f.docs_received_count === 'number') local.docs_received_count = f.docs_received_count;
         if (typeof f.docs_total_count === 'number') local.docs_total_count = f.docs_total_count;
     }
+}
+
+// DL-386: inline prompt anchored to the freshly-added chip in the
+// "מסמכים נדרשים" section. Replaces a center-screen confirm dialog with a
+// contextual popover that visually points at the new doc. Clicking שייך
+// reassigns the active card's file; clicking ✕ or anywhere outside dismisses.
+function _showInlineAssignToNewDocPrompt(docRecordId, cardId, templateId) {
+    if (!docRecordId || !cardId) return;
+    // Wait one frame so refreshClientDocTags's DOM update has flushed.
+    requestAnimationFrame(() => {
+        const chip = document.querySelector(
+            `#aiDocsPane [data-doc-record-id="${CSS.escape(docRecordId)}"], `
+            + `.ai-accordion [data-doc-record-id="${CSS.escape(docRecordId)}"]`
+        );
+        if (!chip) return;
+
+        // Strip any prior prompt + flash
+        document.querySelectorAll('.ai-inline-assign-prompt').forEach(p => p.remove());
+        chip.classList.add('ai-doc-tag--flash');
+        try { chip.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); } catch (e) {}
+
+        const pop = document.createElement('div');
+        pop.className = 'ai-inline-assign-prompt';
+        pop.setAttribute('role', 'dialog');
+        pop.innerHTML = `
+            <div class="ai-inline-assign-prompt__arrow"></div>
+            <div class="ai-inline-assign-prompt__body">
+                <span class="ai-inline-assign-prompt__msg">לשייך את הקובץ למסמך זה?</span>
+                <button type="button" class="ai-inline-assign-prompt__btn ai-inline-assign-prompt__btn--primary" data-act="confirm">שייך</button>
+                <button type="button" class="ai-inline-assign-prompt__btn ai-inline-assign-prompt__btn--ghost" data-act="dismiss" aria-label="ביטול">✕</button>
+            </div>`;
+        document.body.appendChild(pop);
+
+        // Position absolutely under the chip (page-relative so it scrolls).
+        const r = chip.getBoundingClientRect();
+        const sx = window.scrollX || 0;
+        const sy = window.scrollY || 0;
+        pop.style.position = 'absolute';
+        pop.style.top = (r.bottom + sy + 6) + 'px';
+        // RTL: anchor to chip's right edge minus popover width, clamped to viewport.
+        requestAnimationFrame(() => {
+            const pw = pop.offsetWidth;
+            const vw = window.innerWidth;
+            let left = r.right + sx - pw;
+            if (left < 8 + sx) left = 8 + sx;
+            if (left + pw > vw + sx - 8) left = vw + sx - pw - 8;
+            pop.style.left = left + 'px';
+        });
+
+        const close = () => {
+            document.removeEventListener('click', onOutside, true);
+            document.removeEventListener('keydown', onKey);
+            pop.remove();
+            chip.classList.remove('ai-doc-tag--flash');
+        };
+        const onOutside = (e) => { if (!pop.contains(e.target) && e.target !== chip) close(); };
+        const onKey = (e) => { if (e.key === 'Escape') close(); };
+        pop.addEventListener('click', (e) => {
+            const btn = e.target.closest('button');
+            if (!btn) return;
+            if (btn.dataset.act === 'confirm') {
+                close();
+                submitAIReassign(cardId, templateId, docRecordId);
+            } else {
+                close();
+            }
+        });
+        // Defer outside-click binding so the click that opened the popover
+        // doesn't immediately close it.
+        setTimeout(() => {
+            document.addEventListener('click', onOutside, true);
+            document.addEventListener('keydown', onKey);
+        }, 0);
+    });
 }
 
 // DL-386: locate the freshly-created doc in the refreshed AI item so we can
