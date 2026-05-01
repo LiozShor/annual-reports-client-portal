@@ -9,7 +9,7 @@ import { calcReminderNextDate } from '../lib/reminders';
 import { buildClientEmailHtml, buildClientEmailSubject } from '../lib/email-html';
 import { logError } from '../lib/error-logger';
 import { logEvent } from '../lib/activity-logger';
-import { isOffHours, getNext0800Israel } from '../lib/israel-time';
+import { isOffHoursOrWeekend, getNextBusinessMorning0800Israel } from '../lib/israel-time';
 import { checkAutoAdvanceToReview } from '../lib/auto-advance';
 import type { Env } from '../lib/types';
 import type { DocItem, CategoryInfo, ClientEmailParams, RejectedUpload } from '../lib/email-html';
@@ -213,10 +213,10 @@ approveAndSend.get('/approve-and-send', async (c) => {
 
     // Step 5: Send email — deferred if off-hours (DL-273: PidTagDeferredSendTime)
     const graph = new MSGraphClient(c.env, c.executionCtx);
-    const offHours = isOffHours();
+    const offHours = isOffHoursOrWeekend();
     let graphMessageId: string | null = null;
     if (offHours) {
-      const deferredUtc = getNext0800Israel();
+      const deferredUtc = getNextBusinessMorning0800Israel();
       const result = await graph.sendMailDeferred(subject, html, clientEmail, SENDER, deferredUtc);
       graphMessageId = result.messageId;
     } else {

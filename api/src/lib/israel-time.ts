@@ -56,3 +56,40 @@ export function getNext0800Israel(): string {
   const utcTarget = new Date(Date.UTC(y, m, targetDay, 8 - offsetHours, 0, 0));
   return utcTarget.toISOString().replace('.000Z', '.0000000Z');
 }
+
+// 0=Sun, 1=Mon, ... 5=Fri, 6=Sat. Israel work-week is Sun–Thu.
+export function getIsraelDayOfWeek(d: Date = new Date()): number {
+  const wd = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'Asia/Jerusalem',
+    weekday: 'short',
+  }).format(d);
+  return ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].indexOf(wd);
+}
+
+export function isWeekend(d: Date = new Date()): boolean {
+  const dow = getIsraelDayOfWeek(d);
+  return dow === 5 || dow === 6;
+}
+
+export function isOffHoursOrWeekend(): boolean {
+  return isOffHours() || isWeekend();
+}
+
+/**
+ * Returns the next 08:00 Israel time as a UTC ISO string, skipping
+ * Friday and Saturday Israel calendar days. Used by every client-facing
+ * email path so weekend approvals defer to Sunday morning.
+ *
+ * Example: Friday 10:00 Israel → Sunday 08:00 Israel.
+ */
+export function getNextBusinessMorning0800Israel(): string {
+  let iso = getNext0800Israel();
+  // At most 2 advances needed (Fri→Sat→Sun). Cap at 3 as defence.
+  for (let i = 0; i < 3; i++) {
+    if (!isWeekend(new Date(iso))) return iso;
+    const d = new Date(iso);
+    d.setUTCDate(d.getUTCDate() + 1);
+    iso = d.toISOString().replace('.000Z', '.0000000Z');
+  }
+  return iso;
+}

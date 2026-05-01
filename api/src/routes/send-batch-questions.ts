@@ -4,7 +4,7 @@ import { AirtableClient } from '../lib/airtable';
 import { MSGraphClient } from '../lib/ms-graph';
 import { logError } from '../lib/error-logger';
 import { buildBatchQuestionsSubject, buildBatchQuestionsHtml } from '../lib/email-html';
-import { isOffHours, getNext0800Israel } from '../lib/israel-time';
+import { isOffHoursOrWeekend, getNextBusinessMorning0800Israel } from '../lib/israel-time';
 import type { Env } from '../lib/types';
 import type { BatchQuestionItem } from '../lib/email-html';
 
@@ -74,10 +74,10 @@ sendBatchQuestions.post('/send-batch-questions', async (c) => {
 
     // Send email — off-hours (20:00-08:00 Israel) defers to next 08:00 via PidTagDeferredSendTime (DL-264/273)
     const graph = new MSGraphClient(c.env, c.executionCtx);
-    const offHours = isOffHours();
+    const offHours = isOffHoursOrWeekend();
     let deferredMessageId: string | null = null;
     if (offHours) {
-      const deferredUtc = getNext0800Israel();
+      const deferredUtc = getNextBusinessMorning0800Israel();
       const r = await graph.sendMailDeferred(subject, html, clientEmail, SENDER, deferredUtc);
       deferredMessageId = r.messageId;
     } else {

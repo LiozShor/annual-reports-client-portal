@@ -6,6 +6,7 @@ import { calcReminderNextDate } from '../lib/reminders';
 import { buildQuestionnaireEmailHtml } from '../lib/email-html';
 import { buildQuestionnaireUrl } from '../lib/questionnaire-url';
 import { logError } from '../lib/error-logger';
+import { isOffHoursOrWeekend, getNextBusinessMorning0800Israel } from '../lib/israel-time';
 import type { Env } from '../lib/types';
 
 const sendQuestionnaires = new Hono<{ Bindings: Env }>();
@@ -83,7 +84,12 @@ sendQuestionnaires.post('/admin-send-questionnaires', async (c) => {
         const label = FILING_LABELS[filingType] || FILING_LABELS.annual_report;
         const subject = `שאלון \u2014 ${label} ${year} | ${clientName}`;
 
-        await graph.sendMail(subject, html, clientEmail, SENDER, ccEmail);
+        // DL-389: defer to next business morning if off-hours or Fri/Sat Israel time.
+        if (isOffHoursOrWeekend()) {
+          await graph.sendMailDeferred(subject, html, clientEmail, SENDER, getNextBusinessMorning0800Israel(), ccEmail);
+        } else {
+          await graph.sendMail(subject, html, clientEmail, SENDER, ccEmail);
+        }
 
         // Update stage immediately after email confirmed sent — never defer
         await airtable.updateRecord(REPORTS_TABLE, reportId, {

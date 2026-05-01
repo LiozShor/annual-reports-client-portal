@@ -20,6 +20,7 @@ import { MSGraphClient } from '../lib/ms-graph';
 import { buildPasswordRequestEmailHtml } from '../lib/email-html';
 import { logError } from '../lib/error-logger';
 import { logEvent } from '../lib/activity-logger';
+import { isOffHoursOrWeekend, getNextBusinessMorning0800Israel } from '../lib/israel-time';
 import { TABLES } from '../lib/inbound/types';
 import type { Env } from '../lib/types';
 
@@ -126,8 +127,13 @@ export async function handleRequestPdfPassword(c: Context<{ Bindings: Env }>): P
     }
 
     // ── Send email ──────────────────────────────────────────────────────────
+    // DL-389: defer to next business morning if off-hours or Fri/Sat Israel time.
     const msGraph = new MSGraphClient(c.env, c.executionCtx);
-    await msGraph.sendMail(subject, html, clientEmail, SENDER);
+    if (isOffHoursOrWeekend()) {
+      await msGraph.sendMailDeferred(subject, html, clientEmail, SENDER, getNextBusinessMorning0800Israel());
+    } else {
+      await msGraph.sendMail(subject, html, clientEmail, SENDER);
+    }
 
     // ── Stamp all records with token + sent_at ──────────────────────────────
     const now = new Date().toISOString();

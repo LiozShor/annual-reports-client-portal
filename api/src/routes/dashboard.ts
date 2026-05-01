@@ -3,7 +3,7 @@ import { verifyToken } from '../lib/token';
 import { AirtableClient } from '../lib/airtable';
 import { getCachedOrFetch, invalidateCache } from '../lib/cache';
 import { MSGraphClient } from '../lib/ms-graph';
-import { isOffHours, getNext0800Israel } from '../lib/israel-time';
+import { isOffHoursOrWeekend, getNextBusinessMorning0800Israel } from '../lib/israel-time';
 import { buildCommentEmailHtml, buildCommentEmailSubject } from '../lib/email-html';
 import { logError } from '../lib/error-logger';
 import type { Env } from '../lib/types';
@@ -354,10 +354,10 @@ dashboard.post('/admin-send-comment', async (c) => {
   try {
     // DL-273: Deferred send via PidTagDeferredSendTime if off-hours
     const graph = new MSGraphClient(c.env, c.executionCtx);
-    const offHours = isOffHours();
+    const offHours = isOffHoursOrWeekend();
 
     if (offHours) {
-      const deferredUtc = getNext0800Israel();
+      const deferredUtc = getNextBusinessMorning0800Israel();
       let deferredMessageId: string | null = null;
       if (originalMessageId) {
         try {
