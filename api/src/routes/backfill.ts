@@ -4,6 +4,7 @@
  * DL-315: Backfill pending_classifications for clients who received docs before
  * submitting their questionnaire (initially scoped to CPA-XXX).
  * DL-360: Backfill conversation_id on historical email notes (thread grouping).
+ * DL-390: Backfill reminder_next_date — shift Fri/Sat to preceding Thursday.
  * Remove after running once in production.
  */
 
@@ -13,6 +14,7 @@ import { AirtableClient } from '../lib/airtable';
 import { MSGraphClient } from '../lib/ms-graph';
 import { DRIVE_ID } from '../lib/classification-helpers';
 import { classifyAttachment } from '../lib/inbound/document-classifier';
+import { shiftOffWeekend } from '../lib/reminders';
 import type { AttachmentInfo, ProcessingContext } from '../lib/inbound/types';
 import type { Env } from '../lib/types';
 
@@ -361,6 +363,80 @@ backfill.post('/backfill-conversation-ids', async (c) => {
     notesPatched,
     notesNotFound,
     results,
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// DL-390: Backfill reminder_next_date — shift Fri/Sat to preceding Thursday.
+// Body: { dryRun?: boolean, filing_type?: 'annual_report' | 'capital_statement' }
+// ─────────────────────────────────────────────────────────────────────────────
+backfill.post('/admin-backfill-reminder-weekend-dates', async (c) => {
+  const authHeader = c.req.header('Authorization') || '';
+  const bearer = authHeader.startsWith('Bearer ') ? authHeader.slice(7).trim() : '';
+  const tokenResult = await verifyToken(bearer, c.env.SECRET_KEY);
+  if (!tokenResult.valid) {
+    return c.json({ ok: false, error: 'unauthorized' }, 401);
+  }
+
+  const body = await c.req.json().catch(() => ({})) as { dryRun?: boolean; filing_type?: string };
+  const dryRun = body.dryRun !== false; // default true — safer
+  const filingTypeFilter = body.filing_type || '';
+
+  const airtable = new AirtableClient(c.env.AIRTABLE_BASE_ID, c.env.AIRTABLE_PAT);
+
+  // Only rows in active reminder stages with a non-null reminder_next_date.
+  const filterParts = [
+    `{reminder_next_date} != ''`,
+    `OR({stage}='Waiting_For_Answers', {stage}='Collecting_Docs')`,
+  ];
+  if (filingTypeFilter === 'annual_report' || filingTypeFilter === 'capital_statement') {
+    filterParts.push(`{filing_type}='${filingTypeFilter}'`);
+  }
+  const filterByFormula = `AND(${filterParts.join(',')})`;
+
+  const reports = await airtable.listAllRecords<Record<string, unknown>>(TABLES.REPORTS, {
+    filterByFormula,
+    fields: ['reminder_next_date', 'filing_type', 'client_name', 'year', 'stage'],
+  });
+
+  const sample: Array<{ id: string; client: string; from: string; to: string; filing_type: string }> = [];
+  let shifted = 0;
+  const byFilingType: Record<string, number> = {};
+
+  for (const rec of reports) {
+    const f = rec.fields as Record<string, unknown>;
+    const orig = String(Array.isArray(f.reminder_next_date) ? f.reminder_next_date[0] : f.reminder_next_date || '');
+    if (!orig) continue;
+    // YYYY-MM-DD → Date at UTC midnight
+    const m = orig.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (!m) continue;
+    const d = new Date(Date.UTC(parseInt(m[1]), parseInt(m[2]) - 1, parseInt(m[3])));
+    const dow = d.getUTCDay();
+    if (dow !== 5 && dow !== 6) continue; // not a weekend — skip
+
+    shiftOffWeekend(d);
+    const newDate = d.toISOString().split('T')[0];
+    const ft = String(Array.isArray(f.filing_type) ? f.filing_type[0] : f.filing_type || 'annual_report');
+    const clientName = String(Array.isArray(f.client_name) ? f.client_name[0] : f.client_name || '');
+
+    if (sample.length < 10) {
+      sample.push({ id: rec.id, client: clientName.slice(0, 4) + '...', from: orig, to: newDate, filing_type: ft });
+    }
+    byFilingType[ft] = (byFilingType[ft] || 0) + 1;
+    shifted++;
+
+    if (!dryRun) {
+      await airtable.updateRecord(TABLES.REPORTS, rec.id, { reminder_next_date: newDate });
+    }
+  }
+
+  return c.json({
+    ok: true,
+    dryRun,
+    scanned: reports.length,
+    shifted,
+    by_filing_type: byFilingType,
+    sample_changes: sample,
   });
 });
 

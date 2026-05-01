@@ -567,6 +567,13 @@ if (isOffHoursOrWeekend()) {
 ### UI surface
 DL-281's `(N בתור לשליחה)` count + modal in the admin dashboard reads Outlook directly via `listOutboxDeferred()` — weekend-deferred messages appear automatically alongside off-hours-deferred ones. No frontend change needed when adding new gated paths.
 
+### Reminder cadence — store-side weekend skip (DL-390)
+DL-389 gates the **send time** (cron + per-route `isOffHoursOrWeekend()`). DL-390 also shifts the **stored** `reminder_next_date` in `annual_reports` so the value matches when the cron actually fires:
+- `api/src/lib/reminders.ts` — `shiftOffWeekend(d)` shifts Fri/Sat → preceding Thursday.
+- `calcReminderNextDate()` (Worker SSOT) and the n8n WF[06] `Set Update Fields` Code node (post-send recompute) both call this shift.
+- One-shot backfill: `POST /webhook/admin-backfill-reminder-weekend-dates` (admin Bearer; supports `dryRun` + `filing_type`).
+- Holidays explicitly out of scope — manual override on the Reminders admin tab remains available.
+
 ---
 
 ## Quick Reference — What NOT to Do
