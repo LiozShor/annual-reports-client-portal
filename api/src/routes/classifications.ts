@@ -174,6 +174,8 @@ classifications.get('/get-pending-classifications', async (c) => {
     const activeMap = new Map<string, boolean>();
     const clientNotesMap = new Map<string, string>();
     const filingTypeMap = new Map<string, string>();
+    // DL-386: spouse_name per report so the AI-tab "+ הוסף מסמך" popover can render the person picker.
+    const spouseNameMap = new Map<string, string>();
 
     // DL-254: Parallel batch fetch reports in chunks of 50
     // DL-322: also collect linked `documents` IDs to scope the docs fetch below
@@ -184,7 +186,7 @@ classifications.get('/get-pending-classifications', async (c) => {
       const formula = `OR(${chunk.map(id => `RECORD_ID()='${id}'`).join(',')})`;
       reportChunkPromises.push(airtable.listAllRecords(TABLES.REPORTS, {
         filterByFormula: formula,
-        fields: ['client_is_active', 'client_notes', 'filing_type', 'documents'],
+        fields: ['client_is_active', 'client_notes', 'filing_type', 'documents', 'spouse_name'],
       }));
     }
     const reportBatches = await Promise.all(reportChunkPromises);
@@ -194,6 +196,9 @@ classifications.get('/get-pending-classifications', async (c) => {
         filingTypeMap.set(rep.id, (rep.fields.filing_type as string) || 'annual_report');
         if (rep.fields.client_notes) {
           clientNotesMap.set(rep.id, rep.fields.client_notes as string);
+        }
+        if (rep.fields.spouse_name) {
+          spouseNameMap.set(rep.id, rep.fields.spouse_name as string);
         }
         const docs = rep.fields.documents;
         if (Array.isArray(docs)) for (const d of docs) docIdsToFetch.add(d as string);
@@ -464,6 +469,9 @@ classifications.get('/get-pending-classifications', async (c) => {
         all_docs: reportDocs?.all || [],
         docs_received_count: (reportDocs?.all || []).filter((d: any) => d.status === 'Received').length,
         docs_total_count: (reportDocs?.all || []).length,
+        // DL-386: expose spouse_name (from report) so the AI-tab "+ הוסף מסמך"
+        // popover renders the client/spouse selector for couples.
+        spouse_name: spouseNameMap.get(reportId) || '',
         email_body_text: (f.email_body_text as string) || '',
         review_status: (f.review_status as string) || 'pending',
         notes: (f.notes as string) || '',
