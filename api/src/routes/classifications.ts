@@ -1418,12 +1418,27 @@ classifications.post('/review-classification', async (c) => {
 
       try {
         for (const r of resolvedTargets) {
-          const filename = resolveOneDriveFilename({
+          // For virtual templates (general_doc, spouse_doc, etc.) not in templateMap,
+          // the user's custom issuer_name IS the intended filename — use it as the
+          // attachmentName fallback so resolveOneDriveFilename doesn't fall back to
+          // the source file's original name (which would cause a same-path PUT that
+          // updates the source in-place instead of creating a new copy).
+          const isVirtualTemplate = !templateMap.has(r.templateId);
+          const targetAttachmentName = isVirtualTemplate
+            ? String((r.fields.issuer_name as string | undefined) ?? (clsFields.attachment_name as string | null | undefined) ?? '')
+            : (clsFields.attachment_name as string | null | undefined) ?? null;
+          let filename = resolveOneDriveFilename({
             templateId: r.templateId,
             issuerName: String((r.fields.issuer_name as string | undefined) ?? ''),
-            attachmentName: (clsFields.attachment_name as string | null | undefined) ?? null,
+            attachmentName: targetAttachmentName,
             templateMap,
           });
+          // Collision guard: if resolved name still matches the source attachment name,
+          // append the template_id so the PUT targets a new path rather than the source file.
+          const sourceBaseName = String(clsFields.attachment_name ?? '').replace(/\.[^.]+$/, '');
+          if (filename.replace(/\.pdf$/i, '') === sourceBaseName) {
+            filename = filename.replace(/\.pdf$/i, '') + `_${r.templateId}.pdf`;
+          }
           const newItem = await msGraph.putBinary(
             `/drives/${DRIVE_ID}/items/${folderId}:/${encodeURIComponent(filename)}:/content?@microsoft.graph.conflictBehavior=rename`,
             sourceBinary,
