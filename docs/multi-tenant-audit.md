@@ -125,8 +125,8 @@
 
 | File | Line | Value | Category | Difficulty |
 |------|------|-------|----------|------------|
-| `api/src/lib/classification-helpers.ts` | 15-16 | `DRIVE_ID = 'b!SxgoZq...'` (OneDrive drive ID) | STORAGE | HARD |
-| `api/src/lib/inbound/attachment-utils.ts` | 7 | `ONEDRIVE_SHARING_TOKEN = 'u!aHR0cH...'` (SharePoint encoded URL) | STORAGE | HARD |
+| `api/src/lib/classification-helpers.ts` | 15-16 | `DRIVE_ID = '[REDACTED-ONEDRIVE-DRIVE-ID]'` (OneDrive drive ID) | STORAGE | HARD |
+| `api/src/lib/inbound/attachment-utils.ts` | 7 | `ONEDRIVE_SHARING_TOKEN = '[REDACTED-ONEDRIVE-SHARING-TOKEN]'` (SharePoint encoded URL) | STORAGE | HARD |
 
 ### 2.6 AUTH — Token binding
 
@@ -420,11 +420,11 @@ These patterns are tenant-agnostic and need minimal or no changes:
 |----------|------|------|----------------|----------|
 | [07] Daily Natan Digest | Query Pending Approval | httpRequest | `appqBL5RWQN9cPOyh` | AIRTABLE_ID |
 | [07] Daily Natan Digest | Query Pending Approval | httpRequest | `tbls7m3hmHC4hhQVy` | AIRTABLE_ID |
-| [07] Daily Natan Digest | Query Pending Approval | httpRequest | `pat2XQGRyzPdycQWr.059c...` (Airtable PAT plaintext) | SECRET |
+| [07] Daily Natan Digest | Query Pending Approval | httpRequest | `[REDACTED-AIRTABLE-PAT-1]` (Airtable PAT plaintext) | SECRET |
 | [07] Daily Natan Digest | Query Pending Reviews | httpRequest | `tbloiSDN3rwRcl1ii` | AIRTABLE_ID |
 | [07] Daily Natan Digest | Summarize Inbox (Claude) | code | `reports@moshe-atsits.co.il` | EMAIL |
 | [07] Daily Natan Digest | Summarize Inbox (Claude) | code | CPA firm system prompt | AI_PROMPT |
-| [07] Daily Natan Digest | Call Claude API | httpRequest | `sk-ant-api03-8Xzh...` (Anthropic API key plaintext) | SECRET |
+| [07] Daily Natan Digest | Call Claude API | httpRequest | `[REDACTED-ANTHROPIC-KEY]` (Anthropic API key plaintext) | SECRET |
 | [07] Daily Natan Digest | Build Digest Email | code | `liozshor.github.io/annual-reports-client-portal/admin/` | FRONTEND_URL |
 | [07] Daily Natan Digest | Build Digest Email | code | `Moshe Atsits` | FIRM_NAME |
 | [07] Daily Natan Digest | Build Digest Email | code | `moshe@moshe-atsits.co.il` | EMAIL |
@@ -434,7 +434,7 @@ These patterns are tenant-agnostic and need minimal or no changes:
 | [06] Reminder Scheduler | Search Due Reminders | airtable | `appqBL5RWQN9cPOyh` + `tbls7m3hmHC4hhQVy` | AIRTABLE_ID |
 | [06] Reminder Scheduler | Search Missing Docs | airtable | `tblcwptR63skeODPn` | AIRTABLE_ID |
 | [06] Reminder Scheduler | Fetch Pending Cls | airtable | `tbloiSDN3rwRcl1ii` | AIRTABLE_ID |
-| [06] Reminder Scheduler | Build Type A Email | code | `db3f995dd145fa5d...` (client token secret plaintext) | SECRET |
+| [06] Reminder Scheduler | Build Type A Email | code | `[REDACTED-CLIENT-TOKEN-SECRET]` (client token secret plaintext) | SECRET |
 | [06] Reminder Scheduler | Build Type A Email | code | `liozshor.github.io/annual-reports-client-portal/` | FRONTEND_URL |
 | [06] Reminder Scheduler | Build Type A Email | code | `reports@moshe-atsits.co.il`, `natan@moshe-atsits.co.il` | EMAIL |
 | [06] Reminder Scheduler | Build Type A Email | code | `wa.me/972779928421`, `03-6390820`, `077-9928421` | PHONE |
@@ -443,30 +443,30 @@ These patterns are tenant-agnostic and need minimal or no changes:
 | [06] Reminder Scheduler | Prepare Type B Input | code | `'annual_report'` hardcoded default | FILING_TYPE |
 | [06] Reminder Scheduler | Call Document Service | executeWorkflow | `hf7DRQ9fLmQqHv3u` (sub-workflow ID) | WORKFLOW_ID |
 | [MONITOR] Security Alerts | Query Security Logs | httpRequest | `appqBL5RWQN9cPOyh` + `security_logs` | AIRTABLE_ID |
-| [MONITOR] Security Alerts | Query Security Logs | httpRequest | `pat2XQGRyzPdycQWr.059c...` (Airtable PAT plaintext) | SECRET |
+| [MONITOR] Security Alerts | Query Security Logs | httpRequest | `[REDACTED-AIRTABLE-PAT-1]` (Airtable PAT plaintext) | SECRET |
 | [MONITOR] Security Alerts | Build Alert Email | code | `Moshe Atsits` (logo alt), `liozshor.github.io` | FIRM_NAME |
 | [MONITOR] Security Alerts | Send Email | httpRequest | `liozshor1@gmail.com` (alert recipient) | EMAIL |
 | [MONITOR] Log Cleanup | All nodes | httpRequest/code | `appqBL5RWQN9cPOyh` + `security_logs` + Airtable PAT (x3) | AIRTABLE_ID, SECRET |
-| [API] Send Batch Status | Parse & Verify | code | `0d1a9b04f3c2...` (N8N_INTERNAL_KEY plaintext) | SECRET |
-| [API] Send Batch Status | Parse & Verify | code | `QKiwUBXVH@%#1gD7t@rB]<,dM.[NC5b_` (HMAC secret) | SECRET |
+| [API] Send Batch Status | Parse & Verify | code | `[REDACTED-N8N-INTERNAL-KEY]` (N8N_INTERNAL_KEY plaintext) | SECRET |
+| [API] Send Batch Status | Parse & Verify | code | `[REDACTED-HMAC-SECRET]` (HMAC secret) | SECRET |
 | [API] Send Batch Status | Get Report | airtable | `appqBL5RWQN9cPOyh` + `tbls7m3hmHC4hhQVy` | AIRTABLE_ID |
 | [API] Send Batch Status | Search Documents | airtable | `tblcwptR63skeODPn` | AIRTABLE_ID |
 | [API] Send Batch Status | Build Email | code | `reports@moshe-atsits.co.il`, `natan@moshe-atsits.co.il` | EMAIL |
 | [API] Send Batch Status | Build Email | code | `wa.me/972779928421`, `03-6390820`, `077-9928421` | PHONE |
 | [API] Send Batch Status | Build Email | code | `Moshe Atsits CPA Firm` / `משרד רו"ח משה עציץ` | FIRM_NAME |
 | [API] Send Batch Status | Build Email | code | `liozshor.github.io/.../view-documents.html` | FRONTEND_URL |
-| [API] Send Batch Status | Build Email | code | `db3f995dd145fa5d...` (client token secret) | SECRET |
-| [API] Send Batch Status | Update Notification | code | `patvXzYxSlSUEKx9i.25f38...` (2nd Airtable PAT) | SECRET |
+| [API] Send Batch Status | Build Email | code | `[REDACTED-CLIENT-TOKEN-SECRET]` (client token secret) | SECRET |
+| [API] Send Batch Status | Update Notification | code | `[REDACTED-AIRTABLE-PAT-2]` (2nd Airtable PAT) | SECRET |
 | [API] Send Batch Status | Respond nodes | respondToWebhook | `liozshor.github.io` (CORS) | FRONTEND_URL |
 | [02] Questionnaire Processing | 8 Airtable nodes | airtable | `appqBL5RWQN9cPOyh` + 6 table IDs | AIRTABLE_ID |
-| [02] Questionnaire Processing | Clear Reminder Date | code | `patvXzYxSlSUEKx9i.25f38...` (Airtable PAT plaintext) | SECRET |
+| [02] Questionnaire Processing | Clear Reminder Date | code | `[REDACTED-AIRTABLE-PAT-2]` (Airtable PAT plaintext) | SECRET |
 | [02] Questionnaire Processing | Extract & Map | code | `'annual_report'` default | FILING_TYPE |
 | [02] Questionnaire Processing | Prepare Email | code | `reports@moshe-atsits.co.il` | EMAIL |
 | [02] Questionnaire Processing | Call Document Service | executeWorkflow | `hf7DRQ9fLmQqHv3u` | WORKFLOW_ID |
 | [05] Inbound Processing | Forward to Worker | httpRequest | `annual-reports-api.liozshor1.workers.dev/webhook/...` | WORKER_URL |
-| [05] Inbound Processing | Forward to Worker | httpRequest | `Bearer 0d1a9b04f3c2...` (internal key plaintext) | SECRET |
-| [05] Inbound Processing | Extract Notification | code | `wf05-inbound-secret` (clientState) | SECRET |
-| [05] Inbound Processing | Pinned data | webhook | Azure tenantId `1c7cac5b-...` | AZURE_ID |
+| [05] Inbound Processing | Forward to Worker | httpRequest | `Bearer [REDACTED-N8N-INTERNAL-KEY]` (internal key plaintext) | SECRET |
+| [05] Inbound Processing | Extract Notification | code | `[REDACTED-WF05-CLIENTSTATE]` (clientState) | SECRET |
+| [05] Inbound Processing | Pinned data | webhook | Azure tenantId `[REDACTED-AZURE-TENANT]` | AZURE_ID |
 | [SUB] Document Service | 4 Airtable nodes | airtable | `appqBL5RWQN9cPOyh` + 3 table IDs | AIRTABLE_ID |
 | [SUB] Document Service | Generate HTML | code | `reports@`, `natan@moshe-atsits.co.il` | EMAIL |
 | [SUB] Document Service | Generate HTML | code | `annual-reports-api.liozshor1.workers.dev` | WORKER_URL |
@@ -474,7 +474,7 @@ These patterns are tenant-agnostic and need minimal or no changes:
 | [SUB] Document Service | Generate HTML | code | `Moshe Atsits` / `משרד רו"ח משה עציץ` | FIRM_NAME |
 | [06-SUB] Monthly Reset | 4 Airtable nodes | airtable | `appqBL5RWQN9cPOyh` + `tbls7m3hmHC4hhQVy` (x4) | AIRTABLE_ID |
 | [05-SUB] Email Subscription | Create Subscription | httpRequest | `liozshor.app.n8n.cloud/webhook/wf05-email-notification` | WEBHOOK_URL |
-| [05-SUB] Email Subscription | Multiple nodes | code/httpRequest | `wf05-inbound-secret`, `liozshor1@gmail.com` | SECRET, EMAIL |
+| [05-SUB] Email Subscription | Multiple nodes | code/httpRequest | `[REDACTED-WF05-CLIENTSTATE]`, `liozshor1@gmail.com` | SECRET, EMAIL |
 | [04] Document Edit Handler | Webhook | webhook | `https://liozshor.github.io` (CORS) | FRONTEND_URL |
 | [04] Document Edit Handler | Extract & Validate | code | `appqBL5RWQN9cPOyh` + `tbls7m3hmHC4hhQVy` | AIRTABLE_ID |
 | [04] Document Edit Handler | 6 Airtable nodes | airtable | `appqBL5RWQN9cPOyh` + 2 table IDs (x6) | AIRTABLE_ID |
@@ -492,7 +492,7 @@ These patterns are tenant-agnostic and need minimal or no changes:
 | SECRET (CRITICAL) | 17 workflows | Admin HMAC key in Code nodes |
 | SECRET (CRITICAL) | 8 workflows | 2 distinct Airtable PATs in plaintext Code nodes |
 | SECRET (CRITICAL) | 4 workflows | Client token secret in Code nodes |
-| SECRET (CRITICAL) | 1 workflow | Admin password `reports3737!` in plaintext (Auth & Verify) |
+| SECRET (CRITICAL) | 1 workflow | Admin password `[REDACTED-ADMIN-PASSWORD]` in plaintext (Auth & Verify) |
 | SECRET | 1 workflow | Webhook approval secret |
 | SECRET | 1 workflow | N8N internal key |
 | FRONTEND_URL | 20 workflows | `liozshor.github.io` in CORS headers |
@@ -500,7 +500,7 @@ These patterns are tenant-agnostic and need minimal or no changes:
 | EMAIL | 3 workflows | `reports@`, `natan@moshe-atsits.co.il` |
 | FIRM_NAME | 2 workflows | `צוות משרד רו"ח משה עציץ` in email HTML |
 | PHONE | 1 workflow | `03-6390820`, `077-9928421`, WhatsApp `972779928421` |
-| ONEDRIVE | 1 workflow | Drive ID `b!SxgoZqBDPEO...` + SharePoint path |
+| ONEDRIVE | 1 workflow | Drive ID `[REDACTED-ONEDRIVE-DRIVE-ID]` + SharePoint path |
 | TALLY_ID | 2 workflows | `1AkYKb` (HE), `1AkopM` (EN) in pinned data |
 | CREDENTIAL_REF | 7 workflows | MS Graph credential `GcLQZwzH2xj41sV7` |
 | WORKFLOW_ID | 3 workflows | Sub-workflow references |
@@ -532,7 +532,7 @@ These patterns are tenant-agnostic and need minimal or no changes:
 | `routes/chat.ts` | 10,26 | AI prompt: `Moshe Atsits CPA firm's...`, `Moshe_Review` | AI_PROMPT, STAFF_NAME |
 | `lib/email-styles.ts` | 33-48 | Office email, WhatsApp, asset URLs, API URL | EMAIL, PHONE, URL |
 | `lib/email-html.ts` | 83-635 | Firm names (EN+HE), phones, emails (15+) | FIRM_NAME, EMAIL, PHONE |
-| `lib/classification-helpers.ts` | 15-16 | OneDrive drive ID `b!SxgoZqBDPEO...` | ONEDRIVE |
+| `lib/classification-helpers.ts` | 15-16 | OneDrive drive ID `[REDACTED-ONEDRIVE-DRIVE-ID]` | ONEDRIVE |
 | `lib/inbound/types.ts` | 15-19 | Multiple table IDs | AIRTABLE_ID |
 | `lib/inbound/processor.ts` | 67 | `reports@moshe-atsits.co.il` | EMAIL |
 | `lib/inbound/client-identifier.ts` | 32 | `@moshe-atsits.co.il` domain | EMAIL |
@@ -702,7 +702,7 @@ Plaintext secrets hardcoded in n8n Code nodes across 20+ workflows:
 | Client token secret | Forge client portal tokens | 2 active + 4 archived |
 | N8N internal key | Call internal webhooks | 2 active + 1 archived |
 | Anthropic API key | Make AI calls on our account | 1 active |
-| Admin password (`reports3737!`) | Direct admin login | 1 archived |
+| Admin password (`[REDACTED-ADMIN-PASSWORD]`) | Direct admin login | 1 archived |
 | Webhook approval secret | Forge approval requests | 1 archived |
 
 **Impact:** Visible to anyone with n8n instance access. **Showstopper** for multi-tenancy — must be remediated before any tenant onboarding.
