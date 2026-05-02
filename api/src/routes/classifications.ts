@@ -1397,30 +1397,71 @@ classifications.post('/review-classification', async (c) => {
         return c.json({ ok: false, conflict: true, conflicts, error: 'One or more targets already have approved files' }, 409);
       }
 
-      // Step C: write shared file pointer onto every target record.
+      // Step C (DL-394): upload a physical copy per target; each gets its own OneDrive item.
       const now = new Date().toISOString();
       const createdDocIds: string[] = [];
-      for (const r of resolvedTargets) {
+      const msGraph = new MSGraphClient(c.env, c.executionCtx);
+
+      // C1: resolve source file's parent folder (copies land in same OneDrive folder).
+      const sourceItem = await msGraph.get(`/drives/${DRIVE_ID}/items/${sharedItemId}?$select=parentReference`);
+      const folderId = (sourceItem?.parentReference as any)?.id as string | undefined;
+      if (!folderId) {
+        return c.json({ ok: false, code: 'no_parent_folder', error: 'Source file has no parent folder' }, 502);
+      }
+
+      // C2: download source binary once.
+      const sourceBinary = await msGraph.getBinary(`/drives/${DRIVE_ID}/items/${sharedItemId}/content`);
+
+      // C3: upload one copy per target; roll back all on any failure.
+      const uploadedItemIds: string[] = [];
+      const targetUploads: Array<{ docId: string; newItemId: string; newWebUrl: string }> = [];
+
+      try {
+        for (const r of resolvedTargets) {
+          const filename = resolveOneDriveFilename({
+            templateId: r.templateId,
+            issuerName: String((r.fields.issuer_name as string | undefined) ?? ''),
+            attachmentName: (clsFields.attachment_name as string | null | undefined) ?? null,
+            templateMap,
+          });
+          const newItem = await msGraph.putBinary(
+            `/drives/${DRIVE_ID}/items/${folderId}:/${encodeURIComponent(filename)}:/content?@microsoft.graph.conflictBehavior=rename`,
+            sourceBinary,
+          );
+          uploadedItemIds.push(newItem.id);
+          targetUploads.push({
+            docId: r.docId,
+            newItemId: String(newItem.id),
+            newWebUrl: typeof newItem.webUrl === 'string' ? newItem.webUrl : sharedFileUrl,
+          });
+        }
+      } catch (err) {
+        for (const id of uploadedItemIds) {
+          try { await msGraph.delete(`/drives/${DRIVE_ID}/items/${id}`); } catch (e) {
+            console.error('[also_match rollback] failed to delete', id, (e as Error).message);
+          }
+        }
+        return c.json({ ok: false, code: 'partial_copy_failure', error: `Copy to target failed: ${(err as Error).message}` }, 502);
+      }
+
+      // C4: patch each target Documents record with its own file pointer.
+      for (const u of targetUploads) {
         const update: Record<string, unknown> = {
           status: 'Received',
-          // DL-391 follow-up: was 'approved_shared' — not in DOCUMENTS.review_status
-          // choices, caused 422 INVALID_MULTIPLE_CHOICE_OPTIONS. Nothing reads
-          // 'approved_shared' anywhere; collapse to 'confirmed' (same value the
-          // regular approve path writes at line ~1926).
           review_status: 'confirmed',
           reviewed_by: 'Natan',
           reviewed_at: now,
-          file_url: sharedFileUrl,
-          onedrive_item_id: sharedItemId,
+          file_url: u.newWebUrl,
+          onedrive_item_id: u.newItemId,
           file_hash: sharedFileHash || null,
           ai_confidence: clsFields.ai_confidence ?? null,
-          ai_reason: `Multi-match from ${clsFields.matched_template_id || 'classification'}: ${clsFields.ai_reason || ''}`,
+          ai_reason: `Multi-match (per-target copy, DL-394) from ${clsFields.matched_template_id || 'classification'}: ${clsFields.ai_reason || ''}`,
           source_attachment_name: clsFields.attachment_name || null,
           source_sender_email: sanitizeEmail(clsFields.sender_email),
           uploaded_at: clsFields.received_at || null,
         };
-        await airtable.updateRecord(TABLES.DOCUMENTS, r.docId, stripEmpty(update));
-        createdDocIds.push(r.docId);
+        await airtable.updateRecord(TABLES.DOCUMENTS, u.docId, stripEmpty(update));
+        createdDocIds.push(u.docId);
       }
 
       // Step D: stage auto-advance for source + any distinct target reports.
@@ -1440,8 +1481,8 @@ classifications.post('/review-classification', async (c) => {
         ok: true,
         action: 'also_match',
         classification_id,
-        shared_onedrive_item_id: sharedItemId,
         created_doc_ids: createdDocIds,
+        uploaded_item_ids: targetUploads.map(u => u.newItemId),
         linked_count: createdDocIds.length,
       });
     }
