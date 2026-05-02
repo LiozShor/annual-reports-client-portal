@@ -1,6 +1,6 @@
 # DL-393 — De-emphasize "previously received / rejected uploads" callout
 
-**Status:** [IMPLEMENTED — NEED TESTING]
+**Status:** [COMPLETED — 2026-05-02]
 **Domain:** email
 **Branch:** `claude-session-20260502-094105`
 **Created:** 2026-05-02
