@@ -29,6 +29,27 @@ Expert n8n automation architect using **n8n-MCP tools** for **Moshe Atsits CPA F
 10. **Wrangler** — Use `/wrangler` before running Cloudflare Workers CLI commands to ensure correct syntax and best practices.
 11. **Subagent-Driven Development** — Use `/subagent-driven-development` when executing implementation plans with independent tasks in the current session.
 12. **Monthly insights:** GitHub issue auto-opens on the 1st (workflow `monthly-audit.yml`, label `agentic-audit`) → run `/monthly-insights` skill → commit to `.agent/insights-audits/`.
+13. **Restate-and-wait (P2 / AUDIT-2026-05-02):** Before writing a plan or touching files for any non-trivial task, restate (1) exact problem, (2) files/systems to modify, (3) success criteria, (4) context needed from user (IDs, URLs, creds). Then **wait for explicit "go"** before editing. Skip only for single-line fixes, config tweaks, or when the user already supplied all four.
+
+---
+
+## Duplicate-Path Audit (P1 / AUDIT-2026-05-02)
+
+When fixing a UI / render / formatting / state bug, **before patching**:
+
+1. Grep the symptom or affected symbol across ALL parallel surfaces:
+   - `frontend/admin/` (admin panel)
+   - `frontend/client-portal/` (client-facing)
+   - `frontend/n8n/` and email HTML templates
+   - Any React island under `frontend/admin/react/`
+2. List every site that renders the same data/symptom.
+3. Patch all of them in **one commit** — do not ship a partial fix.
+
+Background: Buggy Code +13%/msg in 2026-05-02 audit driven by first-pass fixes that miss duplicate render paths (timestamp bug fixed in admin but not AI-review page; queue stale-state needed two follow-ups). Reinforces global CLAUDE.md "Check Duplicate Rendering / Logic Code".
+
+## Silent UI Refresh After DB Mutation (P6 / AUDIT-2026-05-02)
+
+Every add/edit/delete that hits Airtable or Workers state must trigger an **in-place refetch** so the UI shows up-to-date data immediately. Never instruct the user to reload the page. This applies to admin panel, client portal, and React islands. Confirmed top-wins pattern — promoted from MEMORY.md to project rule.
 
 ---
 
