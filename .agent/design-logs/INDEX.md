@@ -2,7 +2,7 @@
 
 Active and pending logs. For completed history, see [ARCHIVE-INDEX.md](ARCHIVE-INDEX.md).
 
-**Total logs:** 236 | **Active:** 138 | **Archived:** 98
+**Total logs:** 237 | **Active:** 139 | **Archived:** 98
 
 ## Folder Structure
 
@@ -11,7 +11,7 @@ Active and pending logs. For completed history, see [ARCHIVE-INDEX.md](ARCHIVE-I
 - `capital-statements/` — Capital Statements (4)
 - `client-portal/` — Client Portal & Questionnaires (13)
 - `documents/` — Documents & OneDrive (20)
-- `email/` — Email System (21)
+- `email/` — Email System (22)
 - `infrastructure/` — Infrastructure & Workflows (21)
 - `reminders/` — Reminder System (17)
 - `research/` — Research & Feasibility (7)
@@ -21,6 +21,7 @@ Active and pending logs. For completed history, see [ARCHIVE-INDEX.md](ARCHIVE-I
 
 | # | File | Status | Summary |
 |---|------|--------|---------|
+| 393 | [393-deemphasize-rejected-uploads-callout.md](email/393-deemphasize-rejected-uploads-callout.md) | IMPLEMENTED — NEED TESTING | De-emphasize "previously received / rejected uploads" amber callout in Type-B reminder emails. Soft amber (`#FFFBEB`), no border, smaller heading (13px/600), muted row text (`#78350F`), wrapper margin moved from bottom to top. Position swap: callout moves from above docs list to below (3 paths in n8n `FjisCdmWc4ef0qSV` Code node `Build Type B Email`: Hebrew-only, bilingual EN card, bilingual HE card; mirrored in Worker `buildDocSection` non-split + split modes in `api/src/lib/email-html.ts`). Removes alert-palette conflict with DL-127 questions card; reference info now reads as a footnote below the action items. |
 | 392 | [392-document-leakage-audit.md](security/392-document-leakage-audit.md) | COMPLETED — audit, no implementation | Renumbered from DL-376 (number collision with OneDrive orphan rename). Read-only client-document-leakage audit across 8 surfaces (Workers API, doc URLs, client portal, email, AI Review, logs/R2/Airtable, n8n, admin browser). 17 findings P0-P2 incl. F-01 `/download-file` IDOR, F-02 raw PII to Anthropic in 4 LLM call sites, F-03 53-bit cyrb53 approval token (no expiry, non-timing-safe). Roadmap: 8 follow-up DLs, ordered B→C→A. |
 | 390 | [390-reminder-next-date-skip-weekend.md](reminders/390-reminder-next-date-skip-weekend.md) | IMPLEMENTED — NEED TESTING | `reminder_next_date` calculator (`api/src/lib/reminders.ts`) shifts Fri/Sat → preceding Thursday so stored values match when DL-389 cron actually fires. Mirror in n8n WF[06] `Set Update Fields` post-send recompute. Temp admin endpoint `POST /webhook/admin-backfill-reminder-weekend-dates` (dryRun + filing_type) heals existing rows in both `annual_reports` + `capital_statements`. Backward-shift compresses minimum gap but stays above DL-168's 10-day floor. Holidays explicitly out of scope. |
 | 391 | [391-chip-menu-assign-to-this-doc.md](ai-review/391-chip-menu-assign-to-this-doc.md) | IMPLEMENTED — NEED TESTING | DL-386 follow-up (renumbered from DL-390 — colliding with reminder-next-date-skip-weekend): chip menu in [required-docs] now offers "📎 שייך את התצוגה הפעילה למסמך זה" as the **first** option when (a) an AI cockpit card is preview-active, (b) the chip is `Required_Missing`, (c) chip's doc differs from active card's `matched_doc_record_id`. One-click — reuses `submitAIReassign(activeItemId, templateId, docRecordId)` (script.js:7773). `renderDocTag` gains `data-template-id`. Cache-bust v=394→395. |

@@ -262,8 +262,8 @@ export function buildRejectedUploadsCallout(
   for (const [reason, items] of groups) {
     const esc = (s: string) => s.replace(/</g, '&lt;').replace(/>/g, '&gt;');
     // Group header with ⚠ prefix
-    const topPad = groupIdx > 0 ? '16px' : '0';
-    groupsHtml += `<tr><td style="padding-top:${topPad};padding-bottom:4px;font-size:14px;font-weight:700;color:#92400E;direction:${dir};text-align:${align};font-family:${FONT};">\u26A0 ${esc(reason)}</td></tr>`;
+    const topPad = groupIdx > 0 ? '10px' : '0';
+    groupsHtml += `<tr><td style="padding-top:${topPad};padding-bottom:2px;font-size:13px;font-weight:600;color:#92400E;direction:${dir};text-align:${align};font-family:${FONT};">\u26A0 ${esc(reason)}</td></tr>`;
 
     // File rows under this reason
     for (const entry of items) {
@@ -277,15 +277,16 @@ export function buildRejectedUploadsCallout(
       if (entry.notes && entry.notes.trim()) {
         rowText += ` (${esc(entry.notes)})`;
       }
-      groupsHtml += `<tr><td style="padding:4px 12px;font-size:14px;color:#92400E;direction:${dir};text-align:${align};font-family:${FONT};">${rowText}</td></tr>`;
+      groupsHtml += `<tr><td style="padding:2px 12px;font-size:13px;color:#78350F;direction:${dir};text-align:${align};font-family:${FONT};">${rowText}</td></tr>`;
     }
     groupIdx++;
   }
 
-  return `<table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 16px 0;">` +
-    `<tr><td style="background:#FEF3C7;border:1px solid #F59E0B;border-radius:8px;padding:20px;">` +
+  // DL-393: soft amber, no border, smaller heading; top margin (was bottom) — sits below doc list now.
+  return `<table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:16px 0 0 0;">` +
+    `<tr><td style="background:#FFFBEB;border-radius:6px;padding:12px 16px;">` +
     `<table width="100%" cellpadding="0" cellspacing="0" border="0">` +
-    `<tr><td style="font-size:16px;font-weight:700;color:#92400E;padding-bottom:12px;text-align:${align};direction:${dir};font-family:${FONT};">${title}</td></tr>` +
+    `<tr><td style="font-size:13px;font-weight:600;color:#92400E;padding-bottom:6px;text-align:${align};direction:${dir};font-family:${FONT};">${title}</td></tr>` +
     `<tr><td style="padding:0;"><table width="100%" cellpadding="0" cellspacing="0" border="0">${groupsHtml}</table></td></tr>` +
     `</table></td></tr></table>`;
 }
@@ -313,7 +314,8 @@ function buildDocSection(
   const rejCallout = buildRejectedUploadsCallout(rejectedUploads, lang as 'he' | 'en');
 
   if (!splitMode) {
-    let html = rejCallout;
+    // DL-393: rejCallout appended at end (was prepended)
+    let html = '';
     if (cDocs.length > 0) {
       if (married) {
         const label = lang === 'en' ? 'Client documents' : 'מסמכים של הלקוח';
@@ -329,6 +331,7 @@ function buildDocSection(
       html += spacerRow(8);
       html += generateDocListHtml(sDocs, lang, sortedCategories);
     }
+    html += rejCallout;
     return html;
   }
 
@@ -340,7 +343,8 @@ function buildDocSection(
   const cLabel = lang === 'en' ? 'Client documents' : 'מסמכים של הלקוח';
   const sLabel = lang === 'en' ? 'Spouse documents' : 'מסמכים של בן/בת הזוג';
 
-  let html = rejCallout;
+  // DL-393: rejCallout appended at end (was prepended)
+  let html = '';
 
   if (totalMissing > 0) {
     html += `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">` +
@@ -383,6 +387,7 @@ function buildDocSection(
     }
   }
 
+  html += rejCallout;
   return html;
 }
 
