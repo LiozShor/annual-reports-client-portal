@@ -1,0 +1,60 @@
+title = "Annual Reports CRM gitleaks config"
+
+[extend]
+useDefault = true
+
+[[rules]]
+id = "audit-doc-plaintext-marker"
+description = "Audit doc admits a value is plaintext / live / in code node — value should be redacted"
+# Must literally say `plaintext`, `in code node`, `real value`, or `live value` in
+# the parenthetical right after the backticked value. Generic words like "token"
+# or "secret" are too common in legitimate prose and produce false positives.
+regex = '''(?i)`[^`]{16,}`\s*\([^)]*\b(plaintext|in code node|real value|live value|active value|leaked value)\b[^)]*\)'''
+tags = ["doc", "audit"]
+[rules.allowlist]
+description = "Already-redacted placeholders are fine"
+regexTarget = "match"
+regexes = ['''\[REDACTED-[A-Z0-9_-]+\]''']
+
+[[rules]]
+id = "airtable-pat"
+description = "Airtable Personal Access Token"
+regex = '''pat[A-Z][A-Za-z0-9]{16}\.[A-Za-z0-9]{20,}'''
+tags = ["airtable", "secret"]
+
+[[rules]]
+id = "anthropic-api-key-strict"
+description = "Anthropic API key (more permissive than default)"
+regex = '''sk-ant-(api03|admin01)-[A-Za-z0-9_-]{8,}'''
+tags = ["anthropic", "secret"]
+
+[allowlist]
+description = "Allow redacted-token placeholders"
+regexes = [
+  '''\[REDACTED-[A-Z0-9_-]+\]''',
+]
+paths = [
+  '''(.*/)?node_modules/''',
+  '''(.*/)?\.git/''',
+  '''(.*/)?docs/wf05-backup-pre-migration-2026-03-26\.json$''',
+  '''(^|.*/)\.env(\..+)?$''',
+  '''(.*/)?\.claude/worktrees/''',
+  '''(.*/)?api/\.dryrun-cors-preview/''',
+  '''(.*/)?api/\.wrangler/''',
+  # Gitignored / untracked — out of source-control scope
+  '''^archive/''',
+  '''^\.mcp\.json$''',
+  # Old design-log archive — historical redacted content. Triage separately if needed.
+  '''^\.agent/design-logs/''',
+  # The rotation runbook discusses the very rules it documents (self-reference);
+  # the false positive is an artifact of that meta-content.
+  '''^\.agent/secret-rotation-2026-05-02\.md$''',
+  # `wrangler.toml` declares public Cloudflare/Airtable IDs (BASE_ID is `appXXX`,
+  # a public application identifier — not a secret).
+  '''^api/wrangler\.toml$''',
+  # n8n workflow exports use SPOUSE_KEY / otherDetailKey as internal data-keys,
+  # not API keys — gitleaks generic-api-key regex false-positives on the name.
+  '''^frontend/n8n/workflow-processor-n8n\.js$''',
+  # `token === ...` in extract-issuer-names is a code-path comparison constant.
+  '''^api/src/routes/extract-issuer-names\.ts$''',
+]
