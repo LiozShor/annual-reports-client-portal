@@ -8356,7 +8356,15 @@ function transitionCardToReviewed(recordId, newReviewStatus, responseData) {
         queueMicrotask(() => {
             try {
                 loadAIClassifications(true)
-                    .then(() => { if (item) refreshClientDocTags(item.client_name); })
+                    .then(() => {
+                        if (item) {
+                            refreshClientDocTags(item.client_name);
+                            // DL-391 follow-up: counter ('X/Y התקבלו') reads from
+                            // aiClassificationsData; rerun row-stats with the post-reconcile
+                            // data so the count matches the just-refreshed chip section.
+                            refreshClientRowStats(item.client_name);
+                        }
+                    })
                     .catch(() => {});
             } catch {}
         });
