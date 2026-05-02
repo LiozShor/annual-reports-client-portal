@@ -10141,15 +10141,16 @@ function buildPaPreviewBody(item) {
     const docGroups = Array.isArray(item.doc_groups) ? item.doc_groups : [];
     const showNo = _paShowNoAnswers.has(item.report_id);
 
-    // Partition answers: yes (✓ כן), no (✗ לא), free-text
-    const yesAnswers = [];
+    // DL-395: mirror print sheet — surface every answer except "✗ לא" in one
+    // flat list (in original questionnaire order). "✗ לא" stays behind the
+    // existing toggle. Original index in answersAll is preserved as
+    // data-answer-idx so DL-302 cross-highlight indices remain stable.
+    const visibleAnswers = [];
     const noAnswers = [];
-    const freeAnswers = [];
-    for (const a of answersAll) {
-        if (a.value === '✓ כן' || a.value === '✓ Yes') yesAnswers.push(a);
-        else if (a.value === '✗ לא' || a.value === '✗ No') noAnswers.push(a);
-        else freeAnswers.push(a);
-    }
+    answersAll.forEach((a, idx) => {
+        if (a.value === '✗ לא' || a.value === '✗ No') noAnswers.push({ a, idx });
+        else visibleAnswers.push({ a, idx });
+    });
 
     // ========== Q&A SECTION (left column) ==========
     let qaHtml = '';
@@ -10162,26 +10163,21 @@ function buildPaPreviewBody(item) {
                 </button>
             </div>`;
 
-        // DL-299 follow-up: "✓ כן" chip block removed (noisy; reviewer only needs free-text answers + optional "לא" reveal)
-
-        if (freeAnswers.length > 0) {
-            qaHtml += `<div class="pa-preview-subsection">
-                <div class="pa-preview-subtitle">תשובות פתוחות (${freeAnswers.length})</div>
-                <div class="pa-preview-qa">
-                    ${freeAnswers.map((a, i) => {
-                        // DL-302: cross-highlight metadata. template_ids is a comma-joined list
-                        // (server attaches it from question_mappings). Selectable + focusable for
-                        // keyboard parity with the desktop hover.
-                        const tids = Array.isArray(a.template_ids) ? a.template_ids.join(',') : '';
-                        const linkAttr = tids
-                            ? ` data-template-ids="${escapeAttr(tids)}" tabindex="0" role="button" aria-label="${escapeAttr('הדגש מסמכים מקושרים')}"`
-                            : '';
-                        return `<div class="pa-preview-qa-row" data-answer-idx="${i}"${linkAttr}>
-                        <span class="pa-preview-qa-label">${escapeHtml(a.label)}</span>
-                        <span class="pa-preview-qa-value">${escapeHtml(a.value)}</span>
-                    </div>`;
-                    }).join('')}
-                </div>
+        if (visibleAnswers.length > 0) {
+            qaHtml += `<div class="pa-preview-qa">
+                ${visibleAnswers.map(({ a, idx }) => {
+                    // DL-302: cross-highlight metadata. template_ids is a comma-joined list
+                    // (server attaches it from question_mappings). Selectable + focusable for
+                    // keyboard parity with the desktop hover.
+                    const tids = Array.isArray(a.template_ids) ? a.template_ids.join(',') : '';
+                    const linkAttr = tids
+                        ? ` data-template-ids="${escapeAttr(tids)}" tabindex="0" role="button" aria-label="${escapeAttr('הדגש מסמכים מקושרים')}"`
+                        : '';
+                    return `<div class="pa-preview-qa-row" data-answer-idx="${idx}"${linkAttr}>
+                    <span class="pa-preview-qa-label">${escapeHtml(a.label)}</span>
+                    <span class="pa-preview-qa-value">${escapeHtml(a.value)}</span>
+                </div>`;
+                }).join('')}
             </div>`;
         }
 
@@ -10192,7 +10188,7 @@ function buildPaPreviewBody(item) {
                     ${showNo ? 'הסתר' : 'הצג'} תשובות "לא" (${noAnswers.length})
                 </button>
                 ${showNo ? `<div class="pa-yes-chips-grid" style="margin-top:var(--sp-2);">
-                    ${noAnswers.map(a => `<span class="pa-yes-chip pa-yes-chip--no">${escapeHtml(a.label)}</span>`).join('')}
+                    ${noAnswers.map(({ a }) => `<span class="pa-yes-chip pa-yes-chip--no">${escapeHtml(a.label)}</span>`).join('')}
                 </div>` : ''}
             </div>`;
         }

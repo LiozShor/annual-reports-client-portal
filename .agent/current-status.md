@@ -1,9 +1,24 @@
 # Annual Reports CRM - Current Status
 
-**Last Updated:** 2026-05-02 (DL-394 COMPLETED — all tests passed. DL-391 cascade-revert 422 fix verified on main.)
+**Last Updated:** 2026-05-02 (DL-395 — IMPLEMENTED, NEED TESTING. PA review questionnaire-answers section mirrors print sheet — every answer except `✗ [H:no]` shown as a flat list. DL-394 COMPLETED. DL-391 cascade-revert 422 fix verified on main.)
+
+## OPEN: DL-395 — PA review yes-answers visibility
+
+DL: `.agent/design-logs/admin-ui/395-pa-review-show-yes-answers.md`
+
+Open-test items from Section 7 (deploy Pages first, then verify on live admin):
+
+- [ ] PA review for a sample client — confirm questionnaire-answers section lists has-children=✓, business-stock=✓, pension/keren-hishtalmut/life-insurance rows (with company values), no yes/free subsection split.
+- [ ] Click print button on the same card — printed sheet matches the on-screen list 1:1.
+- [ ] `[H:no]` toggle regression — pick a client with ≥1 `✗ [H:no]`; confirm count, expand/collapse work, no row leaks to main list.
+- [ ] Empty `answers_all` client — section renders nothing.
+- [ ] DL-302 cross-highlight — hover a yes-answer with `template_ids`; related doc tags highlight. Yes-answer with no templates — no error.
+- [ ] Mobile <1024px — single column, no horizontal overflow.
+- [ ] Hard-refresh — confirm `script.js?v=400` is served.
 
 ## Recent (last 7 days)
 
+- **2026-05-02 · DL-395 — IMPLEMENTED, NEED TESTING.** `buildPaPreviewBody` (`frontend/admin/js/script.js` ~10144-10182) now mirrors print sheet — drops only `✗ [H:no]`, renders rest in flat list with original-index `data-answer-idx` for DL-302 cross-highlight stability. Cache-bust v=399→400.
 - **2026-05-02 · DL-394 — COMPLETED.** `also_match` now uploads a physical OneDrive copy per target (renamed via `resolveOneDriveFilename`). Each Documents record has its own `onedrive_item_id` + `file_url`. Rollback-on-failure. Cascade-revert is naturally per-card. All 4 test cases verified live. DL: `.agent/design-logs/ai-review/394-onedrive-copy-on-also-match.md`.
 - **2026-05-02 · DL-391 cascade-revert 422 fix — COMPLETED.** `notification_status: null` instead of `''` (commit 94964040). Verified on main.
 - **Pages cache-bust race resolved.** Pages git auto-deploy is back online (verified 2026-05-02). Manual `wrangler pages deploy` races against the git build and 502s on `/pages/assets/upload`. Memory: `reference_pages_git_autodeploy_back.md`. DL-368 marked archival once user confirms the auto-deploy is stable across multiple commits.
