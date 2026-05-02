@@ -1377,7 +1377,11 @@ classifications.post('/review-classification', async (c) => {
       for (const r of resolvedTargets) {
         const update: Record<string, unknown> = {
           status: 'Received',
-          review_status: 'approved_shared',
+          // DL-391 follow-up: was 'approved_shared' — not in DOCUMENTS.review_status
+          // choices, caused 422 INVALID_MULTIPLE_CHOICE_OPTIONS. Nothing reads
+          // 'approved_shared' anywhere; collapse to 'confirmed' (same value the
+          // regular approve path writes at line ~1926).
+          review_status: 'confirmed',
           reviewed_by: 'Natan',
           reviewed_at: now,
           file_url: sharedFileUrl,
