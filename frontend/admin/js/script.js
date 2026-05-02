@@ -10982,7 +10982,7 @@ function _paRenderAddDocPick() {
         <div class="pa-add-doc-list" id="paAddDocList">${listHtml}</div>
         <div class="pa-add-doc-divider">או מסמך מותאם אישית</div>
         <div class="pa-add-doc-custom">
-            <input type="text" id="paAddDocCustomInput" placeholder="שם המסמך..." dir="auto"
+            <input type="text" id="paAddDocCustomInput" placeholder="שם המסמך..." dir="rtl"
                 onkeydown="if(event.key==='Enter'){event.preventDefault();paAddCustomDocSubmit();}">
             <button type="button" class="pa-add-doc-custom-btn" onclick="paAddCustomDocSubmit()">
                 ${icon('plus', 'icon-xs')} הוסף

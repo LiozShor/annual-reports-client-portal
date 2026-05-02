@@ -1239,6 +1239,12 @@ classifications.post('/review-classification', async (c) => {
       const sourceReport = sourceReportId ? await airtable.getRecord(TABLES.REPORTS, sourceReportId) : null;
       const sourceClientId = sourceReport ? String(getField((sourceReport.fields as any).client_id) || '') : '';
 
+      // DL-391 follow-up: cache templates for auto-create fallback when a target
+      // template's Documents row doesn't exist on the report yet.
+      const _alsoMatchTemplateRecords = await getCachedOrFetch(c.env.CACHE_KV, 'cache:templates', 3600,
+        () => airtable.listAllRecords(TABLES.TEMPLATES));
+      const templateMap = buildTemplateMap(_alsoMatchTemplateRecords);
+
       // Step A: resolve every target to a concrete Airtable doc record.
       // Step B: validate same-client + pre-flight conflict check. Abort batch on ANY conflict.
       const resolvedTargets: Array<{
@@ -1290,11 +1296,51 @@ classifications.post('/review-classification', async (c) => {
           targetDocRec = created[0];
           isNewlyCreated = true;
         } else {
-          const found = await airtable.listAllRecords(TABLES.DOCUMENTS, {
-            filterByFormula: `AND({type} = '${t.template_id}', FIND('${tReportId}', ARRAYJOIN({report})))`,
-            maxRecords: 1,
-          });
-          targetDocRec = found[0];
+          // DL-391 follow-up: ARRAYJOIN({report}) on a linked-record field returns the
+          // linked record's primary display value (not its id), so the previous
+          // FIND('${tReportId}', ARRAYJOIN({report})) filter never matched. Switch to
+          // pulling the report's `documents` link list and matching by template_id in code —
+          // same pattern used by Step 5 above.
+          const targetReportRec = await airtable.getRecord(TABLES.REPORTS, tReportId);
+          const linkedDocIds = ((targetReportRec.fields as any)?.documents as string[]) || [];
+          if (linkedDocIds.length > 0) {
+            const orFilter = linkedDocIds.map(id => `RECORD_ID()='${id}'`).join(',');
+            const linkedDocs = await airtable.listAllRecords(TABLES.DOCUMENTS, {
+              filterByFormula: `AND(OR(${orFilter}), {type} = '${t.template_id}')`,
+              maxRecords: 1,
+            });
+            targetDocRec = linkedDocs[0];
+          }
+        }
+
+        if (!targetDocRec) {
+          // DL-391 follow-up: auto-create the target Documents record (templated) when
+          // none exists for this report. Mirrors the general_doc branch above. Allows
+          // also_match to link the same file to a template even before its Documents
+          // row was materialized.
+          const tmplRecord = templateMap.get(t.template_id);
+          if (tmplRecord) {
+            const tmplFields = (tmplRecord as any).fields || tmplRecord || {};
+            const issuerName = (tmplFields.name_he as string) || t.template_id;
+            const issuerKey = t.template_id.toLowerCase();
+            const docUid = `${tReportId}_${t.template_id.toLowerCase()}_client_${issuerKey}_${Date.now()}`;
+            const created = await airtable.createRecords(TABLES.DOCUMENTS, [{
+              fields: {
+                type: t.template_id,
+                issuer_name: issuerName,
+                issuer_name_en: (tmplFields.name_en as string) || issuerName,
+                issuer_key: issuerKey,
+                category: (tmplFields.category as string) || 'general',
+                person: 'client',
+                status: 'Required_Missing',
+                report: [tReportId],
+                document_uid: docUid,
+                document_key: docUid,
+              },
+            }]);
+            targetDocRec = created[0];
+            isNewlyCreated = true;
+          }
         }
 
         if (!targetDocRec) {
