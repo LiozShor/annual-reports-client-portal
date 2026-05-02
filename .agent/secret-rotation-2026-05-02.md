@@ -45,13 +45,28 @@
 
 ---
 
+## Step 1.5 — Delete dead `[API] Send Batch Status` workflow (DL-194 cleanup)
+
+**Why:** Per DL-194 (2026-03-26) the entire batch-status feature was removed (Worker route + frontend deleted, n8n workflow deactivated but not deleted). The dead workflow was still holding plaintext copies of `SECRET_KEY` (Step 2), Airtable PAT #2 (Step 4), and the now-rotated `N8N_INTERNAL_KEY`. Deleting it shrinks the rotation surface and removes a future leak vector.
+
+**Pre-delete checks (2026-05-02):**
+- `n8n_get_workflow QREwCScDZvhF9njF` → `active: false` ✅
+- `grep -rn "batch-status\|QREwCScDZvhF9njF" api/src` → zero matches ✅
+- Deactivated since 2026-03-26, today 2026-05-02 → >7 days ✅
+
+**Action:** `n8n_delete_workflow QREwCScDZvhF9njF` → confirmed deleted; readback returns `NOT_FOUND` ✅.
+
+- [x] **Done — 2026-05-02.** Workflow `[API] Send Batch Status` (id `QREwCScDZvhF9njF`) permanently deleted from n8n. Steps 2 and 4 footprint reduced (see strikethroughs below).
+
+---
+
 ## Step 2 — Worker `SECRET_KEY` (HMAC, was `QKiwUBXVH@%#1gD7t@rB]<,dM.[NC5b_`)
 
 **Why second:** Forging admin tokens. Rotating this **logs out every active admin session**. Do during low-activity window.
 
 **Where it lives:**
 - Cloudflare Worker secret `SECRET_KEY`.
-- n8n Code node `Parse & Verify` in `[API] Send Batch Status` (same node as step 1).
+- ~~n8n Code node `Parse & Verify` in `[API] Send Batch Status` (same node as step 1).~~ — workflow deleted in Step 1.5.
 - n8n Code node `Verify Admin Token` in `[04] Document Edit Handler` (id `y7n4qaAUiCS4R96W`).
 
 **You do:**
@@ -96,7 +111,7 @@
 **Why separate from #3:** Different scope/use. Used by inbound + questionnaire processing flows.
 
 **Where it lives:**
-- n8n Code nodes in `[02] Questionnaire Processing` (id `QqEIWQlRs1oZzEtNxFUcQ`), `[API] Send Batch Status` (`QREwCScDZvhF9njF`).
+- n8n Code nodes in `[02] Questionnaire Processing` (id `QqEIWQlRs1oZzEtNxFUcQ`)~~, `[API] Send Batch Status` (`QREwCScDZvhF9njF`)~~ — Send Batch Status workflow deleted in Step 1.5.
 - Cloudflare Worker secret `AIRTABLE_PAT` (this is the Worker-side copy that hits Airtable from the API).
 - Local untracked `docs/wf05-backup-pre-migration-2026-03-26.json` — gitignored, but the secret in there will become invalid (good, that's the point).
 
@@ -106,8 +121,8 @@
 
 **I'll do:**
 3. `wrangler secret put AIRTABLE_PAT` on Worker.
-4. Update 2 n8n workflow Code nodes via MCP.
-5. Verify: submit a test Tally questionnaire response → confirm `[02] Questionnaire Processing` runs green; trigger one batch-status email → confirm green.
+4. Update n8n `[02] Questionnaire Processing` Code nodes via MCP (Send Batch Status is gone, see Step 1.5).
+5. Verify: submit a test Tally questionnaire response → confirm `[02] Questionnaire Processing` runs green.
 
 - [ ] **Done.**
 
