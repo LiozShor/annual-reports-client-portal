@@ -132,7 +132,9 @@ for b in "${MERGED[@]}"; do
     continue
   fi
   log "[cleanup] git branch -d $b"
-  if run "git branch -d \"$b\" 2>&1"; then
+  # </dev/null prevents git from prompting "Should I try again? (y/n)" on
+  # Windows when ref dir deletion is blocked by a file lock.
+  if run "git branch -d \"$b\" </dev/null 2>&1"; then
     DELETED=$((DELETED+1))
   fi
 done
@@ -149,7 +151,7 @@ if [ "$MODE" = "aggressive" ]; then
     [ "$b" = "$CURRENT_BRANCH" ] && continue
     git worktree list --porcelain | awk '/^branch /{print $2}' | grep -qx "refs/heads/$b" && continue
     log "[cleanup] git branch -D $b (force, merged to HEAD only)"
-    if run "git branch -D \"$b\" 2>&1"; then
+    if run "git branch -D \"$b\" </dev/null 2>&1"; then
       DELETED=$((DELETED+1))
     fi
   done
