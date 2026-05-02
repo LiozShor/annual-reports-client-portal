@@ -69,6 +69,11 @@ fi
 # ---- 3. Per-worktree triage ------------------------------------------------
 KEEP=()
 REMOVE=()
+# SAFETY: skip worktrees whose timestamp is younger than this many hours.
+# Branch name pattern: claude-session-YYYYMMDD-HHMMSS — likely an active session.
+MIN_AGE_HOURS=6
+NOW_EPOCH="$(date +%s)"
+
 for wt in "${SESSION_WORKTREES[@]}"; do
   name="$(basename "$wt")"
   # Get the branch attached to this worktree
@@ -77,6 +82,25 @@ for wt in "${SESSION_WORKTREES[@]}"; do
   # Skip the current session's own worktree
   if [ "$branch" = "$CURRENT_BRANCH" ]; then
     KEEP+=("$wt (current session)"); continue
+  fi
+  # SAFETY GUARD 1 — refuse if the worktree has any uncommitted or untracked work.
+  # `git worktree remove --force` does NOT respect dirty trees; we must check ourselves.
+  # A fresh session-branch has zero commits relative to main, so the merged-into-main
+  # check below would otherwise wipe live work.
+  if [ -n "$(git -C "$wt" status --porcelain 2>/dev/null)" ]; then
+    KEEP+=("$wt → $branch (DIRTY — uncommitted/untracked files)"); continue
+  fi
+  # SAFETY GUARD 2 — refuse if the session timestamp is younger than MIN_AGE_HOURS.
+  # Parse claude-session-YYYYMMDD-HHMMSS into an epoch and compare.
+  if [[ "$branch" =~ ^claude-session-([0-9]{4})([0-9]{2})([0-9]{2})-([0-9]{2})([0-9]{2})([0-9]{2})$ ]]; then
+    bts="${BASH_REMATCH[1]}-${BASH_REMATCH[2]}-${BASH_REMATCH[3]} ${BASH_REMATCH[4]}:${BASH_REMATCH[5]}:${BASH_REMATCH[6]}"
+    bts_epoch="$(date -d "$bts" +%s 2>/dev/null || echo 0)"
+    if [ "$bts_epoch" -gt 0 ]; then
+      age_hours=$(( (NOW_EPOCH - bts_epoch) / 3600 ))
+      if [ "$age_hours" -lt "$MIN_AGE_HOURS" ]; then
+        KEEP+=("$wt → $branch (RECENT — ${age_hours}h old, < ${MIN_AGE_HOURS}h cutoff)"); continue
+      fi
+    fi
   fi
   # Is the branch merged into origin/main?
   if git merge-base --is-ancestor "$branch" origin/main 2>/dev/null; then
