@@ -238,6 +238,7 @@ After all steps above are ✓:
 - [ ] Delete `docs/wf05-backup-pre-migration-2026-03-26.json` from local disk (it's gitignored but contains a now-invalid PAT — still good hygiene to remove).
 - [ ] Add a pre-commit gitleaks rule for inline-code Markdown patterns matching `(plaintext)` / `(plaintext in Code node)` near values ≥16 chars (so this kind of doc-style leak gets caught next time).
 - [ ] **Optional: contribute `audit-doc-plaintext-marker` rule upstream to `gitleaks/gitleaks`.** Rationale: AI-generated audit/compliance docs that paste live secret values + label them "(plaintext)" / "(plaintext in Code node)" / "(real value)" are a real and growing leakage vector that the default gitleaks rule set doesn't cover. Open after Layer 9 lands and the audit script has been running clean for ≥1 week. Reference our 2026-05-02 incident (`docs/multi-tenant-audit.md` leak) as motivation.
+- [ ] **Enable GitHub Push Protection** (Lioz to do — UI only): Settings → Code security → Secret scanning → Push protection → enable for `LiozShor/annual-reports-client-portal`. Free for public repos. Catches `sk-ant-`, `pat<X>.`, AWS, Slack, ~200 token formats at the push edge. This is the canonical defense for the 2026-05-02 leak vector — gitleaks/pii-guard catch on commit; Push Protection catches on push, server-side, even if local hooks were bypassed.
 
 ---
 
