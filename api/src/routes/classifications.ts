@@ -1187,10 +1187,13 @@ classifications.post('/review-classification', async (c) => {
         }
       }
 
-      // Reset classification to pending
+      // Reset classification to pending.
+      // DL-391 follow-up: notification_status is a single-select; sending '' tries
+      // to create an empty option and 422s on a token without schema-create perms.
+      // null clears the field properly.
       await airtable.updateRecord(TABLES.CLASSIFICATIONS, classification_id, {
         review_status: 'pending',
-        notification_status: '',
+        notification_status: null,
         document: [],
       } as any);
 
