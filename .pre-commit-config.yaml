@@ -29,3 +29,14 @@ repos:
         pass_filenames: true
         files: ^\.agent/
         types: [text]
+
+  # 4. Size-ratchet — block growth of monolithic JS files (script.js, chatbot.js)
+  # Baseline lives in .claude/script-size-baseline.json. Shrinks auto-update.
+  - repo: local
+    hooks:
+      - id: script-size-ratchet
+        name: script-size-ratchet
+        entry: python3 .claude/hooks/script-size-ratchet.py
+        language: system
+        pass_filenames: false
+        always_run: true
