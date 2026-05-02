@@ -243,8 +243,8 @@ export function buildRejectedUploadsCallout(
   const align = isHe ? 'right' : 'left';
 
   const title = isHe
-    ? 'מסמכים שקיבלנו ממך בעבר'
-    : 'Files we received from you previously';
+    ? 'מסמכים שנשלחו אך אינם רלוונטיים'
+    : 'Files sent but not relevant';
 
   // Group entries by reason
   const fallbackReason = isHe ? 'נדחה ע"י המשרד' : 'Rejected by office';
