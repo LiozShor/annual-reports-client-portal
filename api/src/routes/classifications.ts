@@ -1276,23 +1276,31 @@ classifications.post('/review-classification', async (c) => {
 
         if (t.doc_record_id) {
           targetDocRec = await airtable.getRecord(TABLES.DOCUMENTS, t.doc_record_id);
-        } else if (t.template_id === 'general_doc' && t.new_doc_name) {
+        } else if (t.new_doc_name) {
+          // DL-391 follow-up: any picker selection (general_doc OR templated)
+          // with new_doc_name means "create a NEW instance, don't match an
+          // existing row". Previously only general_doc honored this; templated
+          // picks with new_doc_name silently fell through to find-existing and
+          // overwrote the first matching type=template_id row.
           const issuerKey = t.new_doc_name.toLowerCase().replace(/[^a-zA-Zא-ת0-9\s]/g, '').replace(/\s+/g, '_');
-          const docUid = `${tReportId}_general_doc_client_${issuerKey}`;
-          const created = await airtable.createRecords(TABLES.DOCUMENTS, [{
-            fields: {
-              type: 'general_doc',
-              issuer_name: t.new_doc_name,
-              issuer_name_en: t.new_doc_name,
-              issuer_key: t.new_doc_name,
-              category: 'general',
-              person: 'client',
-              status: 'Required_Missing',
-              report: [tReportId],
-              document_uid: docUid,
-              document_key: docUid,
-            },
-          }]);
+          const docUid = `${tReportId}_${t.template_id.toLowerCase()}_client_${issuerKey}_${Date.now()}`;
+          const tmpl = t.template_id !== 'general_doc' ? templateMap.get(t.template_id) : null;
+          const tmplCategory = tmpl ? ((tmpl as any).category as string) : null;
+          const tmplPerson = tmpl ? ((tmpl as any).person as string) : null;
+          const fields: Record<string, unknown> = {
+            type: t.template_id,
+            issuer_name: t.new_doc_name,
+            issuer_name_en: t.new_doc_name,
+            issuer_key: t.new_doc_name,
+            person: tmplPerson || 'client',
+            status: 'Required_Missing',
+            report: [tReportId],
+            document_uid: docUid,
+            document_key: docUid,
+          };
+          if (t.template_id === 'general_doc') fields.category = 'general';
+          else if (tmplCategory) fields.category = tmplCategory;
+          const created = await airtable.createRecords(TABLES.DOCUMENTS, [{ fields }], { typecast: true });
           targetDocRec = created[0];
           isNewlyCreated = true;
         } else {
