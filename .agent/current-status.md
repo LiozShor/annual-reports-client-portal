@@ -1,15 +1,11 @@
 # Annual Reports CRM - Current Status
 
-**Last Updated:** 2026-05-02 (DL-394 IMPLEMENTED — also_match per-target OneDrive copy. DL-391 cascade-revert 422 fix already on main.)
+**Last Updated:** 2026-05-02 (DL-394 COMPLETED — all tests passed. DL-391 cascade-revert 422 fix verified on main.)
 
-## OPEN — DL-391 follow-ups (queued, not implemented)
+## Recent (last 7 days)
 
-- **OneDrive copy-on-also-match — DL-394 IMPLEMENTED, NEED TESTING.** `also_match` now uploads a physical OneDrive copy per target (renamed via `resolveOneDriveFilename`). Each Documents record has its own `onedrive_item_id` + `file_url`. Rollback-on-failure. Cascade-revert is naturally per-card (unique item IDs; no code change needed). DL: `.agent/design-logs/ai-review/394-onedrive-copy-on-also-match.md`.
-  - [ ] Two-target also_match happy path: two files in OneDrive with target-appropriate names; each Documents record has unique `onedrive_item_id`; `file_hash` identical.
-  - [ ] Cascade-revert post also_match: primary doc cleared + archived; sibling UNTOUCHED.
-  - [ ] Legacy shared record: revert still cascades (legacy behavior unchanged).
-  - [ ] DL-314 chip: new post-DL-394 record → no "🔗 also matches" chip (count = 1).
-- **Cascade revert 422 fix — MERGED to main (commit 94964040), pending Worker deploy verification.** `revert_cascade` was writing `notification_status: ''` (empty string) and Airtable rejected with 422 INVALID_MULTIPLE_CHOICE_OPTIONS. Fix: send `null` instead. `api/src/routes/classifications.ts:1191-1198`.
+- **2026-05-02 · DL-394 — COMPLETED.** `also_match` now uploads a physical OneDrive copy per target (renamed via `resolveOneDriveFilename`). Each Documents record has its own `onedrive_item_id` + `file_url`. Rollback-on-failure. Cascade-revert is naturally per-card. All 4 test cases verified live. DL: `.agent/design-logs/ai-review/394-onedrive-copy-on-also-match.md`.
+- **2026-05-02 · DL-391 cascade-revert 422 fix — COMPLETED.** `notification_status: null` instead of `''` (commit 94964040). Verified on main.
 - **Pages cache-bust race resolved.** Pages git auto-deploy is back online (verified 2026-05-02). Manual `wrangler pages deploy` races against the git build and 502s on `/pages/assets/upload`. Memory: `reference_pages_git_autodeploy_back.md`. DL-368 marked archival once user confirms the auto-deploy is stable across multiple commits.
 
 
