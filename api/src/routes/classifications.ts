@@ -2174,8 +2174,18 @@ classifications.post('/review-classification', async (c) => {
     }
 
     // ---- Step 8: Return response ----
-    // DL-254: Invalidate documents cache after approve/reject/reassign changes doc status
-    invalidateCache(c.env.CACHE_KV, 'cache:documents_non_waived_v2');
+    // DL-254: Invalidate documents cache after approve/reject/reassign changes doc status.
+    // DL-391 follow-up: also bust the pending-classifications response cache —
+    // also_match auto-create writes new DOCUMENTS rows that the silent
+    // loadAIClassifications refetch wouldn't see otherwise. Mirrors lines 2540
+    // and 2691 (move-classification-client + dismiss-classifications paths).
+    invalidateCache(
+      c.env.CACHE_KV,
+      'cache:documents_non_waived_v2',
+      'pending-classifications:annual_report',
+      'pending-classifications:capital_statements',
+      'pending-classifications:all',
+    );
 
     // DL-365 Phase 2: emit ADMIN review action event (doc_approve / doc_reject / doc_reassign).
     const reviewClientId = (Array.isArray(clsFields.client_id) ? clsFields.client_id[0] : clsFields.client_id) as string | undefined;
