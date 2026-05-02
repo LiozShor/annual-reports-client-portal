@@ -124,7 +124,7 @@
 4. Update n8n `[02] Questionnaire Processing` Code nodes via MCP (Send Batch Status is gone, see Step 1.5).
 5. Verify: submit a test Tally questionnaire response → confirm `[02] Questionnaire Processing` runs green.
 
-- [ ] **Done.**
+- [x] **Done — 2026-05-02 ~16:21 UTC.** Regenerated via Airtable Builder Hub (token-id prefix `patvXzYxSlSUEKx9i.` kept, new suffix). **Note:** the live pre-rotation suffix in `[02]` was actually `917c…`, NOT the runbook reference `25f38a9e…` — runbook reference was stale (an earlier silent rotation had occurred). The same Airtable token-id covers both, so the user's regenerate invalidated whatever was live. n8n `[02] Questionnaire Processing` updated (PUT 200, 1 replacement, distinct_old_suffix4=`917c`). Worker secret `AIRTABLE_PAT` put successfully. Cutover gap n8n↔Worker: 5s. Verified live read with new PAT against `reports` table → 200 / 1 record. .env update n/a (no `AIRTABLE_PAT` mirror in .env). No active workflow other than `[02]` referenced this PAT prefix. Tally→[02] live-submit verification deferred to user (out-of-band).
 
 ---
 
@@ -238,7 +238,7 @@ After all steps above are ✓:
 | 1 | N8N_INTERNAL_KEY | ☑ | ☑ | ☑ | ☑ | 2026-05-02; 7s n8n→Worker outage during cutover; live Worker→n8n curl skipped (workflow inactive) — readback confirmed |
 | 2 | SECRET_KEY (HMAC) | ☑ | ☑ | ☑ | ☑ | 2026-05-02 16:07; 6s cutover; user re-logged in successfully |
 | 3 | Airtable PAT #1 | ☑ | ☑ | n/a | ☑ | 2026-05-02 16:16; 3 workflows updated; .env synced; 200 with new / 401 with old |
-| 4 | Airtable PAT #2 | ☐ | ☐ | ☐ | ☐ | |
+| 4 | Airtable PAT #2 | ☑ | ☑ | ☑ | ☑ | 2026-05-02 16:21; 5s cutover; runbook ref was stale (917c→c5a0); Tally live-test deferred |
 | 5 | Anthropic key | ☐ | ☐ | ☐ | ☐ | |
 | 6 | CLIENT_SECRET_KEY | — | — | — | — | **DEFERRED 2026-05-02** — 400 in-flight tokens; needs key-versioning in `client-token.ts` first. Tracked in Post-rotation cleanup. |
 | 7 | MS Graph clientState | ☐ | ☐ | n/a | ☐ | |
