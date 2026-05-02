@@ -237,6 +237,7 @@ After all steps above are ✓:
 - [ ] **Prerequisite for `CLIENT_SECRET_KEY` rotation (Step 6, deferred 2026-05-02):** add key-versioning to `api/src/lib/client-token.ts` — verify incoming tokens against `[CLIENT_SECRET_KEY_NEW, CLIENT_SECRET_KEY_OLD]`, fall back to old for ≤45d after rollover, then drop the old key. Open a DL for the implementation. Once shipped, rotate `CLIENT_SECRET_KEY` aligned with the next reminder run so re-issued tokens propagate naturally and the 45-day overlap window covers all in-flight links.
 - [ ] Delete `docs/wf05-backup-pre-migration-2026-03-26.json` from local disk (it's gitignored but contains a now-invalid PAT — still good hygiene to remove).
 - [ ] Add a pre-commit gitleaks rule for inline-code Markdown patterns matching `(plaintext)` / `(plaintext in Code node)` near values ≥16 chars (so this kind of doc-style leak gets caught next time).
+- [ ] **Optional: contribute `audit-doc-plaintext-marker` rule upstream to `gitleaks/gitleaks`.** Rationale: AI-generated audit/compliance docs that paste live secret values + label them "(plaintext)" / "(plaintext in Code node)" / "(real value)" are a real and growing leakage vector that the default gitleaks rule set doesn't cover. Open after Layer 9 lands and the audit script has been running clean for ≥1 week. Reference our 2026-05-02 incident (`docs/multi-tenant-audit.md` leak) as motivation.
 
 ---
 

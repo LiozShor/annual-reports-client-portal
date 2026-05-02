@@ -9,7 +9,7 @@ description = "Audit doc admits a value is plaintext / live / in code node — v
 # Must literally say `plaintext`, `in code node`, `real value`, or `live value` in
 # the parenthetical right after the backticked value. Generic words like "token"
 # or "secret" are too common in legitimate prose and produce false positives.
-regex = '''(?i)`[^`]{16,}`\s*\([^)]*\b(plaintext|in code node|real value|live value|active value|leaked value)\b[^)]*\)'''
+regex = '''(?i)`[^`\r\n]{16,}`[ \t]*\([^)\r\n]*\b(plaintext|in code node|real value|live value|active value|leaked value)\b[^)\r\n]*\)'''
 tags = ["doc", "audit"]
 [rules.allowlist]
 description = "Already-redacted placeholders are fine"
@@ -18,8 +18,11 @@ regexes = ['''\[REDACTED-[A-Z0-9_-]+\]''']
 
 [[rules]]
 id = "airtable-pat"
-description = "Airtable Personal Access Token"
-regex = '''pat[A-Z][A-Za-z0-9]{16}\.[A-Za-z0-9]{20,}'''
+description = "Airtable Personal Access Token (pat + 14 alnum + . + ≥40 hex/alnum)"
+# Real PATs observed: `pat2XQGRyzPdycQWr.059c2b89...` and `patvXzYxSlSUEKx9i.25f3...`
+# Shape: `pat` + 14 alnum + `.` + ≥40 alnum (real suffix is 64 hex). Built-in
+# gitleaks `airtable-api-key` rule is too narrow / generic on this format.
+regex = '''\bpat[A-Za-z0-9]{14}\.[A-Za-z0-9]{40,}\b'''
 tags = ["airtable", "secret"]
 
 [[rules]]
@@ -28,10 +31,22 @@ description = "Anthropic API key (more permissive than default)"
 regex = '''sk-ant-(api03|admin01)-[A-Za-z0-9_-]{8,}'''
 tags = ["anthropic", "secret"]
 
+# NOTE: changes here must keep `bash .claude/hooks/test-fixtures/test-gitleaks-allowlist.sh`
+# passing — the test guards against issue-1790 (allowlist poisoning subsequent matches).
 [allowlist]
-description = "Allow redacted-token placeholders"
+description = "Allowlist: shape-based content patterns + gitignored / generated paths"
+# Default regexTarget = "secret" (the captured secret group). Do NOT promote to
+# "match" globally — it triggers issue #1790 where an allowlist suppresses
+# subsequent unrelated matches in the same file scope. `[REDACTED-X]` marker
+# allowlisting belongs in per-rule allowlists, not here.
 regexes = [
-  '''\[REDACTED-[A-Z0-9_-]+\]''',
+  # Airtable public application IDs (`app` + 14 alnum) — public base identifiers,
+  # not credentials. Distinct from PATs which start `pat`.
+  '''\bapp[A-Za-z0-9]{14}\b''',
+  # Tally form question IDs — `question_<6-alphanum>`. Form-field handles, not secrets.
+  '''\bquestion_[A-Za-z0-9]{6,12}\b''',
+  # `c.env.<NAME>` — Hono env binding references in Worker code, not literal values.
+  '''\bc\.env\.[A-Z][A-Z0-9_]+\b''',
 ]
 paths = [
   '''(.*/)?node_modules/''',
@@ -44,17 +59,13 @@ paths = [
   # Gitignored / untracked — out of source-control scope
   '''^archive/''',
   '''^\.mcp\.json$''',
-  # Old design-log archive — historical redacted content. Triage separately if needed.
+  # Old design-log archive — historical redacted content; triage separately if needed.
   '''^\.agent/design-logs/''',
-  # The rotation runbook discusses the very rules it documents (self-reference);
-  # the false positive is an artifact of that meta-content.
-  '''^\.agent/secret-rotation-2026-05-02\.md$''',
-  # `wrangler.toml` declares public Cloudflare/Airtable IDs (BASE_ID is `appXXX`,
-  # a public application identifier — not a secret).
-  '''^api/wrangler\.toml$''',
-  # n8n workflow exports use SPOUSE_KEY / otherDetailKey as internal data-keys,
-  # not API keys — gitleaks generic-api-key regex false-positives on the name.
-  '''^frontend/n8n/workflow-processor-n8n\.js$''',
-  # `token === ...` in extract-issuer-names is a code-path comparison constant.
-  '''^api/src/routes/extract-issuer-names\.ts$''',
+  # The baseline file itself contains the test-fixture leak hash — would
+  # double-count if scanned. Baseline scope already excludes via --baseline-path.
+  '''^\.gitleaks-baseline\.json$''',
 ]
+# NOTE: `.claude/hooks/test-fixtures/` contains intentional fake-leak shapes for
+# regression-testing the config. Suppressing it via path here would also suppress
+# the targeted regression scan (gitleaks normalizes paths). Instead, manage that
+# expected leak via `--baseline-path .gitleaks-baseline.json` on full-repo scans.
