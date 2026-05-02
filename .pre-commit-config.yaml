@@ -44,3 +44,27 @@ repos:
         language: system
         pass_filenames: false
         always_run: true
+
+  # 5. Entropy scan for high-entropy values in Markdown — catches novel/custom
+  # keys (e.g. HMAC secrets) that don't match known prefix regex. Layer 5 of
+  # Phase-2 prevention. Threshold tuneable via ENTROPY_THRESHOLD constant.
+  - repo: local
+    hooks:
+      - id: entropy-md-guard
+        name: Entropy scan for high-entropy values in Markdown
+        entry: python3 .claude/hooks/entropy-md-guard.py
+        language: system
+        files: \.md$
+        pass_filenames: true
+
+  # 6. Large-Markdown-doc commit friction — flags any .md addition >200 lines
+  # in one commit. Bypass via `LARGE_DOC_REVIEWED=1 git commit ...`. Forces
+  # human-review when an AI generates a long doc. Layer 6 of Phase-2 prevention.
+  - repo: local
+    hooks:
+      - id: large-doc-warn
+        name: Warn on large Markdown additions
+        entry: python3 .claude/hooks/large-doc-warn.py
+        language: system
+        files: \.md$
+        pass_filenames: true
