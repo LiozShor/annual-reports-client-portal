@@ -19,7 +19,11 @@ repos:
         entry: timeout 30 ggshield secret scan pre-commit
         pass_filenames: false
 
-  # 3. Custom PII guard — blocks CPA-IDs and Hebrew text in .agent/ commits
+  # 3. Custom PII guard — blocks CPA-IDs, Hebrew text, and tokens in .agent/
+  # AND in high-risk docs/ filenames (audit, compliance, security, secret notes
+  # — the genre that produced the 2026-05-02 multi-tenant-audit.md leak).
+  # Layer 3 of the Phase-2 prevention work; Layer 8 broadens the filename match
+  # to ANY path with these keywords, not just docs/.
   - repo: local
     hooks:
       - id: agent-pii-guard
@@ -27,7 +31,7 @@ repos:
         entry: python3 .claude/hooks/agent-pii-guard.py
         language: python
         pass_filenames: true
-        files: ^\.agent/
+        files: '^(\.agent/|docs/.*(audit|compliance|security|secret).*\.md$|docs/SECURITY\.md$)'
         types: [text]
 
   # 4. Size-ratchet — block growth of monolithic JS files (script.js, chatbot.js)
