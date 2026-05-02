@@ -8350,8 +8350,16 @@ function transitionCardToReviewed(recordId, newReviewStatus, responseData) {
 
     // DL-388: silent reconcile with server truth after every mutation.
     // SWR fingerprint short-circuit in loadAIClassifications keeps this cheap.
+    // DL-391 follow-up: chain refreshClientDocTags so the [נדרשים] chip section
+    // picks up newly-created docs (e.g. also-match auto-create) without a manual reload.
     if (typeof loadAIClassifications === 'function') {
-        queueMicrotask(() => { try { loadAIClassifications(true).catch(() => {}); } catch {} });
+        queueMicrotask(() => {
+            try {
+                loadAIClassifications(true)
+                    .then(() => { if (item) refreshClientDocTags(item.client_name); })
+                    .catch(() => {});
+            } catch {}
+        });
     }
 }
 
