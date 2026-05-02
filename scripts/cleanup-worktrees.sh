@@ -108,7 +108,9 @@ fi
 for entry in "${REMOVE[@]}"; do
   IFS='|' read -r wt _branch _reason <<<"$entry"
   log "[cleanup] removing worktree $wt"
-  run "git worktree remove --force \"$wt\" 2>&1 || rm -rf \"$wt\""
+  # </dev/null prevents git from interactively prompting "Should I try again? (y/n)"
+  # when Windows file locks block dir removal (other Claude session, VS Code, etc).
+  run "git worktree remove --force \"$wt\" </dev/null 2>&1 || rm -rf \"$wt\""
 done
 
 # ---- 7. Prune stale .git/worktrees admin dirs ------------------------------
