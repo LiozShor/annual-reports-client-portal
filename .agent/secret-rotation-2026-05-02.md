@@ -200,7 +200,7 @@ If you choose (a):
 4. Use Microsoft Graph API to **update** the subscription's `clientState` (`PATCH /subscriptions/{id}` — newer subs allow this; if not, delete + recreate).
 5. Verify: send a test email to `reports@moshe-atsits.co.il` → confirm the inbound flow executes end-to-end (check activity logs).
 
-- [ ] **Done.**
+- [x] **Done — 2026-05-02 ~16:35 UTC.** New value len=24, prefix `xpRz`. **Surprise finding:** `GET /subscriptions` against the Moshe Atsits tenant (verified correct tenant via Graph Explorer) returned empty array — **no active MS Graph webhook subscription exists**. Pinned data in [05] showed last expiration `2026-03-26T22:00:42`; subscription likely expired ~5 weeks ago and was never renewed. The leaked `wf05-inbound-secret` is therefore dormant — nothing in production was relying on it. Action taken: tightened n8n `[05] Inbound Document Processing` `Extract Notification` Code node to accept new-only (no transition window needed); also scrubbed the leaked value from the node's `pinData` sample payload. Skipped the MS Graph PATCH (nothing to patch). Worker source has no clientState/subscription references — nothing else to update. **Follow-up TODO added below: investigate missing subscription, decide whether to recreate (with new clientState) or accept that inbound-email auto-processing has been broken since 2026-03-26.**
 
 ---
 
@@ -225,6 +225,7 @@ After all steps above are ✓:
 - [ ] Commit `docs/multi-tenant-audit.md` redactions on a feature branch + PR.
 - [ ] Decide on **history rewrite** (optional now that values are dead). If yes, run the `git filter-repo` plan we discussed.
 - [ ] Migrate the secrets-in-Code-nodes to **n8n Credentials** so the next rotation doesn't require touching every workflow JSON. (Finding 24 in `multi-tenant-audit.md`.) Track as a separate DL.
+- [ ] **Investigate missing MS Graph webhook subscription (surfaced during Step 7, 2026-05-02):** `GET /subscriptions` returned empty array under the Moshe Atsits tenant. Last seen `subscriptionExpirationDateTime` (in `[05]` pinData) was `2026-03-26T22:00:42` — ~5 weeks ago. Either inbound-email auto-processing has been silently broken since, OR another mechanism took over (n8n MS Graph trigger node? Outlook rule? IMAP poll?). Audit how inbound emails currently reach `[05]` / `/webhook/process-inbound-email`. If subscription needs recreation, **use the new clientState `xpRz4oGpgS57Fxo6fjywLA==`** (now wired into n8n) and add a renewal-cron (subscriptions expire ≤3 days for `messages` resources) to avoid re-recurrence.
 - [ ] **Prerequisite for `CLIENT_SECRET_KEY` rotation (Step 6, deferred 2026-05-02):** add key-versioning to `api/src/lib/client-token.ts` — verify incoming tokens against `[CLIENT_SECRET_KEY_NEW, CLIENT_SECRET_KEY_OLD]`, fall back to old for ≤45d after rollover, then drop the old key. Open a DL for the implementation. Once shipped, rotate `CLIENT_SECRET_KEY` aligned with the next reminder run so re-issued tokens propagate naturally and the 45-day overlap window covers all in-flight links.
 - [ ] Delete `docs/wf05-backup-pre-migration-2026-03-26.json` from local disk (it's gitignored but contains a now-invalid PAT — still good hygiene to remove).
 - [ ] Add a pre-commit gitleaks rule for inline-code Markdown patterns matching `(plaintext)` / `(plaintext in Code node)` near values ≥16 chars (so this kind of doc-style leak gets caught next time).
@@ -241,7 +242,7 @@ After all steps above are ✓:
 | 4 | Airtable PAT #2 | ☑ | ☑ | ☑ | ☑ | 2026-05-02 16:21; 5s cutover; runbook ref was stale (917c→c5a0); Tally live-test deferred |
 | 5 | Anthropic key | ☑ | ☑ | ☑ | ☑ | 2026-05-02 16:25; old key initially missed revoke, caught and fixed; 200/401 confirmed |
 | 6 | CLIENT_SECRET_KEY | — | — | — | — | **DEFERRED 2026-05-02** — 400 in-flight tokens; needs key-versioning in `client-token.ts` first. Tracked in Post-rotation cleanup. |
-| 7 | MS Graph clientState | ☐ | ☐ | n/a | ☐ | |
+| 7 | MS Graph clientState | ☑ | ☑ | n/a | ☑ | 2026-05-02 16:35; n8n tightened to new-only; **no live subscription found** — nothing to PATCH; follow-up TODO added |
 
 ---
 
