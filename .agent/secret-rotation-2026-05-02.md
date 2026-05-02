@@ -177,7 +177,7 @@ If you choose (a):
 4. Update 3 n8n Code nodes via MCP.
 5. Verify: generate a fresh client link from admin → confirm clicking it works.
 
-- [ ] **Done OR deferred.** Choice: ___
+- [x] **DEFERRED — 2026-05-02.** Reason: ~400 outstanding client portal tokens from 2026-05-01 reminder run, signed with current `CLIENT_SECRET_KEY` and valid for 45 days. `api/src/lib/client-token.ts` has no key versioning — rotating now invalidates all 400 immediately, clients clicking reminder links get 401 INVALID_TOKEN on every gated endpoint. Leaked-prefix risk is acceptable: 16/64 hex chars exposed → attacker must brute-force the remaining 192 bits (2^192) to forge → computationally infeasible. **No .env change** (prod stays old, .env stays in sync with prod). See "Post-rotation cleanup" for the prerequisite work to enable rotation safely.
 
 ---
 
@@ -225,6 +225,7 @@ After all steps above are ✓:
 - [ ] Commit `docs/multi-tenant-audit.md` redactions on a feature branch + PR.
 - [ ] Decide on **history rewrite** (optional now that values are dead). If yes, run the `git filter-repo` plan we discussed.
 - [ ] Migrate the secrets-in-Code-nodes to **n8n Credentials** so the next rotation doesn't require touching every workflow JSON. (Finding 24 in `multi-tenant-audit.md`.) Track as a separate DL.
+- [ ] **Prerequisite for `CLIENT_SECRET_KEY` rotation (Step 6, deferred 2026-05-02):** add key-versioning to `api/src/lib/client-token.ts` — verify incoming tokens against `[CLIENT_SECRET_KEY_NEW, CLIENT_SECRET_KEY_OLD]`, fall back to old for ≤45d after rollover, then drop the old key. Open a DL for the implementation. Once shipped, rotate `CLIENT_SECRET_KEY` aligned with the next reminder run so re-issued tokens propagate naturally and the 45-day overlap window covers all in-flight links.
 - [ ] Delete `docs/wf05-backup-pre-migration-2026-03-26.json` from local disk (it's gitignored but contains a now-invalid PAT — still good hygiene to remove).
 - [ ] Add a pre-commit gitleaks rule for inline-code Markdown patterns matching `(plaintext)` / `(plaintext in Code node)` near values ≥16 chars (so this kind of doc-style leak gets caught next time).
 
@@ -239,7 +240,7 @@ After all steps above are ✓:
 | 3 | Airtable PAT #1 | ☐ | ☐ | n/a | ☐ | |
 | 4 | Airtable PAT #2 | ☐ | ☐ | ☐ | ☐ | |
 | 5 | Anthropic key | ☐ | ☐ | ☐ | ☐ | |
-| 6 | CLIENT_SECRET_KEY | ☐ | ☐ | ☐ | ☐ | Deferrable |
+| 6 | CLIENT_SECRET_KEY | — | — | — | — | **DEFERRED 2026-05-02** — 400 in-flight tokens; needs key-versioning in `client-token.ts` first. Tracked in Post-rotation cleanup. |
 | 7 | MS Graph clientState | ☐ | ☐ | n/a | ☐ | |
 
 ---
