@@ -31,7 +31,10 @@ repos:
         entry: python3 .claude/hooks/agent-pii-guard.py
         language: python
         pass_filenames: true
-        files: '^(\.agent/|docs/.*(audit|compliance|security|secret).*\.md$|docs/SECURITY\.md$)'
+        # Layer 8 (Phase-2): match high-risk filename keywords ANYWHERE in path,
+        # not just under docs/. Catches a moved or renamed audit/compliance/
+        # security/secret/runbook/creds doc whose old path used to live in docs/.
+        files: '(?i)^(\.agent/|.*/?(audit|compliance|security|secret|creds|runbook).*\.md$)'
         types: [text]
 
   # 4. Size-ratchet — block growth of monolithic JS files (script.js, chatbot.js)
@@ -56,6 +59,18 @@ repos:
         language: system
         files: \.md$
         pass_filenames: true
+
+  # 8. Hard-block n8n / workflow export files — they historically contain
+  # plaintext Code-node secrets. Even with .gitignore (Layer 7), `git add -f`
+  # would bypass it; this hook is the second line of defense.
+  - repo: local
+    hooks:
+      - id: forbid-workflow-exports
+        name: Forbid workflow-export files (contain plaintext secrets)
+        entry: python3 .claude/hooks/forbid-workflow-exports.py
+        language: system
+        pass_filenames: true
+        always_run: false
 
   # 6. Large-Markdown-doc commit friction — flags any .md addition >200 lines
   # in one commit. Bypass via `LARGE_DOC_REVIEWED=1 git commit ...`. Forces
