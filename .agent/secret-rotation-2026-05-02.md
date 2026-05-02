@@ -41,7 +41,7 @@
 4. Update Worker: `CLOUDFLARE_API_TOKEN="" npx wrangler secret put N8N_INTERNAL_KEY -c wrangler.toml` from `api/`.
 5. Verify: trigger one Worker→n8n batch-status call (we'll pick one safe report) and confirm 200.
 
-- [ ] **Done.** New value: `[paste new value here once we're past this step — or leave as ✓ ROTATED]`
+- [x] **Done — 2026-05-02 ~16:00 UTC.** New value: ✓ ROTATED (len=64, prefix `rCZ1`, URL-safe base64). Old value `0d1a9b04…` no longer present in either workflow nor Worker. Verified Worker accepts new Bearer (202) and rejects old (401). Live Worker→n8n curl skipped because `[API] Send Batch Status` was inactive at rotation time — confirmed via PUT readback (new key in `Parse & Verify` jsCode). Outage window n8n→Worker: ~7s.
 
 ---
 
@@ -219,7 +219,7 @@ After all steps above are ✓:
 
 | # | Secret | New value received? | n8n updated? | Worker updated? | Verified? | Notes |
 |---|---|:-:|:-:|:-:|:-:|---|
-| 1 | N8N_INTERNAL_KEY | ☐ | ☐ | ☐ | ☐ | |
+| 1 | N8N_INTERNAL_KEY | ☑ | ☑ | ☑ | ☑ | 2026-05-02; 7s n8n→Worker outage during cutover; live Worker→n8n curl skipped (workflow inactive) — readback confirmed |
 | 2 | SECRET_KEY (HMAC) | ☐ | ☐ | ☐ | ☐ | |
 | 3 | Airtable PAT #1 | ☐ | ☐ | n/a | ☐ | |
 | 4 | Airtable PAT #2 | ☐ | ☐ | ☐ | ☐ | |
