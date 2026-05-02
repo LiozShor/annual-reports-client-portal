@@ -41,7 +41,7 @@
 4. Update Worker: `CLOUDFLARE_API_TOKEN="" npx wrangler secret put N8N_INTERNAL_KEY -c wrangler.toml` from `api/`.
 5. Verify: trigger one Worker→n8n batch-status call (we'll pick one safe report) and confirm 200.
 
-- [x] **Done — 2026-05-02 ~16:00 UTC.** New value: ✓ ROTATED (len=64, prefix `rCZ1`, URL-safe base64). Old value `0d1a9b04…` no longer present in either workflow nor Worker. Verified Worker accepts new Bearer (202) and rejects old (401). Live Worker→n8n curl skipped because `[API] Send Batch Status` was inactive at rotation time — confirmed via PUT readback (new key in `Parse & Verify` jsCode). Outage window n8n→Worker: ~7s.
+- [x] **Done — 2026-05-02 ~16:00 UTC.** New value: ✓ ROTATED (len=64, prefix `rCZ1`, URL-safe base64). Old value `0d1a9b04…` no longer present in either workflow nor Worker. Verified Worker accepts new Bearer (202) and rejects old (401). Live Worker→n8n curl skipped because `[API] Send Batch Status` was inactive at rotation time — confirmed via PUT readback (new key in `Parse & Verify` jsCode). Outage window n8n→Worker: ~7s. **`.env` line `N8N_INTERNAL_KEY=` updated to new value (Fix #1, applied 2026-05-02 ~16:10 UTC) — local scripts now use new key. .env stays gitignored.**
 
 ---
 
@@ -81,7 +81,7 @@
 4. Update both n8n Code nodes via MCP `n8n_update_partial_workflow`.
 5. Verify: log in to admin panel with current session → confirm logged out → re-login works.
 
-- [ ] **Done.**
+- [x] **Deployed — 2026-05-02 ~16:07 UTC.** New value: ✓ ROTATED (len=44, prefix `e54j`, base64 with `=` padding). n8n `[04] Document Edit Handler` `Verify Admin Token` updated (PUT 200, 1 replacement, old absent in readback). Worker secret `SECRET_KEY` put successfully. n8n→Worker cutover gap: 6s (16:07:14 → 16:07:21 UTC). **Pending live verification: user to re-login to admin panel.**
 
 ---
 
@@ -235,7 +235,7 @@ After all steps above are ✓:
 | # | Secret | New value received? | n8n updated? | Worker updated? | Verified? | Notes |
 |---|---|:-:|:-:|:-:|:-:|---|
 | 1 | N8N_INTERNAL_KEY | ☑ | ☑ | ☑ | ☑ | 2026-05-02; 7s n8n→Worker outage during cutover; live Worker→n8n curl skipped (workflow inactive) — readback confirmed |
-| 2 | SECRET_KEY (HMAC) | ☐ | ☐ | ☐ | ☐ | |
+| 2 | SECRET_KEY (HMAC) | ☑ | ☑ | ☑ | ⏳ | 2026-05-02 16:07; 6s cutover; pending user re-login to admin panel |
 | 3 | Airtable PAT #1 | ☐ | ☐ | n/a | ☐ | |
 | 4 | Airtable PAT #2 | ☐ | ☐ | ☐ | ☐ | |
 | 5 | Anthropic key | ☐ | ☐ | ☐ | ☐ | |
