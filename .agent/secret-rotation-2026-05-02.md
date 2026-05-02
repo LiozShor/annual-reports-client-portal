@@ -144,7 +144,7 @@
 5. Update n8n `[07]` httpRequest node `Authorization` header via MCP.
 6. Verify: hit `/admin/chat` from admin panel with a "hello" message → 200 with content.
 
-- [ ] **Done.**
+- [x] **Done — 2026-05-02 ~16:25 UTC.** New key prefix `sk-ant-api03-6iSw…`, old `sk-ant-api03-8Xzh…` revoked. n8n `[07] Daily Natan Digest` updated (PUT 200, 1 replacement). Worker secret `ANTHROPIC_API_KEY` put. `.env` line 5 synced. Cutover gap n8n↔Worker: 5s. Initial verify caught a security gap — user had created new key without revoking the old one (old still 200). Flagged, user revoked, re-tested: new → 200 message, old → 401 `authentication_error`. Live `/admin/chat` UI verify deferred (out-of-band; Anthropic API direct verify already covered the secret).
 
 ---
 
@@ -239,7 +239,7 @@ After all steps above are ✓:
 | 2 | SECRET_KEY (HMAC) | ☑ | ☑ | ☑ | ☑ | 2026-05-02 16:07; 6s cutover; user re-logged in successfully |
 | 3 | Airtable PAT #1 | ☑ | ☑ | n/a | ☑ | 2026-05-02 16:16; 3 workflows updated; .env synced; 200 with new / 401 with old |
 | 4 | Airtable PAT #2 | ☑ | ☑ | ☑ | ☑ | 2026-05-02 16:21; 5s cutover; runbook ref was stale (917c→c5a0); Tally live-test deferred |
-| 5 | Anthropic key | ☐ | ☐ | ☐ | ☐ | |
+| 5 | Anthropic key | ☑ | ☑ | ☑ | ☑ | 2026-05-02 16:25; old key initially missed revoke, caught and fixed; 200/401 confirmed |
 | 6 | CLIENT_SECRET_KEY | — | — | — | — | **DEFERRED 2026-05-02** — 400 in-flight tokens; needs key-versioning in `client-token.ts` first. Tracked in Post-rotation cleanup. |
 | 7 | MS Graph clientState | ☐ | ☐ | n/a | ☐ | |
 
