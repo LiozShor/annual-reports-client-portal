@@ -1324,22 +1324,37 @@ classifications.post('/review-classification', async (c) => {
             const issuerName = (tmplFields.name_he as string) || t.template_id;
             const issuerKey = t.template_id.toLowerCase();
             const docUid = `${tReportId}_${t.template_id.toLowerCase()}_client_${issuerKey}_${Date.now()}`;
-            const created = await airtable.createRecords(TABLES.DOCUMENTS, [{
-              fields: {
-                type: t.template_id,
-                issuer_name: issuerName,
-                issuer_name_en: (tmplFields.name_en as string) || issuerName,
-                issuer_key: issuerKey,
-                category: (tmplFields.category as string) || 'general',
-                person: 'client',
-                status: 'Required_Missing',
-                report: [tReportId],
-                document_uid: docUid,
-                document_key: docUid,
-              },
-            }]);
-            targetDocRec = created[0];
-            isNewlyCreated = true;
+            // DL-391 follow-up: typecast=true so Airtable coerces unknown
+            // category values (single-select options on DOCUMENTS may not
+            // perfectly mirror TEMPLATES). Drop fields that would reject
+            // outright if the option doesn't exist.
+            try {
+              const created = await airtable.createRecords(TABLES.DOCUMENTS, [{
+                fields: {
+                  type: t.template_id,
+                  issuer_name: issuerName,
+                  issuer_name_en: (tmplFields.name_en as string) || issuerName,
+                  issuer_key: issuerKey,
+                  person: 'client',
+                  status: 'Required_Missing',
+                  report: [tReportId],
+                  document_uid: docUid,
+                  document_key: docUid,
+                  // category intentionally omitted on auto-create — DOCUMENTS
+                  // single-select doesn't accept arbitrary new values, and the
+                  // category isn't required for also-match linking. Existing
+                  // categorized docs unaffected.
+                },
+              }], { typecast: true });
+              targetDocRec = created[0];
+              isNewlyCreated = true;
+            } catch (createErr) {
+              console.error('[also_match] auto-create failed:', t.template_id, (createErr as Error).message);
+              return c.json({
+                ok: false,
+                error: `Could not create target doc for ${t.template_id}: ${(createErr as Error).message}`,
+              }, 500);
+            }
           }
         }
 
