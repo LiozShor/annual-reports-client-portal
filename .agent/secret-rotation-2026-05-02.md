@@ -102,7 +102,7 @@
 6. Update each of the 3 n8n workflows via MCP — replace the `AT_KEY` constant in each Code node and the `Authorization` header in each HTTP node.
 7. Verify: trigger a Daily Natan Digest manual run (or wait for next 15:00 cron); confirm Airtable queries return 200.
 
-- [ ] **Done.**
+- [x] **Done — 2026-05-02 ~16:16 UTC.** Regenerated via Airtable Builder Hub (prefix kept `pat2XQGRyzPdycQWr.`, new suffix). 3 n8n workflows updated (PUT 200 each): `[07] Daily Natan Digest` (2 replacements), `[MONITOR] Security Alerts` (2 replacements), `[MONITOR] Log Cleanup` (3 replacements). All 3 PUTs completed in 2s window. `.env` `AIRTABLE_API_KEY` synced. Verified: live read against `reports` table with new PAT → 200 / 1 record; same read with old PAT → 401 UNAUTHORIZED (Airtable revoked old token on regenerate). Scopes per user: `data.records:read` + 8 more (full list not enumerated; preserved by Regenerate).
 
 ---
 
@@ -236,8 +236,8 @@ After all steps above are ✓:
 | # | Secret | New value received? | n8n updated? | Worker updated? | Verified? | Notes |
 |---|---|:-:|:-:|:-:|:-:|---|
 | 1 | N8N_INTERNAL_KEY | ☑ | ☑ | ☑ | ☑ | 2026-05-02; 7s n8n→Worker outage during cutover; live Worker→n8n curl skipped (workflow inactive) — readback confirmed |
-| 2 | SECRET_KEY (HMAC) | ☑ | ☑ | ☑ | ⏳ | 2026-05-02 16:07; 6s cutover; pending user re-login to admin panel |
-| 3 | Airtable PAT #1 | ☐ | ☐ | n/a | ☐ | |
+| 2 | SECRET_KEY (HMAC) | ☑ | ☑ | ☑ | ☑ | 2026-05-02 16:07; 6s cutover; user re-logged in successfully |
+| 3 | Airtable PAT #1 | ☑ | ☑ | n/a | ☑ | 2026-05-02 16:16; 3 workflows updated; .env synced; 200 with new / 401 with old |
 | 4 | Airtable PAT #2 | ☐ | ☐ | ☐ | ☐ | |
 | 5 | Anthropic key | ☐ | ☐ | ☐ | ☐ | |
 | 6 | CLIENT_SECRET_KEY | — | — | — | — | **DEFERRED 2026-05-02** — 400 in-flight tokens; needs key-versioning in `client-token.ts` first. Tracked in Post-rotation cleanup. |
