@@ -18,6 +18,7 @@ import {
 } from '../lib/activity-logger';
 import { verifyToken } from '../lib/token';
 import { verifyClientToken } from '../lib/client-token';
+import { timingSafeEqual } from '../lib/crypto';
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -35,29 +36,6 @@ const VALID_CATEGORIES: ReadonlySet<string> = new Set<EventCategory>([
   'WORKFLOW',
   'ERROR',
 ]);
-
-// ─── Helpers ─────────────────────────────────────────────────────────────────
-
-/**
- * Constant-time string comparison to defend against timing attacks on secrets.
- * Returns true only when a === b AND both have the same length.
- */
-function timingSafeEqual(a: string, b: string): boolean {
-  if (a.length !== b.length) {
-    // Still run through the loop to keep timing uniform-ish
-    // (length leak is acceptable; the secret value is not)
-    let diff = 0;
-    for (let i = 0; i < a.length; i++) {
-      diff |= (a.charCodeAt(i) ^ (b.charCodeAt(i % b.length)));
-    }
-    return false; // length mismatch always loses
-  }
-  let acc = 0;
-  for (let i = 0; i < a.length; i++) {
-    acc |= (a.charCodeAt(i) ^ b.charCodeAt(i));
-  }
-  return acc === 0;
-}
 
 // ─── Router ──────────────────────────────────────────────────────────────────
 

@@ -20,6 +20,7 @@
 
 import { Hono } from 'hono';
 import { verifyToken } from '../lib/token';
+import { timingSafeEqual } from '../lib/crypto';
 import { AirtableClient } from '../lib/airtable';
 import { buildTemplateMap } from '../lib/doc-builder';
 import { logError } from '../lib/error-logger';
@@ -209,7 +210,7 @@ route.post('/extract-issuer-names', async (c) => {
 
     // Accept either an admin/client HMAC token OR the shared N8N_INTERNAL_KEY
     // used by Worker↔n8n calls (DL-293: WF02 calls this endpoint).
-    let authorized = token === c.env.N8N_INTERNAL_KEY && token.length > 0;
+    let authorized = token.length > 0 && timingSafeEqual(token, c.env.N8N_INTERNAL_KEY);
     if (!authorized) {
       const auth = await verifyToken(token, c.env.SECRET_KEY);
       authorized = auth.valid;
