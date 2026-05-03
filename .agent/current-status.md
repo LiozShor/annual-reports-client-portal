@@ -1,44 +1,10 @@
 # Annual Reports CRM - Current Status
 
-**Last Updated:** 2026-05-03 (DL-396 follow-up redesign — IMPLEMENTED, NEED TESTING. Dashboard recent-messages group cards rebuilt around iOS/PatternFly patterns: latest snippet only in header, group-level ✓/💬/📁 actions, dimmer older rows, soft counter pill, stack-peek ghost. Cache v=401→402. DL-395 still open.)
+**Last Updated:** 2026-05-03 (DL-396 — COMPLETED. Dashboard recent-messages group-by-client shipped + redesigned (v=401→402); user confirmed tests passed live. DL-395 still open.)
 
-## OPEN: DL-396 follow-up — Group card UX redesign
+## Recent (last 7 days)
 
-DL: `.agent/design-logs/admin-ui/396-recent-messages-group-by-client.md` (Section 9)
-
-Open-test items (deploy Pages first, then verify on live admin):
-
-- [ ] Multi-message group: header shows client name + counter pill + relative time + chevron (icon-sm, trailing edge); preview snippet below; 3 action buttons (reply, open doc-manager, ✓ all) at the bottom of header.
-- [ ] Click chevron / header / preview → expands; expanded body shows ONLY older messages (latest is NOT duplicated).
-- [ ] Older rows have no client name, dimmer text (opacity 0.85), smaller font, tighter padding, dashed separator.
-- [ ] Click ✓-all on header → entire group fades out; toast "סומן כטופל (N)"; all N messages hidden server-side; no group-level ✓ regression for already-handled rows.
-- [ ] Click 💬 on header → reply input opens against the LATEST message of the group.
-- [ ] Click 📁 on header → opens client's doc-manager in new tab.
-- [ ] Per-message ✓/💬/📁 inside the older rows still work; click ✓ on an older row → row fades, group stays expanded, counter decrements on re-render.
-- [ ] Stack-peek ghost: faint shadow visible behind collapsed multi-message group; disappears on hover and when expanded.
-- [ ] Single-message clients: render unchanged (zero visual delta vs first ship).
-- [ ] Hard-refresh — `script.js?v=402` served.
-
-## OPEN: DL-396 — Recent messages group-by-client
-
-DL: `.agent/design-logs/admin-ui/396-recent-messages-group-by-client.md`
-
-Open-test items from Section 7 (deploy Pages first, then verify on live admin):
-
-- [ ] Client with 1 message: row renders identically to before (no counter, no toggle).
-- [ ] Client with 2+ messages: shows ONE card; header has chevron + client name + "N הודעות" counter + latest relative time + latest snippet preview.
-- [ ] Click header → expands; ALL messages appear with full per-message reply/folder/✓ buttons.
-- [ ] Office replies (DL-289 `replies[]`) nested under their parent inbound message inside the expanded view.
-- [ ] Click ✓ on a message inside an expanded group → row fades; group stays expanded; counter decrements on re-render.
-- [ ] Click ✓ on the LAST remaining message in a group → entire group disappears.
-- [ ] Click ✓ on a 1-message (non-grouped) row → row disappears (existing behavior preserved).
-- [ ] Pagination: "הצג עוד..." reveals 10 *more groups* (not 10 more messages).
-- [ ] Groups sorted by latest message date desc — most recently active client at top.
-- [ ] Search bar (DL-274): filters `_allMessages`; grouping recomputes; works identically.
-- [ ] Reply modal (DL-289 expanded compose) opens from inside an expanded group.
-- [ ] Verify with the [H:client-name] screenshots: two rows become one card, "2 הודעות" badge, 09:11 at top, "לפני 4 ימים" message visible under expand.
-- [ ] Mobile (<900px): groups still readable; counter and chevron don't wrap awkwardly.
-- [ ] Hard-refresh — confirm `script.js?v=401` is served.
+- **2026-05-03 · DL-396 — COMPLETED.** Dashboard "הודעות אחרונות מלקוחות" panel groups multiple emails per client into one card. Two ships in one day: (a) v=401 baseline grouping by `client_name|client_id` composite key with collapsible expanded body; (b) v=402 follow-up UX redesign driven by `/tech-researcher` (PatternFly notification-drawer + iOS WWDC18 grouped notifications + Smashing 2025 notifications UX) — header shows latest snippet ONCE, header IS action surface (✓-all + 💬-reply-latest + 📁), older rows dim with hidden client name, soft counter pill, trailing-edge chevron, iOS stack-peek ghost. Group-level ✓ via new `markGroupHandled` (Promise.all of existing `delete-client-note`). Frontend-only. Branches `claude-session-20260503-115728` (c6cab9ae) + `DL-396-followup-ux-redesign` (22da373a). DL: `.agent/design-logs/admin-ui/396-recent-messages-group-by-client.md`.
 
 ## OPEN: DL-395 — PA review yes-answers visibility
 

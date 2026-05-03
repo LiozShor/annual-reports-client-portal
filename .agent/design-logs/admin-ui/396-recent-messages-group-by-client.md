@@ -1,6 +1,6 @@
 # Design Log 396: Group Recent Messages by Client (Dashboard Side Panel)
 
-**Status:** [IMPLEMENTED — NEED TESTING]
+**Status:** [COMPLETED — 2026-05-03]
 **Date:** 2026-05-03
 **Related Logs:** DL-261 (panel), DL-289 (✓ + threads), DL-263 (hide), DL-272 (load more), DL-360 (doc-manager thread grouping)
 
