@@ -12,6 +12,7 @@ Expert n8n automation architect using **n8n-MCP tools** for **Moshe Atsits CPA F
 4. **Airtable = State Machine:** All stages, statuses, transitions live in Airtable.
 5. **Idempotent & Safe:** No duplicate emails, no lost documents, no irreversible actions on failure.
 6. **Bilingual:** Hebrew-first, English support for English-speaking clients.
+7. **Silent Refresh After Mutation:** Any add/edit/delete/modify that writes to Airtable (or any persisted state) MUST trigger an in-place silent refetch of every affected UI surface (admin list + detail, client portal, mobile + desktop). No full page reload, no flicker, no scroll jump, no "refresh to see changes" instructions. The user must always see up-to-date data.
 
 ---
 
@@ -46,6 +47,29 @@ When fixing a UI / render / formatting / state bug, **before patching**:
 3. Patch all of them in **one commit** — do not ship a partial fix.
 
 Background: Buggy Code +13%/msg in 2026-05-02 audit driven by first-pass fixes that miss duplicate render paths (timestamp bug fixed in admin but not AI-review page; queue stale-state needed two follow-ups). Reinforces global CLAUDE.md "Check Duplicate Rendering / Logic Code".
+
+## Secret-Audit Safety (P0 / AUDIT-2026-05-02)
+
+When auditing for secrets, NEVER paste the actual value into any tracked file
+(.md, .ts, .json, .agent/**, docs/**). The audit's job is to point AT the secret,
+not contain it.
+
+Allowed in audit docs:
+  - file path + line number (`api/src/lib/x.ts:42`)
+  - **first 4 chars only** of a known prefix (`pat2…`, never `pat2XQGRyzPdycQWr`)
+  - the var NAME (`CLIENT_SECRET_KEY`, `AIRTABLE_PAT`)
+  - a stable hash if cross-referencing is needed (`sha256:abc…`)
+
+Forbidden:
+  - secrets in backticks, code fences, table cells, or quoted strings
+  - "(plaintext)" / "(plaintext in Code node)" markers next to a value
+  - >12 consecutive hex/base64 chars from any real key
+
+Background: 2026-05-02 leak in `docs/multi-tenant-audit.md` exposed admin password,
+HMAC secret, Airtable PAT prefixes, Anthropic key prefix in plaintext Markdown
+table cells. AI-assisted audit doc was committed without review. Existing gitleaks
+/ pii-guard / TruffleHog defenses missed it because they target KEY=value shapes,
+not Markdown table cells with adjacent "plaintext" markers.
 
 ## Silent UI Refresh After DB Mutation (P6 / AUDIT-2026-05-02)
 

@@ -19,7 +19,11 @@ repos:
         entry: timeout 30 ggshield secret scan pre-commit
         pass_filenames: false
 
-  # 3. Custom PII guard — blocks CPA-IDs and Hebrew text in .agent/ commits
+  # 3. Custom PII guard — blocks CPA-IDs, Hebrew text, and tokens in .agent/
+  # AND in high-risk docs/ filenames (audit, compliance, security, secret notes
+  # — the genre that produced the 2026-05-02 multi-tenant-audit.md leak).
+  # Layer 3 of the Phase-2 prevention work; Layer 8 broadens the filename match
+  # to ANY path with these keywords, not just docs/.
   - repo: local
     hooks:
       - id: agent-pii-guard
@@ -27,7 +31,10 @@ repos:
         entry: python3 .claude/hooks/agent-pii-guard.py
         language: python
         pass_filenames: true
-        files: ^\.agent/
+        # Layer 8 (Phase-2): match high-risk filename keywords ANYWHERE in path,
+        # not just under docs/. Catches a moved or renamed audit/compliance/
+        # security/secret/runbook/creds doc whose old path used to live in docs/.
+        files: '(?i)^(\.agent/|.*/?(audit|compliance|security|secret|creds|runbook).*\.md$)'
         types: [text]
 
   # 4. Size-ratchet — block growth of monolithic JS files (script.js, chatbot.js)
@@ -40,3 +47,39 @@ repos:
         language: system
         pass_filenames: false
         always_run: true
+
+  # 5. Entropy scan for high-entropy values in Markdown — catches novel/custom
+  # keys (e.g. HMAC secrets) that don't match known prefix regex. Layer 5 of
+  # Phase-2 prevention. Threshold tuneable via ENTROPY_THRESHOLD constant.
+  - repo: local
+    hooks:
+      - id: entropy-md-guard
+        name: Entropy scan for high-entropy values in Markdown
+        entry: python3 .claude/hooks/entropy-md-guard.py
+        language: system
+        files: \.md$
+        pass_filenames: true
+
+  # 8. Hard-block n8n / workflow export files — they historically contain
+  # plaintext Code-node secrets. Even with .gitignore (Layer 7), `git add -f`
+  # would bypass it; this hook is the second line of defense.
+  - repo: local
+    hooks:
+      - id: forbid-workflow-exports
+        name: Forbid workflow-export files (contain plaintext secrets)
+        entry: python3 .claude/hooks/forbid-workflow-exports.py
+        language: system
+        pass_filenames: true
+        always_run: false
+
+  # 6. Large-Markdown-doc commit friction — flags any .md addition >200 lines
+  # in one commit. Bypass via `LARGE_DOC_REVIEWED=1 git commit ...`. Forces
+  # human-review when an AI generates a long doc. Layer 6 of Phase-2 prevention.
+  - repo: local
+    hooks:
+      - id: large-doc-warn
+        name: Warn on large Markdown additions
+        entry: python3 .claude/hooks/large-doc-warn.py
+        language: system
+        files: \.md$
+        pass_filenames: true

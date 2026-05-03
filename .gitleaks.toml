@@ -1,0 +1,75 @@
+title = "Annual Reports CRM gitleaks config"
+
+[extend]
+useDefault = true
+
+[[rules]]
+id = "audit-doc-plaintext-marker"
+description = "Audit doc admits a value is plaintext / live / in code node — value should be redacted"
+# Must literally say `plaintext`, `in code node`, `real value`, or `live value` in
+# the parenthetical right after the backticked value. Generic words like "token"
+# or "secret" are too common in legitimate prose and produce false positives.
+regex = '''(?i)`[^`\r\n]{16,}`[ \t]*\([^)\r\n]*\b(plaintext|in code node|real value|live value|active value|leaked value)\b[^)\r\n]*\)'''
+tags = ["doc", "audit"]
+[rules.allowlist]
+description = "Already-redacted placeholders are fine"
+regexTarget = "match"
+regexes = ['''\[REDACTED-[A-Z0-9_-]+\]''']
+
+[[rules]]
+id = "airtable-pat"
+description = "Airtable Personal Access Token (pat + 14 alnum + . + ≥40 hex/alnum)"
+# Real PATs observed: `pat2XQGRyzPdycQWr.059c2b89...` and `patvXzYxSlSUEKx9i.25f3...`
+# Shape: `pat` + 14 alnum + `.` + ≥40 alnum (real suffix is 64 hex). Built-in
+# gitleaks `airtable-api-key` rule is too narrow / generic on this format.
+regex = '''\bpat[A-Za-z0-9]{14}\.[A-Za-z0-9]{40,}\b'''
+tags = ["airtable", "secret"]
+
+[[rules]]
+id = "anthropic-api-key-strict"
+description = "Anthropic API key (more permissive than default)"
+regex = '''sk-ant-(api03|admin01)-[A-Za-z0-9_-]{8,}'''
+tags = ["anthropic", "secret"]
+
+# NOTE: changes here must keep `bash .claude/hooks/test-fixtures/test-gitleaks-allowlist.sh`
+# passing — the test guards against issue-1790 (allowlist poisoning subsequent matches).
+[allowlist]
+description = "Allowlist: shape-based content patterns + gitignored / generated paths"
+# Default regexTarget = "secret" (the captured secret group). Do NOT promote to
+# "match" globally — it triggers issue #1790 where an allowlist suppresses
+# subsequent unrelated matches in the same file scope. `[REDACTED-X]` marker
+# allowlisting belongs in per-rule allowlists, not here.
+regexes = [
+  # Airtable public application IDs (`app` + 14 alnum) — public base identifiers,
+  # not credentials. Distinct from PATs which start `pat`.
+  '''\bapp[A-Za-z0-9]{14}\b''',
+  # Tally form question IDs — `question_<6-alphanum>`. Form-field handles, not secrets.
+  '''\bquestion_[A-Za-z0-9]{6,12}\b''',
+  # `c.env.<NAME>` — Hono env binding references in Worker code, not literal values.
+  '''\bc\.env\.[A-Z][A-Z0-9_]+\b''',
+]
+paths = [
+  '''(.*/)?node_modules/''',
+  '''(.*/)?\.git/''',
+  '''(.*/)?docs/wf05-backup-pre-migration-2026-03-26\.json$''',
+  '''(^|.*/)\.env(\..+)?$''',
+  '''(.*/)?\.claude/worktrees/''',
+  '''(.*/)?api/\.dryrun-cors-preview/''',
+  '''(.*/)?api/\.wrangler/''',
+  # Gitignored / untracked — out of source-control scope
+  '''^archive/''',
+  '''^\.mcp\.json$''',
+  # Old design-log archive — historical redacted content; triage separately if needed.
+  '''^\.agent/design-logs/''',
+  # The baseline file itself contains the test-fixture leak hash — would
+  # double-count if scanned. Baseline scope already excludes via --baseline-path.
+  '''^\.gitleaks-baseline\.json$''',
+  # The credential-drift audit script intentionally hardcodes OLD revoked
+  # secret values for negative tests (verifying providers reject them). The
+  # values are dead, this script is the canonical source for them.
+  '''^scripts/audit-n8n-credentials\.sh$''',
+]
+# NOTE: `.claude/hooks/test-fixtures/` contains intentional fake-leak shapes for
+# regression-testing the config. Suppressing it via path here would also suppress
+# the targeted regression scan (gitleaks normalizes paths). Instead, manage that
+# expected leak via `--baseline-path .gitleaks-baseline.json` on full-repo scans.

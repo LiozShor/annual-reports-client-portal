@@ -71,3 +71,33 @@ Thumbs.db
 # React island dev artifacts
 frontend/admin/react/node_modules/
 frontend/admin/react/dist/
+
+# ─── Secret-Leakage prevention — Phase-2 Layer 7 (2026-05-02) ───
+# AI agent tool state — may contain transcripts, plans, draft secrets
+.codex/
+.agents/
+AGENTS.md
+CODEX.md
+*.local-backup
+
+# Office documents — typically contain PII / live client data and were never
+# meant to live in source control
+*.xlsx
+*.xls
+*.docx
+*.doc
+
+# n8n / workflow exports — historically contain plaintext secrets in Code nodes.
+# wf05-backup-pre-migration-2026-03-26.json is the reference incident.
+# Layer 8 hook (forbid-workflow-exports.py) hard-blocks any attempt to commit these.
+*-backup-*.json
+*-export-*.json
+*.workflow.json
+*n8n-export*.json
+*workflow-backup*.json
+
+# Wrangler dryrun artifacts
+api/.dryrun-cors-preview/
+
+# Added by ggshield
+.cache_ggshield
