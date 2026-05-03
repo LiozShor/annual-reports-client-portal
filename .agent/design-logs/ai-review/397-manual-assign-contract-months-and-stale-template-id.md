@@ -1,5 +1,5 @@
 # Design Log 397: Capture Contract Months on Manual Assign + Fix Stale `matched_template_id`
-**Status:** [IMPLEMENTED — NEED TESTING]
+**Status:** [COMPLETED — 2026-05-03]
 **Date:** 2026-05-03
 **Related Logs:** DL-385 (lenient MM.YYYY parser + T901↔T902 swap), DL-359 (edit full-year contract dates), DL-391 (chip menu "assign to this doc"), DL-386 (add-doc popover with inline reassign), DL-269/270/271 (partial-contract banner + request-missing-period)
 
