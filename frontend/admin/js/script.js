@@ -997,8 +997,9 @@ async function loadDashboard(silent = false) {
 // DL-261: Recent client messages side panel
 let recentMessagesLoaded = false;
 let _allMessages = []; // DL-271: full message list for client-side pagination
-let _messagesVisible = 10; // DL-271: how many to show
+let _messagesVisible = 10; // DL-271: how many to show (DL-396: now counts client-groups, not raw messages)
 let _searchCache = null; // DL-273: cached all-years messages for instant client-side search
+const _expandedClients = new Set(); // DL-396: composite-key set of client groups left expanded across re-renders
 
 function formatRelativeTime(dateStr) {
     if (!dateStr) return '';
@@ -1111,6 +1112,53 @@ function clearMessageSearch() {
 }
 
 // DL-271: Render visible slice of messages with "load more" link
+// DL-396: Render a single message row (extracted so single-message groups and
+// expanded-group children share identical markup — DL-261/263/289 invariant preserved).
+function _renderMessageRowHtml(m) {
+    const navParam = m.client_id ? `client_id=${encodeURIComponent(m.client_id)}` : `report_id=${encodeURIComponent(m.report_id)}`;
+    const displayText = m.raw_snippet || m.summary || '';
+    const noteId = escapeHtml(m.id || '');
+    const reportId = escapeHtml(m.report_id || '');
+    const replies = Array.isArray(m.replies) ? m.replies : [];
+    const repliesHtml = replies.length > 0
+        ? `<div class="msg-thread-replies">${replies.map((r, i) => `
+            <div class="msg-office-reply">
+                <div class="msg-reply-label">${icon('corner-down-left', 'icon-xs')} ${replies.length > 1 ? `תגובת המשרד #${i + 1}` : 'תגובת המשרד'}</div>
+                <div class="msg-reply-text">${escapeHtml(r.summary)}</div>
+                <div class="msg-reply-date">${formatRelativeTime(r.date)}</div>
+            </div>`).join('')}</div>`
+        : '';
+    return `<div class="msg-row" data-note-id="${noteId}" data-client-name="${escapeAttr(m.client_name)}" data-year="${escapeAttr(String(m.year || ''))}">
+        <div class="msg-content" onclick="this.parentElement.classList.toggle('expanded')">
+            <div class="msg-meta">
+                <span class="msg-client">${escapeHtml(m.client_name)}</span>
+                <span class="msg-date">${formatRelativeTime(m.date)}</span>
+            </div>
+            <div class="msg-summary">"${escapeHtml(displayText)}"</div>
+            ${repliesHtml}
+        </div>
+        <div class="msg-actions">
+            <button class="msg-action-btn" title="השב ללקוח" onclick="event.stopPropagation(); showReplyInput('${noteId}', '${reportId}')">${icon('message-square', 'icon-xs')}</button>
+            <button class="msg-action-btn" title="פתח בניהול מסמכים" onclick="window.open('../document-manager.html?${navParam}', '_blank')">${icon('folder-open', 'icon-xs')}</button>
+            <button class="msg-action-btn msg-action-btn--success" title="סמן כטופל" onclick="markMessageHandled('${noteId}', '${reportId}')">${icon('check', 'icon-sm')}</button>
+        </div>
+    </div>`;
+}
+
+// DL-396: Toggle a client-group's expanded state and persist across re-renders.
+function toggleGroup(headerEl) {
+    const groupEl = headerEl.parentElement;
+    if (!groupEl) return;
+    const key = groupEl.getAttribute('data-client-key') || '';
+    if (groupEl.classList.contains('expanded')) {
+        groupEl.classList.remove('expanded');
+        _expandedClients.delete(key);
+    } else {
+        groupEl.classList.add('expanded');
+        _expandedClients.add(key);
+    }
+}
+
 function renderMessages() {
     const container = document.getElementById('recentMessagesContainer');
     if (!container) return;
@@ -1125,38 +1173,49 @@ function renderMessages() {
         return;
     }
 
-    const visible = _allMessages.slice(0, _messagesVisible);
-    const hasMore = _messagesVisible < _allMessages.length;
-    const remaining = _allMessages.length - _messagesVisible;
+    // DL-396: Bucket by client. _allMessages is already sorted newest-first,
+    // so encounter order means messages[0] is the latest message for that client.
+    const groupsMap = new Map();
+    for (const m of _allMessages) {
+        const key = `${m.client_name || ''}|${m.client_id || ''}`;
+        let bucket = groupsMap.get(key);
+        if (!bucket) {
+            bucket = { key, client_name: m.client_name, client_id: m.client_id, year: m.year, messages: [] };
+            groupsMap.set(key, bucket);
+        }
+        bucket.messages.push(m);
+    }
+    // Belt-and-suspenders: explicit sort by latest-message date desc.
+    const groups = Array.from(groupsMap.values()).sort((a, b) => {
+        const da = String(a.messages[0]?.date || '');
+        const db = String(b.messages[0]?.date || '');
+        return db.localeCompare(da);
+    });
 
-    const rowsHtml = visible.map(m => {
-        const navParam = m.client_id ? `client_id=${encodeURIComponent(m.client_id)}` : `report_id=${encodeURIComponent(m.report_id)}`;
-        const displayText = m.raw_snippet || m.summary || '';
-        const noteId = escapeHtml(m.id || '');
-        const reportId = escapeHtml(m.report_id || '');
-        const replies = Array.isArray(m.replies) ? m.replies : [];
-        const repliesHtml = replies.length > 0
-            ? `<div class="msg-thread-replies">${replies.map((r, i) => `
-                <div class="msg-office-reply">
-                    <div class="msg-reply-label">${icon('corner-down-left', 'icon-xs')} ${replies.length > 1 ? `תגובת המשרד #${i + 1}` : 'תגובת המשרד'}</div>
-                    <div class="msg-reply-text">${escapeHtml(r.summary)}</div>
-                    <div class="msg-reply-date">${formatRelativeTime(r.date)}</div>
-                </div>`).join('')}</div>`
-            : '';
-        return `<div class="msg-row" data-note-id="${noteId}" data-client-name="${escapeAttr(m.client_name)}" data-year="${escapeAttr(String(m.year || ''))}">
-            <div class="msg-content" onclick="this.parentElement.classList.toggle('expanded')">
-                <div class="msg-meta">
-                    <span class="msg-client">${escapeHtml(m.client_name)}</span>
-                    <span class="msg-date">${formatRelativeTime(m.date)}</span>
+    const visibleGroups = groups.slice(0, _messagesVisible);
+    const hasMore = _messagesVisible < groups.length;
+
+    const rowsHtml = visibleGroups.map(g => {
+        // Single-message group → render the existing row markup verbatim (zero visual delta vs pre-DL-396).
+        if (g.messages.length === 1) {
+            return _renderMessageRowHtml(g.messages[0]);
+        }
+        // Multi-message group → wrapper with header (preview) + collapsible body containing all rows.
+        const latest = g.messages[0];
+        const previewText = latest.raw_snippet || latest.summary || '';
+        const isExpanded = _expandedClients.has(g.key);
+        const childrenHtml = g.messages.map(m => _renderMessageRowHtml(m)).join('');
+        return `<div class="msg-group${isExpanded ? ' expanded' : ''}" data-client-key="${escapeAttr(g.key)}">
+            <div class="msg-group-header" onclick="toggleGroup(this)">
+                <div class="msg-group-header-line">
+                    <span class="msg-group-chevron">${icon('chevron-down', 'icon-xs')}</span>
+                    <span class="msg-client">${escapeHtml(g.client_name || '')}</span>
+                    <span class="msg-group-counter">${g.messages.length} הודעות</span>
+                    <span class="msg-date">${formatRelativeTime(latest.date)}</span>
                 </div>
-                <div class="msg-summary">"${escapeHtml(displayText)}"</div>
-                ${repliesHtml}
+                <div class="msg-group-preview">"${escapeHtml(previewText)}"</div>
             </div>
-            <div class="msg-actions">
-                <button class="msg-action-btn" title="השב ללקוח" onclick="event.stopPropagation(); showReplyInput('${noteId}', '${reportId}')">${icon('message-square', 'icon-xs')}</button>
-                <button class="msg-action-btn" title="פתח בניהול מסמכים" onclick="window.open('../document-manager.html?${navParam}', '_blank')">${icon('folder-open', 'icon-xs')}</button>
-                <button class="msg-action-btn msg-action-btn--success" title="סמן כטופל" onclick="markMessageHandled('${noteId}', '${reportId}')">${icon('check', 'icon-sm')}</button>
-            </div>
+            <div class="msg-group-older">${childrenHtml}</div>
         </div>`;
     }).join('');
 

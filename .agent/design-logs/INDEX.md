@@ -2,7 +2,7 @@
 
 Active and pending logs. For completed history, see [ARCHIVE-INDEX.md](ARCHIVE-INDEX.md).
 
-**Total logs:** 238 | **Active:** 140 | **Archived:** 98
+**Total logs:** 239 | **Active:** 141 | **Archived:** 98
 
 ## Folder Structure
 
@@ -21,6 +21,7 @@ Active and pending logs. For completed history, see [ARCHIVE-INDEX.md](ARCHIVE-I
 
 | # | File | Status | Summary |
 |---|------|--------|---------|
+| 396 | [396-recent-messages-group-by-client.md](admin-ui/396-recent-messages-group-by-client.md) | IMPLEMENTED — NEED TESTING | Dashboard side-panel "הודעות אחרונות מלקוחות" buckets `_allMessages` by `client_name` (composite key with `client_id`) so multiple emails from one client collapse into ONE card. Header shows chevron + name + "N הודעות" counter + latest snippet preview; click expands to all messages with full per-message reply/folder/✓ buttons (DL-289 invariant preserved — no group-level ✓). Single-message groups render today's exact `.msg-row` (zero visual delta). Pagination semantic flips: `_messagesVisible` now counts *groups*, not messages — chatty clients no longer crowd out everyone. Expanded state survives re-render via `_expandedClients` Set. Frontend-only (`script.js`, `style.css`, `index.html` cache-bust v=400→401). |
 | 395 | [395-pa-review-show-yes-answers.md](admin-ui/395-pa-review-show-yes-answers.md) | COMPLETED — 2026-05-02 | PA review tab `תשובות שאלון` section now mirrors the print sheet — every answer except `✗ לא` renders in one flat list (in original questionnaire order) instead of dropping all `✓ כן` answers. `buildPaPreviewBody` (`frontend/admin/js/script.js` ~10144-10182) replaces the 3-bucket partition with `visibleAnswers`/`noAnswers`; rows keep their original `answers_all` index for DL-302 cross-highlight stability. `pa-preview-subtitle "תשובות פתוחות (N)"` wrapper dropped. `togglePaShowNo` block + print button preserved. Cache-bust v=399→400. |
 | 394 | [394-onedrive-copy-on-also-match.md](ai-review/394-onedrive-copy-on-also-match.md) | COMPLETED — 2026-05-02 | DL-391 follow-up: `also_match` now uploads a physical OneDrive copy per target (rename via resolveOneDriveFilename) instead of sharing one file. Rollback-on-failure. Cascade-revert becomes naturally per-card (unique item IDs). Worker-only change, no schema/frontend change. |
 | 393 | [393-deemphasize-rejected-uploads-callout.md](email/393-deemphasize-rejected-uploads-callout.md) | COMPLETED — 2026-05-02 | De-emphasize "previously received / rejected uploads" amber callout in Type-B reminder emails. Soft amber (`#FFFBEB`), no border, smaller heading (13px/600), muted row text (`#78350F`), wrapper margin moved from bottom to top. Position swap: callout moves from above docs list to below (3 paths in n8n `FjisCdmWc4ef0qSV` Code node `Build Type B Email`: Hebrew-only, bilingual EN card, bilingual HE card; mirrored in Worker `buildDocSection` non-split + split modes in `api/src/lib/email-html.ts`). Removes alert-palette conflict with DL-127 questions card; reference info now reads as a footnote below the action items. |

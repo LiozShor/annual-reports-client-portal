@@ -1,6 +1,27 @@
 # Annual Reports CRM - Current Status
 
-**Last Updated:** 2026-05-02 (DL-395 — IMPLEMENTED, NEED TESTING. PA review questionnaire-answers section mirrors print sheet — every answer except `✗ [H:no]` shown as a flat list. DL-394 COMPLETED. DL-391 cascade-revert 422 fix verified on main.)
+**Last Updated:** 2026-05-03 (DL-396 — IMPLEMENTED, NEED TESTING. Dashboard "הודעות אחרונות מלקוחות" panel now groups multiple emails from the same client into one collapsible card. DL-395 still open.)
+
+## OPEN: DL-396 — Recent messages group-by-client
+
+DL: `.agent/design-logs/admin-ui/396-recent-messages-group-by-client.md`
+
+Open-test items from Section 7 (deploy Pages first, then verify on live admin):
+
+- [ ] Client with 1 message: row renders identically to before (no counter, no toggle).
+- [ ] Client with 2+ messages: shows ONE card; header has chevron + client name + "N הודעות" counter + latest relative time + latest snippet preview.
+- [ ] Click header → expands; ALL messages appear with full per-message reply/folder/✓ buttons.
+- [ ] Office replies (DL-289 `replies[]`) nested under their parent inbound message inside the expanded view.
+- [ ] Click ✓ on a message inside an expanded group → row fades; group stays expanded; counter decrements on re-render.
+- [ ] Click ✓ on the LAST remaining message in a group → entire group disappears.
+- [ ] Click ✓ on a 1-message (non-grouped) row → row disappears (existing behavior preserved).
+- [ ] Pagination: "הצג עוד..." reveals 10 *more groups* (not 10 more messages).
+- [ ] Groups sorted by latest message date desc — most recently active client at top.
+- [ ] Search bar (DL-274): filters `_allMessages`; grouping recomputes; works identically.
+- [ ] Reply modal (DL-289 expanded compose) opens from inside an expanded group.
+- [ ] Verify with the [H:client-name] screenshots: two rows become one card, "2 הודעות" badge, 09:11 at top, "לפני 4 ימים" message visible under expand.
+- [ ] Mobile (<900px): groups still readable; counter and chevron don't wrap awkwardly.
+- [ ] Hard-refresh — confirm `script.js?v=401` is served.
 
 ## OPEN: DL-395 — PA review yes-answers visibility
 

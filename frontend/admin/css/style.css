@@ -3461,6 +3461,83 @@ tr:hover .client-view-link {
     margin-top: 0; /* gap handles spacing */
 }
 
+/* DL-396: Group-by-client wrapper for multi-message clients in the dashboard panel.
+   Single-message groups bypass this and render the bare .msg-row (zero visual delta). */
+.msg-group {
+    border-bottom: 1px solid var(--gray-100);
+}
+.msg-group:last-child {
+    border-bottom: none;
+}
+.msg-group-header {
+    cursor: pointer;
+    padding: var(--sp-3);
+    border-radius: var(--radius-md);
+    transition: background 0.15s;
+}
+.msg-group-header:hover {
+    background: var(--gray-50);
+}
+.msg-group-header-line {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
+    flex-wrap: wrap;
+}
+.msg-group-header-line .msg-client {
+    font-weight: 600;
+    color: var(--gray-800);
+}
+.msg-group-header-line .msg-date {
+    margin-inline-start: auto; /* push date to the far edge in RTL */
+    font-size: 0.75rem;
+    color: var(--gray-500);
+}
+.msg-group-counter {
+    background: var(--gray-100);
+    color: var(--gray-700);
+    font-size: 0.7rem;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 999px;
+    line-height: 1.4;
+}
+.msg-group-chevron {
+    display: inline-flex;
+    align-items: center;
+    color: var(--gray-500);
+    transition: transform 0.18s ease;
+}
+.msg-group.expanded .msg-group-chevron {
+    transform: rotate(180deg);
+}
+.msg-group-preview {
+    margin-top: var(--sp-1);
+    color: var(--gray-600);
+    font-size: 0.85rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+}
+.msg-group-older {
+    display: none;
+    padding-inline-start: var(--sp-3);
+    border-inline-start: 2px solid var(--gray-200);
+    margin-inline-start: var(--sp-3);
+    margin-top: var(--sp-2);
+}
+.msg-group.expanded .msg-group-older {
+    display: block;
+}
+.msg-group-older .msg-row {
+    border-bottom: 1px dashed var(--gray-100);
+}
+.msg-group-older .msg-row:last-child {
+    border-bottom: none;
+}
+
 /* DL-288: Gmail-style expand button on reply textarea */
 .msg-reply-expand-btn {
     position: absolute;
