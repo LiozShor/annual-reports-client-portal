@@ -5,6 +5,26 @@
 ## Recent (last 7 days)
 
 - **2026-05-03 · DL-396 — COMPLETED.** Dashboard "הודעות אחרונות מלקוחות" panel groups multiple emails per client into one card. Two ships in one day: (a) v=401 baseline grouping by `client_name|client_id` composite key with collapsible expanded body; (b) v=402 follow-up UX redesign driven by `/tech-researcher` (PatternFly notification-drawer + iOS WWDC18 grouped notifications + Smashing 2025 notifications UX) — header shows latest snippet ONCE, header IS action surface (✓-all + 💬-reply-latest + 📁), older rows dim with hidden client name, soft counter pill, trailing-edge chevron, iOS stack-peek ghost. Group-level ✓ via new `markGroupHandled` (Promise.all of existing `delete-client-note`). Frontend-only. Branches `claude-session-20260503-115728` (c6cab9ae) + `DL-396-followup-ux-redesign` (22da373a). DL: `.agent/design-logs/admin-ui/396-recent-messages-group-by-client.md`.
+**Last Updated:** 2026-05-03 (DL-397 — IMPLEMENTED, NEED TESTING. Capture contract months at manual assign to T901/T902 across 3 flows + fix silent 400 from `request-remaining-contract` after manual reassign. DL-395, DL-394 prior.)
+
+## OPEN: DL-397 — Manual-assign contract months + stale `matched_template_id` fix
+
+DL: `.agent/design-logs/ai-review/397-manual-assign-contract-months-and-stale-template-id.md`
+
+Open-test items from Section 7 (deploy Worker first via `bash .claude/workflows/deploy-worker.sh`, then verify on live admin):
+
+- [ ] **400 fix**: classification with AI guess `general_doc`, manually reassign to T901 → Airtable CLASSIFICATIONS row shows `matched_template_id = T901`. Click "+ [H:request-contract]" button → succeeds, no 400.
+- [ ] **Reassign modal flow**: pick T901 in modal → months mini-form appears below picker. Submit `1.2025`/`12.2025` → Airtable `contract_period = {"startDate":"2025-01-01","endDate":"2025-12-31","coversFullYear":true}`. Banner renders without page reload.
+- [ ] **Chip menu flow**: click chip "assign to this doc" on T902 chip while preview open → sub-popover with two MM.YYYY inputs and Save/Cancel buttons → submit `5.2026`/`12.2026` → success.
+- [ ] **Add-doc popover flow**: add T901 doc; inline assign prompt embeds months input → submit `3.2025`/`8.2025` → success.
+- [ ] **Validation — empty/bad/inverted**: blank input, `13.2025`, end before start → inline error + Hebrew toast, no POST (Network tab silent).
+- [ ] **Pre-flight templateId guard**: DevTools breakpoint forcing `templateId=''` on chip handler → friendly toast `'לא נבחר תבנית — נסה שוב'`, no POST.
+- [ ] **Non-rental reassign**: reassign to T100 → no months input shown; server doesn't write `contract_period`; behavior unchanged.
+- [ ] **Regression — banner editor (DL-385)**: existing post-classification banner still saves via `update-contract-period`.
+- [ ] **Regression — T901↔T902 swap (DL-385)**: swap button still flips classification.
+- [ ] **Regression — full-year badge (DL-359)**: click-to-edit on full-year badge still works.
+- [ ] **Cache-bust**: hard reload, DevTools shows `script.js?v=403`.
+- [ ] **Activity log**: `node scripts/query-worker-logs.mjs --since=1h --search="doc_reassign"` shows new events; classification rows have populated `matched_template_id`.
 
 ## OPEN: DL-395 — PA review yes-answers visibility
 

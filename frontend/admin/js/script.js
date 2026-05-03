@@ -6935,6 +6935,93 @@ function parseLenientMonthYear(str) {
     return { month, year };
 }
 
+// DL-397: Predicate — is this template a rental contract (T901 income / T902 expense)?
+function isRentalTemplate(letter) {
+    return letter === 'T901' || letter === 'T902';
+}
+
+// DL-397: Reusable inline contract-months mini-form. Single source of truth used by all
+// three manual-assign flows (reassign modal, chip menu "assign to this doc", add-doc popover).
+// Returns a controller object so callers can validate + extract values before submitting.
+function renderContractMonthsInput(opts) {
+    const { containerEl, year, defaultStart, defaultEnd, idPrefix } = opts || {};
+    if (!containerEl) return null;
+    const pfx = idPrefix || ('cmi-' + Math.random().toString(36).slice(2, 8));
+    const startVal = defaultStart || '';
+    const endVal = defaultEnd || '';
+    containerEl.innerHTML = `
+        <div class="dl397-months-section" style="display:flex;flex-direction:column;gap:6px;padding:10px 12px;background:var(--surface-50,#f7f8fa);border:1px solid var(--border,#e5e7eb);border-radius:6px;margin-top:10px;">
+            <div style="font-size:12px;font-weight:600;color:var(--text-700,#374151);">תקופת החוזה <span style="color:var(--danger-600,#dc2626);">*</span></div>
+            <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+                <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-600,#4b5563);">
+                    <span>מ-</span>
+                    <input type="text" inputmode="numeric" id="${pfx}-start" class="dl397-months-input" value="${escapeAttr(startVal)}" placeholder="MM.YYYY" dir="ltr" style="width:90px;padding:4px 6px;font-size:12px;border:1px solid var(--border,#cbd5e1);border-radius:4px;text-align:center;">
+                </label>
+                <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-600,#4b5563);">
+                    <span>עד</span>
+                    <input type="text" inputmode="numeric" id="${pfx}-end" class="dl397-months-input" value="${escapeAttr(endVal)}" placeholder="MM.YYYY" dir="ltr" style="width:90px;padding:4px 6px;font-size:12px;border:1px solid var(--border,#cbd5e1);border-radius:4px;text-align:center;">
+                </label>
+            </div>
+            <div id="${pfx}-error" class="dl397-months-error" style="font-size:11px;color:var(--danger-600,#dc2626);min-height:14px;"></div>
+        </div>`;
+    const startEl = containerEl.querySelector('#' + pfx + '-start');
+    const endEl = containerEl.querySelector('#' + pfx + '-end');
+    const errEl = containerEl.querySelector('#' + pfx + '-error');
+
+    function normalize(input) {
+        const parsed = parseLenientMonthYear(input.value);
+        input.classList.remove('dl397-invalid');
+        input.style.borderColor = 'var(--border,#cbd5e1)';
+        if (input.value && !parsed) {
+            input.classList.add('dl397-invalid');
+            input.style.borderColor = 'var(--danger-600,#dc2626)';
+            return null;
+        }
+        if (parsed) {
+            input.value = String(parsed.month).padStart(2, '0') + '.' + parsed.year;
+        }
+        return parsed;
+    }
+    startEl.addEventListener('blur', () => normalize(startEl));
+    endEl.addEventListener('blur', () => normalize(endEl));
+    [startEl, endEl].forEach(el => el.addEventListener('input', () => { errEl.textContent = ''; }));
+
+    function getValues() {
+        const s = parseLenientMonthYear(startEl.value);
+        const e = parseLenientMonthYear(endEl.value);
+        if (!s || !e) return null;
+        const startDate = `${s.year}-${String(s.month).padStart(2, '0')}-01`;
+        const lastDay = new Date(e.year, e.month, 0).getDate();
+        const endDate = `${e.year}-${String(e.month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+        return { startDate, endDate };
+    }
+    function validate() {
+        normalize(startEl);
+        normalize(endEl);
+        if (!startEl.value.trim() || !endEl.value.trim()) {
+            errEl.textContent = 'נא למלא את חודשי החוזה';
+            return { ok: false, error: errEl.textContent };
+        }
+        const v = getValues();
+        if (!v) {
+            errEl.textContent = 'פורמט לא תקין — נסו 05.2026';
+            return { ok: false, error: errEl.textContent };
+        }
+        if (new Date(v.startDate) >= new Date(v.endDate)) {
+            errEl.textContent = 'תאריך סיום חייב להיות אחרי תאריך התחלה';
+            return { ok: false, error: errEl.textContent };
+        }
+        errEl.textContent = '';
+        return { ok: true };
+    }
+    return {
+        getValues,
+        validate,
+        focus: () => startEl.focus(),
+        destroy: () => { containerEl.innerHTML = ''; },
+    };
+}
+
 // DL-359: Render full-year contract badge (clickable to edit)
 function renderFullYearBadge(rid, year) {
     return `<span class="ai-ap-contract-full" data-record-id="${rid}" data-year="${year}" onclick="event.stopPropagation(); expandFullYearBadgeToEdit('${rid}', this)" style="background: var(--success-50); color: var(--success-700); padding: 4px 8px; border-radius: 3px; font-size: 11px; cursor: pointer;" title="לחץ לעריכה — תאריכי החוזה לא נכונים?">📅 חוזה שנתי מלא ✓ <span style="opacity: 0.6; font-size: 10px;">✏️</span></span>`;
@@ -7437,6 +7524,8 @@ function showAIReassignModal(recordId) {
 
     _aiReassignExpandedTarget = null;
     document.getElementById('aiReassignConfirmBtn').disabled = true;
+    // DL-397: reset months section on every modal open
+    _dl397SyncReassignMonths('', item);
     createDocCombobox(comboContainer, ownDocs, {
         currentMatchId,
         allowCreate: true,
@@ -7445,6 +7534,7 @@ function showAIReassignModal(recordId) {
             const expandedPicker = document.getElementById('aiReassignExpandedPicker');
             if (expandedPicker) { expandedPicker.style.display = 'none'; expandedPicker.innerHTML = ''; }
             document.getElementById('aiReassignConfirmBtn').disabled = !templateId;
+            _dl397SyncReassignMonths(templateId, item);
         },
         onExpand: () => {
             _aiReassignExpandedTarget = null;
@@ -7459,6 +7549,7 @@ function showAIReassignModal(recordId) {
                 onPick: (target) => {
                     _aiReassignExpandedTarget = target;
                     document.getElementById('aiReassignConfirmBtn').disabled = !target;
+                    _dl397SyncReassignMonths(target && target.template_id, item);
                 },
             });
         },
@@ -7839,16 +7930,53 @@ function closeAIReassignModal() {
     aiCurrentReassignId = null;
 }
 
+// DL-397: Toggle the contract-months section on the reassign modal based on selected template.
+// When the picked template is T901/T902, mounts renderContractMonthsInput; otherwise hides + clears.
+let _dl397ReassignMonthsCtrl = null;
+function _dl397SyncReassignMonths(templateLetter, item) {
+    const section = document.getElementById('aiReassignContractMonths');
+    if (!section) return;
+    if (isRentalTemplate(templateLetter)) {
+        const year = (item && item.year) || new Date().getFullYear();
+        section.style.display = '';
+        _dl397ReassignMonthsCtrl = renderContractMonthsInput({
+            containerEl: section,
+            year,
+            idPrefix: 'dl397-modal',
+        });
+    } else {
+        section.style.display = 'none';
+        section.innerHTML = '';
+        _dl397ReassignMonthsCtrl = null;
+    }
+}
+
 async function confirmAIReassign() {
     if (!aiCurrentReassignId) return;
     const recordId = aiCurrentReassignId;
     const item = aiClassificationsData.find(i => i.id === recordId);
 
+    // DL-397: when user picked T901/T902, validate months input before submit.
+    // Returns null on validation fail so caller aborts; returns {} when not rental
+    // (no extras needed); returns {contract_period: {...}} when valid.
+    const collectExtras = (templateLetter) => {
+        if (!isRentalTemplate(templateLetter)) return {};
+        if (!_dl397ReassignMonthsCtrl) return null;
+        const v = _dl397ReassignMonthsCtrl.validate();
+        if (!v.ok) {
+            showAIToast(v.error || 'נא למלא את חודשי החוזה', 'error');
+            return null;
+        }
+        return { contract_period: _dl397ReassignMonthsCtrl.getValues() };
+    };
+
     // DL-336: If user picked from the expanded template picker, use that
     if (_aiReassignExpandedTarget) {
         const t = _aiReassignExpandedTarget;
+        const extras = collectExtras(t.template_id);
+        if (extras === null) return; // validation failed, keep modal open
         closeAIReassignModal();
-        await submitAIReassign(recordId, t.template_id, t.doc_record_id || '', null, t.new_doc_name || '', false, null);
+        await submitAIReassign(recordId, t.template_id, t.doc_record_id || '', null, t.new_doc_name || '', false, null, extras);
         return;
     }
 
@@ -7874,16 +8002,26 @@ async function confirmAIReassign() {
     // DL-239: Capture selected report ID for cross-type reassign before closing
     const selectedReportId = aiReassignSelectedReportId;
     const isCrossType = selectedReportId && item && selectedReportId !== item.report_record_id;
+
+    const extras = collectExtras(templateId);
+    if (extras === null) return; // validation failed, keep modal open
     closeAIReassignModal();
 
     if (templateId === '__NEW__' && newDocName.trim()) {
         await submitAIReassign(recordId, 'general_doc', '', null, newDocName.trim(), false, isCrossType ? selectedReportId : null);
     } else {
-        await submitAIReassign(recordId, templateId, docRecordId);
+        await submitAIReassign(recordId, templateId, docRecordId, null, '', false, null, extras);
     }
 }
 
-async function submitAIReassign(recordId, templateId, docRecordId, loadingText, newDocName, forceOverwrite, targetReportId) {
+async function submitAIReassign(recordId, templateId, docRecordId, loadingText, newDocName, forceOverwrite, targetReportId, extras) {
+    // DL-397: pre-flight guard — closes the silent-400 path triggered when callers
+    // pass an empty/null templateId (e.g., chip whose data-template-id was unset).
+    if (!recordId || !templateId || typeof templateId !== 'string') {
+        console.warn('[DL-397] reassign blocked: invalid templateId', { recordId, templateId, docRecordId });
+        showAIToast('לא נבחר תבנית — נסה שוב', 'error');
+        return;
+    }
     setCardLoading(recordId, loadingText || 'משייך מחדש...');
 
     try {
@@ -7897,6 +8035,10 @@ async function submitAIReassign(recordId, templateId, docRecordId, loadingText, 
         if (newDocName) body.new_doc_name = newDocName;
         if (forceOverwrite) body.force_overwrite = true;
         if (targetReportId) body.target_report_id = targetReportId; // DL-239
+        // DL-397: forward contract_period when target template is rental (T901/T902)
+        if (extras && extras.contract_period && isRentalTemplate(templateId)) {
+            body.contract_period = extras.contract_period;
+        }
 
         const response = await fetchWithTimeout(ENDPOINTS.REVIEW_CLASSIFICATION, {
             method: 'POST',
@@ -9336,15 +9478,49 @@ function selectDocTagStatus(event, btnEl) {
 // DL-391: Reassign the active AI cockpit card's file to this chip's doc slot.
 // Mirrors selectDocTagStatus shape; menu visibility is already gated in
 // openDocTagMenu (active card present, Required_Missing chip, not same doc).
+// DL-397: when chip is T901/T902, swap menu to a months sub-popover before submitting.
 async function selectDocTagAssignToCard(event, btnEl) {
     event.stopPropagation();
     const menu = btnEl.closest('.ai-doc-tag-menu');
     const docRecordId = menu?.dataset?.docRecordId || '';
     const templateId = btnEl.dataset.templateId || '';
-    closeDocTagMenu();
-    if (!docRecordId || !templateId) return;
+    if (!docRecordId || !templateId) { closeDocTagMenu(); return; }
     const activeItemId = document.getElementById('aiActionsPanel')?.dataset?.itemId || '';
-    if (!activeItemId) return;
+    if (!activeItemId) { closeDocTagMenu(); return; }
+
+    if (isRentalTemplate(templateId) && menu) {
+        const activeItem = (aiClassificationsData || []).find(x => String(x.id) === String(activeItemId));
+        const year = (activeItem && activeItem.year) || new Date().getFullYear();
+        menu.innerHTML = `
+            <div style="padding:10px 12px;">
+                <div style="font-size:12px;font-weight:600;color:var(--text-700,#374151);margin-bottom:4px;">
+                    שיוך ל-${templateId === 'T901' ? 'חוזה שכירות (הכנסה)' : 'חוזה שכירות (הוצאה)'}
+                </div>
+                <div id="dl397ChipMonths"></div>
+                <div style="display:flex;gap:8px;margin-top:10px;justify-content:flex-end;">
+                    <button type="button" id="dl397ChipCancel" class="btn btn-outline btn-sm">ביטול</button>
+                    <button type="button" id="dl397ChipSave" class="btn btn-primary btn-sm">שמור ושייך</button>
+                </div>
+            </div>`;
+        const ctrl = renderContractMonthsInput({
+            containerEl: menu.querySelector('#dl397ChipMonths'),
+            year,
+            idPrefix: 'dl397-chip',
+        });
+        ctrl && ctrl.focus();
+        menu.querySelector('#dl397ChipCancel').onclick = (e) => { e.stopPropagation(); closeDocTagMenu(); };
+        menu.querySelector('#dl397ChipSave').onclick = async (e) => {
+            e.stopPropagation();
+            const v = ctrl && ctrl.validate();
+            if (!v || !v.ok) return;
+            const period = ctrl.getValues();
+            closeDocTagMenu();
+            await submitAIReassign(activeItemId, templateId, docRecordId, null, '', false, null, { contract_period: period });
+        };
+        return;
+    }
+
+    closeDocTagMenu();
     await submitAIReassign(activeItemId, templateId, docRecordId);
 }
 
@@ -11641,14 +11817,31 @@ function _showInlineAssignToNewDocPrompt(docRecordId, cardId, templateId) {
         const pop = document.createElement('div');
         pop.className = 'ai-inline-assign-prompt';
         pop.setAttribute('role', 'dialog');
+        // DL-397: when target is T901/T902, embed contract-months mini-form before שייך.
+        const isRental = isRentalTemplate(templateId);
+        const monthsBlock = isRental
+            ? `<div id="dl397InlinePromptMonths" style="margin:6px 0 4px;"></div>`
+            : `<span class="ai-inline-assign-prompt__msg">לשייך את הקובץ למסמך זה?</span>`;
         pop.innerHTML = `
             <div class="ai-inline-assign-prompt__arrow"></div>
-            <div class="ai-inline-assign-prompt__body">
-                <span class="ai-inline-assign-prompt__msg">לשייך את הקובץ למסמך זה?</span>
-                <button type="button" class="ai-inline-assign-prompt__btn ai-inline-assign-prompt__btn--primary" data-act="confirm">שייך</button>
-                <button type="button" class="ai-inline-assign-prompt__btn ai-inline-assign-prompt__btn--ghost" data-act="dismiss" aria-label="ביטול">✕</button>
+            <div class="ai-inline-assign-prompt__body" style="${isRental ? 'flex-direction:column;align-items:stretch;' : ''}">
+                ${monthsBlock}
+                <div style="display:flex;gap:6px;justify-content:flex-end;${isRental ? 'margin-top:4px;' : ''}">
+                    <button type="button" class="ai-inline-assign-prompt__btn ai-inline-assign-prompt__btn--primary" data-act="confirm">שייך</button>
+                    <button type="button" class="ai-inline-assign-prompt__btn ai-inline-assign-prompt__btn--ghost" data-act="dismiss" aria-label="ביטול">✕</button>
+                </div>
             </div>`;
         document.body.appendChild(pop);
+        let dl397Ctrl = null;
+        if (isRental) {
+            const activeItem = (aiClassificationsData || []).find(x => String(x.id) === String(cardId));
+            const year = (activeItem && activeItem.year) || new Date().getFullYear();
+            dl397Ctrl = renderContractMonthsInput({
+                containerEl: pop.querySelector('#dl397InlinePromptMonths'),
+                year,
+                idPrefix: 'dl397-inline',
+            });
+        }
 
         // Position absolutely under the chip (page-relative so it scrolls).
         const r = chip.getBoundingClientRect();
@@ -11678,8 +11871,17 @@ function _showInlineAssignToNewDocPrompt(docRecordId, cardId, templateId) {
             const btn = e.target.closest('button');
             if (!btn) return;
             if (btn.dataset.act === 'confirm') {
-                close();
-                submitAIReassign(cardId, templateId, docRecordId);
+                // DL-397: validate months before closing/submitting for rental targets.
+                if (dl397Ctrl) {
+                    const v = dl397Ctrl.validate();
+                    if (!v.ok) return; // keep popover open with inline error
+                    const period = dl397Ctrl.getValues();
+                    close();
+                    submitAIReassign(cardId, templateId, docRecordId, null, '', false, null, { contract_period: period });
+                } else {
+                    close();
+                    submitAIReassign(cardId, templateId, docRecordId);
+                }
             } else {
                 close();
             }

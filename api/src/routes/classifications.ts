@@ -101,6 +101,26 @@ const getField = (val: unknown): unknown =>
 
 const escapeAirtableValue = (value: string): string => value.replace(/'/g, "\\'");
 
+// DL-397: Validate + serialize contract_period payload. Reused by `update-contract-period`
+// and the manual-reassign path so both callers produce identical JSON shape and validation.
+function buildContractPeriod(startDate: string, endDate: string):
+  | { json: string; contractPeriod: { startDate: string; endDate: string; coversFullYear: boolean } }
+  | { error: string } {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(startDate) || !/^\d{4}-\d{2}-\d{2}$/.test(endDate)) {
+    return { error: 'Dates must be in YYYY-MM-DD format' };
+  }
+  const startD = new Date(startDate);
+  const endD = new Date(endDate);
+  if (startD >= endD) {
+    return { error: 'start_date must be before end_date' };
+  }
+  const coversFullYear = startD.getMonth() === 0 && startD.getDate() === 1 &&
+    endD.getMonth() === 11 && endD.getDate() === 31 &&
+    startD.getFullYear() === endD.getFullYear();
+  const contractPeriod = { startDate, endDate, coversFullYear };
+  return { json: JSON.stringify(contractPeriod), contractPeriod };
+}
+
 // GET /webhook/get-pending-classifications
 classifications.get('/get-pending-classifications', async (c) => {
   // DL-323: hoist perf state so catch block can log marks too
@@ -598,7 +618,7 @@ classifications.post('/review-classification', async (c) => {
 
     // ---- Step 1: Validate request ----
     const body = await c.req.json() as Record<string, unknown>;
-    const { token, classification_id, action, reassign_template_id, reassign_doc_record_id, notes, new_doc_name, force_overwrite, approve_mode, target_report_id, additional_targets, create_if_missing, template_id } = body as {
+    const { token, classification_id, action, reassign_template_id, reassign_doc_record_id, notes, new_doc_name, force_overwrite, approve_mode, target_report_id, additional_targets, create_if_missing, template_id, contract_period } = body as {
       token: string;
       classification_id: string;
       action: string;
@@ -619,6 +639,8 @@ classifications.post('/review-classification', async (c) => {
       // DL-319: atomically create required-doc row when none exists, then approve
       create_if_missing?: boolean;
       template_id?: string;
+      // DL-397: capture contract months at manual reassign to T901/T902
+      contract_period?: { startDate?: string; endDate?: string };
     };
 
     if (!token) {
@@ -697,25 +719,14 @@ classifications.post('/review-classification', async (c) => {
       if (!start_date || !end_date) {
         return c.json({ ok: false, error: 'start_date and end_date are required' }, 400);
       }
-      // Validate date format
-      if (!/^\d{4}-\d{2}-\d{2}$/.test(start_date) || !/^\d{4}-\d{2}-\d{2}$/.test(end_date)) {
-        return c.json({ ok: false, error: 'Dates must be in YYYY-MM-DD format' }, 400);
+      const built = buildContractPeriod(start_date, end_date);
+      if ('error' in built) {
+        return c.json({ ok: false, error: built.error }, 400);
       }
-      const startD = new Date(start_date);
-      const endD = new Date(end_date);
-      if (startD >= endD) {
-        return c.json({ ok: false, error: 'start_date must be before end_date' }, 400);
-      }
-      const coversFullYear = startD.getMonth() === 0 && startD.getDate() === 1 &&
-        endD.getMonth() === 11 && endD.getDate() === 31 &&
-        startD.getFullYear() === endD.getFullYear();
-
-      const contractPeriod = { startDate: start_date, endDate: end_date, coversFullYear };
       await airtable.updateRecord(TABLES.CLASSIFICATIONS, classification_id, {
-        contract_period: JSON.stringify(contractPeriod),
+        contract_period: built.json,
       });
-
-      return c.json({ ok: true, action: 'update-contract-period', contract_period: contractPeriod });
+      return c.json({ ok: true, action: 'update-contract-period', contract_period: built.contractPeriod });
     }
 
     // ---- DL-385: Swap T901↔T902 classification — early return ----
@@ -2072,16 +2083,33 @@ classifications.post('/review-classification', async (c) => {
     }
 
     // ---- Step 5: Update classification record ----
+    // DL-397: persist matched_template_id on reassign (was previously only updated on local
+    // frontend cache, leaving server-side stale → silent 400 from request-remaining-contract).
+    // Also accept optional contract_period when target letter ∈ {T901, T902}.
+    const step5Fields: Record<string, unknown> = {
+      review_status: action === 'approve' ? 'approved' : action === 'reject' ? 'rejected' : 'reassigned',
+      reviewed_at: new Date().toISOString(),
+      notes: notes || '',
+    };
+    if (action === 'reassign' && reassign_template_id) {
+      step5Fields.matched_template_id = reassign_template_id;
+      if (
+        ['T901', 'T902'].includes(reassign_template_id) &&
+        contract_period &&
+        contract_period.startDate &&
+        contract_period.endDate
+      ) {
+        const built = buildContractPeriod(contract_period.startDate, contract_period.endDate);
+        if ('error' in built) {
+          return c.json({ ok: false, error: built.error }, 400);
+        }
+        step5Fields.contract_period = built.json;
+      }
+    }
     await fetch(`https://api.airtable.com/v0/${env.AIRTABLE_BASE_ID}/${TABLES.CLASSIFICATIONS}/${classification_id}`, {
       method: 'PATCH',
       headers: { Authorization: `Bearer ${env.AIRTABLE_PAT}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        fields: {
-          review_status: action === 'approve' ? 'approved' : action === 'reject' ? 'rejected' : 'reassigned',
-          reviewed_at: new Date().toISOString(),
-          notes: notes || '',
-        }
-      }),
+      body: JSON.stringify({ fields: step5Fields }),
     });
 
     // DL-210: notification_status is no longer auto-set here.
