@@ -87,6 +87,9 @@ CODEX.md
 *.docx
 *.doc
 
+# Real-client tax docs gathered for testing — local-only, never commit
+docs/Samples/
+
 # n8n / workflow exports — historically contain plaintext secrets in Code nodes.
 # wf05-backup-pre-migration-2026-03-26.json is the reference incident.
 # Layer 8 hook (forbid-workflow-exports.py) hard-blocks any attempt to commit these.
