@@ -2130,7 +2130,7 @@ function recalculateStats() {
         const el = document.getElementById(id);
         if (!el) return;
         const pct = counts.total > 0 ? Math.round((n / counts.total) * 100) : 0;
-        el.innerHTML = `${n}<span class="stat-pct">${pct}%</span>`;
+        el.innerHTML = `${n}<span class="stat-pct">(${pct}%)</span>`;
     };
     for (let i = 1; i <= 8; i++) setStat(`stat-stage${i}`, counts['stage' + i]);
 

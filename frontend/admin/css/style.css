@@ -265,11 +265,12 @@ body {
 }
 
 .stat-pct {
-    font-size: 0.55em;
+    font-size: 0.45em;
     font-weight: 500;
-    color: var(--gray-500);
-    margin-inline-start: 4px;
-    vertical-align: middle;
+    color: var(--gray-400);
+    margin-inline-start: 8px;
+    vertical-align: 0.35em;
+    letter-spacing: 0.02em;
 }
 
 .stat-label {
