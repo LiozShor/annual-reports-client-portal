@@ -236,7 +236,7 @@ adminDevActivity.post('/admin-clients-lookup', async (c) => {
     const unique = [...new Set(cpaIds.map(id => id.toUpperCase()))];
     for (let i = 0; i < unique.length; i += 10) {
       const chunk = unique.slice(i, i + 10);
-      const orParts = chunk.map(id => `UPPER({client_id})='${id.replace(/'/g, "\\'")}'`).join(', ');
+      const orParts = chunk.map(id => `{client_id}='${id.replace(/'/g, "\\'")}'`).join(', ');
       const formula = chunk.length === 1 ? orParts : `OR(${orParts})`;
       const records = await airtable.listAllRecords<Record<string, unknown>>(REPORTS_TABLE, {
         filterByFormula: formula,
