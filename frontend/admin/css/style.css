@@ -264,6 +264,14 @@ body {
     margin-bottom: var(--sp-1);
 }
 
+.stat-pct {
+    font-size: 0.55em;
+    font-weight: 500;
+    color: var(--gray-500);
+    margin-inline-start: 4px;
+    vertical-align: middle;
+}
+
 .stat-label {
     font-size: var(--text-xs);
     color: var(--gray-500);

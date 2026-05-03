@@ -2126,14 +2126,13 @@ function recalculateStats() {
     }
 
     document.getElementById('stat-total').textContent = counts.total;
-    document.getElementById('stat-stage1').textContent = counts.stage1;
-    document.getElementById('stat-stage2').textContent = counts.stage2;
-    document.getElementById('stat-stage3').textContent = counts.stage3;
-    document.getElementById('stat-stage4').textContent = counts.stage4;
-    document.getElementById('stat-stage5').textContent = counts.stage5;
-    document.getElementById('stat-stage6').textContent = counts.stage6;
-    document.getElementById('stat-stage7').textContent = counts.stage7;
-    document.getElementById('stat-stage8').textContent = counts.stage8;
+    const setStat = (id, n) => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        const pct = counts.total > 0 ? Math.round((n / counts.total) * 100) : 0;
+        el.innerHTML = `${n}<span class="stat-pct">${pct}%</span>`;
+    };
+    for (let i = 1; i <= 8; i++) setStat(`stat-stage${i}`, counts['stage' + i]);
 
     // Stage 3 attention: toggle .needs-attention based on count
     const stage3Card = document.querySelector('.stat-card.stage-3');
