@@ -1,6 +1,6 @@
 # DL-400: Edit-Client Modal — Row Disappears After Save
 
-**Status:** [IMPLEMENTED — NEED TESTING]
+**Status:** [COMPLETED — 2026-05-03]
 **Branch:** `claude-session-20260503-165625`
 **Date:** 2026-05-03
 **Domain:** admin-ui
