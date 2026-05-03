@@ -44,6 +44,7 @@
       var rid = client.report_id || '';
       var bad = client.last_bounced_email ? String(client.last_bounced_email) : '';
       var reason = client.email_bounce_reason ? String(client.email_bounce_reason) : '';
+      var when = client.email_bounce_at ? String(client.email_bounce_at) : '';
       var tipParts = ['כתובת מייל לא תקינה'];
       if (bad) tipParts.push(bad);
       if (reason) tipParts.push(reason);
@@ -51,11 +52,15 @@
       var tip = _esc(tipParts.join(' · '));
       return (
         '<button type="button" class="bounce-warning-badge" ' +
-        'onclick="event.stopPropagation(); openBounceModal(\'' + _esc(rid) + '\')" ' +
+        'data-report-id="' + _esc(rid) + '" ' +
+        'data-bounce-email="' + _esc(bad) + '" ' +
+        'data-bounce-reason="' + _esc(reason) + '" ' +
+        'data-bounce-at="' + _esc(when) + '" ' +
+        'onclick="event.stopPropagation(); openBounceModalFromButton(this)" ' +
         'title="' + tip + '" ' +
         'aria-label="כתובת מייל לא תקינה" ' +
         'style="background:#fee2e2;color:#991b1b;padding:2px 8px;border-radius:8px;font-size:12px;font-weight:bold;cursor:pointer;border:none;margin-inline-start:8px;display:inline-flex;align-items:center;gap:4px;">' +
-        _icon('alert-triangle', 'icon-xs') + ' ⚠' +
+        _icon('alert-triangle', 'icon-xs') +
         '</button>'
       );
     }
@@ -84,17 +89,30 @@
     }
   }
 
-  function openBounceModal(reportId) {
-    var clients = (typeof window.clientsData !== 'undefined' && window.clientsData) || [];
-    var client = clients.find ? clients.find(function (c) { return c.report_id === reportId; }) : null;
-    if (!client) {
-      if (typeof window.showAIToast === 'function') window.showAIToast('הלקוח לא נמצא', 'danger');
-      return;
-    }
+  function openBounceModalFromButton(btn) {
+    if (!btn) return;
+    openBounceModal({
+      reportId: btn.getAttribute('data-report-id') || '',
+      lastBouncedEmail: btn.getAttribute('data-bounce-email') || '',
+      reason: btn.getAttribute('data-bounce-reason') || '',
+      at: btn.getAttribute('data-bounce-at') || '',
+    });
+  }
 
-    var lastBounced = client.last_bounced_email || client.email || '';
-    var reason = client.email_bounce_reason || '—';
-    var when = _formatBounceAt(client.email_bounce_at);
+  function openBounceModal(arg) {
+    // Back-compat: callers may still pass a reportId string. Prefer the data-attr object form.
+    var reportId, lastBounced, reason, when;
+    if (typeof arg === 'string') {
+      reportId = arg;
+      lastBounced = '';
+      reason = '—';
+      when = _formatBounceAt('');
+    } else {
+      reportId = (arg && arg.reportId) || '';
+      lastBounced = (arg && arg.lastBouncedEmail) || '';
+      reason = (arg && arg.reason) || '—';
+      when = _formatBounceAt(arg && arg.at);
+    }
 
     // Build/reuse a dedicated overlay so we don't fight #modal which uses textContent.
     var overlay = document.getElementById('bounceDetailModal');
@@ -209,6 +227,7 @@
   // Expose
   window.bounceBadgeHTML = bounceBadgeHTML;
   window.openBounceModal = openBounceModal;
+  window.openBounceModalFromButton = openBounceModalFromButton;
   window.closeBounceModal = closeBounceModal;
   window.hasBouncedInStage1 = hasBouncedInStage1;
   window.hasEmail = hasEmail;
