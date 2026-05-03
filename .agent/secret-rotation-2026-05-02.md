@@ -233,7 +233,7 @@ After all steps above are ✓:
 - [ ] Commit `docs/multi-tenant-audit.md` redactions on a feature branch + PR.
 - [ ] Decide on **history rewrite** (optional now that values are dead). If yes, run the `git filter-repo` plan we discussed.
 - [ ] Migrate the secrets-in-Code-nodes to **n8n Credentials** so the next rotation doesn't require touching every workflow JSON. (Finding 24 in `multi-tenant-audit.md`.) Track as a separate DL.
-- [ ] **MS Graph subscription auto-renewal (surfaced during Step 7, 2026-05-02):** New subscription `7171bd0d-7169-4244-9466-e1c637604c9e` expires `2026-05-05T16:47:29Z` (~3 days). MS Graph caps `messages` subscriptions at ≤3 days. Need a scheduled n8n workflow that runs daily, calls `PATCH /subscriptions/{id}` with `{expirationDateTime: now+3d-1m}` using `MS_Graph_CPA_Automation` OAuth2 cred. Without this, inbound email stops in 3 days. The PRIOR sub (`e9e1fa40…` created by GUID `d821385d…`) was somehow auto-renewing for weeks — investigate whether that mechanism still exists somewhere and update it for the new sub id, OR build a fresh renewal cron.
+- [x] **MS Graph subscription auto-renewal (surfaced during Step 7, 2026-05-02; resolved 2026-05-03).** Discovered that `[05-SUB] Email Subscription Manager` (id `qCNsXnAE06jAZOMe`, schedule trigger every 2 days) was the prior auto-renewer all along. PATCH path sends `{expirationDateTime: now+3d}` against any sub matching the wf05 notificationUrl — keeps the new sub `7171bd0d…` alive indefinitely without manual cron. **Latent leak-resurrection bug found and fixed:** the disaster-recovery POST path (only fires if no sub exists) hardcoded the previously-leaked `clientState: 'wf05-inbound-secret'` string. Updated to `xpRz4oGpgS57Fxo6fjywLA==` via `n8n_update_workflow` PUT 200, 1 replacement. Tested no further action required.
 - [ ] **Prerequisite for `CLIENT_SECRET_KEY` rotation (Step 6, deferred 2026-05-02):** add key-versioning to `api/src/lib/client-token.ts` — verify incoming tokens against `[CLIENT_SECRET_KEY_NEW, CLIENT_SECRET_KEY_OLD]`, fall back to old for ≤45d after rollover, then drop the old key. Open a DL for the implementation. Once shipped, rotate `CLIENT_SECRET_KEY` aligned with the next reminder run so re-issued tokens propagate naturally and the 45-day overlap window covers all in-flight links.
 - [ ] Delete `docs/wf05-backup-pre-migration-2026-03-26.json` from local disk (it's gitignored but contains a now-invalid PAT — still good hygiene to remove).
 - [ ] Add a pre-commit gitleaks rule for inline-code Markdown patterns matching `(plaintext)` / `(plaintext in Code node)` near values ≥16 chars (so this kind of doc-style leak gets caught next time).
@@ -268,3 +268,40 @@ After all steps above are ✓:
 4. **Step 6 deferred for sound reasons** — ~400 outstanding 45-day client portal tokens signed under current `CLIENT_SECRET_KEY`. `api/src/lib/client-token.ts` has no key versioning; rotating now invalidates every token immediately. Leaked-prefix risk acceptable (16/64 hex = 192 bits unbroken). Prerequisite: ship key-versioning (verify against `[NEW, OLD]`, 45d fallback) before next rotation.
 5. **One-shot regression test for future rotations.** A single inbound email exercises Steps 1 + 4 + 5 + 7 simultaneously: MS Graph notification (Step 7 clientState) → n8n `[05]` → Worker `/webhook/process-inbound-email` (Step 1 Bearer) → AirtableClient (Step 4 PAT via `AIRTABLE_PAT` env) → AI classification (Step 5 Anthropic key). A single Tally submission additionally exercises Step 3 (PAT #1 via `[02]` Code-node literals) and Step 4 again (via Airtable v2 nodes that use the credential store). After any future rotation: send one email + submit one Tally form, watch executions for green. If both pass, the credential surfaces are clean.
 6. **Pre-commit hooks that DID fire correctly through this rotation:** `gitleaks` + `ggshield` + `agent-pii-guard` + `script-size-ratchet` ran cleanly on every runbook commit and never blocked. The leak path that this rotation responded to (markdown-table plaintext markers in `docs/multi-tenant-audit.md`) was not caught — Phase 2 layers are designed to close that specific class of leak.
+
+---
+
+## Phase 2 — Prevention (9 layers, shipped 2026-05-02 → 2026-05-03)
+
+Targets the actual failure mode that produced the 2026-05-02 leak: AI-generated audit doc → live secret values pasted into Markdown table cells → committed unread → public push. Default gitleaks / ggshield / pii-guard rules missed it because they target `KEY=value` shapes, not Markdown table cells with adjacent "(plaintext)" markers.
+
+| Layer | What | Files | Commit |
+|---|---|---|---|
+| 1 | `CLAUDE.md` "Secret-Audit Safety (P0)" rule — forbid live values in audit docs; only file:line + first-4-char prefix + var name + sha256 hash allowed | `CLAUDE.md` | `609a8c49` |
+| 2 | gitleaks custom config — `audit-doc-plaintext-marker` rule, stricter `airtable-pat` regex, `anthropic-api-key-strict` rule, shape-based content allowlist (`appXXX` IDs, Tally `question_*`, `c.env.*`); regression fixture for issue-1790 (allowlist poisoning) with runtime-assembled fake secret + `test-gitleaks-allowlist.sh` runner | `.gitleaks.toml`, `.claude/hooks/test-fixtures/{gitleaks-allowlist-bypass.md,test-gitleaks-allowlist.sh}` | `d4ae5ba9` + `c5227558` |
+| 3 | `agent-pii-guard` `files:` regex extended to high-risk `docs/*audit*\|*compliance*\|*security*\|*secret*\|SECURITY.md` filenames | `.pre-commit-config.yaml` | `4de668fb` |
+| 4 | **GitHub Push Protection enabled at repo level** — server-side gate; blocks ~200 token formats at the push edge even if local hooks bypassed. Manual UI step (Settings → Code security → Secret protection → enable) | repo settings | n/a |
+| 5 | `entropy-md-guard.py` pre-commit hook — flags backticked values ≥20 chars with Shannon entropy ≥4.5 that look like secret-shape (continuous alnum/base64). Diff-only scan grandfathers existing baseline content | `.claude/hooks/entropy-md-guard.py` | `4ef3e823` |
+| 6 | `large-doc-warn.py` pre-commit hook — friction on any single-commit Markdown addition >200 lines; bypass via `LARGE_DOC_REVIEWED=1` env var | `.claude/hooks/large-doc-warn.py` | `4ef3e823` |
+| 7 | `.gitignore` extended with AI tool state (`.codex/`, `.agents/`, `AGENTS.md`, `CODEX.md`, `*.local-backup`), office docs (`*.xlsx`, `*.docx`, etc.), n8n workflow exports (`*-backup-*.json`, `*-export-*.json`, `*.workflow.json`, `*n8n-export*.json`, `*workflow-backup*.json`), Wrangler dryrun artifacts | `.gitignore` | `61accacf` |
+| 8 | `forbid-workflow-exports.py` hook — hard-blocks committing files matching workflow-export patterns (defense in depth for `.gitignore` Layer 7); plus `agent-pii-guard` `files:` regex broadened from `docs/*` to ANY path with audit/compliance/security/secret/creds/runbook keywords (case-insensitive) | `.claude/hooks/forbid-workflow-exports.py`, `.pre-commit-config.yaml` | `7a83563b` |
+| 9 | `scripts/audit-n8n-credentials.sh` — credential-drift checker to run before/after every future rotation. 4 positive probes (n8n API, Worker Bearer, Airtable PAT, Anthropic key) + enumerates n8n workflow credential refs + invokes the gitleaks regression test + runs the paranoid `--no-git` scan. Negative tests for OLD revoked values are env-var-driven (`OLD_N8N_KEY` / `OLD_AIRTABLE_PAT_1` / `OLD_ANTHROPIC_KEY`) — old values intentionally NOT hardcoded so the script doesn't trip Push Protection | `scripts/audit-n8n-credentials.sh`, `.gitguardian.yaml` (path-allowlist for the script's own historical dead values) | `7c4cbae1` |
+
+### Phase 2 final gates (all green)
+- `python3 -m pre_commit run --all-files` → 7/7 hooks pass
+- `gitleaks detect --source . --config .gitleaks.toml --no-git --redact` → 0 leaks
+- `bash scripts/audit-n8n-credentials.sh` → 4/4 positive probes pass + regression fixture pass
+
+---
+
+## Closeout (2026-05-03)
+
+- **PR #7** opened against `main` from `chore/secret-rotation-2026-05-02`. Push Protection caught dead values in the original Layer 9 commit on first push attempt; resolved by `git reset --soft HEAD~2` and squashing the bad-state intermediate commits into one clean `7c4cbae1` (env-var-driven negative tests, no hardcoded old values).
+- **Merged to main** as merge commit `ca91c992` (`--no-ff` from canonical clone).
+- **Worker deployed** via `bash .claude/workflows/deploy-worker.sh` — version `b69f0798`, health endpoint 200.
+- **GitHub Push Protection enabled at repo level** (Layer 4) — confirmed live during the merge push (it had already caught the dead values on the first push attempt under user-level Push Protection).
+- **`[05-SUB] Email Subscription Manager` patched** — disaster-recovery POST path no longer recreates with leaked clientState. MS Graph renewal cron continues running every 2 days against new sub `7171bd0d…`.
+
+### Manual operator items remaining
+- **`OLD_N8N_KEY` / `OLD_AIRTABLE_PAT_1` / `OLD_ANTHROPIC_KEY`** — set in a gitignored `.env.audit-old-values` so future `audit-n8n-credentials.sh` runs include the negative-test branch. Without these env vars the script SKIPs the negative probes (still passes overall).
+- **`client-token.ts` key-versioning DL** — open when ready to tackle Step 6. No urgency (192-bit residual entropy makes brute-force infeasible).
