@@ -3285,21 +3285,19 @@ async function sendQuestionnaires(reportIds) {
 
 function renderReviewTable(queue) {
     const container = document.getElementById('reviewTableContainer');
-
-    // Filter out archived clients
     if (queue) queue = queue.filter(c => c.is_active !== false);
+    reviewState.queueCache = queue || [];
+    queue = filterReviewQueue(queue);
 
     if (!queue || queue.length === 0) {
-        container.innerHTML = `
-            <div class="empty-state">
-                <div class="empty-state-icon">${icon('inbox', 'icon-2xl')}</div>
-                <p>אין לקוחות מוכנים להכנה כרגע</p>
-            </div>
-        `;
+        container.innerHTML = `<div class="empty-state"><div class="empty-state-icon">${icon('inbox', 'icon-2xl')}</div><p>אין לקוחות מוכנים להכנה כרגע</p></div>`;
+        renderPagination('reviewPagination', 0, 1, PAGE_SIZE, goToReviewPage);
         safeCreateIcons();
         return;
     }
 
+    const { slice: pagedSlice, fifoOffset, totalItems } = paginateReviewQueue(queue, PAGE_SIZE);
+    queue = pagedSlice;
     const now = new Date();
 
     let html = `
@@ -3331,12 +3329,12 @@ function renderReviewTable(queue) {
         if (diffDays >= 14) waitingClass = 'waiting-urgent';
         else if (diffDays >= 7) waitingClass = 'waiting-warn';
 
-        const waitingText = diffDays === 0 ? 'היום' : diffDays === 1 ? 'יום אחד' : `${diffDays} ימים`;
+        const waitingText = formatWaiting(diffDays);
         const dateStr = completedAt.toLocaleDateString('he-IL', { day: '2-digit', month: '2-digit', year: 'numeric' });
 
         html += `
             <tr>
-                <td><span class="fifo-number">${i + 1}</span></td>
+                <td><span class="fifo-number">${fifoOffset + i + 1}</span></td>
                 <td>
                     <strong
                         class="client-link"
@@ -3377,12 +3375,12 @@ function renderReviewTable(queue) {
         let waitingClass = '';
         if (diffDays >= 14) waitingClass = 'waiting-urgent';
         else if (diffDays >= 7) waitingClass = 'waiting-warn';
-        const waitingText = diffDays === 0 ? 'היום' : diffDays === 1 ? 'יום אחד' : `${diffDays} ימים`;
+        const waitingText = formatWaiting(diffDays);
         const dateStr = completedAt.toLocaleDateString('he-IL', { day: '2-digit', month: '2-digit', year: 'numeric' });
 
         cards += `<li class="mobile-card">
             <div class="mobile-card-primary">
-                <span class="fifo-number">${i + 1}</span>
+                <span class="fifo-number">${fifoOffset + i + 1}</span>
                 <div class="mobile-card-info">
                     <span class="mobile-card-name" onclick="viewClientDocs('${escapeAttr(client.report_id)}')">${escapeHtml(client.name)}</span>
                     <span class="waiting-badge ${waitingClass}">${waitingText}</span>
@@ -3407,6 +3405,7 @@ function renderReviewTable(queue) {
 
     html += cards + '</div>';
     container.innerHTML = html;
+    renderPagination('reviewPagination', totalItems, _reviewPage, PAGE_SIZE, goToReviewPage);
     safeCreateIcons();
 }
 
