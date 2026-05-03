@@ -1,0 +1,16 @@
+{
+  "$schema": "skill-eval/v1",
+  "name": "renumbered-dl-squash-merge",
+  "skill": "repo-cleanup",
+  "query": "clean up branches — there are about 20 old DL branches I want to delete if they're already merged",
+  "expected_behavior": [
+    "Invokes repo-cleanup",
+    "Runs git cherry main origin/<branch> for each ahead-of-main remote branch",
+    "When git cherry emits a '+' line, does NOT immediately classify the branch as unmerged",
+    "Greps main's log by the DL number AND by a key phrase from the commit subject to detect squash-merge with renumbering (real cases in this repo: DL-387→DL-343, DL-386→DL-387, DL-388→DL-389)",
+    "Only deletes a branch after confirming via cherry OR via main-log subject match",
+    "Stops and asks the user when a '+' commit has no semantic match in main"
+  ],
+  "should_NOT_trigger": false,
+  "_notes": "Edge case — the squash-merge + DL-renumber pattern that motivated this skill. Plain --merged check would miss these and leave branches piling up forever; plain --force delete would orphan genuine WIP. The skill must do both checks."
+}

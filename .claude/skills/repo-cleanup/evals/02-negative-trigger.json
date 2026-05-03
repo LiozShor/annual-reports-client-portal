@@ -1,0 +1,13 @@
+{
+  "$schema": "skill-eval/v1",
+  "name": "do-not-trigger-on-single-commit",
+  "skill": "repo-cleanup",
+  "query": "commit and push the changes I just made",
+  "expected_behavior": [
+    "Does NOT invoke repo-cleanup",
+    "Invokes git-ship instead (the sibling skill for single-commit/push flows)",
+    "Treats this as routine commit work, not periodic cleanup"
+  ],
+  "should_NOT_trigger": true,
+  "_notes": "Negative trigger — git-ship handles routine commits. repo-cleanup is for periodic batch deletes, not per-task commits. The two were explicitly disambiguated in the description sibling-skill clause."
+}

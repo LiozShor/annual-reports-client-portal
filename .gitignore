@@ -30,7 +30,8 @@ tmp/
 .claude/agents/
 .claude/plans/
 .claude/rules/
-.claude/skills/
+.claude/skills/*
+!.claude/skills/repo-cleanup/
 .claude/telemetry/
 .claude/worktrees/
 .claude/settings.local.json

@@ -1,0 +1,15 @@
+{
+  "$schema": "skill-eval/v1",
+  "name": "trigger-on-cleanup-phrase",
+  "skill": "repo-cleanup",
+  "query": "lets do cleanup",
+  "expected_behavior": [
+    "Invokes the repo-cleanup skill (not git-ship, not silent-failure-hunt)",
+    "Runs git status and git branch / git worktree list before proposing any deletion",
+    "Categorizes untracked files into junk / commit-worthy / PII",
+    "Waits for explicit user approval before deleting junk or staging commits",
+    "Uses git cherry + main-log grep when checking remote branches with ahead-of-main commits"
+  ],
+  "should_NOT_trigger": false,
+  "_notes": "Mirror of the real session that prompted this skill. Validates the primary trigger phrase and the three-phase gated workflow."
+}
