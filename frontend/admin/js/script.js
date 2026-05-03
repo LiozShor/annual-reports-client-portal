@@ -13917,13 +13917,12 @@ function openClientDetailModal(reportId, options) {
         // DL-366: optional auto-focus target ('email' | 'cc_email' | 'phone')
         focusField: opts.focusField,
         onSaved: (updated, prev) => {
-            // Optimistic update in clientsData
+            // DL-400: payload is a delta; skip undefined to preserve untouched fields.
             const client = clientsData.find(c => c.report_id === updated.reportId);
             if (client) {
-                client.name = updated.name;
-                client.email = updated.email;
-                client.cc_email = updated.cc_email;
-                client.phone = updated.phone;
+                for (const k of ['name', 'email', 'cc_email', 'phone']) {
+                    if (updated[k] !== undefined) client[k] = updated[k];
+                }
                 filterClients();
             }
             const changes = buildClientDetailChanges(updated, prev);

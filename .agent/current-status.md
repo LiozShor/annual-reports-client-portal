@@ -1,6 +1,22 @@
 # Annual Reports CRM - Current Status
 
-**Last Updated:** 2026-05-03 (DL-398 — COMPLETED, stat card percentages live on docs.moshe-atsits.com. DL-395 still open.)
+**Last Updated:** 2026-05-03 (DL-400 — IMPLEMENTED, NEED TESTING. Edit-client modal save no longer wipes untouched fields → row no longer disappears.)
+
+## OPEN: DL-400 — Edit-client modal row disappears on save
+
+DL: `.agent/design-logs/admin-ui/400-edit-client-modal-row-disappears-on-save.md`
+
+Open-test items from Section 7 (frontend-only; Pages auto-deploys on push):
+
+- [ ] Edit only `phone` on a real client → row stays visible, name/email/cc_email unchanged.
+- [ ] Edit only `name` → row stays visible, other fields preserved.
+- [ ] Edit only `email` → row stays visible, other fields preserved.
+- [ ] Edit only `cc_email` → row stays visible, other fields preserved.
+- [ ] Edit two fields at once → both update, row visible.
+- [ ] Active search term during save → row remains in filtered view if still matches.
+- [ ] Hard reload after save → values match Airtable (server write succeeded).
+- [ ] Cancel button → no change to local state.
+- [ ] Hard-refresh → confirm `script.js?v=407` is served.
 
 ## Recent (last 7 days)
 
