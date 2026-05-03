@@ -16,7 +16,7 @@ import type { Env } from '../lib/types';
 import { verifyToken } from '../lib/token';
 import { AirtableClient } from '../lib/airtable';
 import { logEvent } from '../lib/activity-logger';
-import { maskEmail, hashPhone } from '../lib/pii';
+import { maskEmail } from '../lib/pii';
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -211,14 +211,13 @@ adminDevActivity.post('/admin-clients-lookup', async (c) => {
   const airtable = new AirtableClient(c.env.AIRTABLE_BASE_ID, c.env.AIRTABLE_PAT);
   const clients: Record<string, { name: string; email_masked: string; phone_hash: string }> = {};
 
-  const buildClient = async (fields: Record<string, unknown>) => {
+  const buildClient = (fields: Record<string, unknown>) => {
     const name = getField(fields.client_name) || '';
     const email = getField(fields.client_email) || '';
-    const phone = getField(fields.client_phone) || '';
     return {
       name: String(name),
       email_masked: maskEmail(String(email)),
-      phone_hash: phone ? await hashPhone(String(phone)) : '',
+      phone_hash: '',
     };
   };
 
@@ -226,10 +225,10 @@ adminDevActivity.post('/admin-clients-lookup', async (c) => {
     const fieldMap = await airtable.batchGetRecords<Record<string, unknown>>(
       REPORTS_TABLE,
       recIds,
-      ['client_name', 'client_email', 'client_phone']
+      ['client_name', 'client_email']
     );
     for (const [id, fields] of fieldMap.entries()) {
-      clients[id] = await buildClient(fields);
+      clients[id] = buildClient(fields);
     }
   }
 
@@ -241,11 +240,11 @@ adminDevActivity.post('/admin-clients-lookup', async (c) => {
       const formula = chunk.length === 1 ? orParts : `OR(${orParts})`;
       const records = await airtable.listAllRecords<Record<string, unknown>>(REPORTS_TABLE, {
         filterByFormula: formula,
-        fields: ['client_id', 'client_name', 'client_email', 'client_phone'],
+        fields: ['client_id', 'client_name', 'client_email'],
       });
       for (const r of records) {
         const cpa = String(getField(r.fields.client_id) || '').toUpperCase();
-        if (cpa) clients[cpa] = await buildClient(r.fields);
+        if (cpa) clients[cpa] = buildClient(r.fields);
       }
     }
     // Also populate the original-case keys the viewer asked for, so Map.get() hits.
