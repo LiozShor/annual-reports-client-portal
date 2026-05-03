@@ -1,0 +1,21 @@
+{
+  "$schema": "skill-eval/v1",
+  "name": "edge-case-focus-arg-and-allowlist",
+  "skill": "security-deep-audit",
+  "query": "/security-deep-audit github-only — and skip anything we've already allowlisted in .agent/audits/false-positive-allowlist.yaml.",
+  "files": [
+    ".agent/audits/false-positive-allowlist.yaml"
+  ],
+  "expected_behavior": [
+    "Parses focus=github-only and runs ONLY category 5 (GitHub posture).",
+    "Skips categories 1, 2, 3, 4, 6, 7, 8, 9, 10 entirely (no subagent spawned for them).",
+    "Pre-flight skips wrangler / n8n-script checks since they are irrelevant to github-only.",
+    "Loads .agent/audits/false-positive-allowlist.yaml and suppresses any matching evidence_hash.",
+    "Suppressed findings appear in § 5 of the report (Suppressed by allowlist), NOT in § 1 (Findings prioritized).",
+    "Final chat summary mentions 'Categories run: 1/10' and lists the skipped categories.",
+    "Allowlist suppression count appears in the summary line.",
+    "Runtime estimate is well under 15 min (just one category) — no confirmation prompt needed."
+  ],
+  "should_NOT_trigger": false,
+  "_notes": "Edge case combining the focus arg AND the false-positive feedback loop. Both features must work together. Tests that the orchestrator respects scope, doesn't waste subagent budget on irrelevant categories, and threads the allowlist through render-report.sh correctly."
+}

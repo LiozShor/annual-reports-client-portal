@@ -1,0 +1,21 @@
+{
+  "$schema": "skill-eval/v1",
+  "name": "positive-full-audit-request",
+  "skill": "security-deep-audit",
+  "query": "Run a deep security audit on my system — find every loose end, exposed credential, and document leak. Use brightdata or tech-researcher if you need to verify anything externally.",
+  "files": [],
+  "expected_behavior": [
+    "Invokes the security-deep-audit skill (does not improvise its own audit script).",
+    "Runs scripts/preflight.sh first and stops if exit code != 0.",
+    "Loads references/category-checks.md before fan-out.",
+    "Spawns Agent subagents for the 10 categories in parallel (one Agent invocation per category).",
+    "Never prints actual secret values in chat — only SHA-256 hashes or file:line references.",
+    "Writes the full report to .agent/audits/security-deep-audit-YYYY-MM-DD.md following assets/report-template.md.",
+    "Appends one summary line to .agent/current-status.md with Edit (not Write).",
+    "Final chat output includes the report path, the count of CRITICAL+HIGH findings, the time-bombs count, and the manual-checks count.",
+    "Does NOT auto-execute any recommended_action even if it looks safe.",
+    "Final output explicitly states the skill is read-only."
+  ],
+  "should_NOT_trigger": false,
+  "_notes": "Canonical positive trigger. The user's phrasing (deep + every loose end + exposed credential + document leak) hits multiple trigger keywords from SKILL.md."
+}

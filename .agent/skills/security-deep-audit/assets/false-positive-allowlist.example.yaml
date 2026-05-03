@@ -1,0 +1,48 @@
+# False-positive allowlist for /security-deep-audit
+#
+# Each entry suppresses one finding by hash. Hashes are stable across runs;
+# new context generates a new hash so this only suppresses the exact same
+# finding shape.
+#
+# Schema:
+#   - evidence_hash: <required, sha256:... 12-char prefix from severity-rubric.md>
+#     category: <required, one of: 1-public-repo, 2-pii, 3-n8n, 4-cloudflare,
+#               5-github, 6-local, 7-saas, 8-auth, 9-time-bombs, 10-dual-use>
+#     reason: <required, free text — why this is not actually a problem>
+#     allowlisted_by: <required, "lioz" or whoever>
+#     date: <required, ISO YYYY-MM-DD>
+#     expires_at: <optional, ISO YYYY-MM-DD — render-report.sh warns when past>
+#
+# Copy this file to .agent/audits/false-positive-allowlist.yaml to start using it.
+
+entries:
+
+  # Example 1: known hardcoded constant we've decided to keep
+  - evidence_hash: "loc:sha256:3f9b2a1c4d7e"
+    category: "10-dual-use"
+    reason: "DRIVE_ID is an opaque OneDrive identifier, not a credential. Discussed 2026-05-02; acceptable to keep hardcoded."
+    allowlisted_by: "lioz"
+    date: "2026-05-02"
+    # No expires_at — permanent decision.
+
+  # Example 2: a phone number that's intentionally public
+  - evidence_hash: "sha256:8e1f6c9a2b3d"
+    category: "2-pii"
+    reason: "Office WhatsApp number +972779928421 — published contact, embedded in client emails by design."
+    allowlisted_by: "lioz"
+    date: "2026-05-02"
+
+  # Example 3: time-limited suppression — re-evaluate after the quiet period
+  - evidence_hash: "sha256:d4c5b6a7e8f9"
+    category: "9-time-bombs"
+    reason: "DL-XXX deferred until after Q3 reporting period ends. Re-check then."
+    allowlisted_by: "lioz"
+    date: "2026-05-02"
+    expires_at: "2026-09-30"
+
+  # Example 4: regression test fixture (don't fire on intentional fakes)
+  - evidence_hash: "sha256:1a2b3c4d5e6f"
+    category: "1-public-repo"
+    reason: "gitleaks regression test fixture — fragments at .claude/hooks/test-fixtures/gitleaks-allowlist-bypass.md. Synthetic, never a live token."
+    allowlisted_by: "lioz"
+    date: "2026-05-02"

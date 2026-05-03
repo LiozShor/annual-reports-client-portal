@@ -1,0 +1,15 @@
+{
+  "$schema": "skill-eval/v1",
+  "name": "negative-silent-failure-bug",
+  "skill": "security-deep-audit",
+  "query": "I sent 30 reminder emails this morning but only 22 clients got them and there's no error in the logs. Audit the workflow and find where they're being silently dropped.",
+  "files": [],
+  "expected_behavior": [
+    "Does NOT invoke security-deep-audit (this is a workflow-correctness / silent-drop bug, not a security/leakage audit).",
+    "Routes to silent-failure-hunt skill instead, OR does direct n8n workflow + Worker route inspection.",
+    "Recognizes the keyword 'audit' alone is not a trigger — must be a security/leak/exposure scope.",
+    "If the agent does invoke security-deep-audit incorrectly, the eval fails."
+  ],
+  "should_NOT_trigger": true,
+  "_notes": "The word 'audit' shows up but the actual scope is silent-drop debugging. SKILL.md explicitly names silent-failure-hunt as the correct sibling for this case."
+}
