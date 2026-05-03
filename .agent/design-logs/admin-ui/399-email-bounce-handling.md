@@ -1,5 +1,5 @@
 # Design Log 399: Email Bounce / NDR Handling
-**Status:** [IMPLEMENTED — NEED TESTING]
+**Status:** [COMPLETED — 2026-05-03]
 **Date:** 2026-05-03
 **Related Logs:** None directly. Adjacent: DL-365 (activity-logger — used for bounce events), DL-264/389 (email-send paths whose bounces we now intercept), DL-127 (email design palette reused for warning badge).
 
