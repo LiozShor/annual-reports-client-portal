@@ -192,8 +192,10 @@ adminDevActivity.post('/admin-clients-lookup', async (c) => {
     return c.json({ ok: true, clients: {} });
   }
 
-  const safeIds = ids.filter((id): id is string => typeof id === 'string' && /^rec[A-Za-z0-9]+$/.test(id)).slice(0, 200);
-  if (safeIds.length === 0) return c.json({ ok: true, clients: {} });
+  const stringIds = ids.filter((id): id is string => typeof id === 'string').slice(0, 200);
+  const recIds = stringIds.filter(id => /^rec[A-Za-z0-9]+$/.test(id));
+  const cpaIds = stringIds.filter(id => /^CPA-\d+$/i.test(id));
+  if (recIds.length === 0 && cpaIds.length === 0) return c.json({ ok: true, clients: {} });
 
   const actorIp = c.req.header('CF-Connecting-IP') ?? undefined;
   logEvent({
@@ -203,26 +205,54 @@ adminDevActivity.post('/admin-clients-lookup', async (c) => {
     actor: 'admin',
     actor_ip: actorIp,
     endpoint: 'POST /webhook/admin-clients-lookup',
-    details: { count: safeIds.length },
+    details: { rec_count: recIds.length, cpa_count: cpaIds.length },
   });
 
   const airtable = new AirtableClient(c.env.AIRTABLE_BASE_ID, c.env.AIRTABLE_PAT);
-  const fieldMap = await airtable.batchGetRecords<Record<string, unknown>>(
-    REPORTS_TABLE,
-    safeIds,
-    ['client_name', 'client_email', 'client_phone']
-  );
-
   const clients: Record<string, { name: string; email_masked: string; phone_hash: string }> = {};
-  for (const [id, fields] of fieldMap.entries()) {
+
+  const buildClient = async (fields: Record<string, unknown>) => {
     const name = getField(fields.client_name) || '';
     const email = getField(fields.client_email) || '';
     const phone = getField(fields.client_phone) || '';
-    clients[id] = {
+    return {
       name: String(name),
       email_masked: maskEmail(String(email)),
       phone_hash: phone ? await hashPhone(String(phone)) : '',
     };
+  };
+
+  if (recIds.length > 0) {
+    const fieldMap = await airtable.batchGetRecords<Record<string, unknown>>(
+      REPORTS_TABLE,
+      recIds,
+      ['client_name', 'client_email', 'client_phone']
+    );
+    for (const [id, fields] of fieldMap.entries()) {
+      clients[id] = await buildClient(fields);
+    }
+  }
+
+  if (cpaIds.length > 0) {
+    const unique = [...new Set(cpaIds.map(id => id.toUpperCase()))];
+    for (let i = 0; i < unique.length; i += 10) {
+      const chunk = unique.slice(i, i + 10);
+      const orParts = chunk.map(id => `UPPER({client_id})='${id.replace(/'/g, "\\'")}'`).join(', ');
+      const formula = chunk.length === 1 ? orParts : `OR(${orParts})`;
+      const records = await airtable.listAllRecords<Record<string, unknown>>(REPORTS_TABLE, {
+        filterByFormula: formula,
+        fields: ['client_id', 'client_name', 'client_email', 'client_phone'],
+      });
+      for (const r of records) {
+        const cpa = String(getField(r.fields.client_id) || '').toUpperCase();
+        if (cpa) clients[cpa] = await buildClient(r.fields);
+      }
+    }
+    // Also populate the original-case keys the viewer asked for, so Map.get() hits.
+    for (const original of cpaIds) {
+      const upper = original.toUpperCase();
+      if (clients[upper] && !clients[original]) clients[original] = clients[upper];
+    }
   }
 
   return c.json({ ok: true, clients });
