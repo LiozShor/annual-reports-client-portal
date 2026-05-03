@@ -64,6 +64,10 @@ paths = [
   # The baseline file itself contains the test-fixture leak hash — would
   # double-count if scanned. Baseline scope already excludes via --baseline-path.
   '''^\.gitleaks-baseline\.json$''',
+  # The credential-drift audit script intentionally hardcodes OLD revoked
+  # secret values for negative tests (verifying providers reject them). The
+  # values are dead, this script is the canonical source for them.
+  '''^scripts/audit-n8n-credentials\.sh$''',
 ]
 # NOTE: `.claude/hooks/test-fixtures/` contains intentional fake-leak shapes for
 # regression-testing the config. Suppressing it via path here would also suppress

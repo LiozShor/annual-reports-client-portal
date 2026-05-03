@@ -98,3 +98,6 @@ CODEX.md
 
 # Wrangler dryrun artifacts
 api/.dryrun-cors-preview/
+
+# Added by ggshield
+.cache_ggshield

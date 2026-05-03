@@ -1,0 +1,13 @@
+version: 2
+
+secret:
+  # Paths whose contents are intentionally hardcoded dead/revoked secrets and
+  # should not block pre-commit. Keep this list narrow.
+  ignored_paths:
+    # Layer 9 audit script — runs negative tests against OLD revoked credentials
+    # (rotated 2026-05-02) to verify the providers reject them. The values are
+    # confirmed dead via the same script's verification.
+    - "scripts/audit-n8n-credentials.sh"
+    # Regression test fixture — split fragments, no detectable leak when scanned
+    # individually but ggshield may still flag the prefix shape.
+    - ".claude/hooks/test-fixtures/gitleaks-allowlist-bypass.md"
