@@ -39,3 +39,12 @@ jobs:
       - name: Wrangler dry-run
         working-directory: api
         run: npx wrangler deploy --dry-run --outdir=/tmp/dist
+
+  size-ratchet:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2  # need HEAD~1 for baseline-bump comparison
+      - name: Run size-ratchet
+        run: python3 .claude/hooks/script-size-ratchet.py

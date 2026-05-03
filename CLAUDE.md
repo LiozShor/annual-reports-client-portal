@@ -34,6 +34,31 @@ Expert n8n automation architect using **n8n-MCP tools** for **Moshe Atsits CPA F
 
 ---
 
+## Monolith Size Ratchet (HARD RULE)
+
+`frontend/admin/js/script.js` and `frontend/admin/js/chatbot.js` are on a one-way
+size ratchet enforced by `.claude/hooks/script-size-ratchet.py` (pre-commit) and
+the `size-ratchet` job in `.github/workflows/check.yml` (CI).
+
+**The baseline in `.claude/script-size-baseline.json` is APPEND-ONLY-DOWN.** It
+can only shrink. There is **no override**. The ratchet hook actively rejects
+any commit that bumps a baseline number upward.
+
+### When the ratchet blocks you
+
+- Do **NOT** edit `.claude/script-size-baseline.json` to make the error go away.
+- Do **NOT** ask the user "can I raise the limit?" — that option does not exist.
+- The fix is one of:
+  1. Extract the new code into `frontend/admin/js/modules/<feature>.js` and
+     `import` it from the monolith. See `frontend/admin/js/modules/README.md`.
+  2. Build the feature as a React island under `frontend/admin/react/`.
+  3. Delete unused code from the monolith first to free up the budget.
+- If none of these are possible, **STOP** and report the situation to the user
+  factually — do not propose a baseline bump as the solution.
+
+Bump `?v=NNN` in `frontend/admin/index.html` after touching any admin JS file
+so browsers don't serve a stale cached module.
+
 ## Duplicate-Path Audit (P1 / AUDIT-2026-05-02)
 
 When fixing a UI / render / formatting / state bug, **before patching**:
