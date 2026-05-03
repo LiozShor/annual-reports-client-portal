@@ -60,3 +60,9 @@ Still need Worker secrets: `DEV_PASSWORD`, `PII_HASH_KEY` (`wrangler secret put`
 ## OPEN: W02 regression — wrangler deploy script missing `-c wrangler.toml`
 
 `api/package.json` deploy script needs `-c wrangler.toml` flag so `check-regressions.sh` W02 case passes honestly.
+
+---
+
+## 2026-05-03 — Security deep audit run
+
+10/10 categories ran. 0 CRITICAL, 10 HIGH, 7 MEDIUM, 6 LOW, 20 INFO. 1 time-bomb (≤7d: MS Graph subscription expiring 2026-05-05), 7 manual UI checks. Report: `.agent/audits/security-deep-audit-2026-05-03.md`.
