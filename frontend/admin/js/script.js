@@ -3405,7 +3405,7 @@ function renderReviewTable(queue) {
 
     html += cards + '</div>';
     container.innerHTML = html;
-    renderPagination('reviewPagination', totalItems, _reviewPage, PAGE_SIZE, goToReviewPage);
+    renderPagination('reviewPagination', totalItems, reviewState.page, PAGE_SIZE, goToReviewPage);
     safeCreateIcons();
 }
 
