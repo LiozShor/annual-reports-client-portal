@@ -54,13 +54,31 @@ dashboard.get('/admin-dashboard', async (c) => {
     getCachedOrFetch(c.env.CACHE_KV, 'cache:available_years', 3600, () =>
       airtable.listAllRecords('tbls7m3hmHC4hhQVy', { fields: ['year'] })
     ),
-    airtable.listAllRecords('tblFFttFScDRZ7Ah5', { fields: ['cc_email'] }),
+    airtable.listAllRecords('tblFFttFScDRZ7Ah5', {
+      fields: ['cc_email', 'email_bounced', 'last_bounced_email', 'email_bounce_reason', 'email_bounce_at'],
+    }),
   ]);
 
   const ccEmailByClientId = new Map<string, string>();
+  const bounceByClientId = new Map<string, {
+    email_bounced: boolean;
+    last_bounced_email: string;
+    email_bounce_reason: string;
+    email_bounce_at: string;
+  }>();
   for (const cr of clientsCcRecords) {
     const cc = (cr.fields.cc_email as string | undefined) || '';
     if (cc) ccEmailByClientId.set(cr.id, cc);
+    const bounced = cr.fields.email_bounced === true;
+    const last = (cr.fields.last_bounced_email as string | undefined) || '';
+    if (bounced || last) {
+      bounceByClientId.set(cr.id, {
+        email_bounced: bounced,
+        last_bounced_email: last,
+        email_bounce_reason: (cr.fields.email_bounce_reason as string | undefined) || '',
+        email_bounce_at: (cr.fields.email_bounce_at as string | undefined) || '',
+      });
+    }
   }
 
   // Distinct years
@@ -103,6 +121,7 @@ dashboard.get('/admin-dashboard', async (c) => {
     const clientLink = f.client;
     const clientRecId = Array.isArray(clientLink) ? String(clientLink[0] ?? '') : '';
     const ccEmail = clientRecId ? (ccEmailByClientId.get(clientRecId) || '') : '';
+    const bounce = clientRecId ? bounceByClientId.get(clientRecId) : undefined;
 
     clients.push({
       report_id: report.id,
@@ -110,6 +129,10 @@ dashboard.get('/admin-dashboard', async (c) => {
       name: getField(f.client_name) || 'Unknown',
       email: getField(f.client_email) || '',
       cc_email: ccEmail,
+      email_bounced: bounce?.email_bounced === true,
+      last_bounced_email: bounce?.last_bounced_email || '',
+      email_bounce_reason: bounce?.email_bounce_reason || '',
+      email_bounce_at: bounce?.email_bounce_at || '',
       year: f.year,
       stage,
       docs_received: parseInt(String(f.docs_received_count)) || 0,
