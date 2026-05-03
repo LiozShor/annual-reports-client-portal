@@ -3461,52 +3461,86 @@ tr:hover .client-view-link {
     margin-top: 0; /* gap handles spacing */
 }
 
-/* DL-396: Group-by-client wrapper for multi-message clients in the dashboard panel.
+/* DL-396 + follow-up: Group-by-client wrapper for multi-message clients in the dashboard panel.
+   Pattern: iOS WWDC18 grouped notifications (latest + meta in header, older behind toggle)
+   crossed with PatternFly notification drawer (group header IS the action surface).
    Single-message groups bypass this and render the bare .msg-row (zero visual delta). */
 .msg-group {
     border-bottom: 1px solid var(--gray-100);
+    position: relative;
 }
 .msg-group:last-child {
     border-bottom: none;
 }
+/* Stack-peek ghost (iOS): hints "more under here" when collapsed.
+   Hidden on hover (header takes over) and when expanded. */
+.msg-group::before {
+    content: '';
+    position: absolute;
+    inset: 4px 4px auto 4px;
+    height: 6px;
+    background: var(--gray-50);
+    border: 1px solid var(--gray-100);
+    border-radius: var(--radius-md);
+    transform: translateY(-3px) scaleX(0.94);
+    z-index: 0;
+    pointer-events: none;
+    transition: opacity 0.15s;
+}
+.msg-group.expanded::before,
+.msg-group:hover::before {
+    opacity: 0;
+}
 .msg-group-header {
-    cursor: pointer;
+    position: relative;
+    z-index: 1;
     padding: var(--sp-3);
     border-radius: var(--radius-md);
     transition: background 0.15s;
+    background: #fff;
 }
 .msg-group-header:hover {
     background: var(--gray-50);
 }
-.msg-group-header-line {
+.msg-group-header-row {
     display: flex;
     align-items: center;
     gap: var(--sp-2);
-    flex-wrap: wrap;
+    cursor: pointer;
 }
-.msg-group-header-line .msg-client {
-    font-weight: 600;
+.msg-group-header-row .msg-client {
+    font-weight: 700;
     color: var(--gray-800);
+    font-size: 0.92rem;
 }
-.msg-group-header-line .msg-date {
-    margin-inline-start: auto; /* push date to the far edge in RTL */
-    font-size: 0.75rem;
+.msg-group-header-row .msg-date {
+    font-size: 0.72rem;
     color: var(--gray-500);
+    font-weight: 400;
+    margin-inline-start: auto;
 }
+/* Counter pill: soft, low-attention (Smashing 2025 — counters are low-attention UI). */
 .msg-group-counter {
-    background: var(--gray-100);
-    color: var(--gray-700);
-    font-size: 0.7rem;
-    font-weight: 600;
-    padding: 2px 8px;
+    background: transparent;
+    color: var(--gray-500);
+    font-size: 0.65rem;
+    font-weight: 500;
+    padding: 1px 7px;
     border-radius: 999px;
-    line-height: 1.4;
+    border: 1px solid var(--gray-200);
+    line-height: 1.5;
+    white-space: nowrap;
 }
+/* Chevron: trailing edge, larger, hover cues expandability (LogRocket accordion best practices). */
 .msg-group-chevron {
     display: inline-flex;
     align-items: center;
-    color: var(--gray-500);
-    transition: transform 0.18s ease;
+    color: var(--gray-400);
+    transition: transform 0.2s ease, color 0.15s;
+    margin-inline-start: var(--sp-1);
+}
+.msg-group-header:hover .msg-group-chevron {
+    color: var(--brand-500, #3b82f6);
 }
 .msg-group.expanded .msg-group-chevron {
     transform: rotate(180deg);
@@ -3515,27 +3549,51 @@ tr:hover .client-view-link {
     margin-top: var(--sp-1);
     color: var(--gray-600);
     font-size: 0.85rem;
+    cursor: pointer;
     overflow: hidden;
     text-overflow: ellipsis;
     display: -webkit-box;
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
 }
+/* Header-level actions (group ✓ all + reply latest + open doc-manager).
+   Pattern: PatternFly notification drawer — group header IS the action surface. */
+.msg-group-actions {
+    display: flex;
+    gap: var(--sp-1);
+    margin-top: var(--sp-2);
+    justify-content: flex-end;
+}
 .msg-group-older {
     display: none;
     padding-inline-start: var(--sp-3);
-    border-inline-start: 2px solid var(--gray-200);
-    margin-inline-start: var(--sp-3);
-    margin-top: var(--sp-2);
+    border-inline-start: 1px solid var(--gray-100);
+    margin-inline-start: var(--sp-4);
+    margin-top: var(--sp-1);
+    margin-bottom: var(--sp-2);
 }
 .msg-group.expanded .msg-group-older {
     display: block;
 }
+/* Older rows: dimmer, smaller, tighter — clear visual hierarchy below the parent.
+   Client name hidden (parent header already says it). */
 .msg-group-older .msg-row {
     border-bottom: 1px dashed var(--gray-100);
+    padding: var(--sp-2) var(--sp-2);
+    opacity: 0.85;
 }
 .msg-group-older .msg-row:last-child {
     border-bottom: none;
+}
+.msg-group-older .msg-client {
+    display: none;
+}
+.msg-group-older .msg-summary {
+    font-size: 0.78rem;
+    color: var(--gray-600);
+}
+.msg-group-older .msg-date {
+    font-size: 0.7rem;
 }
 
 /* DL-288: Gmail-style expand button on reply textarea */

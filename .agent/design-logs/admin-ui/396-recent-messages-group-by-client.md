@@ -96,6 +96,21 @@ Frontend-only `renderMessages()` rewrite. Bucket `_allMessages` by composite cli
 - [ ] Mobile (<900px): groups still readable; counter and chevron don't wrap awkwardly.
 - [ ] No console errors; no orphan Lucide warnings; cache-bust v=401 reflected in DevTools.
 
+## 9. Follow-up — UX/UI Redesign (2026-05-03, branch `DL-396-followup-ux-redesign`)
+
+Live screenshot after first ship surfaced UX issues. Commissioned `/tech-researcher` for primary-source patterns (PatternFly notification-drawer, iOS WWDC18 grouped notifications, LogRocket accordion guide, Smashing 2025 notifications UX). Six principles applied:
+
+1. **Killed snippet duplication.** Latest message's snippet sits in the header preview only — `_renderMessageRowHtml` loop now iterates `g.messages.slice(1)` so the expanded body shows ONLY older messages. iOS pattern: "most recent + summary, expanded shows the rest."
+2. **Group header is now the action surface** (PatternFly). Header has 3 buttons: reply-to-latest (`💬`), open-doc-manager (`📁`), mark-all-handled (`✓`). New `markGroupHandled(clientKey)` runs `Promise.all` of the existing `delete-client-note` action across every note in the bucket — hide-all in one click.
+3. **Visual hierarchy.** Client name `font-weight: 700, 0.92rem` in header; older rows hide `.msg-client` entirely (parent already says it), dim `opacity: 0.85`, tighter padding, smaller fonts. Border-inline-start softened from `2px solid gray-200` to `1px solid gray-100`.
+4. **Counter is "low-attention" UI** (Smashing). Pill: transparent bg, gray-500 text, `0.65rem`, light border. Sits between client name and date, doesn't compete.
+5. **Chevron at trailing edge, larger, hover-tinted brand-blue** (LogRocket accordion best practices). `icon-sm` not `icon-xs`. 180deg rotation on expand.
+6. **iOS stack-peek ghost.** `.msg-group::before` renders a faint 6px-tall ghost row offset behind the header, hidden on hover and when expanded — visual hint that more is stacked under the top message.
+
+Note: principle #2 (group-level ✓) intentionally **overrides** Q4 of original requirements. Tech-researcher's primary-source review (PatternFly + Linear precedent) showed the no-group-✓ choice was a friction tax; user approved override on the redesign go-ahead.
+
+Cache-bust v=401 → v=402.
+
 ## 8. Implementation Notes (Post-Code)
 
 - **Row markup extracted** to `_renderMessageRowHtml(m)` so single-message groups (zero visual delta), expanded-group children, and DL-289 ✓/reply/folder action buttons all reuse the *same* HTML — no risk of drift between today's row and the new nested row.

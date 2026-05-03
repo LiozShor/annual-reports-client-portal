@@ -1,6 +1,23 @@
 # Annual Reports CRM - Current Status
 
-**Last Updated:** 2026-05-03 (DL-396 — IMPLEMENTED, NEED TESTING. Dashboard "הודעות אחרונות מלקוחות" panel now groups multiple emails from the same client into one collapsible card. DL-395 still open.)
+**Last Updated:** 2026-05-03 (DL-396 follow-up redesign — IMPLEMENTED, NEED TESTING. Dashboard recent-messages group cards rebuilt around iOS/PatternFly patterns: latest snippet only in header, group-level ✓/💬/📁 actions, dimmer older rows, soft counter pill, stack-peek ghost. Cache v=401→402. DL-395 still open.)
+
+## OPEN: DL-396 follow-up — Group card UX redesign
+
+DL: `.agent/design-logs/admin-ui/396-recent-messages-group-by-client.md` (Section 9)
+
+Open-test items (deploy Pages first, then verify on live admin):
+
+- [ ] Multi-message group: header shows client name + counter pill + relative time + chevron (icon-sm, trailing edge); preview snippet below; 3 action buttons (reply, open doc-manager, ✓ all) at the bottom of header.
+- [ ] Click chevron / header / preview → expands; expanded body shows ONLY older messages (latest is NOT duplicated).
+- [ ] Older rows have no client name, dimmer text (opacity 0.85), smaller font, tighter padding, dashed separator.
+- [ ] Click ✓-all on header → entire group fades out; toast "סומן כטופל (N)"; all N messages hidden server-side; no group-level ✓ regression for already-handled rows.
+- [ ] Click 💬 on header → reply input opens against the LATEST message of the group.
+- [ ] Click 📁 on header → opens client's doc-manager in new tab.
+- [ ] Per-message ✓/💬/📁 inside the older rows still work; click ✓ on an older row → row fades, group stays expanded, counter decrements on re-render.
+- [ ] Stack-peek ghost: faint shadow visible behind collapsed multi-message group; disappears on hover and when expanded.
+- [ ] Single-message clients: render unchanged (zero visual delta vs first ship).
+- [ ] Hard-refresh — `script.js?v=402` served.
 
 ## OPEN: DL-396 — Recent messages group-by-client
 

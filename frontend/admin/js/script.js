@@ -1147,7 +1147,7 @@ function _renderMessageRowHtml(m) {
 
 // DL-396: Toggle a client-group's expanded state and persist across re-renders.
 function toggleGroup(headerEl) {
-    const groupEl = headerEl.parentElement;
+    const groupEl = headerEl.closest('.msg-group');
     if (!groupEl) return;
     const key = groupEl.getAttribute('data-client-key') || '';
     if (groupEl.classList.contains('expanded')) {
@@ -1156,6 +1156,36 @@ function toggleGroup(headerEl) {
     } else {
         groupEl.classList.add('expanded');
         _expandedClients.add(key);
+    }
+}
+
+// DL-396 follow-up: Mark every message in a client group as handled (one click → all hidden).
+async function markGroupHandled(clientKey) {
+    const targets = _allMessages.filter(m => `${m.client_name || ''}|${m.client_id || ''}` === clientKey);
+    if (targets.length === 0) return;
+    const groupEl = document.querySelector(`.msg-group[data-client-key="${CSS.escape(clientKey)}"]`);
+    if (groupEl) {
+        groupEl.style.transition = 'opacity 0.3s, max-height 0.3s';
+        groupEl.style.opacity = '0';
+        groupEl.style.maxHeight = '0';
+        groupEl.style.overflow = 'hidden';
+    }
+    try {
+        const results = await Promise.all(targets.map(m =>
+            fetchWithTimeout(ENDPOINTS.ADMIN_UPDATE_CLIENT, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
+                body: JSON.stringify({ token: authToken, report_id: m.report_id, action: 'delete-client-note', note_id: m.id, mode: 'hide' })
+            }).then(r => r.json())
+        ));
+        const handledIds = new Set(targets.filter((_, i) => results[i] && results[i].ok).map(m => m.id));
+        _allMessages = _allMessages.filter(m => !handledIds.has(m.id));
+        _expandedClients.delete(clientKey);
+        setTimeout(() => renderMessages(), 300);
+        showAIToast(`סומן כטופל (${handledIds.size})`, 'success');
+    } catch (err) {
+        showAIToast('שגיאה: ' + (err.message || 'Unknown error'), 'error');
+        renderMessages();
     }
 }
 
@@ -1200,20 +1230,32 @@ function renderMessages() {
         if (g.messages.length === 1) {
             return _renderMessageRowHtml(g.messages[0]);
         }
-        // Multi-message group → wrapper with header (preview) + collapsible body containing all rows.
+        // Multi-message group: header shows latest snippet + group-level actions; expanded body
+        // shows only the OLDER messages (latest is already represented in the header).
+        // Pattern: iOS WWDC18 grouped notifications + PatternFly notification drawer.
         const latest = g.messages[0];
+        const older = g.messages.slice(1);
         const previewText = latest.raw_snippet || latest.summary || '';
         const isExpanded = _expandedClients.has(g.key);
-        const childrenHtml = g.messages.map(m => _renderMessageRowHtml(m)).join('');
-        return `<div class="msg-group${isExpanded ? ' expanded' : ''}" data-client-key="${escapeAttr(g.key)}">
-            <div class="msg-group-header" onclick="toggleGroup(this)">
-                <div class="msg-group-header-line">
-                    <span class="msg-group-chevron">${icon('chevron-down', 'icon-xs')}</span>
+        const latestNoteId = escapeHtml(latest.id || '');
+        const latestReportId = escapeHtml(latest.report_id || '');
+        const navParam = latest.client_id ? `client_id=${encodeURIComponent(latest.client_id)}` : `report_id=${encodeURIComponent(latest.report_id)}`;
+        const groupKeyAttr = escapeAttr(g.key);
+        const childrenHtml = older.map(m => _renderMessageRowHtml(m)).join('');
+        return `<div class="msg-group${isExpanded ? ' expanded' : ''}" data-client-key="${groupKeyAttr}">
+            <div class="msg-group-header">
+                <div class="msg-group-header-row" onclick="toggleGroup(this)">
                     <span class="msg-client">${escapeHtml(g.client_name || '')}</span>
                     <span class="msg-group-counter">${g.messages.length} הודעות</span>
                     <span class="msg-date">${formatRelativeTime(latest.date)}</span>
+                    <span class="msg-group-chevron">${icon('chevron-down', 'icon-sm')}</span>
                 </div>
-                <div class="msg-group-preview">"${escapeHtml(previewText)}"</div>
+                <div class="msg-group-preview" onclick="toggleGroup(this)">"${escapeHtml(previewText)}"</div>
+                <div class="msg-group-actions">
+                    <button class="msg-action-btn" title="השב להודעה האחרונה" onclick="event.stopPropagation(); showReplyInput('${latestNoteId}', '${latestReportId}')">${icon('message-square', 'icon-xs')}</button>
+                    <button class="msg-action-btn" title="פתח בניהול מסמכים" onclick="event.stopPropagation(); window.open('../document-manager.html?${navParam}', '_blank')">${icon('folder-open', 'icon-xs')}</button>
+                    <button class="msg-action-btn msg-action-btn--success" title="סמן את כל ההודעות כטופלו" onclick="event.stopPropagation(); markGroupHandled('${groupKeyAttr}')">${icon('check', 'icon-sm')}</button>
+                </div>
             </div>
             <div class="msg-group-older">${childrenHtml}</div>
         </div>`;
