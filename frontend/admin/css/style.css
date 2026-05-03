@@ -209,7 +209,7 @@ body {
     box-shadow: var(--shadow-md);
 }
 
-.stat-card.stage-1 { border-inline-start-color: var(--gray-400); }
+.stat-card.stage-1 { border-inline-start-color: #F59E0B; }
 .stat-card.stage-2 { border-inline-start-color: var(--warning-500); }
 .stat-card.stage-3 { border-inline-start-color: #F59E0B; }
 .stat-card.stage-4 { border-inline-start-color: var(--info-500); }

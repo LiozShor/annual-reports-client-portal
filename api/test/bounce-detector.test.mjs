@@ -46,3 +46,41 @@ test('Fixture C — Hebrew out-of-office must NOT trigger', () => {
   );
   assert.equal(result, null);
 });
+
+test('Fixture D — Outlook MicrosoftExchange NDR with Hebrew prefix on subject (real DL-399 incident)', () => {
+  const result = detectBounce(
+    '‏‏לא ניתן למסירה: Undeliverable: שאלון — דוח שנתי 2025 | ליעוז שור',
+    'microsoftexchange329e71ec88ae4615bbc36ab6ce41109e@mosheatsits.onmicrosoft.com',
+    [
+      "Your message wasn't delivered to nonexistent-dl399@example.invalid because the address couldn't be found",
+      'or the domain does not exist.',
+      'Original sender: reports@moshe-atsits.co.il',
+      'Recipient: nonexistent-dl399@example.invalid',
+    ].join('\n'),
+  );
+  assert.equal(result?.failedRecipient, 'nonexistent-dl399@example.invalid');
+  assert.equal(result?.isHard, true);
+});
+
+test('Fixture E — sender-only (no subject match) still detects when body has clear NDR markers', () => {
+  const result = detectBounce(
+    'שאלון — דוח שנתי 2025',
+    'postmaster@moshe-atsits.co.il',
+    'Recipient: bad@example.invalid\ndomain does not exist',
+  );
+  assert.equal(result?.failedRecipient, 'bad@example.invalid');
+  assert.equal(result?.reasonCode, 'dns_not_found');
+});
+
+test('Fixture F — fallback recipient extraction excludes office + sender domains', () => {
+  const result = detectBounce(
+    'Undeliverable',
+    'postmaster@moshe-atsits.co.il',
+    [
+      'Sent from reports@moshe-atsits.co.il',
+      'Internal relay: microsoftexchange@mosheatsits.onmicrosoft.com',
+      'Failed recipient: real-bad@example.invalid',
+    ].join('\n'),
+  );
+  assert.equal(result?.failedRecipient, 'real-bad@example.invalid');
+});

@@ -2136,9 +2136,9 @@ function recalculateStats() {
     // Stage 3 attention: toggle .needs-attention based on count
     const stage3Card = document.querySelector('.stat-card.stage-3');
     if (stage3Card) stage3Card.classList.toggle('needs-attention', counts.stage3 > 0);
-    // DL-399: stage 1 attention when any pending client has a bounced email
+    // DL-399: stage 1 attention always when count > 0 (parity with stage 3 — both are office-action queues)
     const stage1Card = document.querySelector('.stat-card.stage-1');
-    if (stage1Card) stage1Card.classList.toggle('needs-attention', counts.stage1 > 0 && hasBouncedInStage1(clientsData));
+    if (stage1Card) stage1Card.classList.toggle('needs-attention', counts.stage1 > 0);
 
     // DL-281/288: Outbox-backed queued count (source of truth = Outlook). Before the
     // Outbox fetch lands, render nothing — the legacy queued_send_at fallback flashed

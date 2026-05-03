@@ -6,10 +6,11 @@ export interface BounceInfo {
 }
 
 const SUBJECT_PATTERNS = [
-  /^undeliverable[: ]/i,
-  /^delivery status notification/i,
-  /^delivery has failed/i,
-  /^non[- ]delivery/i,
+  /\bundeliverable\b/i,
+  /\bdelivery status notification\b/i,
+  /\bdelivery has failed\b/i,
+  /\bnon[- ]delivery\b/i,
+  /לא ניתן למסירה/,
   /המסירה.*נכשלה/,
   /דואר.*לא הצליח להישלח/,
 ];
@@ -20,14 +21,15 @@ const SENDER_PATTERNS = [
   /^microsoftexchange.*@/i,
 ];
 
-const OFFICE_ADDRESS = 'reports@moshe-atsits.co.il';
+const OFFICE_DOMAIN = /@(?:moshe-atsits\.co\.il|mosheatsits\.onmicrosoft\.com)$/i;
 
 const EMAIL_TOKEN = /[\w.+-]+@[\w.-]+\.\w+/;
 
 const RECIPIENT_PATTERNS: RegExp[] = [
   /(?:Final-Recipient|Original-Recipient)[^\n]*?:\s*(?:rfc822;\s*)?([\w.+-]+@[\w.-]+\.\w+)/i,
-  /([\w.+-]+@[\w.-]+\.\w+)\s*(?:לא נמצא|not found|does not exist)/i,
-  /(?:לכתובת|To)[:\s]+([\w.+-]+@[\w.-]+\.\w+)/i,
+  /([\w.+-]+@[\w.-]+\.\w+)\s*(?:לא נמצא|not found|does not exist|wasn't found|couldn't be found)/i,
+  /(?:Recipient|To|לכתובת|הנמען|לנמען)[:\s]+([\w.+-]+@[\w.-]+\.\w+)/i,
+  /\bto\s+([\w.+-]+@[\w.-]+\.\w+)/i,
 ];
 
 function matchesSubject(subject: string): boolean {
@@ -38,25 +40,36 @@ function matchesSender(fromAddress: string): boolean {
   return SENDER_PATTERNS.some(p => p.test(fromAddress));
 }
 
-function extractRecipient(body: string): string | null {
+function extractRecipient(body: string, fromAddress: string): string | null {
   for (const pattern of RECIPIENT_PATTERNS) {
     const m = body.match(pattern);
-    if (m) return m[1].toLowerCase();
+    if (m && !OFFICE_DOMAIN.test(m[1]) && m[1].toLowerCase() !== fromAddress.toLowerCase()) {
+      return m[1].toLowerCase();
+    }
   }
   const tokens = body.match(new RegExp(EMAIL_TOKEN.source, 'g')) ?? [];
-  const fallback = tokens.find(t => t.toLowerCase() !== OFFICE_ADDRESS);
+  const fallback = tokens.find(t => {
+    const low = t.toLowerCase();
+    return !OFFICE_DOMAIN.test(low) && low !== fromAddress.toLowerCase();
+  });
   return fallback ? fallback.toLowerCase() : null;
 }
 
-function classifyReason(body: string): Pick<BounceInfo, 'reasonCode' | 'reasonText' | 'isHard'> {
+function classifyReason(
+  body: string,
+  senderIsNdrRobot: boolean,
+): Pick<BounceInfo, 'reasonCode' | 'reasonText' | 'isHard'> {
   if (/DNS|תחום של הנמען לא קיים|domain.*not.*exist|host.*unknown|5\.1\.2|5\.4\.1/i.test(body)) {
     return { reasonCode: 'dns_not_found', reasonText: 'DNS not found', isHard: true };
   }
-  if (/לא נמצא|user unknown|mailbox.*not.*(?:exist|found)|recipient.*not.*found|5\.1\.1/i.test(body)) {
+  if (/לא נמצא|user unknown|mailbox.*not.*(?:exist|found)|recipient.*not.*found|wasn't found|couldn't be found|5\.1\.1/i.test(body)) {
     return { reasonCode: 'mailbox_not_found', reasonText: 'Mailbox not found', isHard: true };
   }
   if (/rejected|denied|5\.7\.1/i.test(body)) {
     return { reasonCode: 'rejected', reasonText: 'Domain rejected', isHard: true };
+  }
+  if (senderIsNdrRobot) {
+    return { reasonCode: 'other', reasonText: 'Delivery failed', isHard: true };
   }
   return { reasonCode: 'other', reasonText: 'Delivery failed', isHard: false };
 }
@@ -71,9 +84,9 @@ export function detectBounce(
 
   if (!subjectMatch && !senderMatch) return null;
 
-  const failedRecipient = extractRecipient(body);
+  const failedRecipient = extractRecipient(body, fromAddress);
   if (!failedRecipient) return null;
 
-  const classification = classifyReason(body);
+  const classification = classifyReason(body, senderMatch);
   return { failedRecipient, ...classification };
 }
