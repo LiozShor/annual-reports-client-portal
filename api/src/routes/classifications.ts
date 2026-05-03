@@ -2093,6 +2093,12 @@ classifications.post('/review-classification', async (c) => {
     };
     if (action === 'reassign' && reassign_template_id) {
       step5Fields.matched_template_id = reassign_template_id;
+      // DL-397 fix: sync in-memory clsFields so Step 6 (OneDrive rename via
+      // getRentalPeriodLabel → reads clsFields.matched_template_id / contract_period)
+      // uses the new values. Without this, manual reassign to T901/T902 produced
+      // filenames without the period suffix (`חוזה שכירות (הוצאה).pdf` instead of
+      // `חוזה שכירות (הוצאה) 01.2025-09.2025.pdf`).
+      clsFields.matched_template_id = reassign_template_id;
       if (
         ['T901', 'T902'].includes(reassign_template_id) &&
         contract_period &&
@@ -2104,6 +2110,7 @@ classifications.post('/review-classification', async (c) => {
           return c.json({ ok: false, error: built.error }, 400);
         }
         step5Fields.contract_period = built.json;
+        clsFields.contract_period = built.json;
       }
     }
     await fetch(`https://api.airtable.com/v0/${env.AIRTABLE_BASE_ID}/${TABLES.CLASSIFICATIONS}/${classification_id}`, {
