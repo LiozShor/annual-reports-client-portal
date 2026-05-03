@@ -32,6 +32,8 @@ import { getCachedOrFetch } from '../cache';
 import { getPdfPageCount } from '../pdf-split';
 import { imageToPdf } from './image-to-pdf';
 import { expandArchiveAttachments } from './archive-expander';
+import { detectBounce } from './bounce-detector';
+import { handleHardBounce } from './bounce-handler';
 
 // ---------------------------------------------------------------------------
 // Airtable field interfaces
@@ -122,6 +124,8 @@ function extractMetadata(email: Record<string, any>, messageId: string): EmailMe
       AUTO_REPLY_HEADERS.includes(h.name.toLowerCase())
     ) || AUTO_REPLY_SUBJECT_PATTERNS.some((p) => p.test(subject));
 
+  const bounceInfo = detectBounce(subject, (sender.address ?? '').toLowerCase(), bodyText);
+
   return {
     messageId,
     internetMessageId: email.internetMessageId ?? '',
@@ -135,6 +139,7 @@ function extractMetadata(email: Record<string, any>, messageId: string): EmailMe
     bodyHtml,
     hasAttachments: email.hasAttachments ?? false,
     isAutoReply,
+    bounceInfo,
   };
 }
 
@@ -924,6 +929,15 @@ export async function processInboundEmail(
 
     // 2. Extract metadata
     const metadata = extractMetadata(email, messageId);
+
+    // 3a. Hard bounce (NDR) — clear bad address, revert stage, log. Must run
+    // before the auto-reply branch because NDR subjects also trip auto-reply
+    // patterns (DL-399).
+    if (metadata.bounceInfo?.isHard) {
+      await handleHardBounce(airtable, metadata.bounceInfo, messageId);
+      await upsertEmailEvent(airtable, metadata, messageId, 'Bounced', [], {});
+      return;
+    }
 
     // 3. Filter auto-replies
     if (metadata.isAutoReply) {

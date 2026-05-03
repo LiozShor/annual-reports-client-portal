@@ -6,6 +6,7 @@
 import type { Env } from '../types';
 import type { MSGraphClient } from '../ms-graph';
 import type { AirtableClient, AirtableRecord } from '../airtable';
+import type { BounceInfo } from './bounce-detector';
 
 // ---------------------------------------------------------------------------
 // Airtable table IDs
@@ -64,6 +65,7 @@ export interface EmailMetadata {
   bodyHtml: string;
   hasAttachments: boolean;
   isAutoReply: boolean;
+  bounceInfo: BounceInfo | null;
 }
 
 // ---------------------------------------------------------------------------

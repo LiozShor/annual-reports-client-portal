@@ -1684,7 +1684,7 @@ function renderClientsTable(clients) {
                         onclick="openStageDropdown(event, '${rid}', '${escapeAttr(client.stage)}')"
                         title="לחץ לשינוי שלב">
                         ${icon(stage.icon, 'icon-sm')} ${stage.label} <span class="stage-caret">&#x25BE;</span>
-                    </span>
+                    </span>${bounceBadgeHTML(client)}
                 </td>
                 <td>
                     ${stageNum <= 3
@@ -1707,9 +1707,7 @@ function renderClientsTable(clients) {
                     <span class="notes-text">${escapeHtml((client.notes || '').substring(0, 60))}${(client.notes || '').length > 60 ? '…' : ''}</span>
                 </td>
                 <td>
-                    ${client.stage === 'Send_Questionnaire' ?
-                `<button class="action-btn send" onclick="sendSingle('${rid}')" title="שלח שאלון">${icon('send', 'icon-sm')}</button>` :
-                ''}
+                    ${client.stage === 'Send_Questionnaire' ? sendQuestionnaireBtnHTML(client, rid) : ''}
                     ${(client.stage === 'Waiting_For_Answers' || client.stage === 'Collecting_Docs') ?
                 `<button class="action-btn reminder-set-btn" onclick="sendDashboardReminder('${rid}', '${cName}')" title="שלח תזכורת">${icon('bell-ring', 'icon-sm')}</button>` :
                 ''}
@@ -1760,7 +1758,7 @@ function renderClientsTable(clients) {
                         onclick="openStageDropdown(event, '${rid}', '${escapeAttr(client.stage)}')"
                         title="לחץ לשינוי שלב">
                         ${icon(stage.icon, 'icon-sm')} ${stage.label}
-                    </span>
+                    </span>${bounceBadgeHTML(client)}
                 </div>
             </div>
             <div class="mobile-card-secondary">
@@ -1777,8 +1775,7 @@ function renderClientsTable(clients) {
                 ${client.notes ? `<span class="notes-text" onclick="editReportNotes(event, '${rid}')">${escapeHtml((client.notes || '').substring(0, 40))}${(client.notes || '').length > 40 ? '…' : ''}</span>` : ''}
             </div>
             <div class="mobile-card-actions">
-                ${client.stage === 'Send_Questionnaire' ?
-                    `<button class="action-btn send" onclick="sendSingle('${rid}')" title="שלח שאלון">${icon('send', 'icon-sm')}</button>` : ''}
+                ${client.stage === 'Send_Questionnaire' ? sendQuestionnaireBtnHTML(client, rid) : ''}
                 ${(client.stage === 'Waiting_For_Answers' || client.stage === 'Collecting_Docs') ?
                     `<button class="action-btn reminder-set-btn" onclick="sendDashboardReminder('${rid}', '${cName}')" title="שלח תזכורת">${icon('bell-ring', 'icon-sm')}</button>` : ''}
                 <div class="row-overflow-dropdown">
@@ -1924,11 +1921,13 @@ function toggleSort(column) {
 }
 
 function sortClients(clients) {
-    if (!currentSort.column) return clients;
+    // DL-399: pin email_bounced clients to top regardless of sort selection
+    if (!currentSort.column) return [...clients].sort((a, b) => (a.email_bounced ? 1 : 0) !== (b.email_bounced ? 1 : 0) ? (a.email_bounced ? -1 : 1) : 0);
     const config = SORT_CONFIG[currentSort.column];
     if (!config) return clients;
 
     return [...clients].sort((a, b) => {
+        if ((a.email_bounced ? 1 : 0) !== (b.email_bounced ? 1 : 0)) return a.email_bounced ? -1 : 1;
         const aVal = config.accessor(a);
         const bVal = config.accessor(b);
         let cmp;
@@ -2136,9 +2135,10 @@ function recalculateStats() {
 
     // Stage 3 attention: toggle .needs-attention based on count
     const stage3Card = document.querySelector('.stat-card.stage-3');
-    if (stage3Card) {
-        stage3Card.classList.toggle('needs-attention', counts.stage3 > 0);
-    }
+    if (stage3Card) stage3Card.classList.toggle('needs-attention', counts.stage3 > 0);
+    // DL-399: stage 1 attention when any pending client has a bounced email
+    const stage1Card = document.querySelector('.stat-card.stage-1');
+    if (stage1Card) stage1Card.classList.toggle('needs-attention', counts.stage1 > 0 && hasBouncedInStage1(clientsData));
 
     // DL-281/288: Outbox-backed queued count (source of truth = Outlook). Before the
     // Outbox fetch lands, render nothing — the legacy queued_send_at fallback flashed
@@ -3174,7 +3174,11 @@ async function sendToSelected() {
         showModal('warning', 'שגיאה', 'יש לבחור לפחות לקוח אחד');
         return;
     }
-    await sendQuestionnaires(selected);
+    // DL-399: drop selections without an email address
+    const { sendable, skipped } = filterClientsWithEmail(selected);
+    if (sendable.length === 0) { showAIToast('כל הלקוחות שנבחרו ללא כתובת מייל', 'warning'); return; }
+    if (skipped.length > 0) showAIToast(`דילגתי על ${skipped.length} לקוחות ללא כתובת מייל`, 'info');
+    await sendQuestionnaires(sendable);
 }
 
 async function sendToAll() {
@@ -13932,10 +13936,9 @@ function openClientDetailModal(reportId, options) {
             } else {
                 showAIToast('לא בוצעו שינויים', 'success');
             }
-            // DL-366: callback for post-save flows (e.g., resend questionnaire prompt)
-            if (typeof opts.afterSave === 'function') {
-                opts.afterSave(updated, prev, changes);
-            }
+            // DL-366: post-save flows. DL-399: stage-1 email-set → offer to send.
+            if (typeof opts.afterSave === 'function') opts.afterSave(updated, prev, changes);
+            else if (shouldPromptResendOnSave(updated, prev)) showConfirmDialog('לשלוח שאלון?', () => sendSingle(updated.reportId), 'שלח', false);
         }
     });
 }
@@ -14228,17 +14231,11 @@ function bulkArchiveClients() {
 function bulkSendQuestionnaires() {
     const checked = document.querySelectorAll('.dashboard-client-checkbox:checked');
     if (checked.length === 0) return;
-
-    const ids = Array.from(checked).map(cb => cb.value);
-
-    showConfirmDialog(
-        `לשלוח שאלון ל-${ids.length} לקוחות?`,
-        () => {
-            sendQuestionnaires(ids);
-            resetClientBulkSelection();
-        },
-        'שלח'
-    );
+    // DL-399: silently drop clients with no email; toast about what we skipped.
+    const { sendable, skipped } = filterClientsWithEmail(Array.from(checked).map(cb => cb.value));
+    if (sendable.length === 0) { showAIToast('כל הלקוחות שנבחרו ללא כתובת מייל', 'warning'); return; }
+    if (skipped.length > 0) showAIToast(`דילגתי על ${skipped.length} לקוחות ללא כתובת מייל`, 'info');
+    showConfirmDialog(`לשלוח שאלון ל-${sendable.length} לקוחות?`, () => { sendQuestionnaires(sendable); resetClientBulkSelection(); }, 'שלח');
 }
 
 // ==================== UTILITIES ====================

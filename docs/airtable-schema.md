@@ -2,9 +2,9 @@
 
 **Base:** Annual Reports CRM
 **Base ID:** `appqBL5RWQN9cPOyh`
-**Last Updated:** 2026-03-27
+**Last Updated:** 2026-05-03
 
-> **Last verified against live Airtable:** 2026-03-27 (full audit — 17 fields added, 1 table added, 1 link target fixed)
+> **Last verified against live Airtable:** 2026-05-03 (DL-399 — 4 fields added to `clients`, `Bounced` option added to `email_events.processing_status`).
 
 ---
 
@@ -47,6 +47,10 @@ company_links (standalone — insurance company URLs for client portal)
 | created_at | createdTime | |
 | updated_at | lastModifiedTime | |
 | cc_email | singleLineText | CC email address for notifications |
+| email_bounced | checkbox | DL-399: True while the client has an unresolved hard email bounce. Drives admin warning button + sort pin-to-top. Cleared when office saves a new non-empty email. |
+| last_bounced_email | singleLineText | DL-399: Audit trail — the bad address that bounced. Preserved after `email` is cleared. |
+| email_bounce_reason | multilineText | DL-399: Human-readable bounce reason (`DNS not found` / `Mailbox not found` / `Domain rejected` / `Delivery failed`). |
+| email_bounce_at | dateTime | DL-399: When the NDR was processed (Asia/Jerusalem). |
 
 ---
 
@@ -322,7 +326,7 @@ These three tables together replace all hardcoded document generation logic. The
 | sender_email | email | Who sent the email |
 | subject | singleLineText | Email subject |
 | attachment_name | singleLineText | Attachment filename |
-| processing_status | singleSelect | Processing state (Detected / Downloaded / Classified / Uploaded / Airtable_Updated / Completed / Failed / NeedsHuman) |
+| processing_status | singleSelect | Processing state (Detected / Downloaded / Classified / Uploaded / Airtable_Updated / Completed / Failed / NeedsHuman / Discarded / PasswordReply / Bounced — DL-399). |
 | error_message | multilineText | Error details if failed |
 | workflow_run_id | singleLineText | n8n workflow execution ID |
 | document | link → documents | Matched document |

@@ -224,17 +224,20 @@ body {
   50% { transform: translateY(-6px); }
 }
 
-.stat-card.stage-3.needs-attention {
+.stat-card.stage-3.needs-attention,
+.stat-card.stage-1.needs-attention {
   animation: stage3-bounce 1s ease-in-out infinite;
 }
 
-.stat-card.stage-3.needs-attention .stat-number {
+.stat-card.stage-3.needs-attention .stat-number,
+.stat-card.stage-1.needs-attention .stat-number {
   color: #D97706;
   font-weight: 800;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .stat-card.stage-3.needs-attention {
+  .stat-card.stage-3.needs-attention,
+  .stat-card.stage-1.needs-attention {
     animation: none;
     box-shadow: 0 0 0 2px #F59E0B;
   }

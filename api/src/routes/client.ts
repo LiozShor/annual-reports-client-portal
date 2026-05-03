@@ -201,6 +201,8 @@ client.post('/admin-update-client', async (c) => {
   if (body.email !== undefined) updateFields.email = body.email;
   if (body.cc_email !== undefined) updateFields.cc_email = body.cc_email;
   if (body.phone !== undefined) updateFields.phone = body.phone;
+  // DL-399: lower bounce flag when office fixes the email
+  if (typeof body.email === 'string' && body.email.trim() !== '') updateFields.email_bounced = false;
 
   await airtable.updateRecord('tblFFttFScDRZ7Ah5', clientId, updateFields);
 
