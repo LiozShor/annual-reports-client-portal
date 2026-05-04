@@ -2,12 +2,12 @@
 
 Active and pending logs. For completed history, see [ARCHIVE-INDEX.md](ARCHIVE-INDEX.md).
 
-**Total logs:** 239 | **Active:** 141 | **Archived:** 98
+**Total logs:** 240 | **Active:** 142 | **Archived:** 98
 
 ## Folder Structure
 
 - `admin-ui/` — Admin UI (34)
-- `ai-review/` — AI Review & Classification (44)
+- `ai-review/` — AI Review & Classification (45)
 - `capital-statements/` — Capital Statements (4)
 - `client-portal/` — Client Portal & Questionnaires (13)
 - `documents/` — Documents & OneDrive (20)
@@ -21,6 +21,7 @@ Active and pending logs. For completed history, see [ARCHIVE-INDEX.md](ARCHIVE-I
 
 | # | File | Status | Summary |
 |---|------|--------|---------|
+| 401 | [401-unidentified-doc-row-clickable.md](ai-review/401-unidentified-doc-row-clickable.md) | IMPLEMENTED — NEED TESTING | Unidentified-inbound doc rows in AI Review (`buildUnidentifiedDocsHtml`, DL-361) were intentionally read-only with `cursor: default` + `opacity: 0.85` and only an external-OneDrive ↗ icon. Now made clickable like classified rows (`script.js:4531`): single-line replacement at `script.js:5548` adds `data-id="${item.id}"` + `title` + `onclick="selectDocument('${item.id}')"`, drops inline cursor/opacity overrides. Reuses the existing `selectDocument` → `loadDocPreview` → `renderActionsPanel` flow (DL-334 perf instrumentation included for free). External ↗ icon preserved (existing `event.stopPropagation()` prevents conflict). Net line delta on script.js: 0 (ratchet-safe). Cache-bust `script.js?v=413→414`. Scope-adjacent observation logged for future DL: DL-112 file-hash dedup at `classifications.ts:172-180` hides older `unidentified-...` rows when newer identified twins exist with same hash — explains user's "3 forwarded → 1 visible" surprise. |
 | 400 | [400-edit-client-modal-row-disappears-on-save.md](admin-ui/400-edit-client-modal-row-disappears-on-save.md) | COMPLETED — 2026-05-03 | Edit-client modal save wiped untouched fields in `clientsData` (delta payload from `ClientDetailModal.tsx` was unconditionally written to all 4 fields in `script.js:13919-13928`), causing `filterClients()` to drop the row until manual refresh. Fix: loop over `['name','email','cc_email','phone']` and only assign when `updated[k] !== undefined`. Cache-bust v=406→407. Compliant with P6 Silent-Refresh rule. |
 | 398 | [398-stat-card-percentage.md](admin-ui/398-stat-card-percentage.md) | COMPLETED — 2026-05-03 | Admin dashboard stat cards: each of stages 1–8 now renders a small muted percentage next to the count (`% of counts.total` active clients, whole numbers). Total card unchanged. JS-only injection of `<span class="stat-pct">` inside `recalculateStats()` (`script.js:2128-2136` → 8-line loop) — no HTML markup change, single render path covers all 9 cards. New `.stat-pct` CSS rule (0.55em, gray-500, RTL-safe `margin-inline-start`). Cache-bust v=403→404 (script.js), v=384→385 (style.css). |
 | 399 | [399-email-bounce-handling.md](admin-ui/399-email-bounce-handling.md) | COMPLETED — 2026-05-03 | Email bounce / NDR handling. Inbound `processor.ts` previously swallowed Outlook NDRs as auto-replies. New `bounce-detector.ts` extracts failed recipient + reason (DNS-not-found / mailbox-not-found / rejected) from Hebrew + EN NDR bodies; `bounce-handler.ts` clears `clients.email`, writes 4 new audit fields (`email_bounced`, `last_bounced_email`, `email_bounce_reason`, `email_bounce_at`), reverts Stage-2 reports to Stage-1, logs `email_bounce_handled` / `email_bounce_unmatched` / `stage_reverted_on_bounce`. Edit-client route lowers `email_bounced` flag when office sets a new non-empty email. Admin frontend (extracted to `modules/bounce-warning.js` due to ratchet): clickable ⚠ button next to stage badge (desktop+mobile) opening bounce-detail modal; pin bounced clients to top of table; Stage-1 stat-card "ממתינים לשליחה" shares DL-187 needs-attention bounce when any stage-1 client is bounced; green paper-plane row button + bulk-send disabled when `email` empty (toast-and-skip pattern); after edit-save with new email + Stage-1, prompts "לשלוח שאלון?". Schema: 4 new fields on `clients`, `Bounced` option added to `email_events.processing_status`. Cache-bust `script.js?v=403→404`. |

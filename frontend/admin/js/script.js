@@ -5545,7 +5545,7 @@ function buildUnidentifiedDocsHtml(groupKey, clientItems) {
         const url = item.file_url || '';
         const sizeKb = item.attachment_size ? Math.round(item.attachment_size / 1024) + ' KB' : '';
         rowsHtml += `
-            <div class="ai-doc-row" style="opacity: 0.85; cursor: default;">
+            <div class="ai-doc-row" data-id="${escapeAttr(item.id || '')}" title="${escapeAttr(fname)}" onclick="selectDocument('${escapeAttr(item.id || '')}')">
                 <div style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
                     ${escapeHtml(fname)}
                 </div>

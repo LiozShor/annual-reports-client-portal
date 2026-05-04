@@ -1,6 +1,20 @@
 # Annual Reports CRM - Current Status
 
-**Last Updated:** 2026-05-03 (DL-400 — IMPLEMENTED, NEED TESTING. Edit-client modal save no longer wipes untouched fields → row no longer disappears.)
+**Last Updated:** 2026-05-04 (DL-401 — IMPLEMENTED, NEED TESTING. Unidentified-inbound doc rows in AI Review are now clickable for in-app preview, matching classified rows.)
+
+## OPEN: DL-401 — Unidentified inbound doc rows clickable
+
+DL: `.agent/design-logs/ai-review/401-unidentified-doc-row-clickable.md`
+
+Open-test items from Section 7 (frontend-only; Pages auto-deploys on push):
+
+- [ ] Pre-commit ratchet on `script.js`: net line count delta == 0 (in-place line replacement).
+- [ ] Live admin AI Review tab — open the current unidentified card → click the `image009.png` row → preview pane opens showing the image; row gets active highlight.
+- [ ] Hover an unidentified row → cursor changes to pointer (no longer `default`); opacity is full (no longer 0.85).
+- [ ] Click the small ↗ OneDrive icon in an unidentified row → OneDrive opens in new tab; row click does NOT also fire (existing `event.stopPropagation()`).
+- [ ] Regression: open a classified card, click any doc row — same behavior as before (no change).
+- [ ] Mobile (narrow viewport) — row click triggers `loadDocPreview` via DL-334 mobile short-circuit.
+- [ ] Hard-refresh — confirm `script.js?v=414` is served.
 
 ## OPEN: DL-400 — Edit-client modal row disappears on save
 
