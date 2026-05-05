@@ -70,6 +70,8 @@ export class WorkerApiClient {
 
   private async unwrap(response: Response, label: string): Promise<unknown> {
     const text = await response.text();
+    // DL-402 M1 live debug — remove once dashboard tool path is verified.
+    console.log(`[telegram-bot/worker-api] ${label} status=${response.status} body=${text.slice(0, 500)}`);
     if (!response.ok) {
       throw new Error(`worker_api_${response.status} (${label}): ${text.slice(0, 200)}`);
     }
