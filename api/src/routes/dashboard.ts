@@ -42,12 +42,14 @@ dashboard.get('/admin-dashboard', async (c) => {
 
   const filters = [
     `{year}=${year}`,
-    // Exclude soft-archived losers from client merges (DL-404).
-    // {merged_into} is a singleLineText field populated by the merge endpoint.
-    // When the field does not yet exist on any record, Airtable evaluates
-    // {nonexistent}=BLANK() as TRUE for every row, so this formula is
-    // safe to ship before any merge has actually been run.
-    `OR({merged_into}=BLANK(),{merged_into}='')`,
+    // DL-404 hotfix: do NOT add `{merged_into}=BLANK()` here — `merged_into`
+    // lives on the clients table, not on reports. Airtable rejects unknown
+    // field references in filterByFormula with 422 INVALID_FILTER_BY_FORMULA,
+    // 500'ing this endpoint. Loser exclusion is handled downstream:
+    //   - merge endpoint sets `clients.is_active=false` on the loser;
+    //   - propagates here via `client_is_active` lookup (read line ~122);
+    //   - review_queue (line ~162) filters `is_active !== false`;
+    //   - frontend filters inactive clients in `loadDashboard` rendering.
   ];
   if (filing_type) filters.push(`{filing_type}='${filing_type}'`);
   const filterByFormula = `AND(${filters.join(',')})`;
