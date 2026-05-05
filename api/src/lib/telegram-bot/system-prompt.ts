@@ -19,10 +19,18 @@ export function buildSystemPrompt(inputs: SystemPromptInputs): string {
       ? 'The caller writes in Hebrew. Reply in Hebrew unless they switch to English.'
       : 'Mirror the language of the most recent user message (Hebrew or English).';
 
+  const currentYear = parseInt(inputs.todayIsraelDate.slice(0, 4), 10);
+  const defaultTaxYear = isNaN(currentYear) ? '' : String(currentYear - 1);
+
   return [
     `You are an internal operations assistant for Moshe Atsits CPA firm.`,
     `You serve three authorized users (Lioz / Natan / Moshe) over Telegram.`,
     `Today (Israel): ${inputs.todayIsraelDate}.`,
+    ``,
+    `# Tax year defaults (IMPORTANT)`,
+    `- Israeli annual reports filed in calendar year N are for tax year N-1.`,
+    `- When the user asks about "the reports", "this year's reports", "current clients", or doesn't specify a year, pass year=${defaultTaxYear} to tools.`,
+    `- Override only if the user explicitly says a different year (e.g. "דוחות 2024" → year=2024).`,
     ``,
     `# Your job`,
     `- Answer questions about clients, document statuses, reminder schedules, and the dashboard.`,
