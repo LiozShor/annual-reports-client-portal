@@ -1,6 +1,41 @@
 # Annual Reports CRM - Current Status
 
-**Last Updated:** 2026-05-04 (DL-401 — IMPLEMENTED, NEED TESTING. Unidentified-inbound doc rows in AI Review are now clickable for in-app preview, matching classified rows.)
+**Last Updated:** 2026-05-05 (DL-404 — IMPLEMENTED, NEED TESTING. One-click merge of two clients into a single household. Worker deployed, dashboard hotfix landed.)
+
+## OPEN: DL-404 — Merge two clients into one
+
+DL: `.agent/design-logs/admin-ui/404-merge-clients.md`
+Worker version: `c8d3a351-4239-4f54-8c50-4492ad8d393b` (a6dfce42 + hotfix a1d88c5a)
+Frontend cache-bust: `script.js?v=416`
+
+Open-test items from Section 7:
+
+- [ ] **Smoke (happy path):** create two QA test clients in Airtable, fill both questionnaires, run merge from kebab. Verify: winner = older `createdTime`, loser is `is_active=false` + `merged_into=<winner>`, winner `name` is the ampersand-merged form (or whatever admin typed), winner.report `spouse_name` populated when previously blank, `cc_email` populated on winner, all docs visible in winner's doc-manager (split across `person` tabs).
+- [ ] **Custom merged name:** override the pre-filled `"A & B"` in the dialog with a free-form name; verify it lands on `clients.name` exactly as typed and propagates to dashboard list, doc-manager header, AI Review accordion, and outgoing email greetings.
+- [ ] **Spouse name conflict warning:** pre-set winner.report.spouse_name to a different non-empty value before merge; merge completes but result includes `spouse_name_conflict`; existing value preserved; toast surfaces it.
+- [ ] **OneDrive physical move:** before merge, note loser's folder contents. After merge, winner's folder contains all loser's files; loser's folder is empty. Doc preview links still work (DL-356 self-heal does not trigger).
+- [ ] **OneDrive collision:** seed both clients with identically-named files. After merge, winner's folder contains both — original + ` (2).pdf` variant. Both preview-able from doc-manager.
+- [ ] **OneDrive partial-failure retry:** simulate by killing the request mid-move (or temporarily revoking permission to one item). Endpoint returns `partial_onedrive_move` with counts. Re-running the same merge call (same idempotency key) only retries un-moved items and completes the rest cleanly.
+- [ ] **Email contract:** send a test reminder + batch-status + approve-and-send to the merged client; inspect SENT mail in Outlook (gws CLI per `docs/gws-cli.md`). Confirm To + CC headers on each. Reply (`replyToMessage`) verified deferred. **Note:** `reminders.ts` is n8n-delegated — actual reminder mail is sent by the n8n workflow `/send-reminder-manual`; the n8n workflow needs a separate cc_email plumbing change (DL-405 candidate).
+- [ ] **Stage rule:** merge a Stage-4 with a Stage-2 → merged stage is Stage-2 (lower wins). Verify reminder recompute fired (`reminder_next_date` updated, weekend-skip per DL-390).
+- [ ] **Questionnaire print:** open merged winner's PA tab — both source questionnaires render sequentially with section headers.
+- [ ] **Idempotency:** click merge button twice rapidly — second call returns prior result, no duplicate side effects.
+- [ ] **Cross-filing-type rejection:** attempt merge across annual + capital_statements → endpoint returns `cross_filing_type`, frontend toasts the structured message.
+- [ ] **Queue counters:** dashboard stat cards + queue tabs do NOT count the loser. `recalculateStats()` matches tab badges (DL-364 invariant).
+- [ ] **Inbound from cc_email:** send a test email from the loser's old address to the office inbox. Verify processor identifies it as the WINNER (check `email_events.client` link + `match_method`); resulting `pending_classification` lands under the winner in AI Review.
+- [ ] **Inbound merged-redirect path:** temporarily blank `clients.cc_email` on the merged row, send another test from the loser's old address. Verify identifier falls through to `merged_into` pointer and still resolves to the winner; `match_method='merged_redirect'` logged.
+- [ ] **Pending classifications carry over:** before merge, ensure both records have at least one `pending_classifications` row. After merge, both appear under the winner's AI Review accordion; previously-attached OneDrive files preview correctly.
+- [ ] **Activity log:** `client_merged` event in Workers Logs with no PII (only client_ids).
+- [ ] **Silent refresh:** after merge, both clients' rows update in-place (winner shows merged data, loser disappears) without page reload (P6 rule).
+- [ ] **Dashboard regression after hotfix:** `/webhook/admin-dashboard?year=2025` returns 200 (dashboard shipped on a6dfce42 caused 500 via bogus `{merged_into}` formula on the reports table; hotfix a1d88c5a removed the formula since the existing `client_is_active` lookup chain handles loser exclusion).
+
+**Deferred / out of scope:**
+- Cross-filing-type merge (annual ↔ capital_statements) — endpoint rejects with `cross_filing_type`.
+- Un-merge / restore — manual Airtable edit only for v1.
+- `replyToMessage` CC support — office-typed replies remain single-recipient until a follow-up DL.
+- Deletion of the empty loser OneDrive folder (audit-preserve).
+- **n8n reminder workflow CC** (DL-405 candidate) — Worker `reminders.ts` delegates to the n8n `/send-reminder-manual` workflow which needs its own CC wiring; out of scope for DL-404.
+
 
 ## OPEN: DL-401 — Unidentified inbound doc rows clickable
 
