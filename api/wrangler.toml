@@ -16,6 +16,9 @@ ALERT_EMAIL = "liozshor1@gmail.com"
 # Flip to "false" after the 2-week dual-write window to make activity-logger the
 # sole sink. Default kept truthy here to preserve current behavior.
 LEGACY_LOG_TO_AIRTABLE = "true"
+# DL-402: Telegram ops bot allow-list (comma-separated Telegram user ids).
+# Solo-test phase: Lioz only. Add Natan + Moshe ids later.
+ADMIN_TELEGRAM_IDS = "6293911784"
 
 # Secrets (set via `wrangler secret put`):
 # - ADMIN_PASSWORD
