@@ -10600,7 +10600,7 @@ function buildPaPreviewBody(item) {
             </div>`).join('')}
         </div>`;
     }
-
+    if (typeof window.buildMergedQuestionnaireSections === 'function') html += window.buildMergedQuestionnaireSections(item, pendingApprovalData); // DL-404 merged fan-out
     return html || `<div class="pa-preview-empty"><p>אין נתונים לתצוגה</p></div>`;
 }
 
@@ -12641,7 +12641,7 @@ function printPaQuestionnaire(reportId) {
         filingTypeLabel: FILING_TYPE_LABELS_LOCAL[item.filing_type] || item.filing_type || 'דוח שנתי',
         answers,
         clientQuestions: Array.isArray(item.client_questions) ? item.client_questions : [],
-        reportNotes,
+        reportNotes, mergedFromReportIds: item.merged_from_report_ids || '', mergedPaData: pendingApprovalData, // DL-404
     });
 }
 
@@ -14097,8 +14097,8 @@ function openClientContextMenu(e) {
                 items += `<button onclick="addSecondFilingType('${rid}'); closeAllRowMenus();">${icon('file-plus')} הוסף ${ctxLabel}</button>`;
             }
         }
-        items += `<hr>`;
-        items += `<button class="danger" onclick="deactivateClient('${rid}', '${cName}'); closeAllRowMenus();">${icon('archive')} העבר לארכיון</button>`;
+        items += `<button onclick="openMergeClientsDialog('${rid}', '${cName}'); closeAllRowMenus();">${icon('merge')} מזג עם לקוח אחר</button>`;
+        items += `<hr><button class="danger" onclick="deactivateClient('${rid}', '${cName}'); closeAllRowMenus();">${icon('archive')} העבר לארכיון</button>`;
     } else {
         items += `<button onclick="viewClient('${rid}'); closeAllRowMenus();">${icon('external-link')} צפייה כלקוח</button>`;
         items += `<hr>`;
@@ -15429,7 +15429,7 @@ function generateQuestionnairePrintHTML(items) {
             });
             printHtml += `</div>`;
         }
-
+        if (typeof window.buildMergedPrintSections === 'function') printHtml += window.buildMergedPrintSections(item, questionnairesData, escapeHtml); // DL-404 merged fan-out
         // Office notes — read from item.notes (returned by API), fallback to clientsData lookup
         const itemNotes = item.notes || reportClient?.notes || '';
         if (itemNotes) {

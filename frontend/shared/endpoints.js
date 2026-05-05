@@ -74,6 +74,9 @@ const ENDPOINTS = {
     // --- Batch questions (DL-328) ---
     SEND_BATCH_QUESTIONS:           `${CF_BASE}/send-batch-questions`,
     SAVE_CLASSIFICATION_QUESTION:   `${CF_BASE}/save-classification-question`,
+
+    // --- Merge clients (DL-404) ---
+    ADMIN_MERGE_CLIENTS:            `${CF_BASE}/admin-merge-clients`,
 };
 
 // Expose to window for React island bundles. Includes camelCase aliases
