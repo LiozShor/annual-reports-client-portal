@@ -2,7 +2,7 @@
 
 Active and pending logs. For completed history, see [ARCHIVE-INDEX.md](ARCHIVE-INDEX.md).
 
-**Total logs:** 240 | **Active:** 142 | **Archived:** 98
+**Total logs:** 241 | **Active:** 143 | **Archived:** 98
 
 ## Folder Structure
 
@@ -12,7 +12,7 @@ Active and pending logs. For completed history, see [ARCHIVE-INDEX.md](ARCHIVE-I
 - `client-portal/` — Client Portal & Questionnaires (13)
 - `documents/` — Documents & OneDrive (20)
 - `email/` — Email System (22)
-- `infrastructure/` — Infrastructure & Workflows (21)
+- `infrastructure/` — Infrastructure & Workflows (22)
 - `reminders/` — Reminder System (17)
 - `research/` — Research & Feasibility (7)
 - `security/` — Security & Auth (7)
@@ -21,6 +21,7 @@ Active and pending logs. For completed history, see [ARCHIVE-INDEX.md](ARCHIVE-I
 
 | # | File | Status | Summary |
 |---|------|--------|---------|
+| 402 | [402-telegram-ops-bot.md](infrastructure/402-telegram-ops-bot.md) | IMPLEMENTED — NEED TESTING (M1) | Internal Telegram ops bot for Lioz/Natan/Moshe. Telegram (free, no BSP) chosen over WhatsApp (per-message pricing post-July-2025 + Meta general-AI ban Jan 2026). New `/webhook/telegram` route in `api/` Worker → constant-time `timingSafeEqual` on `X-Telegram-Bot-Api-Secret-Token` → 3-id allow-list → Claude Haiku 4.5 tool-use loop → existing Worker routes wrapped as tools → KV-backed 10-turn history. Clean-arch layered design with 4 narrow interfaces (`BotMessenger`, `ChatHistoryStore`, `ConfirmTokenStore`, `LlmClient`); `composition.ts` is the only file mixing vendor adapters + use-case layer. M1 ships 4 read-only tools (`get_dashboard_stats`, `get_client_by_report_id`, `get_client_documents`, `search_clients_by_name`); M2 adds confirm-flow + reminder/doc-status writes; M3 adds inbound-doc routing + notes + stage advance. AI-review = v2 (no existing endpoints). New env vars: `TELEGRAM_BOT_TOKEN`, `TELEGRAM_WEBHOOK_SECRET`, `ADMIN_TELEGRAM_IDS`. Zero touches to admin monolith (ratchet-safe). Code complete + 6 contract tests for `trimToTurnCap` green; live verification pending @BotFather setup, secret/var deploy, `setWebhook` script run. |
 | 401 | [401-unidentified-doc-row-clickable.md](ai-review/401-unidentified-doc-row-clickable.md) | IMPLEMENTED — NEED TESTING | Unidentified-inbound doc rows in AI Review (`buildUnidentifiedDocsHtml`, DL-361) were intentionally read-only with `cursor: default` + `opacity: 0.85` and only an external-OneDrive ↗ icon. Now made clickable like classified rows (`script.js:4531`): single-line replacement at `script.js:5548` adds `data-id="${item.id}"` + `title` + `onclick="selectDocument('${item.id}')"`, drops inline cursor/opacity overrides. Reuses the existing `selectDocument` → `loadDocPreview` → `renderActionsPanel` flow (DL-334 perf instrumentation included for free). External ↗ icon preserved (existing `event.stopPropagation()` prevents conflict). Net line delta on script.js: 0 (ratchet-safe). Cache-bust `script.js?v=413→414`. Scope-adjacent observation logged for future DL: DL-112 file-hash dedup at `classifications.ts:172-180` hides older `unidentified-...` rows when newer identified twins exist with same hash — explains user's "3 forwarded → 1 visible" surprise. |
 | 400 | [400-edit-client-modal-row-disappears-on-save.md](admin-ui/400-edit-client-modal-row-disappears-on-save.md) | COMPLETED — 2026-05-03 | Edit-client modal save wiped untouched fields in `clientsData` (delta payload from `ClientDetailModal.tsx` was unconditionally written to all 4 fields in `script.js:13919-13928`), causing `filterClients()` to drop the row until manual refresh. Fix: loop over `['name','email','cc_email','phone']` and only assign when `updated[k] !== undefined`. Cache-bust v=406→407. Compliant with P6 Silent-Refresh rule. |
 | 398 | [398-stat-card-percentage.md](admin-ui/398-stat-card-percentage.md) | COMPLETED — 2026-05-03 | Admin dashboard stat cards: each of stages 1–8 now renders a small muted percentage next to the count (`% of counts.total` active clients, whole numbers). Total card unchanged. JS-only injection of `<span class="stat-pct">` inside `recalculateStats()` (`script.js:2128-2136` → 8-line loop) — no HTML markup change, single render path covers all 9 cards. New `.stat-pct` CSS rule (0.55em, gray-500, RTL-safe `margin-inline-start`). Cache-bust v=403→404 (script.js), v=384→385 (style.css). |

@@ -36,6 +36,7 @@ import auditStaleItemIds from './routes/audit-stale-itemids'; // DL-356
 import unlockPdf from './routes/unlock-pdf'; // DL-373
 import { handleRequestPdfPassword } from './routes/request-pdf-password'; // DL-380
 import adminDevActivity from './routes/admin-dev-activity'; // DL-365 Phase 3
+import webhookTelegram from './routes/webhook-telegram'; // DL-402 Telegram ops bot
 import { logError } from './lib/error-logger';
 import { withEventBuffer } from './lib/activity-logger';
 import { handleInboundQueue } from './lib/inbound/queue-consumer';
@@ -105,6 +106,7 @@ app.route('/webhook', auditStaleItemIds); // DL-356
 app.route('/webhook', unlockPdf); // DL-373
 app.post('/webhook/request-pdf-password', handleRequestPdfPassword); // DL-380
 app.route('/webhook', adminDevActivity); // DL-365 Phase 3
+app.route('/webhook', webhookTelegram); // DL-402 Telegram ops bot
 
 // Health check
 app.get('/health', (c) => c.json({ ok: true, service: 'annual-reports-api' }));

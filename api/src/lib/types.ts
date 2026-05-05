@@ -21,6 +21,14 @@ export interface Env {
   // Anthropic API key for AI chat proxy (Phase 9)
   ANTHROPIC_API_KEY: string;
 
+  // DL-402 Telegram ops bot
+  TELEGRAM_BOT_TOKEN: string;
+  TELEGRAM_WEBHOOK_SECRET: string;
+  /** Comma-separated allow-list of Telegram user IDs (numbers). */
+  ADMIN_TELEGRAM_IDS: string;
+  /** Base URL for Worker self-calls from the bot (read tools wrap existing routes). */
+  WORKER_BASE_URL?: string;
+
   // Alert email for error notifications (Phase 6)
   ALERT_EMAIL: string;
 
