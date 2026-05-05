@@ -13,16 +13,23 @@ import type { TokenPayload } from '../types';
 
 const ADMIN_TOKEN_TTL_MS = 5 * 60 * 1000; // 5 min — covers a multi-tool turn
 
+/**
+ * Cloudflare blocks Workers from fetching their own public URL (error 1042).
+ * We route through a service binding (env.SELF) instead — zero-RTT, no public
+ * traffic. The base URL is only used for URL parsing; the host portion is
+ * ignored because service bindings short-circuit to the bound Worker.
+ */
 export class WorkerApiClient {
   constructor(
-    private readonly baseUrl: string,
-    private readonly secretKey: string
+    private readonly self: Fetcher,
+    private readonly secretKey: string,
+    private readonly baseUrl: string = 'https://internal-self-binding'
   ) {}
 
   async get(path: string, query?: Record<string, string | number | undefined>): Promise<unknown> {
     const url = this.buildUrl(path, query);
     const token = await this.mintAdminToken();
-    const response = await fetch(url, {
+    const response = await this.self.fetch(url, {
       method: 'GET',
       headers: { Authorization: `Bearer ${token}` },
     });
@@ -33,7 +40,7 @@ export class WorkerApiClient {
     const url = this.buildUrl(path);
     const token = await this.mintAdminToken();
     const finalBody = opts?.withTokenInBody ? { ...body, token } : body;
-    const response = await fetch(url, {
+    const response = await this.self.fetch(url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -70,8 +77,6 @@ export class WorkerApiClient {
 
   private async unwrap(response: Response, label: string): Promise<unknown> {
     const text = await response.text();
-    // DL-402 M1 live debug — remove once dashboard tool path is verified.
-    console.log(`[telegram-bot/worker-api] ${label} status=${response.status} body=${text.slice(0, 500)}`);
     if (!response.ok) {
       throw new Error(`worker_api_${response.status} (${label}): ${text.slice(0, 200)}`);
     }

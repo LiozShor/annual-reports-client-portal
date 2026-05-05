@@ -38,6 +38,13 @@ ADMIN_TELEGRAM_IDS = "6293911784"
 # - ADMIN_TELEGRAM_IDS       # DL-402: comma-separated allow-list of Telegram user ids
 # - WORKER_BASE_URL          # DL-402 (optional): override Worker self-call base URL
 
+# DL-402: self-binding for the Telegram bot tools so they can invoke
+# existing /webhook/* routes without hitting the public hostname (CF blocks
+# Workers from fetching their own URL, error 1042). Zero-RTT, internal.
+[[services]]
+binding = "SELF"
+service = "annual-reports-api"
+
 [[kv_namespaces]]
 binding = "TOKEN_CACHE"
 id = "5e3beec684c04f539939efe42dada1d0"

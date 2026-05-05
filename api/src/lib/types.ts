@@ -47,6 +47,9 @@ export interface Env {
   // Queue producer binding (Phase: Cloudflare Queues migration)
   INBOUND_QUEUE: Queue<InboundQueueMessage>;
 
+  // DL-402: self-binding for Telegram bot tools (CF blocks public-URL self-fetch).
+  SELF: Fetcher;
+
   // Vars (set in wrangler.toml [vars])
   ALLOWED_ORIGIN: string;
   AIRTABLE_BASE_ID: string;

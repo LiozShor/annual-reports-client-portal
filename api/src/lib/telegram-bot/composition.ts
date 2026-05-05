@@ -18,8 +18,6 @@ import { buildToolRegistry } from './tools';
 import { WorkerApiClient } from './worker-api-client';
 import type { TelegramUpdate, ToolContext } from './types';
 
-const DEFAULT_WORKER_URL = 'https://annual-reports-api.liozshor1.workers.dev';
-
 export interface BotApp {
   handleUpdate(update: TelegramUpdate, ctx: { requestId: string }): Promise<void>;
 }
@@ -28,7 +26,7 @@ export function buildBotApp(env: Env): BotApp {
   const messenger = new TelegramBotClient(env.TELEGRAM_BOT_TOKEN);
   const llm = new AnthropicLlmClient(env.ANTHROPIC_API_KEY);
   const history = new KvChatHistoryStore(env.CACHE_KV);
-  const api = new WorkerApiClient(env.WORKER_BASE_URL ?? DEFAULT_WORKER_URL, env.SECRET_KEY);
+  const api = new WorkerApiClient(env.SELF, env.SECRET_KEY);
   const tools = buildToolRegistry({ api });
 
   return {
