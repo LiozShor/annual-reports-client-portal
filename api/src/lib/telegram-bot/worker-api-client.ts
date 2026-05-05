@@ -11,7 +11,7 @@
 import { signToken } from '../token';
 import type { TokenPayload } from '../types';
 
-const ADMIN_TOKEN_TTL_SECONDS = 60 * 5; // 5 min — covers a multi-tool turn
+const ADMIN_TOKEN_TTL_MS = 5 * 60 * 1000; // 5 min — covers a multi-tool turn
 
 export class WorkerApiClient {
   constructor(
@@ -56,11 +56,14 @@ export class WorkerApiClient {
   }
 
   private async mintAdminToken(): Promise<string> {
-    const now = Math.floor(Date.now() / 1000);
+    // Project convention (lib/token.ts generateAdminToken + verifyToken): exp/iat
+    // are Date.now() milliseconds, not Unix seconds. Mismatching units silently
+    // marks every token as already-expired — caught during DL-402 M1 live test.
+    const now = Date.now();
     const payload: TokenPayload = {
       type: 'admin',
       iat: now,
-      exp: now + ADMIN_TOKEN_TTL_SECONDS,
+      exp: now + ADMIN_TOKEN_TTL_MS,
     };
     return await signToken(payload, this.secretKey);
   }
