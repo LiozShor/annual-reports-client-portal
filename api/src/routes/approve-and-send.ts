@@ -212,15 +212,16 @@ approveAndSend.get('/approve-and-send', async (c) => {
     if (!clientEmail) return errorResponse('No client email on report');
 
     // Step 5: Send email — deferred if off-hours (DL-273: PidTagDeferredSendTime)
+    const ccEmail = (report.fields.cc_email as string | undefined) || undefined;
     const graph = new MSGraphClient(c.env, c.executionCtx);
     const offHours = isOffHoursOrWeekend();
     let graphMessageId: string | null = null;
     if (offHours) {
       const deferredUtc = getNextBusinessMorning0800Israel();
-      const result = await graph.sendMailDeferred(subject, html, clientEmail, SENDER, deferredUtc);
+      const result = await graph.sendMailDeferred(subject, html, clientEmail, SENDER, deferredUtc, ccEmail);
       graphMessageId = result.messageId;
     } else {
-      await graph.sendMail(subject, html, clientEmail, SENDER);
+      await graph.sendMail(subject, html, clientEmail, SENDER, ccEmail);
     }
 
     // Step 6: Update Airtable — stage advances immediately regardless of deferred send

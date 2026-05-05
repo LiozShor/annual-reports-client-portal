@@ -82,6 +82,15 @@
             cqHtml += `</div>`;
         }
 
+        // DL-404: merged-source questionnaires fan-out.
+        // `data.mergedFromReportIds` is a CSV of source report IDs set by printPaQuestionnaire
+        // when the winner item has `merged_from_report_ids`. The module looks up each source
+        // in the already-loaded pendingApprovalData passed via `data.mergedPaData`.
+        if (data.mergedFromReportIds && typeof window.buildMergedPrintSections === 'function') {
+            const syntheticItem = { merged_from_report_ids: data.mergedFromReportIds };
+            cqHtml += window.buildMergedPrintSections(syntheticItem, data.mergedPaData || [], escapeHtml);
+        }
+
         let notesHtml = '';
         if (data.reportNotes && String(data.reportNotes).trim()) {
             notesHtml = `<div class="office-notes"><h4>הערות משרד</h4><div class="notes-content">${escapeHtml(data.reportNotes)}</div></div>`;

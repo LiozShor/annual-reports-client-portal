@@ -18,6 +18,8 @@ interface ClientFields {
   cc_email?: string;
   name?: string;
   client_id?: string;
+  is_active?: boolean;      // DL-404: false = archived / merged-out loser
+  merged_into?: string;     // DL-404: client_id of winner when is_active=false
 }
 
 interface ReportFields {
@@ -72,36 +74,66 @@ function matchFromRecord(
   };
 }
 
+/** Paired result: ClientMatch + the raw record (for DL-404 merge follow-through) */
+interface TierResult {
+  match: ClientMatch;
+  record: AirtableRecord<ClientFields>;
+}
+
 // ---------------------------------------------------------------------------
-// Tier 1 — Direct email match
+// Tier 1 — Direct email match (primary email, active clients only)
+// Tier 1.5 — cc_email match (DL-404, active clients only)
 // ---------------------------------------------------------------------------
+
+const CLIENT_FIELDS: Array<keyof ClientFields> = [
+  'email', 'cc_email', 'name', 'client_id', 'is_active', 'merged_into',
+];
 
 async function matchByEmail(
   pCtx: ProcessingContext,
   senderEmail: string,
-): Promise<ClientMatch | null> {
+): Promise<TierResult | null> {
   const emailLower = escapeAirtable(senderEmail.toLowerCase());
 
-  // Check primary email
+  // Tier 1: primary email, active clients only (is_active != FALSE handles
+  // both TRUE and blank/null so existing records without the field still match)
   const primary = await pCtx.airtable.listRecords<ClientFields>(TABLES.CLIENTS, {
-    filterByFormula: `LOWER({email}) = '${emailLower}'`,
-    fields: ['email', 'cc_email', 'name', 'client_id'],
+    filterByFormula: `AND(LOWER({email}) = '${emailLower}', {is_active} != FALSE())`,
+    fields: CLIENT_FIELDS,
     maxRecords: 1,
   });
 
   if (primary.records.length > 0) {
-    return matchFromRecord(primary.records[0], 'email_match', 1.0, senderEmail);
+    return {
+      match: matchFromRecord(primary.records[0], 'email_match', 1.0, senderEmail),
+      record: primary.records[0],
+    };
   }
 
-  // Check secondary email
-  const secondary = await pCtx.airtable.listRecords<ClientFields>(TABLES.CLIENTS, {
-    filterByFormula: `LOWER({cc_email}) = '${emailLower}'`,
-    fields: ['email', 'cc_email', 'name', 'client_id'],
+  return null;
+}
+
+/**
+ * Tier 1.5 (DL-404) — match From: against clients.cc_email.
+ * Only considers active clients (is_active != FALSE).
+ */
+async function matchByCcEmail(
+  pCtx: ProcessingContext,
+  senderEmail: string,
+): Promise<TierResult | null> {
+  const emailLower = escapeAirtable(senderEmail.toLowerCase());
+
+  const result = await pCtx.airtable.listRecords<ClientFields>(TABLES.CLIENTS, {
+    filterByFormula: `AND(LOWER({cc_email}) = '${emailLower}', {is_active} != FALSE())`,
+    fields: CLIENT_FIELDS,
     maxRecords: 1,
   });
 
-  if (secondary.records.length > 0) {
-    return matchFromRecord(secondary.records[0], 'email_match', 1.0, senderEmail);
+  if (result.records.length > 0) {
+    return {
+      match: matchFromRecord(result.records[0], 'cc_email_match', 1.0, senderEmail),
+      record: result.records[0],
+    };
   }
 
   return null;
@@ -216,7 +248,7 @@ function tokenOverlapMatch(
 async function matchByForwardedEmail(
   pCtx: ProcessingContext,
   metadata: EmailMetadata,
-): Promise<ClientMatch | null> {
+): Promise<TierResult | null> {
   // Only check forwards from office domain
   if (!metadata.senderEmail.toLowerCase().endsWith(OFFICE_DOMAIN)) {
     return null;
@@ -229,14 +261,18 @@ async function matchByForwardedEmail(
 
   const emailLower = escapeAirtable(forwardedEmail);
 
+  // DL-404: filter inactive clients out so merged losers don't hijack routing.
   const result = await pCtx.airtable.listRecords<ClientFields>(TABLES.CLIENTS, {
-    filterByFormula: `OR(LOWER({email}) = '${emailLower}', LOWER({cc_email}) = '${emailLower}')`,
-    fields: ['email', 'cc_email', 'name', 'client_id'],
+    filterByFormula: `AND(OR(LOWER({email}) = '${emailLower}', LOWER({cc_email}) = '${emailLower}'), {is_active} != FALSE())`,
+    fields: CLIENT_FIELDS,
     maxRecords: 1,
   });
 
   if (result.records.length > 0) {
-    return matchFromRecord(result.records[0], 'forwarded_email', 0.9, forwardedEmail);
+    return {
+      match: matchFromRecord(result.records[0], 'forwarded_email', 0.9, forwardedEmail),
+      record: result.records[0],
+    };
   }
 
   return null;
@@ -272,10 +308,13 @@ async function fetchActiveClients(
 
   // Fetch all clients — filter in-memory since Airtable doesn't support IN()
   const allClients = await pCtx.airtable.listAllRecords<ClientFields>(TABLES.CLIENTS, {
-    fields: ['email', 'cc_email', 'name', 'client_id'],
+    fields: CLIENT_FIELDS,
   });
 
-  return allClients.filter((c) => clientIds.has(c.id));
+  // Only return active clients (exclude soft-archived / merged-out losers)
+  return allClients.filter(
+    (c) => clientIds.has(c.id) && c.fields.is_active !== false,
+  );
 }
 
 async function matchBySenderName(
@@ -422,6 +461,65 @@ async function matchByAI(
 }
 
 // ---------------------------------------------------------------------------
+// DL-404: merged_into follow-through
+// ---------------------------------------------------------------------------
+
+/**
+ * DL-404: merged_into follow-through.
+ *
+ * If a resolved client row is an inactive loser (is_active=false + merged_into
+ * set), follow the pointer ONCE to the winner client and return an updated
+ * ClientMatch with matchMethod='merged_redirect'.
+ *
+ * Returns the original match unchanged if the record is active or has no pointer.
+ * Returns null if the winner cannot be found — caller should fall through to
+ * UNIDENTIFIED_RESULT rather than returning the inactive loser.
+ *
+ * This is a single extra Airtable GET only on the rare inactive-match path;
+ * active records (the common case) exit immediately at the first guard.
+ */
+async function followMergedPointer(
+  pCtx: ProcessingContext,
+  result: TierResult,
+): Promise<ClientMatch | null> {
+  const { match, record } = result;
+
+  // Fast path: active record — no follow-through needed
+  if (record.fields.is_active !== false) return match;
+
+  const winnerId = (record.fields.merged_into ?? '').trim();
+  if (!winnerId) {
+    // Inactive but no pointer — return as-is (unusual state, not a merge)
+    return match;
+  }
+
+  // Fetch the winner by client_id (single extra GET; only fires on inactive rows)
+  const winnerResult = await pCtx.airtable.listRecords<ClientFields>(TABLES.CLIENTS, {
+    filterByFormula: `{client_id} = '${escapeAirtable(winnerId)}'`,
+    fields: CLIENT_FIELDS,
+    maxRecords: 1,
+  });
+
+  if (winnerResult.records.length === 0) {
+    console.warn(
+      `[client-identifier] merged_into pointer from loser=${record.id} ` +
+      `→ client_id="${winnerId}" not found; falling through to unidentified`,
+    );
+    return null;
+  }
+
+  const winner = winnerResult.records[0];
+  return {
+    clientRecordId: winner.id,
+    clientName: winner.fields.name ?? '',
+    clientId: winner.fields.client_id ?? '',
+    email: match.email,
+    matchMethod: 'merged_redirect',
+    confidence: match.confidence,
+  };
+}
+
+// ---------------------------------------------------------------------------
 // Main export
 // ---------------------------------------------------------------------------
 
@@ -453,8 +551,12 @@ export async function identifyClient(
 
   if (isForwardOnBehalf) {
     // Tier 2: try to match the forwarded sender directly
-    const forwardedMatch = await matchByForwardedEmail(pCtx, metadata);
-    if (forwardedMatch) return forwardedMatch;
+    const forwardedResult = await matchByForwardedEmail(pCtx, metadata);
+    if (forwardedResult) {
+      const resolved = await followMergedPointer(pCtx, forwardedResult);
+      if (resolved) return resolved;
+      // Winner lookup failed — fall through to other tiers rather than returning loser
+    }
 
     // Forwarded email not in Clients table (common — clients have multiple
     // addresses). Fetch active clients once, used by Tier 2.5 + Tier 4.
@@ -464,6 +566,8 @@ export async function identifyClient(
     // Catches the common case where the forwarded "From: <Name> <email>"
     // name corresponds to a client whose Airtable email differs from the
     // forwarded address (e.g. multiple addresses per client).
+    // fetchActiveClients already filters is_active=false rows, so no merge
+    // follow-through needed here.
     const forwardedName = parseForwardedSenderName(metadata.bodyText);
     if (forwardedName && activeClients.length > 0) {
       const nameMatch = tokenOverlapMatch(forwardedName, activeClients);
@@ -488,15 +592,29 @@ export async function identifyClient(
     return { ...UNIDENTIFIED_RESULT, email: forwardedInBody };
   }
 
-  // Tier 1: Direct email match
-  const emailMatch = await matchByEmail(pCtx, metadata.senderEmail);
-  if (emailMatch) return emailMatch;
+  // Tier 1: Direct email match (primary email, active clients only)
+  const emailResult = await matchByEmail(pCtx, metadata.senderEmail);
+  if (emailResult) {
+    const resolved = await followMergedPointer(pCtx, emailResult);
+    if (resolved) return resolved;
+  }
+
+  // Tier 1.5 (DL-404): cc_email match (active clients only)
+  const ccResult = await matchByCcEmail(pCtx, metadata.senderEmail);
+  if (ccResult) {
+    const resolved = await followMergedPointer(pCtx, ccResult);
+    if (resolved) return resolved;
+  }
 
   // Tier 2: Forwarded email match (non-office senders or office-self with no forward)
-  const forwardedMatch = await matchByForwardedEmail(pCtx, metadata);
-  if (forwardedMatch) return forwardedMatch;
+  const forwardedResult = await matchByForwardedEmail(pCtx, metadata);
+  if (forwardedResult) {
+    const resolved = await followMergedPointer(pCtx, forwardedResult);
+    if (resolved) return resolved;
+  }
 
   // Tier 3: Sender name match (also fetches active clients for Tier 4)
+  // fetchActiveClients already filters is_active=false rows.
   const { match: nameMatch, activeClients } = await matchBySenderName(pCtx, metadata);
   if (nameMatch) return nameMatch;
 

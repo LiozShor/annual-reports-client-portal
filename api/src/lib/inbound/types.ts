@@ -96,11 +96,13 @@ export interface AttachmentInfo {
 
 export type MatchMethod =
   | 'email_match'
+  | 'cc_email_match'       // DL-404: From: matched against clients.cc_email (active only)
   | 'forwarded_email'
   | 'forwarded_name'      // DL-361: display name in From: header fuzzy-matched against active client names
   | 'sender_name'
   | 'ai_identification'
   | 'manual_assignment'   // DL-361: office picked the client via /webhook/assign-unidentified
+  | 'merged_redirect'     // DL-404: resolved row was inactive+merged; pointer followed to winner
   | 'unidentified';
 
 export interface ClientMatch {

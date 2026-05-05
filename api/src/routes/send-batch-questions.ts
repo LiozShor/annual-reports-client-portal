@@ -73,15 +73,16 @@ sendBatchQuestions.post('/send-batch-questions', async (c) => {
     }
 
     // Send email — off-hours (20:00-08:00 Israel) defers to next 08:00 via PidTagDeferredSendTime (DL-264/273)
+    const ccEmail = (report.fields.cc_email as string | undefined) || undefined;
     const graph = new MSGraphClient(c.env, c.executionCtx);
     const offHours = isOffHoursOrWeekend();
     let deferredMessageId: string | null = null;
     if (offHours) {
       const deferredUtc = getNextBusinessMorning0800Israel();
-      const r = await graph.sendMailDeferred(subject, html, clientEmail, SENDER, deferredUtc);
+      const r = await graph.sendMailDeferred(subject, html, clientEmail, SENDER, deferredUtc, ccEmail);
       deferredMessageId = r.messageId;
     } else {
-      await graph.sendMail(subject, html, clientEmail, SENDER);
+      await graph.sendMail(subject, html, clientEmail, SENDER, ccEmail);
     }
 
     // Append to client_notes + set on_hold on classification records that have questions (DL-335).

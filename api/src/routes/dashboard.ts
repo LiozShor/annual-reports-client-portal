@@ -40,7 +40,15 @@ dashboard.get('/admin-dashboard', async (c) => {
   const filing_type = c.req.query('filing_type');
   const airtable = new AirtableClient(c.env.AIRTABLE_BASE_ID, c.env.AIRTABLE_PAT);
 
-  const filters = [`{year}=${year}`];
+  const filters = [
+    `{year}=${year}`,
+    // Exclude soft-archived losers from client merges (DL-404).
+    // {merged_into} is a singleLineText field populated by the merge endpoint.
+    // When the field does not yet exist on any record, Airtable evaluates
+    // {nonexistent}=BLANK() as TRUE for every row, so this formula is
+    // safe to ship before any merge has actually been run.
+    `OR({merged_into}=BLANK(),{merged_into}='')`,
+  ];
   if (filing_type) filters.push(`{filing_type}='${filing_type}'`);
   const filterByFormula = `AND(${filters.join(',')})`;
 
