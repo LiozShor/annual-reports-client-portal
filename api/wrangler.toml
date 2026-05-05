@@ -45,6 +45,12 @@ ADMIN_TELEGRAM_IDS = "6293911784"
 binding = "SELF"
 service = "annual-reports-api"
 
+# Bot conversation / context memory (created 2026-05-05).
+[[d1_databases]]
+binding = "AGENT_MEMORY"
+database_name = "agent_memory"
+database_id = "154b373c-d86c-4c17-ba38-6131d3181326"
+
 [[kv_namespaces]]
 binding = "TOKEN_CACHE"
 id = "5e3beec684c04f539939efe42dada1d0"

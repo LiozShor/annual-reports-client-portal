@@ -44,6 +44,9 @@ export interface Env {
   TOKEN_CACHE: KVNamespace;
   CACHE_KV: KVNamespace;
 
+  // D1 database for bot agent memory (created 2026-05-05).
+  AGENT_MEMORY: D1Database;
+
   // Queue producer binding (Phase: Cloudflare Queues migration)
   INBOUND_QUEUE: Queue<InboundQueueMessage>;
 

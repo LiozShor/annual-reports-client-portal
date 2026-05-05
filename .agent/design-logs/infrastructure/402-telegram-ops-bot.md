@@ -395,6 +395,22 @@ M3 notes + inbound + stage:
 - `tools.test.mjs` and `loop.test.mjs` — adding the dual-source pattern (`.ts` + `.mjs`) for testable pure logic in tools/loop is M2 work alongside the confirm flow. The M1 history-trim contract test is sufficient coverage for the only pure helper that ships in M1.
 - Soft rate-cap counter in `KV_KEYS.rate` — wired into `types.ts` but enforcement landed in M2.
 
+### M1.1 — Reply quality structural fix (2026-05-05)
+
+**One-sentence summary:** Fixed bot reply quality by transforming tool outputs at the structural layer (not via prompt patches).
+
+**Pattern that emerged — structural fix > prompt patch:** Live test of M1 surfaced raw `recXXX` ids and English stage codes (`Waiting_For_Answers`) leaking into Hebrew bot replies. The instinct was to tighten the system prompt. The correct fix was at the data shape: `_internal` field for IDs the model needs only for follow-up tool calls (never for display), `*_he` suffix for any field that's a user-facing translation of an enum. When the rule lives in the data shape, the model can't violate it — even a smarter model wouldn't help, because the issue was inputs, not intelligence. Defense in depth: leakage now requires both the system prompt rule AND the response shape to fail simultaneously.
+
+**Files changed:**
+- `api/src/lib/stage-translations.ts` — new. `STAGE_HE` (8 stages) + `DOC_STATUS_HE` (5 statuses) + `translateStage()` + `translateDocStatus()` + `formatDocProgress()`. Unknown values return `[stage: <code>]` as a visible bug marker, never silent fallback. SSOT mirrored from `frontend/shared/constants.js:14-21` and `frontend/admin/js/script.js:9399-9401`.
+- `api/src/lib/telegram-bot/tools.ts` — all 4 read tools now run Worker responses through `formatForChat*` helpers. Top-level `id`/`record_id` removed from every response shape; raw record ids isolated to a hidden `_internal` field. New `ChatClientSummary`, `ChatDocsForClient`, `ChatDashboardStats` interfaces front the LLM-visible shape.
+- `api/src/lib/telegram-bot/system-prompt.ts` — appended `## Reply style` section forbidding `rec.../rep...` echoes and mandating use of `*_he` fields. Existing sections untouched.
+- `api/wrangler.toml` + `api/src/lib/types.ts` — wired the Worker `[[services]] SELF` self-binding (Cloudflare blocks Workers from fetching their own public hostname, error 1042) and bound D1 `agent_memory` (created today, EEUR region, id `154b373c-d86c-4c17-ba38-6131d3181326`) as `AGENT_MEMORY: D1Database` for upcoming agent-memory work. Not yet consumed by any code path.
+
+**Verification:** production query `יש לקוח בשם ליעוז שור?` returned a clean Hebrew sentence with zero `rec…` substrings and zero English enum codes. Worker version `67f07df5` (reply-quality fix), then `ba5f96e6` (D1 binding wired but not consumed).
+
+**Worker deploys this session:** `9a5019e5` (M1 source) → `633f41e7` (token unit fix: ms not seconds) → `1283bb08` (debug log) → `93cd4dfc` (SELF service binding) → `3e8bfcab` (year-default to currentYear-1) → `67f07df5` (reply-quality fix) → `ba5f96e6` (D1 binding).
+
 ## 9. Open Questions Resolved Before This Draft
 
 1. **Notes field?** Resolved — `notes` column on Reports table, endpoint `POST /webhook/admin-update-client` action='update-notes' exists. No schema change.
