@@ -103,5 +103,8 @@ docs/Samples/
 # Wrangler dryrun artifacts
 api/.dryrun-cors-preview/
 
+# Per-clone runtime state for hooks (e.g. prune-current-status run counter)
+.claude/state/
+
 # Added by ggshield
 .cache_ggshield
