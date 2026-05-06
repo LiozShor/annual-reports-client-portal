@@ -28,6 +28,50 @@
 ---
 
 **Last Updated:** 2026-05-05 (DL-404 — IMPLEMENTED, NEED TESTING. One-click merge of two clients into a single household. Worker deployed, dashboard hotfix landed.)
+**Last Updated:** 2026-05-06 (DL-406 — IN PROGRESS, paused mid-Phase-D-2.)
+
+## OPEN: DL-406 — Aging colors + pending-notes digest section
+
+DL: `.agent/design-logs/admin-ui/406-aging-colors-pending-notes-digest.md`
+Prompt artifact: `docs/dl-406-pending-notes-prompt.md`
+Edit script (regenerates the WF07 JSON): `docs/dl-406-edit-wf07.py`
+Frontend cache-bust: `script.js?v=419`
+
+### Phase D-1 — frontend aging colors — SHIPPED ✓
+Commit `712c8303` on main (rebased + FF-pushed). Pages auto-deploy verified — `script.js?v=419` live on docs.moshe-atsits.com. Surfaces with new aging cues:
+- Messages widget rows + groups (`.msg-row` / `.msg-group`) — RTL border-inline-start stripe via `m.date`
+- AI Review pending cards (`.ai-review-card`) — bg tint via `item.received_at`
+- PA queue priority badge (`.pa-card__priority`) — unified palette via `item.submitted_at`, replaces DL-295 `--med`/`--high`
+Moshe-Review FIFO queue intentionally untouched.
+
+### Phase D-2 — n8n WF07 digest section — IN PROGRESS, paused
+**Approach pivoted mid-implementation** from sub-workflow → inline edit of WF07 JSON (user concerned about MCP `update_workflow` blast radius on a 13-node production digest, and security harness blocks tool calls carrying real Airtable PAT / Anthropic key).
+
+**Current state:**
+- Modified WF07 JSON sitting at `C:\Users\liozm\Downloads\[07] Daily Natan Digest - DL-406.json` (regenerable via `docs/dl-406-edit-wf07.py`).
+- 6 new nodes added (Query Pending Notes, Build Notes Payload, IF Has Pending Notes, Call Claude (Notes), Parse Notes Response, Return Empty Notes); existing inbox-emails sub-chain shifted right but kept (just no longer rendered).
+- New Section 1 = pending-notes-from-dashboard with three urgency tiers (`urgent` / `regular` / `fyi`); old inbox-emails section removed from rendered email per user request.
+- Subject line updated to lead with urgent count (Hebrew, prepends `N דחופות` ahead of approval/review counts).
+- One bug fixed mid-test: `$('Return Empty Notes').first()` throws when the unran IF branch is referenced; wrapped in try/catch (latest `docs/dl-406-edit-wf07.py` already has the fix).
+
+**Orphan to clean up:** sub-workflow `HeDd1DgXXnzM2qP0` (`[DL-406] Pending Notes Builder`) created earlier in the session before pivoting. Harmless since it has no trigger schedule, but should be archived via `mcp__claude_ai_n8n__archive_workflow` when convenient.
+
+### Resume from here:
+1. **User imports** `[07] Daily Natan Digest - DL-406.json` (Replace) → Save → Execute workflow.
+2. Verify Section 1 renders pending notes (compare to dashboard widget content), and the inbox-emails section is gone.
+3. If Claude prompt output is rough, iterate — `docs/dl-406-pending-notes-prompt.md` documents the design; edit `docs/dl-406-edit-wf07.py` (`SYSTEM_PROMPT` constant) and re-run to regenerate JSON.
+4. After tomorrow's 15:00 / 20:00 send confirms healthy, archive the orphan sub-workflow `HeDd1DgXXnzM2qP0` and run `bash .claude/workflows/close-design-log.sh 406` to mark DL-406 `[COMPLETED]`.
+
+### Open Section 7 items:
+- [ ] Test sub-chain end-to-end: import + execute, verify urgent/regular/fyi tiers render, multi-message dedup works, polite-acknowledgement notes bucketed `fyi` (or skipped), casual `urgent` mention NOT auto-promoted
+- [ ] Verify Friday/Saturday skip still works (DL-204 weekend gate untouched)
+- [ ] Verify recipient routing: 15:00 → Natan, 20:00 → Moshe (per existing `israelHour < 18` check)
+- [ ] Watch first real 15:00 send for Hebrew rendering / mojibake / RTL
+- [ ] Mark `[COMPLETED]` after first clean live send
+
+---
+
+
 
 
 ## OPEN: DL-404 — Merge two clients into one
