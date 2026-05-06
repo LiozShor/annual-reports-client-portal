@@ -231,12 +231,12 @@ export async function mergeClients(
   const [reportsA, reportsB] = await Promise.all([
     airtable.listAllRecords(TABLES.REPORTS, {
       filterByFormula: `{client_id}='${escA}'`,
-      sort: [{ field: 'created_at', direction: 'desc' }],
+      sort: [{ field: 'year', direction: 'desc' }],
       maxRecords: 5,
     }),
     airtable.listAllRecords(TABLES.REPORTS, {
       filterByFormula: `{client_id}='${escB}'`,
-      sort: [{ field: 'created_at', direction: 'desc' }],
+      sort: [{ field: 'year', direction: 'desc' }],
       maxRecords: 5,
     }),
   ]);
