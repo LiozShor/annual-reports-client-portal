@@ -25,6 +25,12 @@ let RESOLVED_CLIENT_ID = CLIENT_ID || '';
 // DL-352: active owner tab for add-doc surface ('client' | 'spouse'). Resets on each page load.
 let _addDocActivePerson = 'client';
 
+// DL-408: templates allowed to appear multiple times on a single report even when
+// they have no user-variables. Rental contracts are one-per-property and a client
+// may own/rent several apartments. Without this allowlist the dedup at line ~771
+// hides them from the dropdown after the first add.
+const MULTI_INSTANCE_TEMPLATES = new Set(['T901', 'T902']);
+
 // DL-281: queued_send_at on Airtable doesn't auto-clear after 08:00 delivery
 // (Exchange has no callback). Treat the field as live only while the next
 // 08:00 Israel after the approval is still in the future. DST-safe via the
@@ -767,7 +773,10 @@ function initDocumentDropdown() {
         const items = [];
         for (const tpl of catTemplates) {
             const userVars = (tpl.variables || []).filter(v => v !== 'year' && v !== 'spouse_name');
-            if (userVars.length === 0 && existingTemplateIds.has(tpl.template_id)) continue;
+            // DL-408: rental contracts are inherently multi-instance (one per property).
+            // Bypass the no-variables single-instance filter for these templates.
+            const isMultiInstance = MULTI_INSTANCE_TEMPLATES.has(tpl.template_id);
+            if (!isMultiInstance && userVars.length === 0 && existingTemplateIds.has(tpl.template_id)) continue;
 
             const displayName = stripBold(tpl.name_he
                 .replace(/\{year\}/g, YEAR || 'YYYY')

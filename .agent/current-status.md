@@ -1,6 +1,25 @@
 # Annual Reports CRM - Current Status
 
-**Last Updated:** 2026-05-06 (DL-405 shipped; DL-404 merge still 500s — likely one root cause left, see snapshot.)
+**Last Updated:** 2026-05-06 (DL-408 implemented — rental-contract multi-instance fix; DL-405 shipped; DL-404 merge still 500s.)
+
+## OPEN: DL-408 — Doc-Manager Rental Contracts Multi-Instance
+
+DL: `.agent/design-logs/admin-ui/408-doc-manager-rental-multi-instance.md`
+Status: **IMPLEMENTED — NEED TESTING**
+
+Symptom (CPA-XXX): T901 ("דירה מושכרת – הכנסה") missing from add-doc dropdown. Root cause: T901's Airtable `variables` field was empty + the `userVars.length === 0 && existingTemplateIds.has(...)` filter at `document-manager.js:771` swallowed it once on the report. Fixed both: PATCHed Airtable T901 row to set `variables = "rent_income_monthly"` AND added `MULTI_INSTANCE_TEMPLATES = new Set(['T901','T902'])` allowlist bypass as defense-in-depth.
+
+### Active TODOs (validation — Phase E)
+- [ ] CPA-XXX (reporter's client) AR doc-manager: confirm T901 + T902 both render under the housing category.
+- [ ] Add T901 once → fill `rent_income_monthly` → confirm T901 still in dropdown afterward (multi-instance).
+- [ ] Add a second T901 with a different `rent_income_monthly` → both chips render distinctly.
+- [ ] Regression: on another client, add a no-variable template NOT in the allowlist → confirm it still disappears after add.
+- [ ] PA queue parity (same reporter's client in Pending Approval): add T901 twice with different `rent_income_monthly` — no duplicate warning, both chips persist.
+- [ ] Cache-bust check: `curl -sI https://docs.moshe-atsits.com/document-manager.html | grep document-manager.js` shows `?v=408`.
+- [ ] Hebrew RTL render check: chips show distinct property identifiers; no visual collision.
+- [ ] **Open question for Natan:** any other contract templates that should be multi-instance? (Bank loan agreements? Business lease contracts?) If yes, append template_ids to `MULTI_INSTANCE_TEMPLATES` in a follow-up DL.
+
+---
 
 ## Session 2026-05-06 — Snapshot
 
