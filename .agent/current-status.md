@@ -88,6 +88,32 @@ Moshe-Review FIFO queue intentionally untouched.
 - [ ] Watch first real 15:00 send for Hebrew rendering / mojibake / RTL
 - [ ] Mark `[COMPLETED]` after first clean live send
 
+### Follow-ups identified 2026-05-06 (post first live digest):
+
+**(A) Coverage mismatch — digest's 6 names vs widget's 7+ with zero overlap.** Two surfaces query Airtable with very different scopes:
+| | Widget `/admin-recent-messages` | WF07 `Query Pending Notes` + `Build Notes Payload` |
+|---|---|---|
+| Year scope | `{year}=<currentYear>` (default 2026) | none — any year |
+| Records | paginated `listAllRecords` | single `pageSize=100` GET, NO offset loop |
+| Record window | none | `LAST_MODIFIED_TIME > NOW-30d` |
+| `!summary` | passes through | hard skip (even after `raw_snippet` fallback) |
+| `type==='office_reply'` | folded into replies map | hard skip |
+| Age cap | none | >14d hard skip |
+| Total cap | none | `slice(0,50)` after sort by age desc → keeps **oldest 50**, drops newest if >50 |
+
+  **Most likely root cause (ranked):** (1) year-scope mismatch — widget shows 2026, digest is year-agnostic and pulls mostly 2025 records; (2) no pagination on the digest query (silent tail-drop if >100 reports have notes modified in last 30d); (3) `!summary` filter drops entries the widget shows blank.
+
+  **Fix shape (needs user approval before edit):**
+  - [ ] Drop `LAST_MODIFIED_TIME` filter; query `client_notes != ''` with offset-loop pagination (matches widget).
+  - [ ] Decide year scope: (a) match widget current-year only, (b) union active years 2025+2026, or (c) all-years. **User to pick.**
+  - [ ] Soften `!summary`: fall back to `n.subject` or empty placeholder so LLM can SKIP-classify instead of silent-drop.
+  - [ ] Cap-bite logging: warn when `>50` notes after filter so we know the cap is biting.
+  - [ ] Keep `>14d` and `office_reply` skips — those are correct.
+
+**(B) LLM tone too terse — pick a candidate before re-tuning prompt.** Drafted 5 tone candidates side-by-side (verb-led terse / personal narrative / boss briefing / empathetic / mixed headline+context) using 4 sample notes. **Held in chat transcript only — not saved to a file yet.** User to pick a tone (or mix), then update `docs/dl-406-pending-notes-prompt.md` few-shot examples + `docs/dl-406-edit-wf07.py` `SYSTEM_PROMPT` constant and re-test on next morning's digest.
+
+**Live-verify gate:** Both fixes must be tested against next morning's actual digest before marking `[COMPLETED]` — per project CLAUDE.md "tests pass ≠ done".
+
 ---
 
 
