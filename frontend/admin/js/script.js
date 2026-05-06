@@ -1659,8 +1659,6 @@ function renderClientsTable(clients) {
         const rid = escapeAttr(client.report_id);
         const cName = escapeAttr(client.name);
         const isActive = client.is_active !== false;
-        const otherType = getClientOtherFilingType(client.email, client.year);
-        const otherTypeLabel = otherType ? FILING_TYPE_LABELS[otherType] : '';
 
         html += `
             <tr data-report-id="${rid}" data-client-name="${cName}" data-stage="${escapeAttr(client.stage)}" data-is-active="${isActive}">
@@ -1712,20 +1710,8 @@ function renderClientsTable(clients) {
                 `<button class="action-btn reminder-set-btn" onclick="sendDashboardReminder('${rid}', '${cName}')" title="שלח תזכורת">${icon('bell-ring', 'icon-sm')}</button>` :
                 ''}
                     <div class="row-overflow-dropdown">
-                        <button class="action-btn overflow" onclick="toggleRowMenu(this, event)" title="פעולות נוספות">⋮</button>
-                        <div class="row-menu">
-                            <button onclick="viewClient('${rid}'); closeAllRowMenus();">${icon('external-link')} צפייה כלקוח</button>
-                            ${stageNum >= 3 ?
-                `<button onclick="viewQuestionnaire('${rid}'); closeAllRowMenus();">${icon('file-text')} צפה בשאלון</button>` : ''}
-                            <button onclick="openCcEmailFromKebab('${rid}', '${escapeAttr(client.stage)}'); closeAllRowMenus();">${icon('users')} ${client.cc_email ? 'ערוך אימייל משני' : 'הוסף אימייל משני'}</button>
-                            ${stageNum >= 1 && stageNum <= 3 ?
-                `<button onclick="copyQuestionnaireLink('${rid}'); closeAllRowMenus();">${icon('copy')} העתק קישור לשאלון</button>` : ''}
-                            ${isActive && otherType ?
-                `<button onclick="addSecondFilingType('${rid}'); closeAllRowMenus();">${icon('file-plus')} הוסף ${otherTypeLabel}</button>` : ''}
-                            ${isActive ?
-                `<button class="danger" onclick="deactivateClient('${rid}', '${cName}'); closeAllRowMenus();">${icon('archive')} העבר לארכיון</button>` :
-                `<button onclick="reactivateClient('${rid}'); closeAllRowMenus();">${icon('archive-restore')} הפעל מחדש</button>`}
-                        </div>
+                        <button class="action-btn overflow" aria-haspopup="menu" onclick="toggleRowMenu(this, event)" title="פעולות נוספות">⋮</button>
+                        <div class="row-menu" role="menu">${window.buildClientRowActionsHtml(client, { rid, isActive, stage: client.stage })}</div>
                     </div>
                 </td>
             </tr>
@@ -1746,8 +1732,6 @@ function renderClientsTable(clients) {
         const rid = escapeAttr(client.report_id);
         const cName = escapeAttr(client.name);
         const isActive = client.is_active !== false;
-        const mOtherType = getClientOtherFilingType(client.email, client.year);
-        const mOtherTypeLabel = mOtherType ? FILING_TYPE_LABELS[mOtherType] : '';
 
         cards += `<li class="mobile-card" data-report-id="${rid}" data-stage="${escapeAttr(client.stage)}" data-is-active="${isActive}">
             <div class="mobile-card-primary">
@@ -1779,20 +1763,8 @@ function renderClientsTable(clients) {
                 ${(client.stage === 'Waiting_For_Answers' || client.stage === 'Collecting_Docs') ?
                     `<button class="action-btn reminder-set-btn" onclick="sendDashboardReminder('${rid}', '${cName}')" title="שלח תזכורת">${icon('bell-ring', 'icon-sm')}</button>` : ''}
                 <div class="row-overflow-dropdown">
-                    <button class="action-btn overflow" onclick="toggleRowMenu(this, event)" title="פעולות נוספות">⋮</button>
-                    <div class="row-menu">
-                        <button onclick="viewClient('${rid}'); closeAllRowMenus();">${icon('external-link')} צפייה כלקוח</button>
-                        ${stageNum >= 3 ?
-                            `<button onclick="viewQuestionnaire('${rid}'); closeAllRowMenus();">${icon('file-text')} צפה בשאלון</button>` : ''}
-                        <button onclick="openCcEmailFromKebab('${rid}', '${escapeAttr(client.stage)}'); closeAllRowMenus();">${icon('users')} ${client.cc_email ? 'ערוך אימייל משני' : 'הוסף אימייל משני'}</button>
-                        ${stageNum >= 1 && stageNum <= 3 ?
-                            `<button onclick="copyQuestionnaireLink('${rid}'); closeAllRowMenus();">${icon('copy')} העתק קישור לשאלון</button>` : ''}
-                        ${isActive && mOtherType ?
-                            `<button onclick="addSecondFilingType('${rid}'); closeAllRowMenus();">${icon('file-plus')} הוסף ${mOtherTypeLabel}</button>` : ''}
-                        ${isActive ?
-                            `<button class="danger" onclick="deactivateClient('${rid}', '${cName}'); closeAllRowMenus();">${icon('archive')} העבר לארכיון</button>` :
-                            `<button onclick="reactivateClient('${rid}'); closeAllRowMenus();">${icon('archive-restore')} הפעל מחדש</button>`}
-                    </div>
+                    <button class="action-btn overflow" aria-haspopup="menu" onclick="toggleRowMenu(this, event)" title="פעולות נוספות">⋮</button>
+                    <div class="row-menu" role="menu">${window.buildClientRowActionsHtml(client, { rid, isActive, stage: client.stage })}</div>
                 </div>
             </div>
         </li>`;
@@ -14064,70 +14036,13 @@ function openClientContextMenu(e) {
     const tr = e.target.closest('tr');
     if (!tr || !tr.dataset.reportId) return;
     e.preventDefault();
-    closeAllRowMenus();
-
+    // DL-405: unified menu — items, layout, and positioning all live in
+    // frontend/admin/js/modules/client-row-actions.js. Single source of truth
+    // shared with desktop kebab + mobile kebab + long-press.
     const rid = tr.dataset.reportId;
-    const cName = tr.dataset.clientName;
-    const stage = tr.dataset.stage;
-    const isActive = tr.dataset.isActive === 'true';
-
-    const menu = document.getElementById('clientContextMenu');
-    let items = '';
-
-    const stageNum = STAGES[stage]?.num || 0;
-    if (isActive) {
-        if (stage === 'Send_Questionnaire') {
-            items += `<button onclick="sendSingle('${rid}'); closeAllRowMenus();">${icon('send')} שלח שאלון</button>`;
-        }
-        if (stage === 'Waiting_For_Answers' || stage === 'Collecting_Docs') {
-            items += `<button onclick="sendDashboardReminder('${rid}', '${cName}'); closeAllRowMenus();">${icon('bell-ring')} שלח תזכורת</button>`;
-        }
-        if (stage === 'Send_Questionnaire' || stage === 'Waiting_For_Answers') {
-            items += `<button onclick="openAssistedQuestionnaire('${rid}', '${cName}'); closeAllRowMenus();">${icon('user-pen')} מלא שאלון במקום הלקוח</button>`;
-        }
-        if (stageNum >= 3) {
-            items += `<button onclick="viewQuestionnaire('${rid}'); closeAllRowMenus();">${icon('file-text')} צפה בשאלון</button>`;
-        }
-        items += `<button onclick="viewClient('${rid}'); closeAllRowMenus();">${icon('external-link')} צפייה כלקוח</button>`;
-        const ctxClient = clientsData.find(c => c.report_id === rid);
-        if (ctxClient) {
-            const ctxOtherType = getClientOtherFilingType(ctxClient.email, ctxClient.year);
-            if (ctxOtherType) {
-                const ctxLabel = FILING_TYPE_LABELS[ctxOtherType];
-                items += `<button onclick="addSecondFilingType('${rid}'); closeAllRowMenus();">${icon('file-plus')} הוסף ${ctxLabel}</button>`;
-            }
-        }
-        items += `<button onclick="openMergeClientsDialog('${rid}', '${cName}'); closeAllRowMenus();">${icon('merge')} מזג עם לקוח אחר</button>`;
-        items += `<hr><button class="danger" onclick="deactivateClient('${rid}', '${cName}'); closeAllRowMenus();">${icon('archive')} העבר לארכיון</button>`;
-    } else {
-        items += `<button onclick="viewClient('${rid}'); closeAllRowMenus();">${icon('external-link')} צפייה כלקוח</button>`;
-        items += `<hr>`;
-        items += `<button onclick="reactivateClient('${rid}'); closeAllRowMenus();">${icon('archive-restore')} הפעל מחדש</button>`;
-    }
-
-    menu.innerHTML = items;
-
-    // Position at cursor, clamped to viewport
-    menu.style.display = 'block';
-    menu.style.visibility = 'hidden';
-    const mRect = menu.getBoundingClientRect();
-    const vw = window.innerWidth;
-    const vh = window.innerHeight;
-    let top = e.clientY;
-    let left = e.clientX;
-    if (top + mRect.height > vh - 8) top = vh - mRect.height - 8;
-    if (left + mRect.width > vw - 8) left = vw - mRect.width - 8;
-    if (top < 8) top = 8;
-    if (left < 8) left = 8;
-    menu.style.top = top + 'px';
-    menu.style.right = 'auto';
-    menu.style.left = left + 'px';
-    menu.style.bottom = '';
-    menu.style.maxHeight = '';
-    menu.style.visibility = '';
-    menu.classList.add('open');
-
-    safeCreateIcons();
+    const client = clientsData.find(c => c.report_id === rid);
+    if (!client) return;
+    window.openClientContextMenuAt(e.clientX, e.clientY, client);
 }
 
 // ==================== BULK ACTIONS (CHECKBOXES) ====================
@@ -14748,6 +14663,11 @@ document.addEventListener('click', (e) => {
 
 // Right-click context menu on client table rows
 document.getElementById('clientsTableContainer').addEventListener('contextmenu', openClientContextMenu);
+
+// DL-405: long-press on mobile cards opens the same unified menu at finger position
+if (typeof window.attachLongPressMenu === 'function') {
+    window.attachLongPressMenu(document.getElementById('clientsTableContainer'));
+}
 
 // Close row menus on scroll
 document.addEventListener('scroll', closeAllRowMenus, true);

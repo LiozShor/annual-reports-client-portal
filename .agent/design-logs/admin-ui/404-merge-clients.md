@@ -191,6 +191,8 @@ Activity-logger event_type added: `client_merged` (category `admin_action`).
 
 ## 8. Implementation Notes
 
+**2026-05-06 erratum (DL-405 follow-up):** T8's "merge with another client" action was added to the right-click context menu (`openClientContextMenu` at `script.js:14100`), not to the per-row `⋮` kebab as the spec implied. The action was reachable but only via right-click — invisible from desktop and mobile kebabs. DL-405 closes this gap structurally by unifying all three render sites through a shared item-list helper (`frontend/admin/js/modules/client-row-actions.js`). Future client-row actions only need to be added in one place.
+
 **Phase D Step 0 findings (2026-05-05):**
 - Questionnaire body render: `buildPaPreviewBody` at `frontend/admin/js/script.js:10416`; header at 10387. Print path also reads `client_questions` at `script.js:15113` and `15360-15366`. The merge-aware extension splices in at the body render — when `report.merged_from_report_ids` is non-empty, fetch each source report's `client_questions` from a new (or existing) read endpoint and render under section headers in chronological order.
 - `client_notes` storage: `clients.client_notes` is a `multilineText` field on the clients table (`docs/airtable-schema.md:96`) — free-form admin notes. NOT a JSON array, NOT a separate table. Merge appends loser's text to winner's with a separator marker (no PII added). The per-classification chat-bubble notes (DL-360, DL-362) live on `pending_classifications.client_notes` as a JSON array and are carried over for free when `pending_classifications.report` is re-pointed in Logic-Flow step 8.
