@@ -1,6 +1,31 @@
 # Annual Reports CRM - Current Status
 
-**Last Updated:** 2026-05-05 (DL-404 — IMPLEMENTED, NEED TESTING. One-click merge of two clients into a single household. Worker deployed, dashboard hotfix landed.)
+**Last Updated:** 2026-05-06 (DL-405 shipped; DL-404 merge still 500s — likely one root cause left, see snapshot.)
+
+## Session 2026-05-06 — Snapshot
+
+**Shipped + deployed:**
+- **DL-405** unify right-click + kebab menus through one shared item-list helper (`frontend/admin/js/modules/client-row-actions.js`). Mobile long-press, ARIA + arrow-key nav. `script.js` net −80 lines (16217 → 16137); ratchet baseline auto-shrunk. Cache-bust `script.js?v=417`. Merged (`748cc6c6`). DL `.agent/design-logs/admin-ui/405-unify-context-menus.md` status `BEING IMPLEMENTED`. **§7 validation un-tested.**
+- **DL-404 hotfix #1** — `window.clientsData` exposure (modules read `window.clientsData` but `script.js` declared it with `let` → not on window). Picker rendered "no clients found" before this. Fix: `window.clientsData = clientsData = data.clients || []`. `script.js?v=418`. Merged (`74be4a94`).
+- **DL-404 hotfix #2** — picker polish: removed CPA-NNN row; exposed `window.STAGES` + `STAGE_NUM_TO_KEY` + `STAGE_LABELS` + `STAGE_ORDER` from `frontend/shared/constants.js` so picker shows Hebrew stage labels instead of raw enum. `merge-clients.js?v=2`, `constants.js?v=371`. Merged (`3cafdd28`).
+- **DL-404 hotfix #3** — `api/src/lib/merge-clients.ts`: replaced `airtable.getRecord(TABLES.CLIENTS, '<client_id>')` (404s — `client_id` is a formula field, not a record id) with `listAllRecords` filter. Replaced `new Date().getFullYear()` year derivation (returned 2026 vs report year=2025 → 0 matches) with most-recent-report sort. First sort attempt used `created_at` on Reports → 422 UNKNOWN_FIELD_NAME (Reports has no `created_at`); switched to `year desc`. Worker `0769016e`. Merged (`3a352d90` + `ba2ffc1f`).
+- **Airtable schema fields created** via Meta API (DL-404's lazy-typecast plan failed because `airtable.updateRecord` doesn't pass `typecast:true`):
+  - `clients.merged_into` — `fldQQrkKiK5Hyv9CI` (singleLineText)
+  - `clients.merged_at` — `fld2PQIRUCaqvVNXE` (dateTime, ISO, Asia/Jerusalem)
+  - `reports.merged_from_report_ids` — `fldzxdRybdcP4lxlE` (multilineText)
+
+**Test clients used:** two QA siblings (older = winner CPA-XX with ~5/49 docs at `Collecting_Docs`; newer = loser CPA-YY with 0/4 docs at `Collecting_Docs` post-questionnaire). Both have annual_report filing_type, year=2025. IDs intentionally redacted from this status file; recover from `clientsData` console dump or git log of session DLs.
+
+**STILL BROKEN — DL-404 merge 500 after all four hotfixes.** Worker response: `{"ok":false,"code":"internal_error","message":"Internal server error"}`. Logpush ~5min latency so live error not captured before session end. **Strongest un-verified hypothesis:** `merge-clients.ts:216-217` uses `filterByFormula: \`{client_id}='${escA}'\`` against the **clients** table, but `clients.client_id` is a **formula** field. Per the airtable skill memory, formula/rollup fields cannot be matched with `=` — must use `SEARCH('CPA-XXX',{client_id})` or `FIND(...)`. Reports table also has `client_id` as a lookup field on lines 233/238 → same trap. If true: listAllRecords 422s → caught at outer catch → route returns `internal_error` 500. **Next-session step 1:** verify with one curl probe (bare `=` vs `SEARCH(...)`) and patch the four occurrences. Step 2 if not it: query Worker Logs (Logpush will have caught up) for the actual exception.
+
+**Other open follow-ups from this session:**
+- `~/.claude/skills/airtable/SKILL.md` falsely lists `created_at` as a Reports field (line 73) and claims it's common "across all four tables" (line 85). Reports has NO `created_at`. Documents DOES (verified). Pending_classifications and Templates do NOT. Fix: remove from Reports field list; change wording to "Documents has `created_at`; Reports/Pending/Templates do not". Re-verify `docs/airtable-schema.md` Reports section too.
+- DL-404 lazy-typecast contract is broken in code — `airtable.updateRecord` (`api/src/lib/airtable.ts:109`) does NOT accept a typecast option, but DL-404 spec assumed PATCH would auto-create the new fields. Either extend `updateRecord` to forward `typecast:true` or strike the lazy-create promise from DL-404 docs (today the latter — manual field creation).
+- Memory entries to save next session: (a) `let`/`const` top-level globals are not on `window` — modules that read `window.X` need explicit exposure; (b) Reports table has no `created_at` field; (c) DL-404 `updateRecord` never passes `typecast`, so any "typecast lazy-create" claim in DL spec is a code lie.
+
+**DL-405 validation still pending** — see DL §7 (long-press, arrow-key nav, ARIA in DOM, group-divider counts, RTL clamp) plus DL-404 erratum smoke test (merge action visible from BOTH right-click + kebab on dashboard).
+
+---
 
 ## OPEN: DL-404 — Merge two clients into one
 
