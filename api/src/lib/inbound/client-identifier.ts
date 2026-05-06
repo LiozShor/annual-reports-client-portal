@@ -85,8 +85,15 @@ interface TierResult {
 // Tier 1.5 — cc_email match (DL-404, active clients only)
 // ---------------------------------------------------------------------------
 
+// DL-404 hotfix: do NOT include 'merged_into' here. Airtable's listRecords
+// validates the `fields` parameter against the schema — listing a field that
+// does not yet exist on the table returns 422 UNKNOWN_FIELD_NAME, which 500s
+// every inbound-email queue processing call. The merged_into column is only
+// auto-created on the first PATCH from the merge endpoint (typecast), so until
+// then it does not exist. `followMergedPointer` re-fetches the inactive
+// record without a fields restriction to read merged_into safely.
 const CLIENT_FIELDS: Array<keyof ClientFields> = [
-  'email', 'cc_email', 'name', 'client_id', 'is_active', 'merged_into',
+  'email', 'cc_email', 'name', 'client_id', 'is_active',
 ];
 
 async function matchByEmail(
@@ -487,7 +494,18 @@ async function followMergedPointer(
   // Fast path: active record — no follow-through needed
   if (record.fields.is_active !== false) return match;
 
-  const winnerId = (record.fields.merged_into ?? '').trim();
+  // DL-404 hotfix: re-fetch the inactive record WITHOUT a fields restriction
+  // so we can read `merged_into` regardless of whether it appears in
+  // CLIENT_FIELDS. (Pre-first-merge the field doesn't exist on the table; the
+  // listRecords call above intentionally omits it to avoid 422.) Once the
+  // merge endpoint has typecast-created the field, this fetch returns it
+  // naturally. Cost: one extra GET, only on the rare inactive-record path.
+  const fullRecordResult = await pCtx.airtable.listRecords<Record<string, unknown>>(TABLES.CLIENTS, {
+    filterByFormula: `RECORD_ID() = '${escapeAirtable(record.id)}'`,
+    maxRecords: 1,
+  });
+  const fullRecord = fullRecordResult.records[0];
+  const winnerId = String((fullRecord?.fields as Record<string, unknown> | undefined)?.merged_into ?? '').trim();
   if (!winnerId) {
     // Inactive but no pointer — return as-is (unusual state, not a merge)
     return match;
