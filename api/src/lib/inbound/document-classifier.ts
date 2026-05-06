@@ -1044,6 +1044,7 @@ export interface DuplicateCheckResult {
   isDuplicate: boolean;
   fileUrl?: string;
   itemId?: string;
+  source?: 'documents' | 'pending_classifications';
 }
 
 export async function checkFileHashDuplicate(
@@ -1071,13 +1072,18 @@ export async function checkFileHashDuplicate(
     }),
   ]);
 
-  const match = pendingRecords[0] || docRecords[0];
+  // DL-409: prefer documents-table match so dedup skip-pending logging
+  // reflects the stronger signal (file already Received, not just queued).
+  const match = docRecords[0] || pendingRecords[0];
   if (!match) return { isDuplicate: false };
 
+  const source: 'documents' | 'pending_classifications' =
+    docRecords[0] ? 'documents' : 'pending_classifications';
   const f = match.fields as Record<string, unknown>;
   return {
     isDuplicate: true,
     fileUrl: (f.file_url as string) || undefined,
     itemId: (f.onedrive_item_id as string) || undefined,
+    source,
   };
 }

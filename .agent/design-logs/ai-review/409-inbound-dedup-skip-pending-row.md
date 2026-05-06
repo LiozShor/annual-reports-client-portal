@@ -1,5 +1,5 @@
 # Design Log 409: Inbound dedup — skip creating pending_classification when file_hash already received
-**Status:** [DRAFT]
+**Status:** [IMPLEMENTED — NEED TESTING]
 **Date:** 2026-05-06
 **Related Logs:** DL-407 (uncovered this gap during the matched_doc_name investigation); DL-112 (file_hash dedup foundation)
 
@@ -57,12 +57,40 @@ Open product questions, to be resolved in Phase A:
 
 ## 6. Proposed Solution
 
-(To be filled in Phase C after Phase A questions are answered.)
+Phase A decisions (user, this session):
+1. Match in `documents` (Received) → **silently skip** the create.
+2. Match in `pending_classifications` (queue twin) → **silently skip** the create.
+3. Retro cleanup of stale rows → **none** (handled manually via Airtable UI).
+
+Implementation (single guard, two helper changes):
+
+- `api/src/lib/inbound/document-classifier.ts` — `DuplicateCheckResult` extended with `source: 'documents' | 'pending_classifications'`. `checkFileHashDuplicate` now prefers the documents-table match (stronger signal: file already Received) and labels the source so logging is accurate.
+- `api/src/lib/inbound/processor.ts` — guard inserted immediately before the `createRecords(PENDING_CLASSIFICATIONS, …)` call. When `isDuplicate` is true, emit a single `attachment_duplicate_skipped` event (category `INBOUND`, PII-safe — first 12 chars of file_hash, no client name, no email body) and `return` early.
+
+The guard short-circuits both:
+- the `pending_classifications` create at the original line 715–717, and
+- the `matchedDocRecordId` documents-table update at line 720 (already gated by `!isDuplicate` before this DL; now never reached at all on the duplicate path).
+
+The post-create `attachment_classified` event is replaced on the duplicate path by `attachment_duplicate_skipped` so we can grep Workers logs for queue-noise drift.
+
+No retrocleanup, no `is_duplicate=true` write, no soft toast, no tests — explicitly out of scope.
 
 ## 7. Validation Plan
 
-(To be filled.)
+**Pre-deploy**
+- [x] `cd api && ./node_modules/.bin/tsc --noEmit` — only the two pre-existing unrelated errors (`index.ts`, `activity-logger.ts`); processor.ts + document-classifier.ts clean.
+
+**Post-deploy (live)**
+- [ ] Forward an email with one attachment whose file_hash already matches a Received doc on a real client. Expect: NO new `pending_classifications` row; one `attachment_duplicate_skipped` log line with `duplicate_match: 'documents'`; AI-review counter unchanged.
+- [ ] Forward the same email twice within ~10 minutes. Expect: first arrival creates a pending row as normal; second arrival fires `attachment_duplicate_skipped` with `duplicate_match: 'pending_classifications'`.
+- [ ] Forward an attachment with a never-seen file_hash. Expect: `pending_classifications` row created as before (non-duplicate path unchanged).
+
+**Observability**
+- [ ] After a few days, run `node scripts/query-worker-logs.mjs --since=72h --search="attachment_duplicate_skipped"` to baseline how often dedup fires.
 
 ## 8. Implementation Notes
 
-(To be filled during Phase D.)
+- Single commit on `claude-session-20260506-174734`: `fix(inbound): DL-409 skip pending_classifications create when file_hash already known`.
+- `processAttachmentWithClassification` returns `Promise<void>` and both call-sites (`processor.ts:1216, 1254`) discard the return — early `return` is safe.
+- Wasted upstream work on the duplicate path (notes-building at line 700-703, `classFields` object at 678-713) is harmless and not worth refactoring out for a one-shot guard.
+- Cribbed the log shape from `api/src/lib/inbound/bounce-handler.ts:75-85`. `file_hash_prefix` is sha256[0:12] — well below the >12 hex-char threshold flagged by P0 secret-audit safety.

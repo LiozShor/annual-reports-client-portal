@@ -712,6 +712,28 @@ async function processAttachmentWithClassification(
     pre_questionnaire: classification?.preQuestionnaire ?? false,
   };
 
+  // DL-409: when the file_hash already exists in documents (Received) or
+  // pending_classifications (queue twin), silently skip creating a fresh
+  // queue row. Prior behavior added redundant rows that polluted AI-review.
+  if (isDuplicate) {
+    logEvent({
+      event_type: 'attachment_duplicate_skipped',
+      category: 'INBOUND',
+      source: 'worker',
+      client_id: clientMatch.clientId,
+      endpoint: '/inbound/process-attachment',
+      details: {
+        template_id: classification?.templateId ?? null,
+        confidence: classification?.confidence ?? null,
+        duplicate_match: dupResult.source ?? null,
+        file_hash_prefix: attachment.sha256?.slice(0, 12),
+        report_id: report.reportRecordId,
+        attachment_name: attachment.name,
+      },
+    });
+    return;
+  }
+
   await pCtx.airtable.createRecords(TABLES.PENDING_CLASSIFICATIONS, [
     { fields: classFields },
   ]);
