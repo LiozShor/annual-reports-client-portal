@@ -205,26 +205,38 @@ export async function mergeClients(
   const airtable = new AirtableClient(env.AIRTABLE_BASE_ID, env.AIRTABLE_PAT);
 
   // ── Step 1: Load both clients rows ─────────────────────────────────────────
-  let clientARecord, clientBRecord;
+  // client_id is a formula field on clients (`CPA-${client_counter}`), so we
+  // must filter rather than getRecord-by-id. (DL-404 followup 2026-05-06.)
+  const escA = clientIdA.replace(/'/g, "\\'");
+  const escB = clientIdB.replace(/'/g, "\\'");
+  let clientARecord: Awaited<ReturnType<typeof airtable.listAllRecords>>[number] | undefined;
+  let clientBRecord: Awaited<ReturnType<typeof airtable.listAllRecords>>[number] | undefined;
   try {
-    [clientARecord, clientBRecord] = await Promise.all([
-      airtable.getRecord(TABLES.CLIENTS, clientIdA),
-      airtable.getRecord(TABLES.CLIENTS, clientIdB),
+    const [aRows, bRows] = await Promise.all([
+      airtable.listAllRecords(TABLES.CLIENTS, { filterByFormula: `{client_id}='${escA}'`, maxRecords: 1 }),
+      airtable.listAllRecords(TABLES.CLIENTS, { filterByFormula: `{client_id}='${escB}'`, maxRecords: 1 }),
     ]);
+    clientARecord = aRows[0];
+    clientBRecord = bRows[0];
   } catch (err) {
     return { ok: false, code: 'not_found', message: `Could not load client records: ${(err as Error).message}` };
   }
+  if (!clientARecord || !clientBRecord) {
+    return { ok: false, code: 'not_found', message: `Client not found: ${!clientARecord ? clientIdA : clientIdB}` };
+  }
 
-  const year = String(new Date().getFullYear());
-
-  // Load reports for both clients in the current year
+  // Load each client's most-recent active report (any year). Picking by year
+  // server-side was wrong: tax-year reports created in spring 2026 carry
+  // year=2025, and `new Date().getFullYear()` would return 2026 → 0 matches.
   const [reportsA, reportsB] = await Promise.all([
     airtable.listAllRecords(TABLES.REPORTS, {
-      filterByFormula: `AND({year}=${year},{client_id}='${clientIdA.replace(/'/g, "\\'")}')`,
+      filterByFormula: `{client_id}='${escA}'`,
+      sort: [{ field: 'created_at', direction: 'desc' }],
       maxRecords: 5,
     }),
     airtable.listAllRecords(TABLES.REPORTS, {
-      filterByFormula: `AND({year}=${year},{client_id}='${clientIdB.replace(/'/g, "\\'")}')`,
+      filterByFormula: `{client_id}='${escB}'`,
+      sort: [{ field: 'created_at', direction: 'desc' }],
       maxRecords: 5,
     }),
   ]);
@@ -236,9 +248,10 @@ export async function mergeClients(
     return {
       ok: false,
       code: 'not_found',
-      message: `Could not find active reports for both clients in year ${year}`,
+      message: `Could not find any reports for both clients`,
     };
   }
+  const year = String((reportA.fields as Record<string, unknown>).year ?? '');
 
   // ── Step 2: Reject cross-filing-type merges ─────────────────────────────────
   const filingTypeA = String((reportA.fields as Record<string, unknown>).filing_type || '');
