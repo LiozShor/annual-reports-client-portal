@@ -890,8 +890,8 @@ async function loadDashboard(silent = false) {
             throw new Error(data.error);
         }
 
-        // Store clients data
-        clientsData = data.clients || [];
+        // Store clients data (window. exposes for modules: DL-404 merge picker, DL-399 bounce warnings)
+        window.clientsData = clientsData = data.clients || [];
         dashboardLoaded = true;
         dashboardLoadedAt = Date.now();
 
