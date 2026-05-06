@@ -27,6 +27,9 @@
 
 ---
 
+**Last Updated:** 2026-05-05 (DL-404 — IMPLEMENTED, NEED TESTING. One-click merge of two clients into a single household. Worker deployed, dashboard hotfix landed.)
+
+
 ## OPEN: DL-404 — Merge two clients into one
 
 DL: `.agent/design-logs/admin-ui/404-merge-clients.md`
@@ -61,7 +64,6 @@ Open-test items from Section 7:
 - Deletion of the empty loser OneDrive folder (audit-preserve).
 - **n8n reminder workflow CC** (DL-405 candidate) — Worker `reminders.ts` delegates to the n8n `/send-reminder-manual` workflow which needs its own CC wiring; out of scope for DL-404.
 
-
 ## OPEN: DL-401 — Unidentified inbound doc rows clickable
 
 DL: `.agent/design-logs/ai-review/401-unidentified-doc-row-clickable.md`
@@ -76,25 +78,12 @@ Open-test items from Section 7 (frontend-only; Pages auto-deploys on push):
 - [ ] Mobile (narrow viewport) — row click triggers `loadDocPreview` via DL-334 mobile short-circuit.
 - [ ] Hard-refresh — confirm `script.js?v=414` is served.
 
-## OPEN: DL-400 — Edit-client modal row disappears on save
-
-DL: `.agent/design-logs/admin-ui/400-edit-client-modal-row-disappears-on-save.md`
-
-Open-test items from Section 7 (frontend-only; Pages auto-deploys on push):
-
-- [ ] Edit only `phone` on a real client → row stays visible, name/email/cc_email unchanged.
-- [ ] Edit only `name` → row stays visible, other fields preserved.
-- [ ] Edit only `email` → row stays visible, other fields preserved.
-- [ ] Edit only `cc_email` → row stays visible, other fields preserved.
-- [ ] Edit two fields at once → both update, row visible.
-- [ ] Active search term during save → row remains in filtered view if still matches.
-- [ ] Hard reload after save → values match Airtable (server write succeeded).
-- [ ] Cancel button → no change to local state.
-- [ ] Hard-refresh → confirm `script.js?v=407` is served.
+## SHIPPED: DL-400 — Edit-client modal row disappears on save (closed 2026-05-03)
 
 ## Recent (last 7 days)
 
 - **2026-05-03 · DL-398 — COMPLETED.** Admin dashboard stat cards show small muted percentage next to count for stages 1–8 (% of `counts.total` active clients, whole numbers, parenthesized superscript). Total card unchanged. JS-only injection inside `recalculateStats()` — single render path. Cache-bust script.js v=403→405, style.css v=384→386 (initial render glued count to percent — fixed in followup commit `d082b1f7` with parens + 0.45em font + vertical-align 0.35em). User confirmed live. DL: `.agent/design-logs/admin-ui/398-stat-card-percentage.md`.
+
 ## Recent (last 7 days)
 
 - **2026-05-03 · DL-399 COMPLETED.** Email bounce / NDR handling shipped + live-verified end-to-end. Worker version `40392bcc-7d21-45e0-9abc-1c92f01c67c6`. New `bounce-detector.ts` parses Outlook NDRs (Hebrew + EN subject prefixes, body recipient extraction with office+sender domain exclusion) before the auto-reply short-circuit; `bounce-handler.ts` clears the matched client's email, writes 4 audit fields, reverts Stage-2 reports to Stage-1, logs to activity-logger. Frontend (extracted to `modules/bounce-warning.js` due to monolith size ratchet): clickable warning button next to the stage badge (desktop + mobile) opens a bounce-detail modal; pin bounced clients to top of table; Stage-1 stat-card pulses blue (distinct from Stage-3 amber); paper-plane row button + bulk-send gated on non-empty email; post-edit-save confirm in Stage-1. Schema: 4 new fields on the clients table, `Bounced` option on `email_events.processing_status`. Mid-flight fixes folded in: regex anchors broken by Hebrew NDR subject prefix → word-boundaries; sender-NDR-robot fallback defaults to isHard true; recipient-extraction fallback excludes office + sender domains; admin-dashboard route extended to expose the 4 bounce fields per client; bounce-modal lookup switched from `window.clientsData` (was let-scoped, undefined inside the module) to button data-* attrs; nav count badges enlarged 11px → 14px. DL: `.agent/design-logs/admin-ui/399-email-bounce-handling.md`.
@@ -106,19 +95,7 @@ Open-test items from Section 7 (frontend-only; Pages auto-deploys on push):
 
 User wants: removing the "מסמך זה כבר קיים ברשימה" guard from add-doc popover so admin can deliberately create N instances of the same template (rental property #1, #2, …; multiple invoices from different issuers). Touch points: `_paAddDocConfirm` / `addAIDoc` in `frontend/admin/js/script.js`; UX decision (warn-and-confirm vs. just allow).
 
-## OPEN: DL-395 — PA review yes-answers visibility
-
-DL: `.agent/design-logs/admin-ui/395-pa-review-show-yes-answers.md`
-
-Open-test items from Section 7 (deploy Pages first, then verify on live admin):
-
-- [ ] PA review for a sample client — confirm questionnaire-answers section lists has-children=✓, business-stock=✓, pension/keren-hishtalmut/life-insurance rows (with company values), no yes/free subsection split.
-- [ ] Click print button on the same card — printed sheet matches the on-screen list 1:1.
-- [ ] `[H:no]` toggle regression — pick a client with ≥1 `✗ [H:no]`; confirm count, expand/collapse work, no row leaks to main list.
-- [ ] Empty `answers_all` client — section renders nothing.
-- [ ] DL-302 cross-highlight — hover a yes-answer with `template_ids`; related doc tags highlight. Yes-answer with no templates — no error.
-- [ ] Mobile <1024px — single column, no horizontal overflow.
-- [ ] Hard-refresh — confirm `script.js?v=400` is served.
+## SHIPPED: DL-395 — PA review yes-answers visibility (closed 2026-05-02)
 
 ## Recent (last 7 days)
 
@@ -128,12 +105,13 @@ Open-test items from Section 7 (deploy Pages first, then verify on live admin):
 - **2026-05-02 · DL-391 cascade-revert 422 fix — COMPLETED.** `notification_status: null` instead of `''` (commit 94964040). Verified on main.
 - **Pages cache-bust race resolved.** Pages git auto-deploy is back online (verified 2026-05-02). Manual `wrangler pages deploy` races against the git build and 502s on `/pages/assets/upload`. Memory: `reference_pages_git_autodeploy_back.md`. DL-368 marked archival once user confirms the auto-deploy is stable across multiple commits.
 
-
-
 **Last Updated:** 2026-05-01 (DL-391 — IMPLEMENTED, NEED TESTING; DL-386 follow-up. Chip menu in AI review [required-docs] now offers "📎 שייך את התצוגה הפעילה למסמך זה" as the first option when (a) `aiActionsPanel.dataset.itemId` is set, (b) chip status is `Required_Missing`, (c) chip's `doc_record_id` differs from the active item's `matched_doc_record_id`. One-click — calls existing `submitAIReassign(activeItemId, templateId, docRecordId)` (script.js:7773); same path DL-386's inline prompt uses (line 11523). `renderDocTag` adds `data-template-id` to chip span. New `selectDocTagAssignToCard` handler next to `selectDocTagStatus`. No CSS / Worker / schema changes. Cache-bust `script.js?v=394→395`. **Verify:** (a) chip menu without active card → option NOT visible; (b) open a pending card preview, then click an unrelated `Required_Missing` chip → option appears as **first** item with paperclip icon, divider below it, status options + Edit name follow; (c) click → toast → success → card auto-advances; (d) `Received` / `Waived` / `Requires_Fix` chips → option NOT visible; (e) general_doc + spouse-doc chips both work; (f) PA tab unaffected (separate `openPaDocTagMenu`); (g) DevTools shows `script.js?v=395`. DL-391 at `.agent/design-logs/ai-review/390-chip-menu-assign-to-this-doc.md`. Pages deploy needed before testing.)
 
+
 **Last Updated:** 2026-05-01 (DL-386 — COMPLETED; "+ [H:add-doc]" chip in AI review [H:required-docs] section, AI-aware PA add-doc popover, silent refresh, spouse selector, and inline assign prompt anchored to the freshly-added chip. Worker exposes `spouse_name` per classification. Verified live on CPA-XXX test client (with dummy spouse). DL-386 at `.agent/design-logs/ai-review/386-add-required-doc-from-ai-review.md`. **TODO (deferred follow-up):** when admin is on a pending card and clicks an existing chip in [H:required-docs], the chip's `openDocTagMenu` should also offer "[H:assign-to-this-doc]" as the first menu item (current options: "[H:hebrew]"=Received, "[H:hebrew]"=Waived, "[H:hebrew]"=edit name) — invokes `submitAIReassign(activeCardId, chip.template_id, chip.doc_record_id)`. Same affordance as the inline prompt after add, but reachable from any existing chip while a card is open in the cockpit. Touch points: `openDocTagMenu` (script.js ~line 9120), `selectDocTagStatus` handler. Gate the new option on `aiActionsPanel[data-item-id]` being set.)
+
 **Last Updated:** 2026-05-01 — DL-368, DL-376, DL-384, DL-387, DL-388 marked done.
+
 
 ## Recent (last 7 days)
 
@@ -150,6 +128,7 @@ Open-test items from Section 7 (deploy Pages first, then verify on live admin):
 
 ---
 
+
 ## OPEN: DL-365 — Activity Logger Phases 3-5
 
 DL: `.agent/design-logs/infrastructure/365-activity-logger.md`
@@ -162,11 +141,13 @@ Still need Worker secrets: `DEV_PASSWORD`, `PII_HASH_KEY` (`wrangler secret put`
 
 ---
 
+
 ## OPEN: W02 regression — wrangler deploy script missing `-c wrangler.toml`
 
 `api/package.json` deploy script needs `-c wrangler.toml` flag so `check-regressions.sh` W02 case passes honestly.
 
 ---
+
 
 ## 2026-05-03 — Security deep audit run
 
