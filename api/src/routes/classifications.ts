@@ -2223,34 +2223,46 @@ classifications.post('/review-classification', async (c) => {
             if (targetFolderId) patchBody.parentReference = { id: targetFolderId };
 
             if (Object.keys(patchBody).length > 0) {
+              // DL-407: split into two try blocks so a future field-shape error
+              // in the Airtable PATCH (Step 5) cannot abandon the OneDrive move
+              // result. Previous shape silently swallowed `matched_doc_name` 422s
+              // and left the Documents row with a stale file_url, so the admin
+              // UI re-rendered the doc as "pending" after AI-review approve.
+              let moveResult: { webUrl?: string; id?: string } | null = null;
               try {
-                const moveResult = await msGraph.patch(
+                moveResult = await msGraph.patch(
                   `/drives/${DRIVE_ID}/items/${itemId}?@microsoft.graph.conflictBehavior=rename`,
                   patchBody
                 );
+              } catch (moveErr) {
+                console.error('[review-classification] OneDrive move failed:', (moveErr as Error).message);
+              }
 
-                // 5. Update Airtable doc record with new file URL + issuer info (skip for reject — doc fields already cleared)
-                // DL-355: also propagate issuer_name + expected_filename so the Documents
-                // record carries the same identity the OneDrive file does. Previously
-                // these were left empty on Documents, leaving admin views with blank columns.
-                if (moveResult?.webUrl && action !== 'reject') {
-                  const updateDocId = action === 'reassign' && targetDoc ? targetDoc.id : (approveDocId || docId);
-                  if (updateDocId) {
-                    const docPatch: Record<string, unknown> = {
-                      file_url: moveResult.webUrl,
-                      onedrive_item_id: moveResult.id || itemId,
-                    };
-                    const clsIssuer = (clsFields.issuer_name as string) || '';
-                    const clsMatched = (clsFields.matched_doc_name as string) || '';
-                    if (clsIssuer && action !== 'reassign') docPatch.issuer_name = clsIssuer;
-                    if (clsMatched) docPatch.matched_doc_name = clsMatched;
-                    if (newFilename) docPatch.expected_filename = newFilename;
+              // 5. Update Airtable doc record with new file URL + issuer info (skip for reject — doc fields already cleared)
+              // DL-355: propagate issuer_name + expected_filename so the Documents row
+              // carries the same identity as the OneDrive file.
+              if (moveResult?.webUrl && action !== 'reject') {
+                const updateDocId = action === 'reassign' && targetDoc ? targetDoc.id : (approveDocId || docId);
+                if (updateDocId) {
+                  const docPatch: Record<string, unknown> = {
+                    file_url: moveResult.webUrl,
+                    onedrive_item_id: moveResult.id || itemId,
+                  };
+                  const clsIssuer = (clsFields.issuer_name as string) || '';
+                  if (clsIssuer && action !== 'reassign') docPatch.issuer_name = clsIssuer;
+                  if (newFilename) docPatch.expected_filename = newFilename;
+                  try {
                     await airtable.updateRecord(TABLES.DOCUMENTS, updateDocId, docPatch);
+                  } catch (patchErr) {
+                    console.error('[review-classification] documents PATCH failed:', (patchErr as Error).message);
+                    logError(c.executionCtx, c.env, {
+                      endpoint: '/webhook/review-classification',
+                      category: 'DEPENDENCY',
+                      error: patchErr as Error,
+                      details: `documents PATCH failed for ${updateDocId} (keys: ${Object.keys(docPatch).join(',')})`,
+                    });
                   }
                 }
-              } catch (moveErr) {
-                console.error('[review-classification] File move failed:', (moveErr as Error).message);
-                // Non-fatal: response already structured, just log the error
               }
             }
           }
