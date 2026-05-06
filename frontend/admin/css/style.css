@@ -3205,6 +3205,18 @@ tr:hover .client-view-link {
     color: var(--gray-600);
 }
 
+/* DL-406: aging-color stripe on the start (RTL: right) edge of each row
+   and on the multi-message group container. Fresh = no stripe (default
+   state shouldn't scream); progressively warmer as the message ages. */
+.msg-row.aging-fresh,
+.msg-group.aging-fresh { border-inline-start: 3px solid transparent; }
+.msg-row.aging-day1,
+.msg-group.aging-day1 { border-inline-start: 3px solid var(--warning-400, #fbbf24); }
+.msg-row.aging-aging,
+.msg-group.aging-aging { border-inline-start: 3px solid var(--danger-400, #f87171); }
+.msg-row.aging-stale,
+.msg-group.aging-stale { border-inline-start: 3px solid var(--gray-700, #374151); background: var(--gray-50); }
+
 .msg-row {
     display: flex;
     flex-wrap: wrap;
@@ -8833,16 +8845,31 @@ tr:hover .client-edit-link {
     font-weight: 600;
     line-height: 1.4;
 }
-.pa-card__priority--med {
+/* DL-406: unified aging palette (replaces DL-295 --med / --high modifiers).
+   aging-fresh: badge hidden by JS; aging-day1: yellow; aging-aging: red;
+   aging-stale: dark slate. Day count text remains for screen readers. */
+.pa-card__priority.aging-day1 {
     background: #fef3c7;
     color: #92400e;
     border: 1px solid #fde68a;
 }
-.pa-card__priority--high {
+.pa-card__priority.aging-aging {
     background: #fee2e2;
     color: #991b1b;
     border: 1px solid #fecaca;
 }
+.pa-card__priority.aging-stale {
+    background: #1f2937;
+    color: #f9fafb;
+    border: 1px solid #374151;
+}
+
+/* DL-406: AI Review card aging — subtle bg tint that doesn't conflict with the
+   match-quality border-inline-start signal already used on .match-full /
+   .match-fuzzy / .match-issuer-mismatch / .match-unmatched. */
+.ai-review-card.aging-day1 { background: #fefce8; }
+.ai-review-card.aging-aging { background: #fef2f2; }
+.ai-review-card.aging-stale { background: #f3f4f6; box-shadow: inset 3px 0 0 var(--gray-700, #374151); }
 
 /* DL-295: clickable doc-name in PA preview */
 .pa-doc-tag-clickable {

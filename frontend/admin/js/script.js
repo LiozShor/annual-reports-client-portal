@@ -1128,7 +1128,7 @@ function _renderMessageRowHtml(m) {
                 <div class="msg-reply-date">${formatRelativeTime(r.date)}</div>
             </div>`).join('')}</div>`
         : '';
-    return `<div class="msg-row" data-note-id="${noteId}" data-client-name="${escapeAttr(m.client_name)}" data-year="${escapeAttr(String(m.year || ''))}">
+    return `<div class="msg-row ${window.AgingColors.ageTier(m.date, window.AgingColors.TIERS_MESSAGES).cls}" data-note-id="${noteId}" data-client-name="${escapeAttr(m.client_name)}" data-year="${escapeAttr(String(m.year || ''))}">
         <div class="msg-content" onclick="this.parentElement.classList.toggle('expanded')">
             <div class="msg-meta">
                 <span class="msg-client">${escapeHtml(m.client_name)}</span>
@@ -1242,7 +1242,7 @@ function renderMessages() {
         const navParam = latest.client_id ? `client_id=${encodeURIComponent(latest.client_id)}` : `report_id=${encodeURIComponent(latest.report_id)}`;
         const groupKeyAttr = escapeAttr(g.key);
         const childrenHtml = older.map(m => _renderMessageRowHtml(m)).join('');
-        return `<div class="msg-group${isExpanded ? ' expanded' : ''}" data-client-key="${groupKeyAttr}">
+        return `<div class="msg-group ${window.AgingColors.ageTier(latest.date, window.AgingColors.TIERS_MESSAGES).cls}${isExpanded ? ' expanded' : ''}" data-client-key="${groupKeyAttr}">
             <div class="msg-group-header">
                 <div class="msg-group-header-row" onclick="toggleGroup(this)">
                     <span class="msg-client">${escapeHtml(g.client_name || '')}</span>
@@ -5995,7 +5995,7 @@ function renderAICard(item) {
     const confidenceClass = rawConfidence >= 0.85 ? 'ai-confidence-high' :
                            rawConfidence >= 0.50 ? 'ai-confidence-medium' : 'ai-confidence-low';
     const isEncrypted = !!(item.ai_reason && /password\s*protected/i.test(item.ai_reason));
-    const cardClass = 'match-' + state + (isEncrypted ? ' is-encrypted' : '');
+    const cardClass = 'match-' + state + (isEncrypted ? ' is-encrypted' : '') + ' ' + window.AgingColors.ageTier(item.received_at, window.AgingColors.TIERS_MESSAGES).cls;
 
     const receivedAt = item.received_at ? formatAIDate(item.received_at) : '';
     const senderEmail = item.sender_email || '';
@@ -10260,14 +10260,11 @@ function buildPaCard(item) {
     const suggestionCount = 0;
     const isExpanded = _paExpanded.has(item.report_id);
 
-    // DL-295: priority age badge — red >7d, yellow 3–7d, none <3d
-    const ageDays = item.submitted_at
-        ? Math.floor((Date.now() - new Date(item.submitted_at).getTime()) / 86400000)
-        : 0;
-    const priorityCls = ageDays > 7 ? 'pa-card__priority--high'
-        : (ageDays >= 3 ? 'pa-card__priority--med' : '');
-    const priorityHtml = priorityCls
-        ? `<span class="pa-card__priority ${priorityCls}">${ageDays} ימים</span>`
+    // DL-406: unified aging palette via shared util (replaces DL-295 bespoke 3d/7d thresholds)
+    const ageDays = item.submitted_at ? Math.floor((Date.now() - new Date(item.submitted_at).getTime()) / 86400000) : 0;
+    const _paAge = window.AgingColors.ageTier(item.submitted_at, window.AgingColors.TIERS_MESSAGES);
+    const priorityHtml = item.submitted_at && _paAge.cls !== 'aging-fresh'
+        ? `<span class="pa-card__priority ${_paAge.cls}">${ageDays} ימים</span>`
         : '';
 
     // DL-299 follow-up: all count badges removed per request. Only the folder-open link + chevron remain.
