@@ -1,5 +1,5 @@
 # Design Log 408: Doc-Manager Rental Contracts — Multi-Instance + Data Drift Fix
-**Status:** [IMPLEMENTED — NEED TESTING]
+**Status:** [COMPLETED — 2026-05-06]
 **Date:** 2026-05-06
 **Related Logs:** DL-239 (filing-type filter), DL-352 (owner tabs / scope filter), DL-162 (spouse-checkbox add docs)
 **Branch:** claude-session-20260506-182812
