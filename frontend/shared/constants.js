@@ -29,3 +29,7 @@ const STAGE_ORDER = Object.fromEntries(Object.entries(STAGES).map(([k, v]) => [k
 // Expose to window for React island bundles (top-level `const` does not attach to window)
 window.API_BASE = API_BASE;
 window.ADMIN_TOKEN_KEY = ADMIN_TOKEN_KEY;
+window.STAGES = STAGES;
+window.STAGE_NUM_TO_KEY = STAGE_NUM_TO_KEY;
+window.STAGE_LABELS = STAGE_LABELS;
+window.STAGE_ORDER = STAGE_ORDER;

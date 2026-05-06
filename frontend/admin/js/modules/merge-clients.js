@@ -142,20 +142,15 @@
                 const hay = (name + ' ' + cid).toLowerCase();
                 if (lower && !hay.includes(lower)) continue;
                 const nameHtml = _highlight(name, filter ? filter.trim() : '');
-                const cidHtml = _highlight(cid, filter ? filter.trim() : '');
+                const stageLabel = (window.STAGES && window.STAGES[c.stage]) ? window.STAGES[c.stage].label : (c.stage || '');
                 rows.push(`
                     <div class="dl404-client-item"
                          data-report-id="${_escAttr(c.report_id)}"
                          data-client-id="${_escAttr(cid)}"
                          style="padding:8px 12px; border-radius:4px; cursor:pointer; display:flex; justify-content:space-between; align-items:center; direction:rtl;"
                          onmouseover="this.style.background='var(--gray-100,#f3f4f6)'" onmouseout="this.style.background=''">
-                        <div>
-                            <div style="font-weight:500;">${nameHtml}</div>
-                            <div style="font-size:11px; color:var(--gray-600,#4b5563);">${cidHtml}</div>
-                        </div>
-                        <div style="font-size:11px; color:var(--gray-500,#6b7280); margin-right:8px;">
-                            ${_escHtml((window.STAGES && window.STAGES[c.stage]) ? window.STAGES[c.stage].label : (c.stage || ''))}
-                        </div>
+                        <div style="font-weight:500;">${nameHtml}</div>
+                        <div style="font-size:11px; color:var(--gray-500,#6b7280); margin-right:8px;">${_escHtml(stageLabel)}</div>
                     </div>
                 `);
                 if (rows.length >= 60) break;
