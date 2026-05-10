@@ -5974,10 +5974,9 @@ function appendContractPeriod(name, item) {
     if (!['T901', 'T902'].includes(item.matched_template_id) || !item.contract_period) return name;
     const cp = item.contract_period;
     if (cp.coversFullYear) return name;
-    const startM = String(new Date(cp.startDate).getMonth() + 1).padStart(2, '0');
-    const endM = String(new Date(cp.endDate).getMonth() + 1).padStart(2, '0');
-    const year = item.year || new Date(cp.endDate).getFullYear();
-    return `${name} ${formatPeriodLabel(parseInt(startM), parseInt(endM), year)}`;
+    const sD = cp.startDate && new Date(cp.startDate), eD = cp.endDate && new Date(cp.endDate);
+    if (!sD || !eD || isNaN(sD.getTime()) || isNaN(eD.getTime())) return `${name} __.__-__.____`; // DL-410 NaN guard
+    return `${name} ${formatPeriodLabel(sD.getMonth() + 1, eD.getMonth() + 1, item.year || eD.getFullYear())}`;
 }
 
 function renderAICard(item) {
@@ -6342,13 +6341,14 @@ function renderReviewedCard(item, reviewStatus) {
     }
 
     // DL-271: Request missing period buttons on reviewed rental contract cards
+    // DL-410: skip when cp dates missing/invalid
     let reviewedPeriodBtns = '';
-    if (['T901', 'T902'].includes(item.matched_template_id) && item.contract_period && !item.contract_period.coversFullYear) {
-        const cp = item.contract_period;
+    const _cp = item.contract_period;
+    const _sD = _cp && _cp.startDate ? new Date(_cp.startDate) : null;
+    const _eD = _cp && _cp.endDate ? new Date(_cp.endDate) : null;
+    if (['T901', 'T902'].includes(item.matched_template_id) && _cp && !_cp.coversFullYear && _sD && _eD && !isNaN(_sD.getTime()) && !isNaN(_eD.getTime())) {
         const rid = escapeAttr(item.id);
-        const startMonth = new Date(cp.startDate).getMonth() + 1;
-        const endMonth = new Date(cp.endDate).getMonth() + 1;
-        const year = item.year || new Date(cp.endDate).getFullYear();
+        const startMonth = _sD.getMonth() + 1, endMonth = _eD.getMonth() + 1, year = item.year || _eD.getFullYear();
         let btns = '';
         if (startMonth > 1) {
             btns += `<button class="btn btn-outline btn-sm btn-request-period" data-record-id="${rid}" onclick="event.stopPropagation(); requestMissingPeriod('${rid}', 1, ${startMonth - 1}, this)">${icon('plus', 'icon-sm')} בקש חוזה ${formatPeriodLabel(1, startMonth - 1, year)}</button>`;
@@ -7293,15 +7293,15 @@ async function requestMissingPeriod(recordId, startMonth, endMonth, btn) {
             btn.classList.add('btn-success');
             safeCreateIcons();
         }
+        // DL-410: silent refresh (CLAUDE.md P6) — mirror DL-385/DL-359
+        const _it = aiClassificationsData.find(i => i.id === recordId);
+        if (_it) { try { if (data.doc_id && _it.client_name) updateClientDocState(_it.client_name, data.doc_id); refreshItemDom(_it); } catch (e) { console.warn('[DL-410]', e); } }
         showAIToast(`נוסף מסמך חסר: חוזה שכירות ${data.period_label}`, 'success');
     } catch (error) {
         if (btn) { btn.disabled = false; btn.innerHTML = `${icon('plus', 'icon-sm')} בקש חוזה`; safeCreateIcons(); }
         showModal('error', 'שגיאה', humanizeError(error));
     }
 }
-// Backwards compat
-function requestRemainingContract(recordId, btn) { requestMissingPeriod(recordId, null, null, btn); }
-
 // DL-222: Re-submit approve with conflict resolution mode
 async function resubmitApprove(recordId, mode, loadingText) {
     setCardLoading(recordId, loadingText);

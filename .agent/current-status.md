@@ -1,6 +1,28 @@
 # Annual Reports CRM - Current Status
 
-**Last Updated:** 2026-05-06 (DL-408 implemented — rental-contract multi-instance fix; DL-405 shipped; DL-404 merge still 500s.)
+**Last Updated:** 2026-05-10 (DL-410 implemented — rental-contract NaN render + silent refresh on "+ בקש חוזה")
+
+## OPEN: DL-410 — Rental-Contract NaN Render + Silent Refresh
+
+DL: `.agent/design-logs/admin-ui/410-rental-contract-nan-and-silent-refresh.md`
+Status: **IMPLEMENTED — NEED TESTING**
+
+Symptom (reported by client via screenshot): green "AI חושב שזה: חוזה שכירות (הכנסה)" pill renders `NaN.2025-NaN.2025`; clicking "+ בקש חוזה MM.YYYY-MM.YYYY" creates the follow-up doc but doesn't refresh the UI — must reload. Fixed: NaN guards in `appendContractPeriod` (`script.js:5973`) and reviewed-card period-buttons block (`script.js:6346`) — partial cp shapes now render `__.__-__.____` placeholder; added silent refresh to `requestMissingPeriod` reusing `refreshItemDom` + `updateClientDocState` (DL-385/DL-359 pattern). Cache-bust `script.js?v=419→420`. Deleted unused `requestRemainingContract` shim to fit ratchet.
+
+### Active TODOs (validation — Phase E)
+- [ ] Live test on reported client: AI-review pill renders `MM.YYYY-MM.YYYY` (when dates present) or `__.__-__.____` (when missing). Never `NaN`.
+- [ ] Reviewed-card with missing dates: "+ בקש חוזה" buttons hidden (no NaN labels).
+- [ ] Silent refresh end-to-end: pick partial T901 → click "+ בקש חוזה MM.YYYY-MM.YYYY" → new follow-up doc appears in admin dashboard expanded row + Doc Manager (if open) without reload. Toast shows `נוסף מסמך חסר: חוזה שכירות MM.YYYY-MM.YYYY`. No flicker, no scroll jump.
+- [ ] Duplicate-press: rapid double-click → only one follow-up doc created.
+- [ ] Hebrew RTL: `__.__-__.____` placeholder renders LTR-correctly inside Hebrew pill.
+- [ ] Regression — DL-359 full-year badge: clicking ✓ badge still expands to editor.
+- [ ] Regression — DL-385 T901↔T902 swap still works.
+- [ ] Regression — DL-397 manual reassign with months still saves and renders.
+- [ ] Regression — `requestRemainingContract` shim removal: no broken callers (grep confirmed zero in repo; watch for n8n/external).
+- [ ] Cache-bust: `curl -sI https://docs.moshe-atsits.com/admin/index.html | grep script.js` shows `?v=420` after Pages auto-deploy.
+- [ ] Activity log: `node scripts/query-worker-logs.mjs --since=1h --search="request-remaining-contract"` confirms action firing during live test.
+
+---
 
 ## OPEN: DL-408 — Doc-Manager Rental Contracts Multi-Instance
 
