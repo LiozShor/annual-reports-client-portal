@@ -7293,9 +7293,8 @@ async function requestMissingPeriod(recordId, startMonth, endMonth, btn) {
             btn.classList.add('btn-success');
             safeCreateIcons();
         }
-        // DL-410: silent refresh (CLAUDE.md P6) — mirror DL-385/DL-359
-        const _it = aiClassificationsData.find(i => i.id === recordId);
-        if (_it) { try { if (data.doc_id && _it.client_name) updateClientDocState(_it.client_name, data.doc_id); refreshItemDom(_it); } catch (e) { console.warn('[DL-410]', e); } }
+        // DL-410: silent refresh (CLAUDE.md P6) — extracted to modules/dl410-silent-refresh.js
+        if (typeof insertNewMissingDocAndRefresh === 'function') insertNewMissingDocAndRefresh(aiClassificationsData.find(i => i.id === recordId), data);
         showAIToast(`נוסף מסמך חסר: חוזה שכירות ${data.period_label}`, 'success');
     } catch (error) {
         if (btn) { btn.disabled = false; btn.innerHTML = `${icon('plus', 'icon-sm')} בקש חוזה`; safeCreateIcons(); }
