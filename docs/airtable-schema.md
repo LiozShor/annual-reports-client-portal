@@ -2,9 +2,9 @@
 
 **Base:** Annual Reports CRM
 **Base ID:** `appqBL5RWQN9cPOyh`
-**Last Updated:** 2026-05-03
+**Last Updated:** 2026-05-10
 
-> **Last verified against live Airtable:** 2026-05-03 (DL-399 — 4 fields added to `clients`, `Bounced` option added to `email_events.processing_status`).
+> **Last verified against live Airtable:** 2026-05-10 (3 fields added to `clients` for shared Mishimit schema: `file_number`, `address`, `notes`).
 
 ---
 
@@ -51,6 +51,9 @@ company_links (standalone — insurance company URLs for client portal)
 | last_bounced_email | singleLineText | DL-399: Audit trail — the bad address that bounced. Preserved after `email` is cleared. |
 | email_bounce_reason | multilineText | DL-399: Human-readable bounce reason (`DNS not found` / `Mailbox not found` / `Domain rejected` / `Delivery failed`). |
 | email_bounce_at | dateTime | DL-399: When the NDR was processed (Asia/Jerusalem). |
+| file_number | singleLineText | Legacy VAT-registry file number (`מספר תיק מע"מ`). Nullable. Added 2026-05-10 for shared Mishimit schema. |
+| address | singleLineText | Client postal address. Nullable. Added 2026-05-10 for shared Mishimit schema. Single-line to keep the admin panel row layout intact. |
+| notes | multilineText | Free-text Hebrew notes. Nullable. Added 2026-05-10 for shared Mishimit schema. **PII reminder:** never quote `notes` content in design logs — refer to the client by Airtable record ID instead. |
 
 ---
 
