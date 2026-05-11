@@ -1,5 +1,5 @@
 # Design Log 410: Rental Contract `NaN.YYYY-NaN.YYYY` Render + Silent Refresh on "+ בקש חוזה"
-**Status:** [IMPLEMENTED — NEED TESTING]
+**Status:** [COMPLETED — 2026-05-11]
 **Date:** 2026-05-10
 **Related Logs:** DL-385 (lenient parser), DL-359 (full-year ↔ partial swap), DL-397 (atomic reassign + contract_period), DL-408 (multi-instance allowlist), DL-269/270/271 (partial-contract banner + request-missing-period)
 **Branch:** claude-session-20260510-173648
