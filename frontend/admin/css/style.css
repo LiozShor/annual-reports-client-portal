@@ -277,7 +277,7 @@ body {
 .stat-pct {
     font-size: 0.45em;
     font-weight: 500;
-    color: var(--gray-400);
+    color: var(--gray-600);
     margin-inline-start: 8px;
     vertical-align: 0.35em;
     letter-spacing: 0.02em;

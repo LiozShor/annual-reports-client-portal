@@ -68,6 +68,7 @@
     if (!hasEmail(client)) {
       return (
         '<span class="no-email-indicator" ' +
+        'role="img" ' +
         'title="אין כתובת מייל" ' +
         'aria-label="אין כתובת מייל" ' +
         'style="background:#f3f4f6;color:#6b7280;padding:2px 6px;border-radius:8px;font-size:11px;font-weight:normal;margin-inline-start:8px;display:inline-flex;align-items:center;gap:3px;">' +

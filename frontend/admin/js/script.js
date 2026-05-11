@@ -35,6 +35,7 @@ let clientsData = [];
 let importData = [];
 let existingEmails = new Set();
 let reviewQueueData = [];
+let reviewMounted = false; // T3: true once review table has been rendered at least once
 let queuedEmailsData = []; // DL-281: Outbox-backed queued email list (both filing types)
 let queuedEmailsLoaded = false; // DL-281: distinguishes "API returned empty" from "not loaded yet"
 let queuedEmailsAutoRefreshInterval = null; // DL-281: 5-min poll so count/modal survive 08:00 delivery boundary when dashboard stays open
@@ -370,6 +371,8 @@ function switchTab(tabName, evt) {
         // re-fetch if we've never loaded dashboard yet. Stale data is fine —
         // visibilitychange handler refreshes when user returns to the app.
         if (!dashboardLoaded) loadDashboard(true);
+        // T3: first visit — mount the table now that the container is visible
+        if (!reviewMounted) { reviewMounted = true; updateReviewQueueUI(); }
     } else if (tabName === 'send') {
         loadPendingClients(true);
     } else if (tabName === 'pending-approval') {
@@ -863,7 +866,8 @@ function updateReviewQueueUI() {
         if (reviewBottomBadge) reviewBottomBadge.style.display = 'none';
     }
     document.getElementById('reviewHeaderCount').textContent = `${filtered.length} לקוחות בתור`;
-    renderReviewTable(filtered);
+    // T3: only render the table when the tab has been visited at least once
+    if (reviewMounted) renderReviewTable(filtered);
 }
 
 async function loadDashboard(silent = false) {
@@ -873,14 +877,10 @@ async function loadDashboard(silent = false) {
     if (silent && isFresh) return;
 
     // DL-247: Inline loading for first-ever load only (no full-screen overlay)
-
-
     try {
         const year = document.getElementById('yearFilter')?.value || '2025';
         const response = await fetchWithTimeout(`${ENDPOINTS.ADMIN_DASHBOARD}?year=${year}&_t=${Date.now()}`, { headers: { 'Authorization': `Bearer ${authToken}` } }, FETCH_TIMEOUTS.slow); // DL-254: 20s for 579+ clients
         const data = await response.json();
-
-
 
         if (!data.ok) {
             if (data.error === 'unauthorized') {
@@ -1632,7 +1632,63 @@ function renderClientsTable(clients) {
         return currentSort.direction === 'asc' ? 'ascending' : 'descending';
     }
 
-    let html = `
+    const IS_MOBILE = window.matchMedia('(max-width: 768px)').matches;
+    let html;
+
+    if (IS_MOBILE) {
+        // Mobile card list only (DL-214)
+        html = '<div class="table-scroll-container" role="region" aria-label="רשימת לקוחות" tabindex="0">';
+        html += '<ul class="mobile-card-list" role="list" aria-label="רשימת לקוחות">';
+        for (const client of clients) {
+            const stage = STAGES[client.stage] || { label: client.stage, icon: 'help-circle', class: '' };
+            const docsReceived = client.docs_received || 0;
+            const docsTotal = client.docs_total || 0;
+            const missingCount = docsTotal - docsReceived;
+            const stageNum = stage.num || 0;
+            const rid = escapeAttr(client.report_id);
+            const cName = escapeAttr(client.name);
+            const isActive = client.is_active !== false;
+
+            html += `<li class="mobile-card" data-report-id="${rid}" data-stage="${escapeAttr(client.stage)}" data-is-active="${isActive}">
+            <div class="mobile-card-primary">
+                <span class="mobile-card-checkbox"><input type="checkbox" class="dashboard-client-checkbox" value="${rid}" aria-label="בחר ${escapeHtml(client.name)}" onchange="updateClientSelectedCount()"></span>
+                <div class="mobile-card-info">
+                    <span class="mobile-card-name" onclick="viewClientDocs('${rid}')" title="${escapeHtml(client.email || '')}">${escapeHtml(client.name)}</span>
+                    <span id="stage-badge-m-${rid}" class="stage-badge ${stage.class} clickable"
+                        onclick="openStageDropdown(event, '${rid}', '${escapeAttr(client.stage)}')"
+                        title="לחץ לשינוי שלב">
+                        ${icon(stage.icon, 'icon-sm')} ${stage.label}
+                    </span>${bounceBadgeHTML(client)}
+                </div>
+            </div>
+            <div class="mobile-card-secondary">
+                ${stageNum > 3 ? `
+                    <span class="mobile-card-detail">
+                        <span class="label">מסמכים</span>
+                        <span class="docs-count clickable-docs" onclick="toggleDocsPopover(event, '${rid}', '${cName}')">${docsReceived}/${docsTotal}</span>
+                    </span>
+                    <span class="mobile-card-detail">
+                        <span class="label">חסרים</span>
+                        <span class="missing-count ${missingCount > 0 ? 'has-missing' : 'all-done'}">${missingCount > 0 ? missingCount : '✓'}</span>
+                    </span>
+                ` : ''}
+                ${client.notes ? `<span class="notes-text" onclick="editReportNotes(event, '${rid}')">${escapeHtml((client.notes || '').substring(0, 40))}${(client.notes || '').length > 40 ? '…' : ''}</span>` : ''}
+            </div>
+            <div class="mobile-card-actions">
+                ${client.stage === 'Send_Questionnaire' ? sendQuestionnaireBtnHTML(client, rid) : ''}
+                ${(client.stage === 'Waiting_For_Answers' || client.stage === 'Collecting_Docs') ?
+                    `<button class="action-btn reminder-set-btn" onclick="sendDashboardReminder('${rid}', '${cName}')" title="שלח תזכורת">${icon('bell-ring', 'icon-sm')}</button>` : ''}
+                <div class="row-overflow-dropdown">
+                    <button class="action-btn overflow" aria-haspopup="menu" onclick="toggleRowMenu(this, event)" title="פעולות נוספות">⋮</button>
+                    <div class="row-menu" role="menu">${window.buildClientRowActionsHtml(client, { rid, isActive, stage: client.stage })}</div>
+                </div>
+            </div>
+        </li>`;
+        }
+        html += '</ul></div>';
+    } else {
+        // Desktop table only
+        html = `
         <div class="table-scroll-container" role="region" aria-label="טבלת לקוחות" tabindex="0">
         <table>
             <thead>
@@ -1647,22 +1703,22 @@ function renderClientsTable(clients) {
                 </tr>
             </thead>
             <tbody>
-    `;
+        `;
 
-    for (const client of clients) {
-        const stage = STAGES[client.stage] || { label: client.stage, icon: 'help-circle', class: '' };
-        const docsReceived = client.docs_received || 0;
-        const docsTotal = client.docs_total || 0;
-        const progressPercent = docsTotal > 0 ? Math.round((docsReceived / docsTotal) * 100) : 0;
-        const missingCount = docsTotal - docsReceived;
-        const stageNum = stage.num || 0;
-        const rid = escapeAttr(client.report_id);
-        const cName = escapeAttr(client.name);
-        const isActive = client.is_active !== false;
+        for (const client of clients) {
+            const stage = STAGES[client.stage] || { label: client.stage, icon: 'help-circle', class: '' };
+            const docsReceived = client.docs_received || 0;
+            const docsTotal = client.docs_total || 0;
+            const progressPercent = docsTotal > 0 ? Math.round((docsReceived / docsTotal) * 100) : 0;
+            const missingCount = docsTotal - docsReceived;
+            const stageNum = stage.num || 0;
+            const rid = escapeAttr(client.report_id);
+            const cName = escapeAttr(client.name);
+            const isActive = client.is_active !== false;
 
-        html += `
+            html += `
             <tr data-report-id="${rid}" data-client-name="${cName}" data-stage="${escapeAttr(client.stage)}" data-is-active="${isActive}">
-                <td><input type="checkbox" class="dashboard-client-checkbox" value="${rid}" onchange="updateClientSelectedCount()"></td>
+                <td><input type="checkbox" class="dashboard-client-checkbox" value="${rid}" aria-label="בחר ${escapeHtml(client.name)}" onchange="updateClientSelectedCount()"></td>
                 <td>
                     <div class="client-name-cell">
                         <strong
@@ -1716,62 +1772,10 @@ function renderClientsTable(clients) {
                 </td>
             </tr>
         `;
+        }
+
+        html += '</tbody></table></div>';
     }
-
-    html += '</tbody></table>';
-
-    // Mobile card list (DL-214)
-    let cards = '<ul class="mobile-card-list" role="list" aria-label="רשימת לקוחות">';
-    for (const client of clients) {
-        const stage = STAGES[client.stage] || { label: client.stage, icon: 'help-circle', class: '' };
-        const docsReceived = client.docs_received || 0;
-        const docsTotal = client.docs_total || 0;
-        const progressPercent = docsTotal > 0 ? Math.round((docsReceived / docsTotal) * 100) : 0;
-        const missingCount = docsTotal - docsReceived;
-        const stageNum = stage.num || 0;
-        const rid = escapeAttr(client.report_id);
-        const cName = escapeAttr(client.name);
-        const isActive = client.is_active !== false;
-
-        cards += `<li class="mobile-card" data-report-id="${rid}" data-stage="${escapeAttr(client.stage)}" data-is-active="${isActive}">
-            <div class="mobile-card-primary">
-                <span class="mobile-card-checkbox"><input type="checkbox" class="dashboard-client-checkbox" value="${rid}" onchange="updateClientSelectedCount()"></span>
-                <div class="mobile-card-info">
-                    <span class="mobile-card-name" onclick="viewClientDocs('${rid}')" title="${escapeHtml(client.email || '')}">${escapeHtml(client.name)}</span>
-                    <span id="stage-badge-m-${rid}" class="stage-badge ${stage.class} clickable"
-                        onclick="openStageDropdown(event, '${rid}', '${escapeAttr(client.stage)}')"
-                        title="לחץ לשינוי שלב">
-                        ${icon(stage.icon, 'icon-sm')} ${stage.label}
-                    </span>${bounceBadgeHTML(client)}
-                </div>
-            </div>
-            <div class="mobile-card-secondary">
-                ${stageNum > 3 ? `
-                    <span class="mobile-card-detail">
-                        <span class="label">מסמכים</span>
-                        <span class="docs-count clickable-docs" onclick="toggleDocsPopover(event, '${rid}', '${cName}')">${docsReceived}/${docsTotal}</span>
-                    </span>
-                    <span class="mobile-card-detail">
-                        <span class="label">חסרים</span>
-                        <span class="missing-count ${missingCount > 0 ? 'has-missing' : 'all-done'}">${missingCount > 0 ? missingCount : '✓'}</span>
-                    </span>
-                ` : ''}
-                ${client.notes ? `<span class="notes-text" onclick="editReportNotes(event, '${rid}')">${escapeHtml((client.notes || '').substring(0, 40))}${(client.notes || '').length > 40 ? '…' : ''}</span>` : ''}
-            </div>
-            <div class="mobile-card-actions">
-                ${client.stage === 'Send_Questionnaire' ? sendQuestionnaireBtnHTML(client, rid) : ''}
-                ${(client.stage === 'Waiting_For_Answers' || client.stage === 'Collecting_Docs') ?
-                    `<button class="action-btn reminder-set-btn" onclick="sendDashboardReminder('${rid}', '${cName}')" title="שלח תזכורת">${icon('bell-ring', 'icon-sm')}</button>` : ''}
-                <div class="row-overflow-dropdown">
-                    <button class="action-btn overflow" aria-haspopup="menu" onclick="toggleRowMenu(this, event)" title="פעולות נוספות">⋮</button>
-                    <div class="row-menu" role="menu">${window.buildClientRowActionsHtml(client, { rid, isActive, stage: client.stage })}</div>
-                </div>
-            </div>
-        </li>`;
-    }
-    cards += '</ul>';
-
-    html += cards + '</div>';
     const _tDom = perfStart();
     container.innerHTML = html;
     safeCreateIcons(container);
@@ -2055,7 +2059,6 @@ async function executeStageChange(reportId, newStage) {
         }, FETCH_TIMEOUTS.mutate);
 
         const data = await response.json();
-
 
         if (!data.ok) {
             throw new Error(data.error || 'שגיאה לא ידועה');
@@ -2626,7 +2629,6 @@ if (uploadZone) {
     });
 }
 
-
 function handleFileSelect(event) {
     const file = event.target.files[0];
     if (file) processFile(file);
@@ -2644,12 +2646,13 @@ function downloadImportTemplate() {
     URL.revokeObjectURL(url);
 }
 
-function processFile(file) {
+async function processFile(file) {
     showLoading('קורא קובץ...');
 
     const reader = new FileReader();
-    reader.onload = (e) => {
+    reader.onload = async (e) => {
         try {
+            const XLSX = await ensureXLSX();
             const data = new Uint8Array(e.target.result);
             const workbook = XLSX.read(data, { type: 'array' });
             const sheetName = workbook.SheetNames[0];
@@ -3003,8 +3006,6 @@ async function loadPendingClients(silent = false, prefetchOnly = false) {
         const response = await deduplicatedFetch(`${ENDPOINTS.ADMIN_PENDING}?year=${year}&filing_type=${activeEntityTab}`, { headers: { 'Authorization': `Bearer ${authToken}` } }, FETCH_TIMEOUTS.load);
         const data = await response.json();
 
-
-
         if (!data.ok) throw new Error(data.error);
 
         pendingClients = data.clients || [];
@@ -3271,8 +3272,52 @@ function renderReviewTable(queue) {
     const { slice: pagedSlice, fifoOffset, totalItems } = paginateReviewQueue(queue, PAGE_SIZE);
     queue = pagedSlice;
     const now = new Date();
+    const IS_MOBILE_REVIEW = window.matchMedia('(max-width: 768px)').matches;
+    let html;
 
-    let html = `
+    if (IS_MOBILE_REVIEW) {
+        // Mobile card list only (DL-214)
+        html = '<div class="table-scroll-container" role="region" aria-label="תור בדיקה" tabindex="0">';
+        html += '<ul class="mobile-card-list" role="list" aria-label="תור בדיקה">';
+        for (let i = 0; i < queue.length; i++) {
+            const client = queue[i];
+            const completedAt = new Date(client.docs_completed_at);
+            const todayMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            const completedMidnight = new Date(completedAt.getFullYear(), completedAt.getMonth(), completedAt.getDate());
+            const diffDays = Math.max(0, Math.round((todayMidnight - completedMidnight) / (1000 * 60 * 60 * 24)));
+            let waitingClass = '';
+            if (diffDays >= 14) waitingClass = 'waiting-urgent';
+            else if (diffDays >= 7) waitingClass = 'waiting-warn';
+            const waitingText = formatWaiting(diffDays);
+            const dateStr = completedAt.toLocaleDateString('he-IL', { day: '2-digit', month: '2-digit', year: 'numeric' });
+
+            html += `<li class="mobile-card">
+            <div class="mobile-card-primary">
+                <span class="fifo-number">${fifoOffset + i + 1}</span>
+                <div class="mobile-card-info">
+                    <span class="mobile-card-name" onclick="viewClientDocs('${escapeAttr(client.report_id)}')">${escapeHtml(client.name)}</span>
+                    <span class="waiting-badge ${waitingClass}">${waitingText}</span>
+                </div>
+            </div>
+            <div class="mobile-card-secondary">
+                <span class="mobile-card-detail"><span class="label">שנה</span> ${client.year}</span>
+                <span class="mobile-card-detail"><span class="label">מסמכים</span> <span class="docs-count clickable-count" onclick="toggleDocsPopover(event, '${escapeOnclick(client.report_id)}', '${escapeOnclick(client.name)}')">${client.docs_received}/${client.docs_total}</span></span>
+                <span class="mobile-card-detail"><span class="label">השלמה</span> ${dateStr}</span>
+                <div class="email-cell">
+                    <a href="mailto:${escapeAttr(client.email)}" class="email-link">${escapeHtml(client.email)}</a>
+                    <button class="copy-email-btn" onclick="event.stopPropagation(); copyToClipboard('${escapeAttr(client.email)}', this)" title="העתק אימייל">${icon('copy', 'icon-xs')}</button>
+                </div>
+            </div>
+            <div class="mobile-card-actions">
+                <button class="action-btn view" onclick="viewClient('${escapeAttr(client.report_id)}')" title="צפה בתיק">${icon('eye', 'icon-sm')}</button>
+                <button class="action-btn complete" onclick="markComplete('${escapeOnclick(client.report_id)}', '${escapeOnclick(client.name)}')" title="העבר לבדיקת משה">${icon('circle-check', 'icon-sm')}</button>
+            </div>
+        </li>`;
+        }
+        html += '</ul></div>';
+    } else {
+        // Desktop table only
+        html = `
         <div class="table-scroll-container" role="region" aria-label="תור בדיקה" tabindex="0">
         <table>
             <thead>
@@ -3288,23 +3333,23 @@ function renderReviewTable(queue) {
                 </tr>
             </thead>
             <tbody>
-    `;
+        `;
 
-    for (let i = 0; i < queue.length; i++) {
-        const client = queue[i];
-        const completedAt = new Date(client.docs_completed_at);
-        const todayMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-        const completedMidnight = new Date(completedAt.getFullYear(), completedAt.getMonth(), completedAt.getDate());
-        const diffDays = Math.max(0, Math.round((todayMidnight - completedMidnight) / (1000 * 60 * 60 * 24)));
+        for (let i = 0; i < queue.length; i++) {
+            const client = queue[i];
+            const completedAt = new Date(client.docs_completed_at);
+            const todayMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            const completedMidnight = new Date(completedAt.getFullYear(), completedAt.getMonth(), completedAt.getDate());
+            const diffDays = Math.max(0, Math.round((todayMidnight - completedMidnight) / (1000 * 60 * 60 * 24)));
 
-        let waitingClass = '';
-        if (diffDays >= 14) waitingClass = 'waiting-urgent';
-        else if (diffDays >= 7) waitingClass = 'waiting-warn';
+            let waitingClass = '';
+            if (diffDays >= 14) waitingClass = 'waiting-urgent';
+            else if (diffDays >= 7) waitingClass = 'waiting-warn';
 
-        const waitingText = formatWaiting(diffDays);
-        const dateStr = completedAt.toLocaleDateString('he-IL', { day: '2-digit', month: '2-digit', year: 'numeric' });
+            const waitingText = formatWaiting(diffDays);
+            const dateStr = completedAt.toLocaleDateString('he-IL', { day: '2-digit', month: '2-digit', year: 'numeric' });
 
-        html += `
+            html += `
             <tr>
                 <td><span class="fifo-number">${fifoOffset + i + 1}</span></td>
                 <td>
@@ -3331,51 +3376,11 @@ function renderReviewTable(queue) {
                 </td>
             </tr>
         `;
+        }
+
+        html += '</tbody></table></div>';
     }
 
-    html += '</tbody></table>';
-
-    // Mobile card list (DL-214)
-    const nowCards = new Date();
-    let cards = '<ul class="mobile-card-list" role="list" aria-label="תור בדיקה">';
-    for (let i = 0; i < queue.length; i++) {
-        const client = queue[i];
-        const completedAt = new Date(client.docs_completed_at);
-        const todayMidnightC = new Date(nowCards.getFullYear(), nowCards.getMonth(), nowCards.getDate());
-        const completedMidnightC = new Date(completedAt.getFullYear(), completedAt.getMonth(), completedAt.getDate());
-        const diffDays = Math.max(0, Math.round((todayMidnightC - completedMidnightC) / (1000 * 60 * 60 * 24)));
-        let waitingClass = '';
-        if (diffDays >= 14) waitingClass = 'waiting-urgent';
-        else if (diffDays >= 7) waitingClass = 'waiting-warn';
-        const waitingText = formatWaiting(diffDays);
-        const dateStr = completedAt.toLocaleDateString('he-IL', { day: '2-digit', month: '2-digit', year: 'numeric' });
-
-        cards += `<li class="mobile-card">
-            <div class="mobile-card-primary">
-                <span class="fifo-number">${fifoOffset + i + 1}</span>
-                <div class="mobile-card-info">
-                    <span class="mobile-card-name" onclick="viewClientDocs('${escapeAttr(client.report_id)}')">${escapeHtml(client.name)}</span>
-                    <span class="waiting-badge ${waitingClass}">${waitingText}</span>
-                </div>
-            </div>
-            <div class="mobile-card-secondary">
-                <span class="mobile-card-detail"><span class="label">שנה</span> ${client.year}</span>
-                <span class="mobile-card-detail"><span class="label">מסמכים</span> <span class="docs-count clickable-count" onclick="toggleDocsPopover(event, '${escapeOnclick(client.report_id)}', '${escapeOnclick(client.name)}')">${client.docs_received}/${client.docs_total}</span></span>
-                <span class="mobile-card-detail"><span class="label">השלמה</span> ${dateStr}</span>
-                <div class="email-cell">
-                    <a href="mailto:${escapeAttr(client.email)}" class="email-link">${escapeHtml(client.email)}</a>
-                    <button class="copy-email-btn" onclick="event.stopPropagation(); copyToClipboard('${escapeAttr(client.email)}', this)" title="העתק אימייל">${icon('copy', 'icon-xs')}</button>
-                </div>
-            </div>
-            <div class="mobile-card-actions">
-                <button class="action-btn view" onclick="viewClient('${escapeAttr(client.report_id)}')" title="צפה בתיק">${icon('eye', 'icon-sm')}</button>
-                <button class="action-btn complete" onclick="markComplete('${escapeOnclick(client.report_id)}', '${escapeOnclick(client.name)}')" title="העבר לבדיקת משה">${icon('circle-check', 'icon-sm')}</button>
-            </div>
-        </li>`;
-    }
-    cards += '</ul>';
-
-    html += cards + '</div>';
     container.innerHTML = html;
     renderPagination('reviewPagination', totalItems, reviewState.page, PAGE_SIZE, goToReviewPage);
     safeCreateIcons();
@@ -3417,7 +3422,7 @@ async function markComplete(reportId, name) {
     }, 'העבר לבדיקת משה');
 }
 
-function exportReviewToExcel() {
+async function exportReviewToExcel() {
     reviewQueueData.forEach(c => { if (!c.filing_type) console.warn('Missing filing_type for record', c.id || c.report_id); });
     const filtered = reviewQueueData.filter(c => (c.filing_type || 'annual_report') === activeEntityTab);
     if (!filtered.length) return;
@@ -3437,6 +3442,7 @@ function exportReviewToExcel() {
         };
     });
 
+    const XLSX = await ensureXLSX();
     const ws = XLSX.utils.json_to_sheet(exportData);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'מוכנים להכנה');
@@ -4159,8 +4165,6 @@ async function loadAIClassifications(silent = false, prefetchOnly = false) {
         const response = await deduplicatedFetch(`${ENDPOINTS.GET_PENDING_CLASSIFICATIONS}?filing_type=all`, { headers: { 'Authorization': `Bearer ${authToken}` } }, FETCH_TIMEOUTS.slow); // DL-238: unified view
         _lastStatus = response.status;
         const data = await response.json();
-
-
 
         if (!data.ok) {
             if (data.error === 'unauthorized') {
@@ -5277,7 +5281,6 @@ function toggleMissingDocs(el) {
     el.closest('.ai-missing-docs-group').classList.toggle('open');
 }
 
-
 function handleComparisonRadio(recordId, radioEl) {
     // DL-334: Desktop-or-mobile-targetable — use panel scope on desktop, fat card on mobile.
     const card = findItemActionsEl(recordId) || document.querySelector(`.ai-review-card[data-id="${recordId}"]`);
@@ -6370,7 +6373,6 @@ function renderReviewedCard(item, reviewStatus) {
     const isReassigned = reviewStatus === 'reassigned';
     const hasShareableFile = !!(item.onedrive_item_id && item.file_url);
     const canAlsoMatch = (isApproved || isReassigned) && hasShareableFile;
-
 
     const alsoMatchBtn = canAlsoMatch
         ? `<button class="btn btn-outline btn-sm ai-also-match-btn" onclick="showAIAlsoMatchModal('${escapeAttr(item.id)}')">
@@ -8984,7 +8986,6 @@ function openBatchQuestionsModal(clientName) {
         renumberCards();
     });
 
-
     saveBtn.addEventListener('click', async () => {
         const qs = collectQuestions();
         // Build target map: file_id → question text (drop cards without a valid file_id)
@@ -9327,7 +9328,6 @@ function recalcAIStats() {
     const mismatchCount = pendingItems.filter(i =>
         i.matched_template_id && i.issuer_match_quality === 'mismatch'
     ).length;
-
 
     // Update tab badge — show unique client count (not doc count)
     const badge = document.getElementById('aiReviewTabBadge');
@@ -12637,8 +12637,6 @@ async function loadReminders(silent = false, prefetchOnly = false) {
         }, FETCH_TIMEOUTS.slow);
         const data = await response.json();
 
-
-
         if (!data.ok) {
             if (data.error === 'unauthorized') { logout(); return; }
             throw new Error(data.error || 'שגיאה בטעינת הנתונים');
@@ -13229,7 +13227,6 @@ function toggleStatusMenu(btn, e) {
         document.addEventListener('keydown', onEsc);
     }
 }
-
 
 function confirmSuppress(action, reportId, name) {
     document.querySelectorAll('.suppress-menu.open').forEach(m => m.classList.remove('open'));
@@ -13828,7 +13825,6 @@ async function executeToggleActive(reportId, active) {
 
         const data = await response.json();
 
-
         if (!data.ok) {
             throw new Error(data.error || 'שגיאה לא ידועה');
         }
@@ -14186,7 +14182,7 @@ function viewClientDocs(reportId, newTab = false) {
     }
 }
 
-function exportToExcel() {
+async function exportToExcel() {
     if (!clientsData.length) return;
 
     const exportData = clientsData.map(c => ({
@@ -14198,6 +14194,7 @@ function exportToExcel() {
         'סה"כ מסמכים': c.docs_total
     }));
 
+    const XLSX = await ensureXLSX();
     const ws = XLSX.utils.json_to_sheet(exportData);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'לקוחות');
@@ -14711,12 +14708,17 @@ document.addEventListener('DOMContentLoaded', () => {
     safeCreateIcons();
     initOfflineDetection();
     setupTabDropdownHover();
+
+    // Re-render on viewport crossing the 768px breakpoint
+    window.matchMedia('(max-width: 768px)').addEventListener('change', () => {
+        if (_filteredClients && _filteredClients.length) renderClientsTable(_filteredClients.slice((_clientsPage - 1) * PAGE_SIZE, _clientsPage * PAGE_SIZE));
+        if (reviewMounted && reviewQueueData.length) updateReviewQueueUI();
+    });
 });
 
 // Initialize
 updateImportFilingTypeLabel(activeEntityTab);
 checkAuth();
-
 
 // ==================== QUESTIONNAIRES TAB ====================
 
@@ -14775,8 +14777,6 @@ async function loadQuestionnaires(silent = false, prefetchOnly = false) {
             FETCH_TIMEOUTS.load
         );
         const data = await response.json();
-
-
 
         if (!data.ok) {
             if (data.error === 'unauthorized') { logout(); return; }
