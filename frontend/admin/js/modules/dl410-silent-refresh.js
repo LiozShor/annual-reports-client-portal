@@ -29,7 +29,7 @@
     return sd.slice(5, 7) + '.' + sd.slice(0, 4) + '-' + ed.slice(5, 7) + '.' + ed.slice(0, 4);
   }
 
-  function insertNewMissingDocAndRefresh(item, data) {
+  function insertNewMissingDocAndRefresh(item, data, arrLive) {
     if (!item || !data || !data.doc_id) return;
     try {
       var nd = {
@@ -41,7 +41,7 @@
         category: 'rental',
         person: 'client',
       };
-      var arr = window.aiClassificationsData || [];
+      var arr = arrLive || window.aiClassificationsData || [];
       for (var i = 0; i < arr.length; i++) {
         var c = arr[i];
         if (c.client_name !== item.client_name) continue;
@@ -54,13 +54,13 @@
     }
   }
 
-  function insertReassignedDocAndRefresh(item, data, templateId, extras) {
+  function insertReassignedDocAndRefresh(item, data, templateId, extras, arrLive) {
     if (!item || !data || !data.doc_id) return;
     try {
       var period = periodLabel(extras && extras.contract_period);
       var base = data.matched_short_name || data.doc_title || '';
       var label = period ? base + ' ' + period : base;
-      var arr = window.aiClassificationsData || [];
+      var arr = arrLive || window.aiClassificationsData || [];
       for (var i = 0; i < arr.length; i++) {
         var c = arr[i];
         if (c.client_name !== item.client_name) continue;

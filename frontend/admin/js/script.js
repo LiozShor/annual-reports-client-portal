@@ -7294,7 +7294,7 @@ async function requestMissingPeriod(recordId, startMonth, endMonth, btn) {
             safeCreateIcons();
         }
         // DL-410: silent refresh (CLAUDE.md P6) — extracted to modules/dl410-silent-refresh.js
-        if (typeof insertNewMissingDocAndRefresh === 'function') insertNewMissingDocAndRefresh(aiClassificationsData.find(i => i.id === recordId), data);
+        if (typeof insertNewMissingDocAndRefresh === 'function') insertNewMissingDocAndRefresh(aiClassificationsData.find(i => i.id === recordId), data, aiClassificationsData);
         showAIToast(`נוסף מסמך חסר: חוזה שכירות ${data.period_label}`, 'success');
     } catch (error) {
         if (btn) { btn.disabled = false; btn.innerHTML = `${icon('plus', 'icon-sm')} בקש חוזה`; safeCreateIcons(); }
@@ -8053,7 +8053,7 @@ async function submitAIReassign(recordId, templateId, docRecordId, loadingText, 
         }
         // DL-350: refresh missing-docs surfaces. DL-410: rental reassigns may create a new doc not yet in local all_docs — use module helper.
         const refreshDocId = docRecordId || data.doc_id;
-        if (refreshDocId) { if (isRentalTemplate(templateId) && typeof insertReassignedDocAndRefresh === 'function') insertReassignedDocAndRefresh(reassignedItem, data, templateId, extras); else updateClientDocState(reassignedItem?.client_name, refreshDocId); }
+        if (refreshDocId) { if (isRentalTemplate(templateId) && typeof insertReassignedDocAndRefresh === 'function') insertReassignedDocAndRefresh(reassignedItem, data, templateId, extras, aiClassificationsData); else updateClientDocState(reassignedItem?.client_name, refreshDocId); }
         // DL-086: Transition to reviewed state instead of removing
         transitionCardToReviewed(recordId, 'reassigned', data);
         showAIToast(formatAISuccessToast(data), 'success');
