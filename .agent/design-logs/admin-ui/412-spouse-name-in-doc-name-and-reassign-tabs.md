@@ -1,6 +1,6 @@
 # Design Log 412: Spouse Name in Doc Names + Reassign-Picker Tabs
 
-**Status:** [IMPLEMENTED — NEED TESTING]
+**Status:** [COMPLETED — 2026-05-11]
 **Date:** 2026-05-11
 **Branch:** `DL-412-spouse-name-in-doc-name`
 **Related Logs:** DL-411 (parent — scope filter removal), DL-352 (origin of segmented tabs), DL-355 (`buildShortName`), DL-301/336 (PA popover), DL-391 (reassign chip menu).
