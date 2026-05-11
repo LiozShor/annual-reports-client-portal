@@ -7112,7 +7112,7 @@ tr:hover .client-edit-link {
         gap: 2px;
         background: none;
         border: none;
-        color: var(--gray-400);
+        color: var(--gray-600);
         cursor: pointer;
         position: relative;
         transition: color var(--transition-fast);
