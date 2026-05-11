@@ -8051,9 +8051,9 @@ async function submitAIReassign(recordId, templateId, docRecordId, loadingText, 
             // DL-410: sync contract_period locally so post-reassign render shows months without reload
             if (extras && extras.contract_period && isRentalTemplate(templateId)) { const _cp = extras.contract_period; reassignedItem.contract_period = { ..._cp, coversFullYear: /-01-01$/.test(_cp.startDate||'') && /-12-(28|29|30|31)$/.test(_cp.endDate||'') }; }
         }
-        // DL-350: refresh the missing-docs/pane-1 surfaces for picker-created docs too — server returns data.doc_id for the freshly-created row.
+        // DL-350: refresh missing-docs surfaces. DL-410: rental reassigns may create a new doc not yet in local all_docs — use module helper.
         const refreshDocId = docRecordId || data.doc_id;
-        if (refreshDocId) updateClientDocState(reassignedItem?.client_name, refreshDocId);
+        if (refreshDocId) { if (isRentalTemplate(templateId) && typeof insertReassignedDocAndRefresh === 'function') insertReassignedDocAndRefresh(reassignedItem, data, templateId, extras); else updateClientDocState(reassignedItem?.client_name, refreshDocId); }
         // DL-086: Transition to reviewed state instead of removing
         transitionCardToReviewed(recordId, 'reassigned', data);
         showAIToast(formatAISuccessToast(data), 'success');
