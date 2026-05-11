@@ -7949,19 +7949,19 @@ async function confirmAIReassign() {
         const extras = collectExtras(t.template_id);
         if (extras === null) return; // validation failed, keep modal open
         closeAIReassignModal();
-        await submitAIReassign(recordId, t.template_id, t.doc_record_id || '', null, t.new_doc_name || '', false, null, extras);
+        await submitAIReassign(recordId, t.template_id, t.doc_record_id || '', null, t.new_doc_name || '', false, null, extras, t.person || null);
         return;
     }
 
-    // DL-350: in the expanded picker, if user typed a custom name but didn't
-    // click "הוסף", treat "אישור" as commit-then-submit.
+    // DL-350: typed-but-not-clicked custom name → commit-then-submit. DL-412: thread picker person tab.
     const expandedPicker = document.getElementById('aiReassignExpandedPicker');
     if (expandedPicker && expandedPicker.style.display !== 'none') {
-        const typedEl = expandedPicker.querySelector('.ai-tpl-custom-input');
-        const typed = typedEl ? typedEl.value.trim() : '';
+        const typed = (expandedPicker.querySelector('.ai-tpl-custom-input')?.value || '').trim();
         if (typed) {
+            const pickerPerson = expandedPicker.querySelector('[data-picker-person].active')?.dataset.pickerPerson || null;
+            const finalTyped = _dl412AppendSpouse(typed, pickerPerson, item && item.spouse_name);
             closeAIReassignModal();
-            await submitAIReassign(recordId, 'general_doc', '', null, typed, false, null);
+            await submitAIReassign(recordId, 'general_doc', '', null, finalTyped, false, null, undefined, pickerPerson);
             return;
         }
     }
@@ -7987,7 +7987,7 @@ async function confirmAIReassign() {
     }
 }
 
-async function submitAIReassign(recordId, templateId, docRecordId, loadingText, newDocName, forceOverwrite, targetReportId, extras) {
+async function submitAIReassign(recordId, templateId, docRecordId, loadingText, newDocName, forceOverwrite, targetReportId, extras, person) {
     // DL-397: pre-flight guard — closes the silent-400 path triggered when callers
     // pass an empty/null templateId (e.g., chip whose data-template-id was unset).
     if (!recordId || !templateId || typeof templateId !== 'string') {
@@ -8008,6 +8008,7 @@ async function submitAIReassign(recordId, templateId, docRecordId, loadingText, 
         if (newDocName) body.new_doc_name = newDocName;
         if (forceOverwrite) body.force_overwrite = true;
         if (targetReportId) body.target_report_id = targetReportId; // DL-239
+        if (person === 'client' || person === 'spouse') body.person = person; // DL-412
         // DL-397: forward contract_period when target template is rental (T901/T902)
         if (extras && extras.contract_period && isRentalTemplate(templateId)) {
             body.contract_period = extras.contract_period;
@@ -8074,6 +8075,7 @@ async function submitAIReassign(recordId, templateId, docRecordId, loadingText, 
 // Uses container-relative selectors to avoid conflicts with PA picker (which uses global IDs).
 function _buildDocTemplatePicker(container, item, opts) {
     const onPick = opts && opts.onPick ? opts.onPick : () => {};
+    let activePerson = 'client'; // DL-412: per-picker active person tab
 
     function renderPick(cached) {
         const filingType = item.filing_type || 'annual_report';
@@ -8097,6 +8099,7 @@ function _buildDocTemplatePicker(container, item, opts) {
         if (!listHtml) listHtml = `<div class="pa-add-doc-empty">אין תבניות זמינות</div>`;
 
         container.innerHTML = `
+            ${item.spouse_name ? `<div class="pa-add-doc-person"><button type="button" class="pa-add-doc-person-btn${activePerson === 'client' ? ' active' : ''}" data-picker-person="client">👤 ${escapeHtml(item.client_name || 'לקוח')}</button><button type="button" class="pa-add-doc-person-btn${activePerson === 'spouse' ? ' active' : ''}" data-picker-person="spouse">👥 ${escapeHtml(item.spouse_name)}</button></div>` : ''}
             <input type="text" class="pa-add-doc-search" placeholder="🔍 חפש מסמך..." dir="rtl" autocomplete="off">
             <div class="pa-add-doc-list" style="max-height:220px;overflow-y:auto;">${listHtml}</div>
             <div class="pa-add-doc-divider">או מסמך מותאם אישית</div>
@@ -8105,7 +8108,7 @@ function _buildDocTemplatePicker(container, item, opts) {
                 <button type="button" class="pa-add-doc-custom-btn">${icon('plus', 'icon-xs')} הוסף</button>
             </div>`;
         safeCreateIcons(container);
-
+        container.querySelectorAll('[data-picker-person]').forEach(btn => btn.addEventListener('click', () => { activePerson = btn.dataset.pickerPerson || 'client'; container.querySelectorAll('[data-picker-person]').forEach(b => b.classList.toggle('active', b.dataset.pickerPerson === activePerson)); })); // DL-412
         const searchEl = container.querySelector('.pa-add-doc-search');
         const listEl = container.querySelector('.pa-add-doc-list');
         searchEl.addEventListener('input', () => {
@@ -8133,7 +8136,8 @@ function _buildDocTemplatePicker(container, item, opts) {
             const name = customInput.value.trim();
             if (!name) { customInput.style.borderColor = 'var(--danger-500)'; customInput.focus(); return; }
             customInput.style.borderColor = '';
-            showChip(name, { template_id: 'general_doc', new_doc_name: name });
+            const finalName = _dl412AppendSpouse(name, activePerson, item && item.spouse_name);
+            showChip(finalName, { template_id: 'general_doc', new_doc_name: finalName, person: activePerson });
         };
         customBtn.addEventListener('click', submitCustom);
         customInput.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); submitCustom(); } });
@@ -8143,7 +8147,7 @@ function _buildDocTemplatePicker(container, item, opts) {
         // .ai-tpl-custom-input directly and submits as 'general_doc'.
         customInput.addEventListener('input', () => {
             const name = customInput.value.trim();
-            onPick(name ? { template_id: 'general_doc', new_doc_name: name, _pending: true } : null);
+            onPick(name ? { template_id: 'general_doc', new_doc_name: name, _pending: true, person: activePerson } : null);
         });
     }
 
@@ -8166,12 +8170,10 @@ function _buildDocTemplatePicker(container, item, opts) {
             }
         }
         const userVars = Array.from(new Set([...declared, ...fromName]));
-        if (userVars.length > 0) {
-            renderVars(tpl, userVars, cached);
-        } else {
-            const display = _paFormatTemplateTitle(tpl, item, {});
-            showChip(display, { template_id: tpl.template_id, new_doc_name: display });
-        }
+        if (userVars.length > 0) { renderVars(tpl, userVars, cached); return; }
+        const { nameHe } = _paResolveTemplateName(tpl, {}, item, activePerson); // DL-412
+        const display = nameHe || _paFormatTemplateTitle(tpl, item, {});
+        showChip(display, { template_id: tpl.template_id, new_doc_name: display, person: activePerson });
     }
 
     function renderVars(tpl, userVars, cached) {
@@ -8217,9 +8219,9 @@ function _buildDocTemplatePicker(container, item, opts) {
                 collected[inp.dataset.var] = val;
             });
             if (missing) { missing.style.borderColor = 'var(--danger-500)'; missing.focus(); return; }
-            const { nameHe } = _paResolveTemplateName(tpl, collected, item);
+            const { nameHe } = _paResolveTemplateName(tpl, collected, item, activePerson);
             const resolvedLabel = nameHe || _paFormatTemplateTitle(tpl, item, collected);
-            showChip(resolvedLabel, { template_id: tpl.template_id, new_doc_name: resolvedLabel });
+            showChip(resolvedLabel, { template_id: tpl.template_id, new_doc_name: resolvedLabel, person: activePerson });
         }
     }
 
@@ -8405,6 +8407,7 @@ async function confirmAIAlsoMatch(recordId) {
             doc_record_id: pickerTarget.doc_record_id || undefined,
             target_report_id: item?.report_record_id || undefined,
             ...(pickerTarget.new_doc_name ? { new_doc_name: pickerTarget.new_doc_name } : {}),
+            ...(pickerTarget.person === 'client' || pickerTarget.person === 'spouse' ? { person: pickerTarget.person } : {}), // DL-412
         });
     }
 
@@ -10985,12 +10988,8 @@ function renderPaAddDocRow(reportId, person) {
 
 function _paStripBold(s) { return (s || '').replace(/<\/?b>/g, '').replace(/\*\*/g, ''); }
 
-function _paResolveTemplateName(tpl, collectedValues, item) {
-    const vals = {
-        year: item.year || '',
-        spouse_name: item.spouse_name || '',
-        ...(collectedValues || {})
-    };
+function _paResolveTemplateName(tpl, collectedValues, item, person) {
+    const vals = { year: item.year || '', spouse_name: item.spouse_name || '', ...(collectedValues || {}) };
     let nameHe = tpl.name_he || '';
     let nameEn = tpl.name_en || '';
     for (const [k, v] of Object.entries(vals)) {
@@ -10998,7 +10997,8 @@ function _paResolveTemplateName(tpl, collectedValues, item) {
         nameHe = nameHe.replace(re, v);
         nameEn = nameEn.replace(re, v);
     }
-    return { nameHe: _paStripBold(nameHe), nameEn: _paStripBold(nameEn) };
+    const sn = item && item.spouse_name;
+    return { nameHe: _dl412AppendSpouse(_paStripBold(nameHe), person, sn), nameEn: _dl412AppendSpouse(_paStripBold(nameEn), person, sn) };
 }
 
 function _paComputeIssuerKey(collectedValues) {
@@ -11494,7 +11494,7 @@ function _paEnterPreview() {
     let displayName;
     let categoryLabel = '';
     if (st.selectedTpl) {
-        const { nameHe, nameEn } = _paResolveTemplateName(st.selectedTpl, st.collectedValues || {}, item);
+        const { nameHe, nameEn } = _paResolveTemplateName(st.selectedTpl, st.collectedValues || {}, item, st.person);
         const issuerKey = _paComputeIssuerKey(st.collectedValues || {});
         pendingDoc = {
             template_id: st.selectedTpl.template_id,

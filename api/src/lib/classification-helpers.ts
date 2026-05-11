@@ -68,6 +68,8 @@ export function buildShortName(
   templateId: string,
   issuerName: string,
   templateMap: Map<string, TemplateInfo>,
+  person?: string,
+  spouseName?: string,
 ): string | null {
   // Step 1 — look up template
   const template = templateMap.get(templateId);
@@ -174,6 +176,18 @@ export function buildShortName(
     .replace(/\s{2,}/g, ' ')
     .trim();
 
+  // DL-412 — append spouse name when person='spouse' (CLIENT-scoped templates
+  // don't carry {spouse_name} in their patterns; this guarantees the marker
+  // shows on the rendered short name without a template data migration).
+  if (
+    person === 'spouse' &&
+    spouseName &&
+    result &&
+    !result.includes(spouseName)
+  ) {
+    result = `${result} – ${spouseName}`;
+  }
+
   // Step 10 — return null if empty
   return result.length > 0 ? result : null;
 }
@@ -200,8 +214,11 @@ export function resolveOneDriveFilename(opts: {
   templateMap: Map<string, TemplateInfo>;
   /** Optional suffix appended before .pdf (e.g. T901/T902 rental period). */
   suffix?: string | null;
+  /** DL-412 — append `– <spouseName>` when person='spouse'. */
+  person?: string | null;
+  spouseName?: string | null;
 }): string {
-  const { templateId, issuerName, attachmentName, templateMap, suffix } = opts;
+  const { templateId, issuerName, attachmentName, templateMap, suffix, person, spouseName } = opts;
   const issuerStr = (issuerName ?? '').toString();
   const issuerPlain = issuerStr.replace(/<[^>]+>/g, '').trim();
 
@@ -209,7 +226,7 @@ export function resolveOneDriveFilename(opts: {
 
   // 1. buildShortName
   if (templateId) {
-    const short = buildShortName(templateId, issuerStr, templateMap);
+    const short = buildShortName(templateId, issuerStr, templateMap, person ?? undefined, spouseName ?? undefined);
     if (short) base = sanitizeFilename(short);
   }
 

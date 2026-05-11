@@ -1850,6 +1850,17 @@ function buildDocMeta(tpl, collectedValues) {
     }
     // DL-411: active tab alone determines person (scope filter dropped).
     const person = isSpouseDocMode() ? 'spouse' : 'client';
+    // DL-412: append " – {spouse_name}" when picking from the spouse tab so the
+    // doc name carries the marker even on CLIENT-scoped templates that don't
+    // include {spouse_name} in their pattern. Guard handles SPOUSE-scoped
+    // templates that already substituted {spouse_name} (no double-tag).
+    const SPOUSE_SEP = ' – ';
+    if (person === 'spouse' && SPOUSE_NAME && !nameHe.includes(SPOUSE_NAME)) {
+        nameHe = `${nameHe}${SPOUSE_SEP}${SPOUSE_NAME}`;
+    }
+    if (person === 'spouse' && SPOUSE_NAME && nameEn && !nameEn.includes(SPOUSE_NAME)) {
+        nameEn = `${nameEn}${SPOUSE_SEP}${SPOUSE_NAME}`;
+    }
     // Build issuer_key from user-provided variable values (exclude auto-filled year/spouse_name)
     const autoVars = ['year', 'spouse_name'];
     const issuerParts = Object.entries(collectedValues)

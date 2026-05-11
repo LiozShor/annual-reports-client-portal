@@ -194,7 +194,9 @@ adminPendingApproval.get('/admin-pending-approval', async (c) => {
           for (const d of catDocs) {
             const tid = (d.type as string) || '';
             const issuerName = (d.issuer_name as string) || (d.name as string) || '';
-            const shortName = tid ? buildShortName(tid, issuerName, templateMap) : null;
+            // DL-412: pass doc.person + report.spouse_name so spouse docs render with the suffix
+            const dPerson = (d.person as string) || 'client';
+            const shortName = tid ? buildShortName(tid, issuerName, templateMap, dPerson, reportCtx.spouse_name) : null;
             if (shortName) d.name_short = shortName;
           }
         }

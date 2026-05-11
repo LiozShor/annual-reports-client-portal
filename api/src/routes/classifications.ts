@@ -323,7 +323,7 @@ classifications.get('/get-pending-classifications', async (c) => {
               chunks.push(
                 airtable.listAllRecords(TABLES.DOCUMENTS, {
                   filterByFormula: formula,
-                  fields: ['report', 'type', 'issuer_name', 'status', 'category', 'onedrive_item_id'],
+                  fields: ['report', 'type', 'issuer_name', 'status', 'category', 'onedrive_item_id', 'person'],
                 })
               );
             }
@@ -356,11 +356,12 @@ classifications.get('/get-pending-classifications', async (c) => {
     );
 
     // DL-321: Memoize buildShortName calls across Steps 5 and 6 (called per doc and per item).
+    // DL-412: key by person + spouseName too — output diverges for spouse docs.
     const shortNameMemo = new Map<string, string | null>();
-    const memoShortName = (templateId: string, docName: string): string | null => {
-      const key = `${templateId}::${docName}`;
+    const memoShortName = (templateId: string, docName: string, person?: string, spouseName?: string): string | null => {
+      const key = `${templateId}::${docName}::${person || ''}::${spouseName || ''}`;
       if (shortNameMemo.has(key)) return shortNameMemo.get(key)!;
-      const resolved = templateId ? buildShortName(templateId, docName, templateMap) : null;
+      const resolved = templateId ? buildShortName(templateId, docName, templateMap, person, spouseName) : null;
       shortNameMemo.set(key, resolved);
       return resolved;
     };
@@ -383,7 +384,10 @@ classifications.get('/get-pending-classifications', async (c) => {
       const catId = (f.category as string) || 'general';
       const catInfo = categoryMap.get(catId);
       const docName = (f.issuer_name as string) || tmpl?.name_he || (f.type as string) || '';
-      const resolvedShort = f.type ? memoShortName(f.type as string, docName) : null;
+      // DL-412: pass doc.person + report.spouse_name so spouse docs render with the suffix
+      const docPerson = (f.person as string) || 'client';
+      const reportSpouseName = spouseNameMap.get(rid) || '';
+      const resolvedShort = f.type ? memoShortName(f.type as string, docName, docPerson, reportSpouseName) : null;
       const shortName = resolvedShort || tmpl?.name_he || '';
       const docEntry = {
         doc_record_id: doc.id,
@@ -618,7 +622,7 @@ classifications.post('/review-classification', async (c) => {
 
     // ---- Step 1: Validate request ----
     const body = await c.req.json() as Record<string, unknown>;
-    const { token, classification_id, action, reassign_template_id, reassign_doc_record_id, notes, new_doc_name, force_overwrite, approve_mode, target_report_id, additional_targets, create_if_missing, template_id, contract_period } = body as {
+    const { token, classification_id, action, reassign_template_id, reassign_doc_record_id, notes, new_doc_name, force_overwrite, approve_mode, target_report_id, additional_targets, create_if_missing, template_id, contract_period, person: bodyPerson } = body as {
       token: string;
       classification_id: string;
       action: string;
@@ -635,12 +639,48 @@ classifications.post('/review-classification', async (c) => {
         doc_record_id?: string;
         target_report_id?: string;
         new_doc_name?: string;
+        person?: string; // DL-412: client | spouse — applied to newly created docs
       }>;
       // DL-319: atomically create required-doc row when none exists, then approve
       create_if_missing?: boolean;
       template_id?: string;
       // DL-397: capture contract months at manual reassign to T901/T902
       contract_period?: { startDate?: string; endDate?: string };
+      // DL-412: person tab from reassign picker — 'client' | 'spouse'
+      person?: string;
+    };
+
+    // DL-412: validate person values up front
+    if (bodyPerson && bodyPerson !== 'client' && bodyPerson !== 'spouse') {
+      return c.json({ ok: false, error: `Invalid person: ${bodyPerson}` }, 400);
+    }
+    if (Array.isArray(additional_targets)) {
+      for (const t of additional_targets) {
+        if (t.person && t.person !== 'client' && t.person !== 'spouse') {
+          return c.json({ ok: false, error: `Invalid additional_targets[].person: ${t.person}` }, 400);
+        }
+      }
+    }
+
+    // DL-412: per-request spouse_name lookup with tiny cache to avoid repeat fetches.
+    const _spouseNameCache = new Map<string, string>();
+    const getSpouseNameForReport = async (rid: string | null | undefined): Promise<string> => {
+      if (!rid) return '';
+      if (_spouseNameCache.has(rid)) return _spouseNameCache.get(rid)!;
+      try {
+        const rep = await airtable.getRecord(TABLES.REPORTS, rid);
+        const sn = ((rep.fields as any)?.spouse_name as string) || '';
+        _spouseNameCache.set(rid, sn);
+        return sn;
+      } catch {
+        _spouseNameCache.set(rid, '');
+        return '';
+      }
+    };
+    const appendSpouseSuffix = (name: string, person: string, spouseName: string): string => {
+      if (person !== 'spouse' || !spouseName || !name) return name;
+      if (name.includes(spouseName)) return name;
+      return `${name} – ${spouseName}`;
     };
 
     if (!token) {
@@ -1296,17 +1336,23 @@ classifications.post('/review-classification', async (c) => {
           // existing row". Previously only general_doc honored this; templated
           // picks with new_doc_name silently fell through to find-existing and
           // overwrote the first matching type=template_id row.
-          const issuerKey = t.new_doc_name.toLowerCase().replace(/[^a-zA-Zא-ת0-9\s]/g, '').replace(/\s+/g, '_');
-          const docUid = `${tReportId}_${t.template_id.toLowerCase()}_client_${issuerKey}_${Date.now()}`;
           const tmpl = t.template_id !== 'general_doc' ? templateMap.get(t.template_id) : null;
           const tmplCategory = tmpl ? ((tmpl as any).category as string) : null;
           const tmplPerson = tmpl ? ((tmpl as any).person as string) : null;
+          // DL-412 — honor per-target `person` from picker tab + append spouse suffix.
+          const personForDoc = t.person === 'spouse' || t.person === 'client'
+            ? t.person
+            : (tmplPerson || 'client');
+          const spouseName = personForDoc === 'spouse' ? await getSpouseNameForReport(tReportId) : '';
+          const finalName = appendSpouseSuffix(t.new_doc_name, personForDoc, spouseName);
+          const issuerKey = finalName.toLowerCase().replace(/[^a-zA-Zא-ת0-9\s]/g, '').replace(/\s+/g, '_');
+          const docUid = `${tReportId}_${t.template_id.toLowerCase()}_${personForDoc}_${issuerKey}_${Date.now()}`;
           const fields: Record<string, unknown> = {
             type: t.template_id,
-            issuer_name: t.new_doc_name,
-            issuer_name_en: t.new_doc_name,
-            issuer_key: t.new_doc_name,
-            person: tmplPerson || 'client',
+            issuer_name: finalName,
+            issuer_name_en: finalName,
+            issuer_key: finalName,
+            person: personForDoc,
             status: 'Required_Missing',
             report: [tReportId],
             document_uid: docUid,
@@ -1884,16 +1930,20 @@ classifications.post('/review-classification', async (c) => {
         targetDoc = await airtable.getRecord(TABLES.DOCUMENTS, reassign_doc_record_id);
       } else if (reassign_template_id === 'general_doc' && new_doc_name && !reassign_doc_record_id) {
         // Path 2: Create new general doc
-        const issuerKey = new_doc_name.toLowerCase().replace(/[^a-zA-Zא-ת0-9\s]/g, '').replace(/\s+/g, '_');
-        const docUid = `${reportId}_general_doc_client_${issuerKey}`;
+        // DL-412 — honor `person` from picker tab + append spouse name to issuer fields.
+        const personForDoc = bodyPerson === 'spouse' ? 'spouse' : 'client';
+        const spouseName = personForDoc === 'spouse' ? await getSpouseNameForReport(reportId) : '';
+        const issuerNameWithSpouse = appendSpouseSuffix(new_doc_name, personForDoc, spouseName);
+        const issuerKey = issuerNameWithSpouse.toLowerCase().replace(/[^a-zA-Zא-ת0-9\s]/g, '').replace(/\s+/g, '_');
+        const docUid = `${reportId}_general_doc_${personForDoc}_${issuerKey}`;
         const created = await airtable.createRecords(TABLES.DOCUMENTS, [{
           fields: {
             type: 'general_doc',
-            issuer_name: new_doc_name,
-            issuer_name_en: new_doc_name,
-            issuer_key: new_doc_name,
+            issuer_name: issuerNameWithSpouse,
+            issuer_name_en: issuerNameWithSpouse,
+            issuer_key: issuerNameWithSpouse,
             category: 'general',
-            person: 'client',
+            person: personForDoc,
             status: 'Required_Missing',
             report: [reportId],
             document_uid: docUid,
@@ -1937,16 +1987,23 @@ classifications.post('/review-classification', async (c) => {
               error: 'Cannot create doc: no name supplied and template has no resolved name. Please re-pick the template and fill any required fields.',
             }, 400);
           }
-          const issuerKey = derivedName.toLowerCase().replace(/[^a-zA-Zא-ת0-9\s]/g, '').replace(/\s+/g, '_');
+          // DL-412 — picker `person` overrides template default; append spouse suffix.
+          const tmplPerson = (tplFields.person as string) || 'client';
+          const personForDoc = bodyPerson === 'spouse' || bodyPerson === 'client'
+            ? bodyPerson
+            : tmplPerson;
+          const spouseName = personForDoc === 'spouse' ? await getSpouseNameForReport(reportId) : '';
+          const finalName = appendSpouseSuffix(derivedName, personForDoc, spouseName);
+          const issuerKey = finalName.toLowerCase().replace(/[^a-zA-Zא-ת0-9\s]/g, '').replace(/\s+/g, '_');
           const docUid = `${reportId}_${reassign_template_id}_${issuerKey}`;
           const created = await airtable.createRecords(TABLES.DOCUMENTS, [{
             fields: {
               type: reassign_template_id,
-              issuer_name: derivedName,
-              issuer_name_en: derivedName,
-              issuer_key: derivedName,
+              issuer_name: finalName,
+              issuer_name_en: finalName,
+              issuer_key: finalName,
               category: (tplFields.category as string) || 'general',
-              person: (tplFields.person as string) || 'client',
+              person: personForDoc,
               status: 'Required_Missing',
               report: [reportId],
               document_uid: docUid,
