@@ -1791,12 +1791,10 @@ function isSpouseDocMode() {
     return _addDocActivePerson === 'spouse';
 }
 
-// DL-352: scope predicate ported from PA popover (script.js _paTemplateMatchesPerson).
-// Airtable scope values: CLIENT, SPOUSE, PERSON, GLOBAL_SINGLE, empty.
-function _addDocTemplateMatchesPerson(tpl, person) {
-    const scope = (tpl && tpl.scope ? String(tpl.scope) : '').trim().toUpperCase();
-    if (scope === 'CLIENT') return person === 'client';
-    if (scope === 'SPOUSE') return person === 'spouse';
+// DL-411: scope filter dropped — both tabs show all templates. Active tab alone
+// determines `person` metadata on the new doc (see buildDocMeta). Function kept
+// so the L871 call-site is unchanged.
+function _addDocTemplateMatchesPerson(_tpl, _person) {
     return true;
 }
 
@@ -1850,8 +1848,8 @@ function buildDocMeta(tpl, collectedValues) {
         nameHe = nameHe.replace(new RegExp(`\\{${key}\\}`, 'g'), val);
         nameEn = nameEn.replace(new RegExp(`\\{${key}\\}`, 'g'), val);
     }
-    // Determine person based on checkbox override or template scope
-    const person = isSpouseDocMode() ? 'spouse' : (tpl.scope === 'SPOUSE') ? 'spouse' : 'client';
+    // DL-411: active tab alone determines person (scope filter dropped).
+    const person = isSpouseDocMode() ? 'spouse' : 'client';
     // Build issuer_key from user-provided variable values (exclude auto-filled year/spouse_name)
     const autoVars = ['year', 'spouse_name'];
     const issuerParts = Object.entries(collectedValues)

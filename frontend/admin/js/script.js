@@ -11253,18 +11253,11 @@ function _paRenderAddDocPick() {
     if (search) setTimeout(() => search.focus(), 50);
 }
 
-// DL-301: template scope filter.
-// Airtable `scope` values (verified live): CLIENT, SPOUSE, PERSON, GLOBAL_SINGLE, empty.
-//  - CLIENT       → client only
-//  - SPOUSE       → spouse only
-//  - PERSON       → either (disability/maternity — whoever the event applies to)
-//  - GLOBAL_SINGLE→ either (single-per-report like T002 ID update)
-//  - empty        → either (defensive default)
-function _paTemplateMatchesPerson(tpl, person) {
-    const scope = (tpl.scope || '').toString().trim().toUpperCase();
-    if (scope === 'CLIENT') return person === 'client';
-    if (scope === 'SPOUSE') return person === 'spouse';
-    return true; // PERSON, GLOBAL_SINGLE, empty, unknown → show for either
+// DL-411: scope filter dropped — both tabs show all templates. Active tab alone
+// determines `person` (st.person, see paAddCustomDocSubmit / _paEnterPreview).
+// Function kept so the L11208 call-site is unchanged.
+function _paTemplateMatchesPerson(_tpl, _person) {
+    return true;
 }
 
 function paAddDocSetPerson(person) {
