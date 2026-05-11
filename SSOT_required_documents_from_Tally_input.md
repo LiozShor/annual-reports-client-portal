@@ -117,10 +117,19 @@ Global single-instance documents:
 * Even if MULTIPLE triggers exist → output ONE document only.
 * There is NO separate "child_id_appendix" document type - all consolidate to T002.
 
-Canonical "ספח ת״ז" title (exactly):
+Canonical "ספח ת״ז" base title (exactly):
 
-* `ספח ת״ז מעודכן`
+* HE: `ספח ת״ז מעודכן`
 * EN: `Updated ID appendix`
+
+Conditional child suffix (HE only):
+
+* When the "new child added to family" trigger fires — Tally question `question_y62LzX` truthy — append the following to the HE title, separated by an en-dash (` – `):
+  * ` – יש לשלוח ספח תז בו מופיע הילד/ה שהצטרף/ה למשפחה`
+* Full HE title with suffix: `ספח ת״ז מעודכן – יש לשלוח ספח תז בו מופיע הילד/ה שהצטרף/ה למשפחה`
+* The suffix is appended ONCE even when other T002 triggers also fire (T002 remains GLOBAL_SINGLE).
+* English title is unaffected — remains `Updated ID appendix` regardless of trigger.
+* Implementation: n8n workflow `SUB Document Service` (`hf7DRQ9fLmQqHv3u`), node `Generate Documents`.
 
 Form 867 dedupe:
 
@@ -309,12 +318,13 @@ Formatting conventions:
 | Template ID | Scope                | Title Template                                                                                   |
 | ----------- | -------------------- | ------------------------------------------------------------------------------------------------ |
 | T001        | CLIENT               | אישור תושבות לשנת **{{year}}** – **{{city_name}}**                                               |
-| T002        | GLOBAL_SINGLE        | ספח ת״ז מעודכן                                                                                   |
+| T002        | GLOBAL_SINGLE        | ספח ת״ז מעודכן [+ קונדיציונל: ` – יש לשלוח ספח תז בו מופיע הילד/ה שהצטרף/ה למשפחה`] |
 | T003        | CLIENT               | מסמכי שינוי סטטוס משפחתי בשנת **{{year}}** – **{{client_name}}** – **{{status_change_details}}** |
 
 Notes:
 
 * T002 must appear once בלבד בכל הפלט (ראה 1.3).
+* T002 child suffix is appended only when the "new child added to family" trigger (`question_y62LzX`) is truthy. See 1.3 for the exact suffix string and rules.
 
 ---
 
