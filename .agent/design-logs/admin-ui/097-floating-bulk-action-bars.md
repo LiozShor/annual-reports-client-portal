@@ -1,5 +1,5 @@
 # Design Log 097: Floating Bulk Action Bars
-**Status:** [DRAFT]
+**Status:** [COMPLETED — 2026-05-12]
 **Date:** 2026-03-05
 **Related Logs:** [087-responsive-floating-elements](087-responsive-floating-elements.md), [086-persistent-batch-review](086-persistent-batch-review.md)
 

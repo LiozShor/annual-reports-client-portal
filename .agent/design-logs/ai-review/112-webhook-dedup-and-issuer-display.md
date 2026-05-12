@@ -1,5 +1,5 @@
 # Design Log 112: Webhook Duplicate Prevention + Issuer Name Display
-**Status:** [DRAFT]
+**Status:** [COMPLETED — 2026-05-12]
 **Date:** 2026-03-08
 **Related Logs:** [035-wf05-ai-classification](035-wf05-ai-classification-onedrive-upload.md), [048-onedrive-dedup](048-onedrive-rename-dedup-improvements.md), [069-race-condition-guard](069-review-classification-race-condition-guard.md), [110-short-doc-names](110-questions-for-client-feature.md)
 

@@ -1,5 +1,5 @@
 # Design Log 319: Approve-as-Required — flip DL-057 disabled button into active "add-to-required + approve"
-**Status:** [IMPLEMENTED — NEED TESTING]
+**Status:** [COMPLETED — 2026-05-12]
 **Date:** 2026-04-21
 **Related Logs:** 057 (Disable Approve for Unrequested Docs), 058 (Add New Custom Doc from AI Review), 314 (Multi-Template Match)
 

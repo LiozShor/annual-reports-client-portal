@@ -1,5 +1,5 @@
 # Design Log 239: Filter Add-Document Dropdown by Filing Type
-**Status:** [IMPLEMENTED — NEED TESTING]
+**Status:** [COMPLETED — 2026-05-12]
 **Date:** 2026-04-06
 **Related Logs:** DL-216 (filing type scoping all tabs), DL-219 (add second filing type)
 

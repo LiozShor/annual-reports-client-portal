@@ -1,5 +1,5 @@
 # Design Log 085: AI Review Card — Remove Fuzzy Hint & Improve Preview Affordance
-**Status:** [DONE]
+**Status:** [COMPLETED — 2026-05-12]
 **Date:** 2026-03-03
 **Related Logs:** 075 (AI Review Inline Document Preview), 043 (AI Review Card Redesign), 082 (Clickable UI Audit)
 

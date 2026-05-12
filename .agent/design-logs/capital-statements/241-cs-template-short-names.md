@@ -1,5 +1,5 @@
 # Design Log 241: Add Issuer Placeholders to CS Template short_name_he
-**Status:** [IMPLEMENTED — NEED TESTING]
+**Status:** [COMPLETED — 2026-05-12]
 **Date:** 2026-04-06
 **Related Logs:** DL-225 (CS Hardcoded AR Remediation), DL-233 (CS Template Fixes), DL-239 (Cross-Filing-Type Reassign)
 

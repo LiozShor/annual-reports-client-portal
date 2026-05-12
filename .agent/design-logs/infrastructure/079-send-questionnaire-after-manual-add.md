@@ -1,5 +1,5 @@
 # Design Log 079: Send Questionnaire After Manual Client Add
-**Status:** [DONE]
+**Status:** [COMPLETED — 2026-05-12]
 **Date:** 2026-03-02
 **Related Logs:** [064-fix-type-a-questionnaire-link.md], [073-type-a-single-cta-mirror-wf01.md]
 

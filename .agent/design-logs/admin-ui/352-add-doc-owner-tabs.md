@@ -1,5 +1,5 @@
 # Design Log 352: Add-Doc Owner Tabs (Doc-Manager + PA Popover Uniformity)
-**Status:** [IMPLEMENTED — NEED TESTING]
+**Status:** [COMPLETED — 2026-05-12]
 **Date:** 2026-04-26
 **Related Logs:** DL-162 (spouse checkbox add docs), DL-301 (PA add-doc affordance), DL-039 (searchable categorized doc dropdown)
 

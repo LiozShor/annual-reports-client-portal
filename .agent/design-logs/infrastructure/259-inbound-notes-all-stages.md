@@ -1,5 +1,5 @@
 # Design Log 259: Capture Client Notes & Attachments at All Stages
-**Status:** IMPLEMENTED — NEED TESTING
+**Status:** [COMPLETED — 2026-05-12]
 **Date:** 2026-04-13
 **Related Logs:** DL-203 (WF05 → Workers migration), DL-199 (client communication notes timeline), DL-258 (secondary zone on low stages)
 

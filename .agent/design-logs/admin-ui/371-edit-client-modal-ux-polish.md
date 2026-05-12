@@ -1,6 +1,6 @@
 # DL-371: Edit-Client Modal — UX/UI Redesign
 
-**Status:** [IMPLEMENTED — NEED TESTING]
+**Status:** [COMPLETED — 2026-05-12]
 **Branch:** `DL-371-edit-client-modal-ux-polish`
 **Date:** 2026-04-28
 

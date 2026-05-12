@@ -1,5 +1,5 @@
 # Design Log 141: Remove "Send Documents" CTA from Type A Reminder
-**Status:** [DONE]
+**Status:** [COMPLETED — 2026-05-12]
 **Date:** 2026-03-10
 **Related Logs:** DL-073 (Type A single CTA), DL-127 (CTA+Help merge), DL-062 (unified tones)
 

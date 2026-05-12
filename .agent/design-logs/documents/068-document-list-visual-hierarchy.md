@@ -1,5 +1,5 @@
 # Design Log 068: Document List Visual Hierarchy Refactor
-**Status:** [DRAFT]
+**Status:** [COMPLETED — 2026-05-12]
 **Date:** 2026-02-26
 **Related Logs:** 012-centralized-display-library.md, 060-reminder-ssot-doc-display.md
 

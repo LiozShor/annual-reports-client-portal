@@ -1,5 +1,5 @@
 # Design Log 127: Email CTA+Help Merge & Questions Repositioning
-**Status:** [IMPLEMENTED — NEED TESTING]
+**Status:** [COMPLETED — 2026-05-12]
 **Date:** 2026-03-09
 **Related Logs:** DL-083 (sendDocsBox), DL-106 (email overhaul, DRAFT), DL-110 (client questions)
 

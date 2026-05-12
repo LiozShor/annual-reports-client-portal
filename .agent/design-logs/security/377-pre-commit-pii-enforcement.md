@@ -1,6 +1,6 @@
 # Design Log 377: Pre-commit + CI PII/Secret Enforcement (no-bypass)
 
-**Status:** [IMPLEMENTED — NEED TESTING]
+**Status:** [COMPLETED — 2026-05-12]
 **Date:** 2026-04-29
 **Related Logs:**
 - DL-089 (URL PII removal — archive) — historical PII work

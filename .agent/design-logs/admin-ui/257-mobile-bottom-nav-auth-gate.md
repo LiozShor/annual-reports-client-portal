@@ -1,5 +1,5 @@
 # Design Log 257: Mobile Bottom Nav — Auth Gate Fix
-**Status:** [IMPLEMENTED — NEED TESTING]
+**Status:** [COMPLETED — 2026-05-12]
 **Date:** 2026-04-12
 **Related Logs:** [212-mobile-bottom-nav-ai-review.md](212-mobile-bottom-nav-ai-review.md)
 

@@ -1,5 +1,5 @@
 # Design Log 182: Capital Statements Tally Questionnaire
-**Status:** [BEING IMPLEMENTED]
+**Status:** [COMPLETED — 2026-05-12]
 **Date:** 2026-03-25
 **Related Logs:** [DL-164: Filing Type Layer](164-filing-type-capital-statements-layer.md), [docs/cs-ar-equivalence-mapping.md](../../docs/cs-ar-equivalence-mapping.md)
 

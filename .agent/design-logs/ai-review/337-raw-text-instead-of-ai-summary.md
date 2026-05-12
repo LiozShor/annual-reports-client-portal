@@ -1,5 +1,5 @@
 # Design Log 337: Show Raw Client Email Text Instead of AI Summary (AI Review Tab)
-**Status:** [BEING IMPLEMENTED — DL-337]
+**Status:** [COMPLETED — 2026-05-12]
 **Date:** 2026-04-23
 **Related Logs:** DL-199 (client communication notes), DL-259 (notes at all stages), DL-262 (inbound note quality), DL-204 (digest summarization)
 

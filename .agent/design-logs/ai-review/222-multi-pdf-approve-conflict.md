@@ -1,5 +1,5 @@
 # Design Log 222: Multi-PDF Approve Conflict — Merge / Keep Both / Override
-**Status:** [IMPLEMENTED — NEED TESTING]
+**Status:** [COMPLETED — 2026-05-12]
 **Date:** 2026-03-29
 **Related Logs:** DL-070 (guard reassign target doc), DL-112 (webhook dedup)
 

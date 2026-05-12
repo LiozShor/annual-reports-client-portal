@@ -1,5 +1,5 @@
 ﻿# Design Log 288: Fix Queued-Subtitle Stale Flash on Dashboard Load
-**Status:** [IMPLEMENTED — NEED TESTING]
+**Status:** [COMPLETED — 2026-05-12]
 **Date:** 2026-04-16
 **Related Logs:** DL-281 (Outbox as source of truth), DL-273 §8 (queued_send_at staleness gap)
 

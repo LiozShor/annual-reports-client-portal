@@ -1,5 +1,5 @@
 # Design Log 213: Questionnaires Tab — Hide NO Answers Toggle
-**Status:** [DRAFT]
+**Status:** [COMPLETED — 2026-05-12]
 **Date:** 2026-03-28
 **Related Logs:** DL-125 (questionnaires actions), DL-200 (document-manager UX)
 

@@ -1,6 +1,6 @@
 # Design Log 282: Fix Forwarded-Email Note Sender (DL-279 Recurrence)
 
-**Status:** [DRAFT]
+**Status:** [COMPLETED — 2026-05-12]
 **Date:** 2026-04-16
 **Related Logs:** DL-279 (first attempt), DL-278 (office_reply filter), DL-266 (threaded office reply), DL-234 (skip own outbound), DL-199 (client communication notes), DL-203 (WF05 Worker migration)
 

@@ -1,5 +1,5 @@
 # Design Log 102: Scrollable Table Containers + Archive Filter Gaps
-**Status:** [DRAFT]
+**Status:** [COMPLETED — 2026-05-12]
 **Date:** 2026-03-05
 **Related Logs:** DL-091 (Deactivate Client / Soft Delete), DL-055 (Sortable Headers), DL-097 (Floating Bulk Action Bars)
 

@@ -1,5 +1,5 @@
 # Design Log 402: Telegram Ops Bot
-**Status:** [IMPLEMENTED — NEED TESTING] (M1 only; M2 + M3 still [DRAFT])
+**Status:** [COMPLETED — 2026-05-12] (M1 only; M2 + M3 still [COMPLETED — 2026-05-12])
 **Date:** 2026-05-05
 **Related Logs:** None directly. Adjacent: DL-365 (activity logger — used for all bot turns), DL-180 (worker error logging), Phase-9 AI chat (Anthropic key already in env).
 

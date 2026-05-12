@@ -1,5 +1,5 @@
 # Design Log 322: Instrument `summarizeAndSaveNote` silent-exit paths
-**Status:** [BEING IMPLEMENTED — DL-322]
+**Status:** [COMPLETED — 2026-05-12]
 **Date:** 2026-04-22
 **Related Logs:** DL-180 (error logging), DL-199 (client communication notes), DL-259 (notes at all stages), DL-282 (forwarded-email note resolver), DL-287 (Cloudflare Queues)
 

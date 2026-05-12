@@ -1,6 +1,6 @@
 # DL-366: Dashboard Kebab Actions — Add/Edit Secondary Email + Copy Questionnaire Link
 
-**Status:** `[IMPLEMENTED — NEED TESTING]`
+**Status:** `[COMPLETED — 2026-05-12]`
 **Date:** 2026-04-28
 **Related Logs:** DL-183 (CC on questionnaire), DL-184 (cc_email admin UI), DL-052 (inbound match by cc_email), DL-293 (client detail modal)
 

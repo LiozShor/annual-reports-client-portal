@@ -1,5 +1,5 @@
 # Design Log 219: Allow Adding Second Filing Type for Existing Client
-**Status:** [DRAFT]
+**Status:** [COMPLETED — 2026-05-12]
 **Date:** 2026-03-29
 **Related Logs:** DL-218 (dual AR+CS tabbed view), DL-216 (filing type scoping)
 

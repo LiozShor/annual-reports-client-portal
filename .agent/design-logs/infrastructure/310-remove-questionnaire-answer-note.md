@@ -1,5 +1,5 @@
 # Design Log 310: Remove `[תשובה מהשאלון]` Raw-Answer Note Append
-**Status:** [IMPLEMENTED — NEED TESTING]
+**Status:** [COMPLETED — 2026-05-12]
 **Date:** 2026-04-20
 **Related Logs:** DL-296 (introduced the feature), DL-300 (kept note-append after narrowing LLM), DL-299 (PA card notes UI)
 

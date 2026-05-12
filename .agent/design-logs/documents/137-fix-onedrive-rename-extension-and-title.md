@@ -1,5 +1,5 @@
 # Design Log 137: Fix OneDrive Rename — Extension Reverts to Original + Wrong Title on Reassign
-**Status:** [IMPLEMENTED — NEED TESTING]
+**Status:** [COMPLETED — 2026-05-12]
 **Date:** 2026-03-09
 **Related Logs:** [115-pdf-conversion-before-onedrive-upload](115-pdf-conversion-before-onedrive-upload.md), [129-dynamic-short-names-ai-review](129-dynamic-short-names-ai-review.md), [049-onedrive-file-ops-rename-move](049-onedrive-file-ops-rename-move.md), [048-onedrive-rename-dedup-improvements](048-onedrive-rename-dedup-improvements.md)
 

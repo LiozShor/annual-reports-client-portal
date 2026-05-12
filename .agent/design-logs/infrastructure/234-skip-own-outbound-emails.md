@@ -1,5 +1,5 @@
 # Design Log 234: Skip Own Outbound Emails in Inbound Pipeline
-**Status:** [IMPLEMENTED — NEED TESTING]
+**Status:** [COMPLETED — 2026-05-12]
 **Date:** 2026-03-31
 **Related Logs:** DL-052 (handle unmatched email senders), DL-203 (WF05 → Workers migration)
 

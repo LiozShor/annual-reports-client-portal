@@ -1,5 +1,5 @@
 # Design Log 157: Insurance Company Links in Help Text
-**Status:** [IMPLEMENTED — NEED TESTING]
+**Status:** [COMPLETED — 2026-05-12]
 **Date:** 2026-03-16
 **Related Logs:** DL-117 (help section implementation)
 

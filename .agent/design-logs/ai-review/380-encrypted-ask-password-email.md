@@ -1,6 +1,6 @@
 # DL-380 — Encrypted PDF: Ask-Password Email + Auto-Detect Reply
 
-**Status:** IMPLEMENTED — NEED TESTING
+**Status:** [COMPLETED — 2026-05-12]
 **Branch:** `DL-380-encrypted-ask-password-email`
 **Related:** DL-373 (in-app PDF unlock), DL-379 (lock indicator on cards)
 

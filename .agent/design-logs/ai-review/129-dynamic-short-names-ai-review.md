@@ -1,5 +1,5 @@
 # Design Log 129: Dynamic Short Names for AI Review Cards
-**Status:** [IMPLEMENTED — NEED TESTING]
+**Status:** [COMPLETED — 2026-05-12]
 **Date:** 2026-03-09
 **Related Logs:** [043-ai-review-card-redesign](043-ai-review-card-redesign.md), [074-live-doc-state-and-card-labels](074-live-doc-state-and-card-labels.md), [088-reassign-card-display-name](088-reassign-card-display-name.md), [109-ai-review-ui-lighten-and-rename-fix](109-ai-review-ui-lighten-and-rename-fix.md)
 

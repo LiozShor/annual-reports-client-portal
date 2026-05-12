@@ -1,6 +1,6 @@
 # DL-354: Approve & Send — idempotency lock to prevent duplicate emails
 
-**Status:** IMPLEMENTED — NEED TESTING
+**Status:** [COMPLETED — 2026-05-12]
 **Created:** 2026-04-26
 **Implemented:** 2026-04-27
 **Worker version:** e79b7292-5385-4a1a-8d30-38ae162fe34f

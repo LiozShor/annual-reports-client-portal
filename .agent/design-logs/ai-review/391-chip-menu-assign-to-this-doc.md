@@ -1,7 +1,7 @@
 # Design Log 391: Chip Menu "Assign to This Doc"
 
 > **Renumbered from DL-390 → DL-391** at push time: another session shipped a different DL-390 (`reminder-next-date-skip-weekend`) before this branch was pushed. Branch + DL file renamed; commit message reflects DL-391.
-**Status:** [IMPLEMENTED — NEED TESTING]
+**Status:** [COMPLETED — 2026-05-12]
 **Date:** 2026-05-01
 **Related Logs:** DL-386 (parent — inline prompt after add-doc), DL-351 (chip menu Edit/divider pattern), DL-330 (3-pane layout), DL-227 (inline doc tag rendering), DL-053 (silent refresh)
 

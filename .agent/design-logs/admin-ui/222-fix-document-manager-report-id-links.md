@@ -1,5 +1,5 @@
 # Design Log 222: Fix Document Manager report_id → client_id Links
-**Status:** [IMPLEMENTED — NEED TESTING]
+**Status:** [COMPLETED — 2026-05-12]
 **Date:** 2026-03-29
 **Related Logs:** DL-208 (document-manager-client-switcher), DL-089 (SEC-004 remove PII from URLs)
 

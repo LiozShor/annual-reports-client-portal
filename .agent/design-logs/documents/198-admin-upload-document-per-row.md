@@ -1,5 +1,5 @@
 # Design Log 198: Admin Upload Document Per Row
-**Status:** [DRAFT]
+**Status:** [COMPLETED — 2026-05-12]
 **Date:** 2026-03-26
 **Related Logs:** DL-035 (WF05 AI classification + OneDrive upload), DL-045 (doc manager status/file actions), DL-137 (OneDrive rename)
 

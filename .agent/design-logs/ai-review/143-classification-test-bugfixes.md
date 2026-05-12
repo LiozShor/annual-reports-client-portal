@@ -1,5 +1,5 @@
 # Design Log 143: Classification Test Bugfixes — OneDrive Collision, NII Issuer, Large PDF Threshold
-**Status:** [IMPLEMENTED — NEED TESTING]
+**Status:** [COMPLETED — 2026-05-12]
 **Date:** 2026-03-10
 **Related Logs:** [035](035-wf05-ai-classification-onedrive-upload.md), [046](046-wf05-loop-restructure-classification-optimization.md), [048](048-onedrive-rename-dedup-improvements.md), [134](134-fix-classifier-field-ordering.md), [137](137-fix-onedrive-rename-extension-and-title.md)
 

@@ -1,6 +1,6 @@
 # Design Log 343: Burst Stagger + Airtable Update Hardening
 
-**Status:** [IMPLEMENTED — NEED TESTING]
+**Status:** [COMPLETED — 2026-05-12]
 **Date:** 2026-04-25
 **Related Logs:** DL-342 (audit), DL-059 (foundation), DL-154 (idempotency, still DRAFT), DL-271 (08:00 cron), DL-277 (429 retry pattern)
 

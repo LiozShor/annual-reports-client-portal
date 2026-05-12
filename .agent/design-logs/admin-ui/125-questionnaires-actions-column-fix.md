@@ -1,5 +1,5 @@
 # Design Log 125: Questionnaires Tab — Actions Column Background & Sticky Fix
-**Status:** [DRAFT]
+**Status:** [COMPLETED — 2026-05-12]
 **Date:** 2026-03-08
 **Related Logs:** DL-120 (questionnaires tab improvements), DL-122 (sticky client name row)
 

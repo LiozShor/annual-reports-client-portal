@@ -1,5 +1,5 @@
 # Design Log 135: Short Names in Document Combobox
-**Status:** [DRAFT]
+**Status:** [COMPLETED — 2026-05-12]
 **Date:** 2026-03-09
 **Related Logs:** [129-dynamic-short-names-ai-review](129-dynamic-short-names-ai-review.md), [039-searchable-categorized-doc-dropdown](039-searchable-categorized-doc-dropdown.md)
 

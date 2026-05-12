@@ -5,7 +5,7 @@ type: design-log
 ---
 
 # Design Log 305: Raise Inline-Image Signature Filter Threshold (20KB → 50KB)
-**Status:** [IMPLEMENTED — NEED TESTING]
+**Status:** [COMPLETED — 2026-05-12]
 **Date:** 2026-04-19
 **Related Logs:** DL-303 (inline-attachment filter rewrite), DL-287 (Cloudflare Queues inbound), DL-260 (archive extraction)
 

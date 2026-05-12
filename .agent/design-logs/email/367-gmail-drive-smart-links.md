@@ -1,6 +1,6 @@
 # Design Log 367: Fetch Gmail Drive Smart-Link Attachments
 
-**Status:** [IMPLEMENTED — NEED TESTING]
+**Status:** [COMPLETED — 2026-05-12]
 **Date:** 2026-04-28
 **Branch:** `DL-367-gmail-drive-smart-links`
 **Related Logs:** DL-203 (WF05 Worker migration), DL-282 (forwarded-email parsing), DL-260 (archive expansion), DL-315 (pre-questionnaire fallback)

@@ -1,5 +1,5 @@
 # Design Log 320: "Also Matches" UX Rework + Robot Icon Removal
-**Status:** [IMPLEMENTED — NEED TESTING]
+**Status:** [COMPLETED — 2026-05-12]
 **Date:** 2026-04-21
 **Related Logs:** DL-314 (multi-template match — introduced the button this rework replaces), DL-222 (multi-PDF approve conflict — 3-option dialog prior art), DL-205 (clear-on-revert field semantics)
 

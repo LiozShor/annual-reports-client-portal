@@ -1,5 +1,5 @@
 # Design Log 389: Block ALL Automated Client Emails on Friday/Saturday
-**Status:** [IMPLEMENTED — NEED TESTING]
+**Status:** [COMPLETED — 2026-05-12]
 **Date:** 2026-05-01
 **Related Logs:** DL-264 (off-hours email queue), DL-273 (MS Graph deferred send), DL-281 (Outlook as source of truth), DL-333 (batch-questions off-hours)
 

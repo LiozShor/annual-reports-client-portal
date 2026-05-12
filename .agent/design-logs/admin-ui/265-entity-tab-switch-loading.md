@@ -1,6 +1,6 @@
 # DL-265: Entity Tab Switch Loading Indicator
 
-**Status:** IMPLEMENTED — NEED TESTING
+**Status:** [COMPLETED — 2026-05-12]
 **Created:** 2026-04-14
 **Category:** Admin UI — Performance & UX
 

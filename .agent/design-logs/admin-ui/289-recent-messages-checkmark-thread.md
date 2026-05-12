@@ -1,5 +1,5 @@
 # Design Log 289: Recent Messages — Comment Threads + Mark-as-Handled + Compose Expand & Preview
-**Status:** [IMPLEMENTED — NEED TESTING]
+**Status:** [COMPLETED — 2026-05-12]
 **Date:** 2026-04-16
 **Related Logs:** DL-261 (recent messages panel), DL-263 (delete + raw text), DL-266 (reply to client messages), DL-272 (load more), DL-273 (deferred send), DL-274 (search bar)
 

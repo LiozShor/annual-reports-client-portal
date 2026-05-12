@@ -1,5 +1,5 @@
 # Design Log 355: OneDrive Rename — Always Use `short_name_he`, Strip Empty `{issuer}`, Fix Bypass Paths
-**Status:** [IMPLEMENTED — NEED TESTING]
+**Status:** [COMPLETED — 2026-05-12]
 **Date:** 2026-04-26
 **Related Logs:** [137-fix-onedrive-rename-extension-and-title](137-fix-onedrive-rename-extension-and-title.md), [296-wf02-extract-issuer-names](../infrastructure/296-wf02-extract-issuer-names.md), [115-pdf-conversion-before-onedrive-upload](115-pdf-conversion-before-onedrive-upload.md), [049-onedrive-file-ops-rename-move](049-onedrive-file-ops-rename-move.md)
 

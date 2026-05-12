@@ -1,5 +1,5 @@
 # Design Log 190: Questionnaire Toggle — Hide "No" Answers On-Screen
-**Status:** [IMPLEMENTED — NEED TESTING]
+**Status:** [COMPLETED — 2026-05-12]
 **Date:** 2026-03-26
 **Related Logs:** DL-156 (Print Questionnaire — Skip 'No' Answers), DL-120 (Questionnaires Tab UX)
 

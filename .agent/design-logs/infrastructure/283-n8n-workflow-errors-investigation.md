@@ -1,5 +1,5 @@
 # Design Log 283: n8n Workflow Errors Investigation & Fix
-**Status:** [IMPLEMENTED — NEED TESTING]
+**Status:** [COMPLETED — 2026-05-12]
 **Date:** 2026-04-16
 **Related Logs:** DL-203 (WF05 → Workers migration), DL-277 (429 retry + inter-batch delay), DL-180 (error logging), Session 14 (PAT rotation)
 

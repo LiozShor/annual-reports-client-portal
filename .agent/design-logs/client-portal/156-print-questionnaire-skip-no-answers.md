@@ -1,5 +1,5 @@
 # Design Log 156: Print Questionnaire — Skip "No" Answers
-**Status:** [DRAFT]
+**Status:** [COMPLETED — 2026-05-12]
 **Date:** 2026-03-16
 **Related Logs:** DL-116 (questionnaires tab with print), DL-120 (questionnaires tab improvements)
 

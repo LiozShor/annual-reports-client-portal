@@ -1,5 +1,5 @@
 # Design Log 409: Inbound dedup — skip creating pending_classification when file_hash already received
-**Status:** [IMPLEMENTED — NEED TESTING]
+**Status:** [COMPLETED — 2026-05-12]
 **Date:** 2026-05-06
 **Related Logs:** DL-407 (uncovered this gap during the matched_doc_name investigation); DL-112 (file_hash dedup foundation)
 

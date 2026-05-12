@@ -1,5 +1,5 @@
 # Design Log 248: Reassign Clears Unrelated Approval on Same Source Doc
-**Status:** [IMPLEMENTED — NEED TESTING]
+**Status:** [COMPLETED — 2026-05-12]
 **Date:** 2026-04-12
 **Related Logs:** DL-210 (classification review bugfixes), DL-222 (multi-PDF approve conflict), DL-205 (clear file fields on status revert)
 

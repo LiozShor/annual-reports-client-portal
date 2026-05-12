@@ -1,5 +1,5 @@
 # Design Log 077: Bulk Recalculate Reminder Dates on send_day Change
-**Status:** [DONE]
+**Status:** [COMPLETED — 2026-05-12]
 **Date:** 2026-03-02
 **Related Logs:** DL-063 (settings dialog), DL-067 (initialize reminder_next_date on stage entry)
 

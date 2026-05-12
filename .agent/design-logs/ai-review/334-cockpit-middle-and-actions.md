@@ -1,6 +1,6 @@
 # Design Log 334: AI Review Cockpit — Middle Column Thin Rows + Right-Side Actions Panel (v2)
 
-**Status:** [IMPLEMENTED — NEED TESTING]
+**Status:** [COMPLETED — 2026-05-12]
 **Date:** 2026-04-23
 **Related Logs:** DL-053 (silent-refresh merge-by-id), DL-075 (original split-view), DL-086 (reviewed state transitions), DL-199 (client notes timeline), DL-237 (PDF split), DL-269/270/271 (contract period), DL-278 (scroll-into-view), DL-306 (deep-link), DL-314 (multi-template match), DL-320 (also-match UX), DL-330 (3-pane rework), DL-332 (pane 1 density), DL-335 (batch-questions dismissal adds `on_hold` review_status — in flight, ships first)
 

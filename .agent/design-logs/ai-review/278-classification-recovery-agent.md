@@ -1,5 +1,5 @@
 # Design Log 278: Classification Recovery Agent
-**Status:** [IMPLEMENTED — NEED TESTING]
+**Status:** [COMPLETED — 2026-05-12]
 **Date:** 2026-04-15
 **Related Logs:** DL-245 (agentic classification workflows — draft research), DL-195 (tool_use parsing fix), DL-277 (429 retry + re-classify)
 

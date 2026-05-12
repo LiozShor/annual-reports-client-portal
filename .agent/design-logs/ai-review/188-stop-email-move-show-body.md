@@ -1,6 +1,6 @@
 # DL-188: Stop Email Folder Move + Show Email Body in AI Review
 
-**Status:** IMPLEMENTED — NEED TESTING
+**Status:** [COMPLETED — 2026-05-12]
 **Created:** 2026-03-26
 **Domain:** ai-review
 

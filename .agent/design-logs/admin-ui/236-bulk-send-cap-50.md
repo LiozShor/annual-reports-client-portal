@@ -1,5 +1,5 @@
 # Design Log 236: Cap Bulk Questionnaire Sending to 50
-**Status:** [IMPLEMENTED — NEED TESTING]
+**Status:** [COMPLETED — 2026-05-12]
 **Date:** 2026-03-31
 **Related Logs:** DL-095 (bulk send fix)
 

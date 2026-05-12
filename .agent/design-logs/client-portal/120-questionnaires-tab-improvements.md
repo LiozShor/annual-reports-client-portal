@@ -1,5 +1,5 @@
 # Design Log 120: Questionnaires Tab — UX Improvements
-**Status:** [IMPLEMENTED — NEED TESTING]
+**Status:** [COMPLETED — 2026-05-12]
 **Date:** 2026-03-08
 **Related Logs:** DL-116 (original questionnaires tab), DL-102 (scrollable tables), DL-097 (floating bulk bars)
 

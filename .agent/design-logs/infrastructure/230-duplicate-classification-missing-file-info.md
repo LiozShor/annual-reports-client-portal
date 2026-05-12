@@ -1,5 +1,5 @@
 # Design Log 230: Duplicate Classifications Missing file_url and onedrive_item_id
-**Status:** [IMPLEMENTED — NEED TESTING]
+**Status:** [COMPLETED — 2026-05-12]
 **Date:** 2026-03-30
 **Related Logs:** DL-035 (AI classification + OneDrive upload), DL-203 (WF05 → Workers migration)
 

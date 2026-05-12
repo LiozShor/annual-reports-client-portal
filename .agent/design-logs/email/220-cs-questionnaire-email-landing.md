@@ -1,5 +1,5 @@
 # Design Log 220: Capital Statement Questionnaire Email + Landing Page
-**Status:** [IMPLEMENTED — NEED TESTING]
+**Status:** [COMPLETED — 2026-05-12]
 **Date:** 2026-03-29
 **Related Logs:** DL-164 (filing type layer), DL-182 (CS Tally questionnaire), DL-219 (second filing type)
 

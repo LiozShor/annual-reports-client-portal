@@ -1,5 +1,5 @@
 # Design Log 403: Bot — active-only search default + Hebrew pluralization
-**Status:** [DRAFT]
+**Status:** [COMPLETED — 2026-05-12]
 **Date:** 2026-05-05
 **Related Logs:** DL-402 (parent — Telegram ops bot M1).
 

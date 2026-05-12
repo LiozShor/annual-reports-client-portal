@@ -1,6 +1,6 @@
 # Design Log 342: Reminder Burst Readiness — 422 This Week
 
-**Status:** [IMPLEMENTED — NEED TESTING]
+**Status:** [COMPLETED — 2026-05-12]
 **Date:** 2026-04-25
 **Related Logs:** DL-059 (foundation), DL-154 (calendar-date idempotency, still DRAFT), DL-257 (admin bulk cap), DL-271 (cron at 08:00), DL-277 (429 retry), DL-155 (twice-monthly)
 

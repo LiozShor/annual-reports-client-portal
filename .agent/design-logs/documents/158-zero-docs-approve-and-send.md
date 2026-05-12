@@ -1,5 +1,5 @@
 # Design Log 158: Fix Approve-and-Send for Zero Documents
-**Status:** [DRAFT]
+**Status:** [COMPLETED — 2026-05-12]
 **Date:** 2026-03-16
 **Related Logs:** DL-102 (stage pipeline), DL-076 (bilingual email cards)
 

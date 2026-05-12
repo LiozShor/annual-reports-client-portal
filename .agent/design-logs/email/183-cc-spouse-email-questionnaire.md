@@ -1,6 +1,6 @@
 # DL-183: CC Spouse Email on Questionnaire Send
 
-**Status:** `[IMPLEMENTED — NEED TESTING]`
+**Status:** `[COMPLETED — 2026-05-12]`
 **Date:** 2026-03-25
 
 ## Summary

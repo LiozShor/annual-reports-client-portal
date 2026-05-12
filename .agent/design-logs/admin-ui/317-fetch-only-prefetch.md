@@ -1,5 +1,5 @@
 # Design Log 317: Fetch-Only Prefetch for Heavy Tab Loaders
-**Status:** [IMPLEMENTED — NEED TESTING]
+**Status:** [COMPLETED — 2026-05-12]
 **Date:** 2026-04-21
 **Related Logs:** DL-311 (admin perf profile), DL-314 (SVG sprite — removed heavy loaders from prefetch as quick fix), DL-247 (SWR staleness)
 

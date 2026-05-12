@@ -1,6 +1,6 @@
 # DL-405: Unify Right-Click Context Menu and Kebab Menu (Single Source of Truth)
 
-**Status:** `[BEING IMPLEMENTED — DL-405]`
+**Status:** `[COMPLETED — 2026-05-12]`
 **Branch:** `DL-405-unify-context-menus`
 **Domain:** admin-ui (frontend-only)
 **Related:** DL-123 (contextual-menu UX research), DL-152 (move view-as-client to row menu), DL-124 (dashboard actions revamp), DL-366 (kebab CC + resend), DL-404 (merge clients — added "merge" to wrong menu)

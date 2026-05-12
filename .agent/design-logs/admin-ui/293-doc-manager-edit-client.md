@@ -1,5 +1,5 @@
 # Design Log 293: Doc-Manager — Full Client Edit (Pencil + Inline)
-**Status:** [IMPLEMENTED — NEED TESTING]
+**Status:** [COMPLETED — 2026-05-12]
 **Date:** 2026-04-17
 **Related Logs:** DL-106 (client-detail-modal), DL-107 (doc-manager-inline-edit [DRAFT, never shipped]), DL-268 (modal cc_email + snapshot), DL-091 (soft-delete / is_active)
 

@@ -1,5 +1,5 @@
 # Design Log 394: OneDrive copy-on-also-match (per-target physical copies)
-**Status:** [BEING IMPLEMENTED — DL-394]
+**Status:** [COMPLETED — 2026-05-12]
 **Date:** 2026-05-02
 **Related Logs:** DL-314 (shared sibling refs), DL-320 (cascade-revert), DL-355 (resolveOneDriveFilename), DL-369/370 (move-classification — similar copy logic), DL-388 (also_match guard), DL-391 (chip-menu follow-up)
 

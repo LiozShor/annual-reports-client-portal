@@ -1,7 +1,7 @@
 # DL-166: Admin Portal Filing Type Tabs (AR / CS)
 
 **Date:** 2026-03-19
-**Status:** IMPLEMENTED — NEED TESTING
+**Status:** [COMPLETED — 2026-05-12]
 **Depends on:** DL-164 (filing_type infrastructure), DL-165 (UX research)
 **Plan:** e556f816-8399-47dc-a27c-30d07448f300
 

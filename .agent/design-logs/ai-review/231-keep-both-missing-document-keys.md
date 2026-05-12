@@ -1,6 +1,6 @@
 # DL-231: Keep-Both Missing document_key, document_uid, issuer_key
 
-**Status:** IMPLEMENTED — NEED TESTING
+**Status:** [COMPLETED — 2026-05-12]
 **Area:** AI Review & Classification
 **Related:** DL-222c (multi-PDF approve conflict), DL-224 (issuer-aware doc lookup)
 **Triggered by:** CPA-XXX_2025_annual_report has 1 document (`rec63YooI7TEznh8U`) without `document_key`

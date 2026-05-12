@@ -1,6 +1,6 @@
 # Design Log 339: AI Review — Move Actions Panel to Pane 2 + Bundled Bug Fixes
 
-**Status:** [IMPLEMENTED — NEED TESTING]
+**Status:** [COMPLETED — 2026-05-12]
 **Date:** 2026-04-24
 **Related Logs:** DL-278 (scroll-into-view), DL-330 (3-pane rework), DL-332 (pane 1 density), DL-334 v2 / v3 / v3.1 / v3.2 / v3.3 (cockpit thin rows + state-aware actions panel)
 **Plan source:** `C:\Users\liozm\.claude\plans\c-users-liozm-desktop-moshe-annual-repo-linear-stream.md`

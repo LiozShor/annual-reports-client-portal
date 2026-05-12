@@ -1,5 +1,5 @@
 # Design Log 244: Rejected Uploads Visibility (Client + Admin)
-**Status:** [IMPLEMENTED — NEED TESTING]
+**Status:** [COMPLETED — 2026-05-12]
 **Date:** 2026-04-07
 **Related Logs:** DL-081 (rejection stale fields fix), DL-194 (remove batch status), DL-199 (client communication notes — pattern source), DL-060 (reminder SSOT doc display), DL-047 (document status visual indicators)
 

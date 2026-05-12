@@ -1,5 +1,5 @@
 # Design Log 066: Reminder Counter Reset on Stage Transition
-**Status:** [DRAFT]
+**Status:** [COMPLETED — 2026-05-12]
 **Date:** 2026-02-26
 **Related Logs:** DL-059 (reminder system), DL-061 (configurable limits), DL-055 (admin change stage)
 

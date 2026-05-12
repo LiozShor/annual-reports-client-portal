@@ -1,5 +1,5 @@
 # Design Log 257: Reminder Select-All Bug Fix & Bulk Cap
-**Status:** [IMPLEMENTED — NEED TESTING]
+**Status:** [COMPLETED — 2026-05-12]
 **Date:** 2026-04-12
 **Related Logs:** DL-236 (bulk send cap 50), DL-256 (table pagination), DL-214 (mobile card layout)
 

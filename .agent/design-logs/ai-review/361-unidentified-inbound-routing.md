@@ -1,5 +1,5 @@
 # Design Log 361: Unidentified Inbound → AI Review Routing + Forwarded-Sender-Name Tier
-**Status:** [BEING IMPLEMENTED — DL-361]
+**Status:** [COMPLETED — 2026-05-12]
 **Date:** 2026-04-27
 **Related Logs:** DL-052 (3-tier identification), DL-282 (forward-on-behalf branch), DL-330 / DL-339 / DL-341 (AI Review pane structure), DL-318 (KV cache invalidation), DL-355 (resolveOneDriveFilename), DL-336 (template picker)
 

@@ -1,5 +1,5 @@
 # Design Log 331: Fix 422 from Airtable batchUpdate in `/webhook/edit-documents`
-**Status:** [IMPLEMENTED — NEED TESTING]
+**Status:** [COMPLETED — 2026-05-12]
 **Date:** 2026-04-22
 **Related Logs:** DL-174 (endpoint introduction), DL-205 (file-field clearing), DL-180 (logError infra)
 

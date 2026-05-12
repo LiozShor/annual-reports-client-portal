@@ -1,5 +1,5 @@
 # Design Log 356: Preview URL Stale itemId — Self-Heal
-**Status:** [IMPLEMENTED — NEED TESTING]
+**Status:** [COMPLETED — 2026-05-12]
 **Date:** 2026-04-26
 **Related Logs:** [DL-205](../documents/205-clear-file-fields-on-status-revert.md), [DL-230](230-duplicate-classification-missing-file-info.md), [DL-180](../infrastructure/) (worker error logging)
 

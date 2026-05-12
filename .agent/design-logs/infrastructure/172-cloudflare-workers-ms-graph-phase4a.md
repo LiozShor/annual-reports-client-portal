@@ -1,5 +1,5 @@
 # Design Log 172: Cloudflare Workers — MS Graph Endpoints Phase 4a
-**Status:** [IMPLEMENTED — NEED TESTING]
+**Status:** [COMPLETED — 2026-05-12]
 **Date:** 2026-03-23
 **Related Logs:** DL-169 (auth scaffold), DL-170 (read endpoints), DL-171 (write endpoints)
 

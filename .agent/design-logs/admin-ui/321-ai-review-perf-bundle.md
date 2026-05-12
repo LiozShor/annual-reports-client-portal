@@ -1,6 +1,6 @@
 # Design Log 321: AI Review Endpoint Perf Bundle — Scoped Docs Fetch + Memo + Idle Refresh
 
-**Status:** [IMPLEMENTED — NEED TESTING]
+**Status:** [COMPLETED — 2026-05-12]
 **Date:** 2026-04-21
 **Related Logs:** DL-311 (admin perf instrumentation), DL-317 (fetch-only prefetch), DL-318 (response-cache reverted), DL-247 (SWR staleness + dedup)
 

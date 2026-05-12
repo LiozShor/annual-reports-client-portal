@@ -1,6 +1,6 @@
 # Design Log 333: Batch-Questions Off-Hours Queue
 
-**Status:** [IMPLEMENTED — NEED TESTING]
+**Status:** [COMPLETED — 2026-05-12]
 **Date:** 2026-04-23
 **Branch:** `DL-333-followup-questions-office-hours-queue`
 **Related Logs:** DL-328 (the "שאל את הלקוח" feature), DL-264 (off-hours queue mechanism), DL-273 (PidTagDeferredSendTime), DL-281 (Outlook = source of truth)

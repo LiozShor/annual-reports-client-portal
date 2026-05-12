@@ -1,6 +1,6 @@
 # Design Log 379: Encrypted-PDF Lock Indicator on AI Review Cards
 
-**Status:** [IMPLEMENTED — NEED TESTING]
+**Status:** [COMPLETED — 2026-05-12]
 **Date:** 2026-04-29
 **Related Logs:** DL-373 (password-protected PDF unlock from preview)
 

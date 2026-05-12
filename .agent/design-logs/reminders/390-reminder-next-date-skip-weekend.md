@@ -1,5 +1,5 @@
 # Design Log 390: Reminder `reminder_next_date` Skips Fri/Sat → Backward to Thursday
-**Status:** [IMPLEMENTED — NEED TESTING]
+**Status:** [COMPLETED — 2026-05-12]
 **Date:** 2026-05-01
 **Related Logs:** DL-389 (block weekend automated emails), DL-155 (twice-monthly reminders), DL-168 (minimum-gap enforcement), DL-067 (init on stage entry)
 

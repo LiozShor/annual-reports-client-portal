@@ -1,5 +1,5 @@
 # Design Log 096: View Documents — Stage-Aware Empty State
-**Status:** [DRAFT]
+**Status:** [COMPLETED — 2026-05-12]
 **Date:** 2026-03-05
 **Related Logs:** [047-document-status-visual-indicators](047-document-status-visual-indicators.md), [074-live-doc-state-and-card-labels](074-live-doc-state-and-card-labels.md)
 

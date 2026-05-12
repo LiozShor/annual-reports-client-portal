@@ -1,5 +1,5 @@
 # Design Log 260: Archive Extraction for Inbound Email Pipeline
-**Status:** [DONE]
+**Status:** [COMPLETED — 2026-05-12]
 **Date:** 2026-04-13
 **Related Logs:** DL-252 (PDF split), DL-244 (rejected uploads), DL-115 (PDF conversion), DL-196 (binary upload fix)
 

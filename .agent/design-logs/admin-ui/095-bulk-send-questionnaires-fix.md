@@ -1,5 +1,5 @@
 # Design Log 095: Fix Bulk Send Questionnaires (Only First Client Processed)
-**Status:** [DRAFT]
+**Status:** [COMPLETED — 2026-05-12]
 **Date:** 2026-03-05
 **Related Logs:** None
 

@@ -1,6 +1,6 @@
 # Design Log 398: Add Percentage to Admin Stat Cards
 
-**Status:** [BEING IMPLEMENTED — DL-398]
+**Status:** [COMPLETED — 2026-05-12]
 **Date:** 2026-05-03
 **Related Logs:** DL-187 (stage3-attention-bounce), DL-288 (queued-subtitle), DL-161 (stage pipeline)
 

@@ -1,6 +1,6 @@
 # Design Log 372: PDF Sticky-Note from AI Review Card
 
-**Status:** [IMPLEMENTED — NEED TESTING]
+**Status:** [COMPLETED — 2026-05-12]
 **Date:** 2026-04-28
 **Related Logs:** DL-075 (inline preview), DL-085 (preview affordance), DL-146 (download button), DL-337 (raw text vs AI summary)
 

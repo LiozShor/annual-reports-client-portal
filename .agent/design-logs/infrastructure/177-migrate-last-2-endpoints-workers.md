@@ -1,5 +1,5 @@
 # Design Log 177: Migrate Last 2 n8n Endpoints to Workers
-**Status:** [IMPLEMENTED — NEED TESTING]
+**Status:** [COMPLETED — 2026-05-12]
 **Date:** 2026-03-24
 **Related Logs:** DL-169 (Workers POC), DL-170 (read endpoints), DL-171 (write endpoints), DL-172-175 (subsequent phases)
 

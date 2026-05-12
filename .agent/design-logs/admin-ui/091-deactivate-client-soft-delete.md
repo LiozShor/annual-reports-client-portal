@@ -1,5 +1,5 @@
 # Design Log 091: Deactivate Client (Soft Delete)
-**Status:** [DRAFT]
+**Status:** [COMPLETED — 2026-05-12]
 **Date:** 2026-03-04
 **Related Logs:** DL-052 (unmatched email senders — only place `is_active` is used), DL-065 (bulk import), DL-089 (PII removal from URLs)
 

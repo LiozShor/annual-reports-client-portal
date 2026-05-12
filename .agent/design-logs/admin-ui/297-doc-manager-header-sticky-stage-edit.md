@@ -1,6 +1,6 @@
 # Design Log 297: Doc-Manager — Sticky Header Merge + Editable Stage
 <!-- Note: originally DL-295; renumbered due to parallel-session collision with DL-295 (PA queue improvements) and DL-296 (WF02 extract-issuer-names). -->
-**Status:** [IMPLEMENTED — NEED TESTING]
+**Status:** [COMPLETED — 2026-05-12]
 **Date:** 2026-04-17
 **Related Logs:** DL-293 (doc-manager pencil + inline edit), DL-102 (stage redesign), DL-055 (clickable stage badges on dashboard)
 

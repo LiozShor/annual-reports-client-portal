@@ -1,6 +1,6 @@
 # DL-197: Fix T501 Short Name + Audit All Templates
 
-**Status:** IMPLEMENTED — NEED TESTING
+**Status:** [COMPLETED — 2026-05-12]
 **Created:** 2026-03-26
 **Domain:** ai-review
 

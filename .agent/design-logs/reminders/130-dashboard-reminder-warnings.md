@@ -1,6 +1,6 @@
 # Design Log 130: Dashboard Reminder Warnings + Sent Count History Click
 
-**Status:** [DRAFT]
+**Status:** [COMPLETED — 2026-05-12]
 **Date:** 2026-03-09
 **Related Logs:** DL-059 (reminder system), DL-078 (reminder tab UX), DL-099 (suppress overhaul), DL-109 (history popover)
 

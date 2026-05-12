@@ -1,5 +1,5 @@
 # Design Log 067: Initialize `reminder_next_date` on Stage Entry
-**Status:** [DRAFT]
+**Status:** [COMPLETED — 2026-05-12]
 **Date:** 2026-02-26
 **Related Logs:** DL-059 (reminder system), DL-066 (counter reset on transition), DL-055 (admin change stage)
 

@@ -1,5 +1,5 @@
 # Design Log 315: Classifier Fallback for Pre-Questionnaire Inbound Docs
-**Status:** [BEING IMPLEMENTED — DL-315]
+**Status:** [COMPLETED — 2026-05-12]
 **Date:** 2026-04-21
 **Related Logs:** DL-203 (WF05 Worker migration), DL-207 (WF05 Worker full gap audit), DL-259 (inbound notes all stages), DL-278 (classification recovery agent)
 

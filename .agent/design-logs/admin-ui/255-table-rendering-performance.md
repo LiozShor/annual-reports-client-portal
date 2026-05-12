@@ -1,5 +1,5 @@
 # Design Log 255: Table Rendering Performance — Hide/Show + Debounce
-**Status:** [IMPLEMENTED — NEED TESTING]
+**Status:** [COMPLETED — 2026-05-12]
 **Date:** 2026-04-12
 **Related Logs:** DL-254 (dashboard load perf), DL-247 (tab switching SWR), DL-214 (mobile card layout), DL-132 (god component risk)
 

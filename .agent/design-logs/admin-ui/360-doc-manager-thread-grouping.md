@@ -1,5 +1,5 @@
 # Design Log 360: Group Doc-Manager Client-Notes by Outlook Conversation
-**Status:** [BEING IMPLEMENTED — DL-360]
+**Status:** [COMPLETED — 2026-05-12]
 **Date:** 2026-04-27
 **Related Logs:** DL-266 (office reply threading), DL-337 (raw text over AI summary), DL-267 (backfill-note-sender pattern)
 

@@ -1,5 +1,5 @@
 # Design Log 117: Help Icons on view-documents
-**Status:** [IMPLEMENTED — NEED TESTING]
+**Status:** [COMPLETED — 2026-05-12]
 **Date:** 2026-03-08
 **Related Logs:** None
 

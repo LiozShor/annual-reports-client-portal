@@ -1,5 +1,5 @@
 # Design Log 078: Reminder Tab — Clickable Stat Cards + Mute/Max Fixes
-**Status:** [DRAFT]
+**Status:** [COMPLETED — 2026-05-12]
 **Date:** 2026-03-02
 **Related Logs:** DL-059 (reminder system), DL-061 (configurable limits), DL-063 (settings dialog), DL-066 (counter reset), DL-067 (next-date init)
 

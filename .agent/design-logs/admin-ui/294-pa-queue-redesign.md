@@ -1,5 +1,5 @@
 # Design Log 294: PA Queue Preview Panel Redesign + Bold Issuer Rendering
-**Status:** [IMPLEMENTED — NEED TESTING]
+**Status:** [COMPLETED — 2026-05-12]
 **Date:** 2026-04-16
 **Related Logs:**
 - DL-292 (built the PA queue tab; this refines the preview panel)

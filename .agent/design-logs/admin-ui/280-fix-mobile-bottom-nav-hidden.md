@@ -1,6 +1,6 @@
 # Design Log 280: Fix Mobile Bottom Nav Hidden After Login
 
-**Status:** [IMPLEMENTED — NEED TESTING] (v2 root fix)
+**Status:** [COMPLETED — 2026-05-12] (v2 root fix)
 **Date:** 2026-04-16 (v1), 2026-04-16 afternoon (v2 root fix)
 **Related Logs:** DL-212 (mobile bottom nav introduction), DL-257 (auth gate + FOUC defense), DL-276 (smooth admin auth flow), DL-281 (regressed v1 fix)
 

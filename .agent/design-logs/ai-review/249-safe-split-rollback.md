@@ -1,6 +1,6 @@
 # Design Log 249: Safe Split with Rollback on Failure
 
-**Status:** [IMPLEMENTED — NEED TESTING]
+**Status:** [COMPLETED — 2026-05-12]
 **Date:** 2026-04-12
 **Related Logs:** DL-237 (PDF split & re-classify — original implementation)
 

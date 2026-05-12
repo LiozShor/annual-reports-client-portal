@@ -1,5 +1,5 @@
 # Design Log 087: Responsive Floating Elements — Viewport-Aware Popovers & Dropdowns
-**Status:** [IN PROGRESS]
+**Status:** [COMPLETED — 2026-05-12]
 **Date:** 2026-03-04
 **Related Logs:** [082-clickable-ui-audit](082-clickable-ui-audit.md), [055-sortable-headers-clickable-stage-badges](055-sortable-headers-clickable-stage-badges.md)
 

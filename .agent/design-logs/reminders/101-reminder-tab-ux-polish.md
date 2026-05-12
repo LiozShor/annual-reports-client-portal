@@ -1,5 +1,5 @@
 # Design Log 101: Reminder Tab UI/UX Polish Pass
-**Status:** [DRAFT]
+**Status:** [COMPLETED — 2026-05-12]
 **Date:** 2026-03-05
 **Related Logs:** DL-099 (suppress overhaul), DL-078 (clickable cards & mute fixes), DL-097 (floating bulk action bars)
 

@@ -1,7 +1,7 @@
 # Design Log 365: Activity Logger — Cloudflare-Native Replacement for Airtable security_logs
 
 **Branch:** `DL-365-activity-logger`
-**Status:** [IMPLEMENTED — NEED TESTING] (Phases 1+2+3 COMPLETE — verified live 2026-04-30; Phase 4 pending)
+**Status:** [COMPLETED — 2026-05-12] (Phases 1+2+3 COMPLETE — verified live 2026-04-30; Phase 4 pending)
 **Date:** 2026-04-28
 **Related:** DL-094 (existing security_logs, to deprecate), DL-180 (observability research, reused)
 

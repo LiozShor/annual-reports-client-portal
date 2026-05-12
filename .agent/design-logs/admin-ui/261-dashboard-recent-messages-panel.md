@@ -1,5 +1,5 @@
 # Design Log 261: Dashboard Recent Client Messages Panel
-**Status:** [DRAFT]
+**Status:** [COMPLETED — 2026-05-12]
 **Date:** 2026-04-13
 **Related Logs:** DL-199 (client communication notes), DL-258 (client messages at all stages), DL-259 (inbound notes at all stages), DL-254 (dashboard load performance)
 

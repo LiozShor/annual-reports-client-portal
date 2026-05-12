@@ -1,5 +1,5 @@
 # Design Log 401: Unidentified Inbound Doc Rows — Clickable for In-App Preview
-**Status:** [IMPLEMENTED — NEED TESTING]
+**Status:** [COMPLETED — 2026-05-12]
 **Date:** 2026-05-04
 **Related Logs:** DL-361 (created `buildUnidentifiedDocsHtml`), DL-334 (preview pane + perf instrumentation), DL-339 (preview pane structure), DL-112 (file_hash dedup — see scope-adjacent note in §4)
 

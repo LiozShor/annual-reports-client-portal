@@ -1,5 +1,5 @@
 # Design Log 194: Remove Batch Status Feature
-**Status:** IMPLEMENTED — NEED TESTING
+**Status:** [COMPLETED — 2026-05-12]
 **Date:** 2026-03-26
 **Related Logs:** DL-086 (persistent batch review), DL-093 (batch completion), DL-108 (remove bilingual), DL-174 (Workers migration)
 

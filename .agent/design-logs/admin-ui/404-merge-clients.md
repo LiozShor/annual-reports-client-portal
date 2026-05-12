@@ -1,5 +1,5 @@
 # Design Log 404: Merge Two Clients Into One
-**Status:** [IMPLEMENTED — NEED TESTING]
+**Status:** [COMPLETED — 2026-05-12]
 **Date:** 2026-05-05
 **Related Logs:** DL-183 (CC on questionnaire), DL-184 (CC admin UI), DL-352 (doc-owner tabs), DL-366 (kebab add CC + resend), DL-208 (client switcher), DL-162 (spouse checkbox), DL-080 (doc-manager spouse fix), DL-110 (client_questions JSON), DL-330 (AI Review group-by-client), DL-355 (OneDrive filename SSOT), DL-356 (preview self-heal), DL-365 (activity logger), DL-369 (move-classification-client picker), DL-374 (webUrl plumbing), DL-390 (weekend skip)
 

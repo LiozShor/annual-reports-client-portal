@@ -1,5 +1,5 @@
 # Design Log 381: Backfill `docs_completed_at` on 2 stuck Stage-5 reports
-**Status:** [IMPLEMENTED — NEED TESTING]
+**Status:** [COMPLETED — 2026-05-12]
 **Date:** 2026-04-29
 **Branch:** `claude-session-20260429-184332`
 **Related Logs:** DL-364 (Review tab count mismatch fix — introduced the invariant, deferred this backfill as Open Question 2), DL-290 (cross-surface stat alignment patterns)

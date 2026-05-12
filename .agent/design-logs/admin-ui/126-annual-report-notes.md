@@ -1,5 +1,5 @@
 # Design Log 126: Annual Report Notes
-**Status:** [DRAFT]
+**Status:** [COMPLETED — 2026-05-12]
 **Date:** 2026-03-09
 **Related Logs:** DL-113 (doc-manager save/stay), DL-116 (questionnaires tab with print)
 

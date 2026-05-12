@@ -1,5 +1,5 @@
 # Design Log 330: AI Review 3-Pane Rework + Scroll Isolation + Progress Counter
-**Status:** [IMPLEMENTED — NEED TESTING]
+**Status:** [COMPLETED — 2026-05-12]
 **Date:** 2026-04-22
 **Related Logs:** DL-075 (original master-detail split-view), DL-109 (card lightening + rename), DL-278 (accordion scroll-into-view), DL-306 (PA-banner deep-link), DL-316 (React-port scoping — still DRAFT)
 

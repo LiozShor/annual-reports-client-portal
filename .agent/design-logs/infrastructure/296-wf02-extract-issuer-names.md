@@ -1,5 +1,5 @@
 # Design Log 296: WF02 — Extract Issuer Names from Questionnaire Free-Text Context
-**Status:** [IMPLEMENTED — NEED TESTING] (✨ accept chip disabled pending UX rework — see 2026-04-17 update)
+**Status:** [COMPLETED — 2026-05-12] (✨ accept chip disabled pending UX rework — see 2026-04-17 update)
 **Date:** 2026-04-17
 
 > **2026-04-17 update (DL-300 follow-up):** the frontend ✨ accept chip shipped by this log is **disabled on both surfaces** (PA card + doc-manager) in commit `ca3e7d5`. Accept overwrote `issuer_name` with the bare short form (e.g. "לאומי"), which then rendered as the entire doc-row label — the template prefix ("טופס 867 (אישור ניכוי מס) לשנת 2025 …") was lost because `doc-builder.ts:293` resolves the label as `issuer_name ?? template.name_he`. The backend (`/webhook/extract-issuer-names`, this log's WF02 wiring) still runs and writes `issuer_name_suggested` for opted-in templates (DL-300 gate); only the UI chip is hidden. Re-enabling = replace the `suggestion = ''` stubs in `frontend/admin/js/script.js` + `frontend/assets/js/document-manager.js` with the original reads, *after* the accept path is reworked to re-compose via `buildShortName(templateId, issuer)` or equivalent.

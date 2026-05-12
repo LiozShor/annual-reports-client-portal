@@ -1,5 +1,5 @@
 # Design Log 364: "מוכנים להכנה" tab — "v" button advances next stage + count mismatch fix
-**Status:** [IMPLEMENTED — NEED TESTING]
+**Status:** [COMPLETED — 2026-05-12]
 **Date:** 2026-04-27
 **Branch:** `DL-364-ready-prep-v-button`
 **Related Logs:** DL-033 (review-queue FIFO), DL-050 (inline confirmation), DL-065 (bulk-import), DL-161 (8-stage pipeline), DL-155 (reminder logic)

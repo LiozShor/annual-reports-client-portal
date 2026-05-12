@@ -1,5 +1,5 @@
 # Design Log 295: PA Queue Improvements — Two-Column Preview + Placeholder Fix + Priority + Inline Actions
-**Status:** [IMPLEMENTED — NEED TESTING]
+**Status:** [COMPLETED — 2026-05-12]
 **Date:** 2026-04-17
 **Related Logs:**
 - DL-292 (PA queue tab foundation)

@@ -1,5 +1,5 @@
 # Design Log 173: Cloudflare Workers — MS Graph Phase 4b (Classifications)
-**Status:** [IMPLEMENTED — NEED TESTING]
+**Status:** [COMPLETED — 2026-05-12]
 **Date:** 2026-03-23
 **Related Logs:** DL-172 (Phase 4a: get-preview-url + get-client-documents), DL-112 (webhook dedup), DL-129 (short names), DL-070 (conflict guard), DL-081 (inline PATCH), DL-137 (file rename)
 

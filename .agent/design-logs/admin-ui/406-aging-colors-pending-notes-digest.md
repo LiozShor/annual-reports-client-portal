@@ -1,6 +1,6 @@
 # Design Log 406: Aging Colors on Dashboard Queues + LLM-Grouped Pending-Notes Digest Section
 
-**Status:** [BEING IMPLEMENTED — DL-406]
+**Status:** [COMPLETED — 2026-05-12]
 **Date:** 2026-05-06
 **Related Logs:** DL-204 (LLM digest summarization for MS Graph inbox), DL-263/271/288/396 (recent-messages widget evolution), DL-203 (archived Email Subscription Mgr)
 

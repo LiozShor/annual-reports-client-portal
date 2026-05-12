@@ -1,5 +1,5 @@
 # Design Log 223: Backfill Empty filing_type on Legacy Report Records
-**Status:** [IMPLEMENTED — NEED TESTING]
+**Status:** [COMPLETED — 2026-05-12]
 **Date:** 2026-03-29
 **Related Logs:** DL-219 (add second filing type), DL-216 (filing type scoping all tabs), DL-164 (capital statements layer)
 

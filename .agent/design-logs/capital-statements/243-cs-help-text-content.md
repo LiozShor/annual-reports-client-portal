@@ -1,5 +1,5 @@
 # Design Log 243: CS Help Text Content (view-documents `?` accordions)
-**Status:** [IMPLEMENTED — NEED TESTING]
+**Status:** [COMPLETED — 2026-05-12]
 **Date:** 2026-04-07
 **Related Logs:** DL-117 (help icons infrastructure), DL-157 (insurance company links), DL-225 (CS hardcoded AR remediation)
 

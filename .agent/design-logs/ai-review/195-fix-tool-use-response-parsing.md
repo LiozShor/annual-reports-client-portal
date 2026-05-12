@@ -1,5 +1,5 @@
 # Design Log 195: Fix Tool-Use Response Parsing in Document Classifier
-**Status:** [IMPLEMENTED — NEED TESTING]
+**Status:** [COMPLETED — 2026-05-12]
 **Date:** 2026-03-26
 **Related Logs:** [131-fix-nii-classification-enum-enforcement](131-fix-nii-classification-enum-enforcement.md), [134-fix-classification-field-ordering-full-enum](134-fix-classification-field-ordering-full-enum.md), [143-classification-test-bugfixes](143-classification-test-bugfixes.md)
 

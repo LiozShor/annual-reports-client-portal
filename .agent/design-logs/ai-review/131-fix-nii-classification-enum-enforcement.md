@@ -1,5 +1,5 @@
 # Design Log 131: Fix NII Classification & Enum Enforcement
-**Status:** [IMPLEMENTED — NEED TESTING]
+**Status:** [COMPLETED — 2026-05-12]
 **Date:** 2026-03-09
 **Related Logs:** [035-wf05-ai-classification](035-wf05-ai-classification-onedrive-upload.md), [046-wf05-loop-restructure](046-wf05-loop-restructure-classification-optimization.md), [112-webhook-dedup-and-issuer-display](112-webhook-dedup-and-issuer-display.md)
 

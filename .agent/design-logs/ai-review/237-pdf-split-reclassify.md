@@ -1,6 +1,6 @@
 # Design Log 237: PDF Split & Re-Classify from AI Review
 
-**Status:** [IMPLEMENTED — NEED TESTING]
+**Status:** [COMPLETED — 2026-05-12]
 **Date:** 2026-04-05
 **Related Logs:** DL-035 (classification pipeline), DL-075 (inline preview), DL-222 (multi-PDF approve conflict)
 

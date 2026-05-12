@@ -1,5 +1,5 @@
 # Design Log 407: Drop matched_doc_name from documents PATCH on AI-review approve
-**Status:** [IMPLEMENTED — NEED TESTING]
+**Status:** [COMPLETED — 2026-05-12]
 **Date:** 2026-05-06
 **Related Logs:** DL-355 (introduced the bug — `feat(documents): unify OneDrive rename via short_name_he`); DL-409 (planned follow-up — inbound dedup gap surfaced during this investigation)
 

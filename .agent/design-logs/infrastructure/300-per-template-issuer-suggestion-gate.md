@@ -1,6 +1,6 @@
 # Design Log 300: Per-Template Issuer-Suggestion Gate
 
-**Status:** [IMPLEMENTED — NEED TESTING] (✨ accept chip disabled on frontend — see 2026-04-17 follow-up)
+**Status:** [COMPLETED — 2026-05-12] (✨ accept chip disabled on frontend — see 2026-04-17 follow-up)
 **Date:** 2026-04-17
 **Branch:** `DL-300-per-template-issuer-suggestion-gate`
 **Related:** DL-296 (WF02 ✨ issuer extraction), DL-299 (PA card manual edit + ✨ chip)

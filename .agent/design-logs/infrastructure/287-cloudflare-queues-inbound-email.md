@@ -1,5 +1,5 @@
 # Design Log 287: Cloudflare Queues Migration for Inbound Email Pipeline
-**Status:** [IMPLEMENTED — NEED TESTING]
+**Status:** [COMPLETED — 2026-05-12]
 **Date:** 2026-04-16
 **Related Logs:** DL-203 (WF05 Worker migration, sync), DL-277 (429 retry + batch delay), DL-283 (SUPERSEDED — waitUntil wrap), DL-286 (SUPERSEDED — revert commit `f439e21`), DL-046 (original serial attachment loop), DL-174 (async hybrid research), DL-264 (KV+cron chosen over Queues for a different shape)
 

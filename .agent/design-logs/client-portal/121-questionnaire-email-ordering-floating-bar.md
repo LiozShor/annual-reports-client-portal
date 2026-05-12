@@ -1,6 +1,6 @@
 # Design Log 121: Questionnaire Email Ordering + Floating Bar + Client Questions
 
-**Status:** [IMPLEMENTED — NEED TESTING]
+**Status:** [COMPLETED — 2026-05-12]
 **Date:** 2026-03-08
 **Related Logs:** DL-110 (Questions for Client), DL-116 (Questionnaires Tab), DL-120 (Questionnaires UX)
 

@@ -1,5 +1,5 @@
 # Design Log 152: Move "צפייה כלקוח" from Inline Icon to Row Menu
-**Status:** [DRAFT]
+**Status:** [COMPLETED — 2026-05-12]
 **Date:** 2026-03-14
 **Related Logs:** None
 

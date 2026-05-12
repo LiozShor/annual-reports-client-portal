@@ -1,5 +1,5 @@
 # Design Log 200: Document Manager UX Improvements
-**Status:** [IMPLEMENTED — NEED TESTING]
+**Status:** [COMPLETED — 2026-05-12]
 **Date:** 2026-03-26
 **Related Logs:** DL-150 (Collapsible Card Redesign — DEPRECATED by this log), DL-045 (Status Overview — Draft), DL-068 (Visual Hierarchy — Draft)
 

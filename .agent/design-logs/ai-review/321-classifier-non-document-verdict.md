@@ -1,5 +1,5 @@
 # Design Log 321: Classifier Explicit Non-Document Verdict
-**Status:** [IMPLEMENTED — NEED TESTING]
+**Status:** [COMPLETED — 2026-05-12]
 **Date:** 2026-04-22
 **Related Logs:** DL-303 (inline attachment filter), DL-305 (raise inline threshold 20→50KB), DL-315 (pre-questionnaire classifier fallback), DL-195 (tool_use response parsing), DL-245 (agentic classification research)
 

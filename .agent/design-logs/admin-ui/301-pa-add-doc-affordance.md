@@ -1,5 +1,5 @@
 # Design Log 301: PA Card — Add Doc Affordance
-**Status:** [IMPLEMENTED — NEED TESTING]
+**Status:** [COMPLETED — 2026-05-12]
 **Date:** 2026-04-17
 **Related Logs:** DL-058 (add new doc from AI review), DL-162 (spouse checkbox add docs), DL-227 (inline waive/receive doc tags), DL-299 (PA card issuer edit + notes + print), DL-295/DL-298 (PA card stacked layout)
 

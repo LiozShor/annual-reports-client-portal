@@ -1,5 +1,5 @@
 # Design Log 162: Spouse Checkbox for Document Addition
-**Status:** [DRAFT]
+**Status:** [COMPLETED — 2026-05-12]
 **Date:** 2026-03-17
 **Related Logs:** DL-160 (document manager company dropdown)
 

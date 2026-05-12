@@ -1,5 +1,5 @@
 # Design Log 227: Inline Waive/Receive on AI Review Doc Tags
-**Status:** [IMPLEMENTED — NEED TESTING]
+**Status:** [COMPLETED — 2026-05-12]
 **Date:** 2026-03-30
 **Related Logs:** DL-074 (live doc state & card labels), DL-205 (clear file fields on status revert)
 
