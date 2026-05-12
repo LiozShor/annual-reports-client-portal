@@ -1,6 +1,6 @@
 # Design Log 411: Spouse Tab — Show All Templates (Drop Scope Filter)
 
-**Status:** [IMPLEMENTED — NEED TESTING]
+**Status:** [COMPLETED — 2026-05-11]
 **Date:** 2026-05-11
 **Related Logs:** DL-352 (origin of the scope filter being relaxed), DL-408 (multi-instance precedent), DL-301/336 (PA add-doc popover), DL-162 (legacy spouse checkbox)
 
