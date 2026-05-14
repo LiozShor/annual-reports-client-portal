@@ -3100,7 +3100,7 @@ function printQuestionnaireFromDocManager() {
 
 // ===================== FILE UPLOAD PER ROW (DL-198) =====================
 
-const UPLOAD_MAX_SIZE = 10 * 1024 * 1024; // 10 MB
+const UPLOAD_MAX_SIZE = 50 * 1024 * 1024; // 50 MB (DL-414)
 const UPLOAD_ALLOWED_EXT = new Set(['pdf','jpg','jpeg','png','heic','tif','tiff','xlsx','docx','xls','doc']);
 
 function triggerUpload(docId) {
@@ -3120,7 +3120,7 @@ function handleFileSelected(event) {
         return;
     }
     if (file.size > UPLOAD_MAX_SIZE) {
-        showToast('הקובץ גדול מדי (מקסימום 10MB)', 'error');
+        showToast('הקובץ גדול מדי (מקסימום 50MB)', 'error');
         return;
     }
 

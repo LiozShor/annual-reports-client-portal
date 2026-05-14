@@ -1,6 +1,26 @@
 # Annual Reports CRM - Current Status
 
-**Last Updated:** 2026-05-10 (DL-410 implemented — rental-contract NaN render + silent refresh on "+ בקש חוזה")
+**Last Updated:** 2026-05-14 (DL-414 implemented — doc upload size limit 10 MB → 50 MB)
+
+## OPEN: DL-414 — Doc Upload Size Limit (10 MB → 50 MB)
+
+DL: `.agent/design-logs/documents/414-doc-upload-size-limit.md`
+Status: **IMPLEMENTED — NEED TESTING**
+
+Office hit the 10 MB cap on a real-world tax document. Four constants flipped to 50 MB: Worker `MAX_FILE_SIZE` (`api/src/routes/upload-document.ts:26`), client `UPLOAD_MAX_SIZE` + Hebrew toast (`frontend/assets/js/document-manager.js:3103/3123`), inbound Drive-link `DRIVE_DEFAULT_MAX_BYTES` (`api/src/lib/inbound/attachment-utils.ts:124`). Cache-bust `document-manager.js?v=412→413`. Research-verified: CF Workers Pro body cap 100 MB; MS Graph single-PUT on Business OneDrive 250 MB (vs. 4 MB old-docs figure); Exchange Online inbound default ~36 MB → our 50 MB ceiling is generous. Wrangler dry-run clean. Worker deploy pending merge to main.
+
+### Active TODOs (validation — Phase E)
+- [ ] Worker deployed: `bash .claude/workflows/deploy-worker.sh` after merge to main; `curl -s https://annual-reports-api.liozshor1.workers.dev/health` returns 200.
+- [ ] Cache-bust live: `curl -sI https://docs.moshe-atsits.com/document-manager.html | grep -o 'document-manager.js?v=[0-9]*'` → `?v=413`.
+- [ ] Deployed JS reflects new constant: `curl -s https://docs.moshe-atsits.com/assets/js/document-manager.js | grep -o 'UPLOAD_MAX_SIZE = [0-9 *]*'` → `50 * 1024 * 1024`.
+- [ ] Admin doc-manager — upload a 12 MB file: succeeds, row flips to Received, OneDrive `file_url` set.
+- [ ] Admin doc-manager — upload a 45 MB file: succeeds (may take 15-30 s on slow connection).
+- [ ] Admin doc-manager — upload a 60 MB file: rejected with toast `הקובץ גדול מדי (מקסימום 50MB)`.
+- [ ] **Specific real-world file that triggered this DL** — end-to-end success.
+- [ ] Inbound regression — forward a small (~2 MB) test attachment to `reports@moshe-atsits.co.il`: no regression on classification + OneDrive copy.
+- [ ] Activity log: `node scripts/query-worker-logs.mjs --since=30m --search="upload-document"` shows `doc_upload` events with new `file_size` values.
+
+---
 
 ## OPEN: DL-410 — Rental-Contract NaN Render + Silent Refresh
 

@@ -121,7 +121,7 @@ const DRIVE_OK_CONTENT_TYPES = [
   'application/vnd.oasis.opendocument.',
 ];
 
-const DRIVE_DEFAULT_MAX_BYTES = 26_214_400; // 25 MB
+const DRIVE_DEFAULT_MAX_BYTES = 52_428_800; // 50 MB (DL-414)
 
 export interface ParsedDriveLink {
   fileId: string;

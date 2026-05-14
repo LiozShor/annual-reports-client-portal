@@ -23,7 +23,7 @@ const TABLES = {
   TEMPLATES: 'tblQTsbhC6ZBrhspc',
 };
 
-const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
+const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50 MB (DL-414)
 const ALLOWED_EXTENSIONS = new Set([
   'pdf', 'jpg', 'jpeg', 'png', 'heic', 'tif', 'tiff', 'xlsx', 'docx', 'xls', 'doc',
 ]);
