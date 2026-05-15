@@ -1,5 +1,5 @@
 # Design Log 414: Raise Doc Upload Size Limit (10 MB → 50 MB)
-**Status:** [IMPLEMENTED — NEED TESTING]
+**Status:** [COMPLETED — 2026-05-15]
 **Date:** 2026-05-14
 **Related Logs:** DL-198 (introduced admin per-row upload + 10 MB cap), DL-367 (Gmail Drive smart-link inbound fetch + 25 MB cap)
 
