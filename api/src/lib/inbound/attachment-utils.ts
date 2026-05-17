@@ -174,6 +174,11 @@ export function parseDriveLinks(bodyHtml: string): ParsedDriveLink[] {
 
 export type DriveFetchResult =
   | { ok: true; attachment: AttachmentInfo }
+  // DL-420 Phase 3: when `too_large` fires, we still know the parsed filename
+  // (from Content-Disposition) and the declared size (from Content-Length).
+  // Pass both back so the synthetic stub + AI-Review badge can show the real
+  // file name + size instead of placeholders.
+  | { ok: false; error: 'too_large'; realFilename?: string; sizeBytes?: number }
   | { ok: false; error: string };
 
 /**
@@ -230,6 +235,12 @@ export async function fetchDriveAttachment(
   })();
   const realFilename = parsedFilename || filename;
 
+  // DL-420 Phase 3: Drive sends Content-Length on the download response. Parse
+  // it so the too_large branch can return the real declared size — drives the
+  // "קובץ גדול מדי (62 MB)" badge in AI Review.
+  const cl = parseInt(resp.headers.get('content-length') || '0', 10);
+  const declaredSize = Number.isFinite(cl) && cl > 0 ? cl : 0;
+
   // Stream-read into chunks with hard byte cap.
   const reader = resp.body?.getReader();
   if (!reader) {
@@ -244,7 +255,12 @@ export async function fetchDriveAttachment(
     total += value.byteLength;
     if (total > maxBytes) {
       try { await reader.cancel(); } catch { /* noop */ }
-      return { ok: false, error: 'too_large' };
+      return {
+        ok: false,
+        error: 'too_large',
+        realFilename,
+        sizeBytes: declaredSize || total,
+      };
     }
     chunks.push(value);
   }

@@ -1135,12 +1135,17 @@ export async function processInboundEmail(
           // a stub attachment so the per-attachment loop creates a metadata-only PC
           // whose file_url points back to Drive. Other Drive errors (permission /
           // network) stay in driveFailures and surface via NeedsHuman + error_message.
+          //
+          // Phase 3: carry the real filename (from Drive's Content-Disposition)
+          // and declared size (from Content-Length) so the AI-Review badge can
+          // show "U9744004.2025.tax.zip — קובץ גדול מדי (62 MB)" instead of the
+          // chip placeholder + size=0.
           if (r.error === 'too_large') {
             attachments.push({
               id: `drive:${link.fileId}`,
-              name: link.filename,
+              name: r.realFilename || link.filename,
               contentType: 'application/pdf',
-              size: 0,
+              size: r.sizeBytes ?? 0,
               content: new ArrayBuffer(0),
               sha256: '',
               tooLarge: true,

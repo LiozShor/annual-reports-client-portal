@@ -623,7 +623,7 @@ function loadMobileDocPreview(recordId) {
     // No onedrive_item_id — show error
     if (!item.onedrive_item_id) {
         error.style.display = '';
-        errorMsg.textContent = 'אין מזהה קובץ — לא ניתן לטעון תצוגה מקדימה';
+        (window.renderDL420TooLargeBadge && window.renderDL420TooLargeBadge(item, errorMsg)) || (errorMsg.textContent = 'אין מזהה קובץ — לא ניתן לטעון תצוגה מקדימה');
         return;
     }
 
@@ -3890,7 +3890,7 @@ async function loadDocPreview(recordId) {
         loading.style.display = 'none';
         iframe.style.display = 'none';
         error.style.display = '';
-        errorMsg.textContent = 'אין מזהה קובץ — לא ניתן לטעון תצוגה מקדימה';
+        (window.renderDL420TooLargeBadge && window.renderDL420TooLargeBadge(item, errorMsg)) || (errorMsg.textContent = 'אין מזהה קובץ — לא ניתן לטעון תצוגה מקדימה');
         header.style.display = 'none';
         return;
     }
