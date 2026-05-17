@@ -3471,7 +3471,7 @@ function createDocCombobox(container, docs, { currentMatchId = null, onSelect = 
     // Group docs by category, skip empty categories
     let groups = groupDocs(docs);
 
-    const getDisplayName = (doc) => doc.name_short || doc.name || doc.template_id || '';
+    const getDisplayName = (doc) => { const lbl = doc.name_short || doc.name || doc.template_id || ''; const pm = ['T901','T902'].includes(doc.template_id) && String(doc.name || '').match(/<b>(\d{1,2}\.\d{4}-\d{1,2}\.\d{4})<\/b>/); return (pm && !lbl.includes(pm[1])) ? `${lbl.replace(/\s*<b>[^<]*<\/b>/g, '').trim()} <b>${pm[1]}</b>` : lbl; }; // DL-415: re-attach period when T901/T902 short_name_he drops it
     const getPlainName = (doc) => (getDisplayName(doc)).replace(/<\/?b>/g, '');
 
     container.innerHTML = `

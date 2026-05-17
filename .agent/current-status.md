@@ -32,6 +32,9 @@ Frontend (`frontend/admin/js/modules/dl410-silent-refresh.js`): new `stripPeriod
 - [ ] **Cache-bust:** `curl -sI https://docs.moshe-atsits.com/admin/index.html | grep dl410-silent-refresh.js` shows `?v=4`.
 - [ ] **Activity log:** `node scripts/query-worker-logs.mjs --since=1h --search="DL-415"` shows the auto-keep_both and dup-waive log lines firing in live testing.
 
+### Follow-up enhancement (not blocking)
+- [ ] **Auto-populate [H:reassign] period inputs from selected target:** when a user picks a target in the [H:reassign] dropdown whose `issuer_name` carries `<b>MM.YYYY-MM.YYYY</b>`, the period inputs in `renderContractMonthsInput` should pre-fill with those months instead of staying blank (`MM.YYYY` placeholder). Currently the user has to retype the period that's already visible in the target label, which is friction. Plumbing: in `_dl397SyncReassignMonths` (script.js ~7912) parse the picked doc's `name`/`issuer_name` for `<b>(\d{1,2})\.(\d{4})-(\d{1,2})\.(\d{4})</b>` and pass as `defaultStart`/`defaultEnd` opts to `renderContractMonthsInput`. Small ratchet impact — likely +3 lines. Surfaced during Test 2 of DL-415 live testing on CPA-XXX.
+
 ---
 
 ## OPEN: DL-414 — Doc Upload Size Limit (10 MB → 50 MB)
