@@ -1,6 +1,6 @@
 # DL-415: AI-Review Reassign + Merge Flow — Period Propagation, Label Dedup, Period-Aware Trigger
 
-**Status:** [IMPLEMENTED — NEED TESTING]
+**Status:** [COMPLETED — 2026-05-17]
 **Date:** 2026-05-17
 **Related Logs:** DL-397 (capture months on manual assign + persist `matched_template_id`), DL-385 (lenient `MM.YYYY` parser + T901↔T902 swap), DL-386 (add doc from AI review), DL-231 (keep-both missing document_keys), DL-410 (silent refresh `periodLabel`), DL-359 (edit full-year contract dates), DL-269/270/271 (partial contract banner)
 
