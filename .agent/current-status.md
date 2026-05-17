@@ -1,6 +1,21 @@
 # Annual Reports CRM - Current Status
 
-**Last Updated:** 2026-05-17 (DL-415 implemented — AI-review reassign period propagation + label dedup + period-aware merge trigger)
+**Last Updated:** 2026-05-17 (DL-418 implemented — portal false "already submitted" flag fixed; stage rank is now the SSOT for `has_submission`)
+
+## OPEN: DL-418 — Client portal falsely shows "already submitted" when docs exist without questionnaire
+
+DL: `.agent/design-logs/client-portal/418-portal-false-submission-flag.md`
+Status: **IMPLEMENTED — NEED TESTING**
+
+`/webhook/check-existing-submission` was returning `has_submission: true` for any report with received docs, gating clients with stuck stage-2 reports out of the language picker. Stage rank is now the sole signal. Deployed to Worker 2026-05-17. API verified via curl on the stuck report (returns `has_submission: false`, `stage_rank: 2`, `document_count: 4`).
+
+**Active TODOs (Section 7):**
+
+- [ ] **Browser walkthrough on a real stuck client URL.** Open the client portal link for a stage-2 report that has received docs; confirm the language picker (HE/EN cards) renders and NOT the "already submitted" warning.
+- [ ] **Regression: stage 3+ report still gated.** Pick any report at `Pending_Approval` or beyond and confirm the "already submitted" view still shows (correct behavior — they actually did submit).
+- [ ] **Regression: stage 1 fresh report.** Pick a stage 1 report with 0 docs; confirm the language picker still shows (no change).
+- [ ] **CS filing type sanity check.** Pick a `capital_statement` report and verify the same flow works through this endpoint.
+- [ ] **Worker error tail (2 min post-deploy).** No spike expected — the change cannot throw.
 
 ## OPEN: DL-415 — AI-Review Reassign Period Propagation
 
