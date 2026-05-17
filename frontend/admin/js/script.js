@@ -7340,19 +7340,12 @@ async function resubmitApprove(recordId, mode, loadingText) {
 }
 
 // DL-224: Re-submit reassign with conflict resolution mode
-async function resubmitReassign(recordId, templateId, docRecordId, newDocName, mode, loadingText) {
+async function resubmitReassign(recordId, templateId, docRecordId, newDocName, mode, loadingText, extras) {
     setCardLoading(recordId, loadingText);
     try {
-        const body = {
-            token: authToken,
-            classification_id: recordId,
-            action: 'reassign',
-            reassign_template_id: templateId,
-            reassign_doc_record_id: docRecordId || null,
-            force_overwrite: true,
-            approve_mode: mode
-        };
+        const body = { token: authToken, classification_id: recordId, action: 'reassign', reassign_template_id: templateId, reassign_doc_record_id: docRecordId || null, force_overwrite: true, approve_mode: mode };
         if (newDocName) body.new_doc_name = newDocName;
+        if (extras && extras.contract_period && isRentalTemplate(templateId)) body.contract_period = extras.contract_period; // DL-415: forward period on dialog-keep_both/merge/override paths
 
         const response = await fetchWithTimeout(ENDPOINTS.REVIEW_CLASSIFICATION, {
             method: 'POST',
@@ -8031,9 +8024,9 @@ async function submitAIReassign(recordId, templateId, docRecordId, loadingText, 
             const existingName = (data.conflict_existing_name || '').replace(/<[^>]+>/g, '');
             const newName = (data.conflict_new_name || '').replace(/<[^>]+>/g, '');
             showApproveConflictDialog(title, existingName, newName,
-                () => resubmitReassign(recordId, templateId, docRecordId, newDocName, 'merge', 'ממזג קבצים...'),
-                () => resubmitReassign(recordId, templateId, docRecordId, newDocName, 'keep_both', 'שומר שניהם...'),
-                () => resubmitReassign(recordId, templateId, docRecordId, newDocName, 'override', 'מחליף קובץ...')
+                () => resubmitReassign(recordId, templateId, docRecordId, newDocName, 'merge', 'ממזג קבצים...', extras),
+                () => resubmitReassign(recordId, templateId, docRecordId, newDocName, 'keep_both', 'שומר שניהם...', extras),
+                () => resubmitReassign(recordId, templateId, docRecordId, newDocName, 'override', 'מחליף קובץ...', extras)
             );
             return;
         }
