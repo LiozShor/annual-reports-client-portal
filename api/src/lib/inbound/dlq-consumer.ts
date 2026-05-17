@@ -20,6 +20,39 @@
 
 import type { Env, InboundQueueMessage } from '../types';
 import { logError } from '../error-logger';
+import { AirtableClient } from '../airtable';
+import { TABLES } from './types';
+
+/**
+ * DL-417 — stamp Airtable email_events row Failed when DLQ exhausts retries.
+ * Fail-open: ANY error here is logged but never propagated, so the ack contract
+ * downstream is preserved. Worst case: the row stays at its prior status
+ * (Detected) and the existing R2 log + alert email remain the audit trail.
+ */
+async function stampDlqFailureOnAirtable(
+  env: Env,
+  messageId: string,
+  reason: string,
+): Promise<void> {
+  if (!messageId || !env.AIRTABLE_BASE_ID || !env.AIRTABLE_PAT) return;
+  try {
+    const airtable = new AirtableClient(env.AIRTABLE_BASE_ID, env.AIRTABLE_PAT);
+    await airtable.upsertRecords(
+      TABLES.EMAIL_EVENTS,
+      [{
+        fields: {
+          source_message_id: messageId,
+          processing_status: 'Failed',
+          error_message: reason.slice(0, 1000),
+          last_error_step: 'dlq_exhausted',
+        },
+      }],
+      ['source_message_id'],
+    );
+  } catch (err) {
+    console.error(`[dlq] airtable stamp failed (fail-open) message_id=${messageId}: ${(err as Error).message}`);
+  }
+}
 
 export async function handleInboundDLQ(
   batch: MessageBatch<InboundQueueMessage>,
@@ -44,6 +77,16 @@ export async function handleInboundDLQ(
       category: 'DEPENDENCY',
       details: `change_type=${change_type ?? 'unknown'}`,
     });
+
+    // DL-417: stamp email_events row as Failed so the admin "stuck emails"
+    // widget surfaces this terminal failure. Fail-open — does not affect ack.
+    ctx.waitUntil(
+      stampDlqFailureOnAirtable(
+        env,
+        message_id,
+        `DLQ exhausted (attempts=${message.attempts}, change_type=${change_type ?? 'unknown'}, ts=${timestamp})`,
+      ),
+    );
 
     // Ack unconditionally — the log + alert IS the recovery path.
     // Retrying a DLQ message would either spin on a vendor outage or
