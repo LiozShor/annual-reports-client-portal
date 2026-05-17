@@ -5974,12 +5974,12 @@ function formatPeriodLabel(startMonth, endMonth, year) {
 }
 
 function appendContractPeriod(name, item) {
-    if (!['T901', 'T902'].includes(item.matched_template_id) || !item.contract_period) return name;
     const cp = item.contract_period;
-    if (cp.coversFullYear) return name;
+    if (!['T901', 'T902'].includes(item.matched_template_id) || !cp || cp.coversFullYear) return name;
     const sD = cp.startDate && new Date(cp.startDate), eD = cp.endDate && new Date(cp.endDate);
-    if (!sD || !eD || isNaN(sD.getTime()) || isNaN(eD.getTime())) return `${name} __.__-__.____`; // DL-410 NaN guard
-    return `${name} ${formatPeriodLabel(sD.getMonth() + 1, eD.getMonth() + 1, item.year || eD.getFullYear())}`;
+    const nm = String(name).replace(/\s*(?:<b>)?\d{1,2}\.\d{4}-\d{1,2}\.\d{4}(?:<\/b>)?/g, '').trim(); // DL-415 idempotent
+    if (!sD || !eD || isNaN(sD.getTime()) || isNaN(eD.getTime())) return `${nm} __.__-__.____`; // DL-410 NaN guard
+    return `${nm} ${formatPeriodLabel(sD.getMonth() + 1, eD.getMonth() + 1, item.year || eD.getFullYear())}`;
 }
 
 function renderAICard(item) {
