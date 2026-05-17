@@ -1541,9 +1541,12 @@ export async function processInboundEmail(
         processing_status: 'NeedsHuman',
         error_message: reason.slice(0, 1000),
       });
-    } else if (driveFailures.length > 0) {
-      // Partial Drive success: process completed for the readable files but
-      // some Drive links failed — surface so operator can manually retrieve.
+    } else if (driveFailures.length > 0 && driveFailures.some(f => f.error !== 'too_large')) {
+      // Partial Drive success with non-too_large failures (permission / network /
+      // bad_id) — these never produce a fallback PC, so the operator must still
+      // intervene. DL-420 too_large rejects DO produce a metadata-only PC in AI
+      // Review and shouldn't drag the email to NeedsHuman — they're surfaced via
+      // the partial-failure counter instead.
       console.warn(`[inbound] Partial Drive failure for message ${messageId}: ${driveFailureSummary}`);
       await airtable.updateRecord(TABLES.EMAIL_EVENTS, emailEventId, {
         processing_status: 'NeedsHuman',
