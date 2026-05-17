@@ -2088,28 +2088,6 @@ classifications.post('/review-classification', async (c) => {
         });
         if (foundMissing.length > 0) {
           targetDoc = foundMissing[0];
-          // DL-415 (bug 4 dedup-on-fill): when the stub generator produced multiple
-          // identical generic missing placeholders for the same (template, person) tuple,
-          // fill the first and waive the rest so the report no longer carries phantom
-          // missing rows. Only same-issuer_name duplicates qualify — period-specific stubs
-          // (those with <b>MM.YYYY-MM.YYYY</b> in issuer_name) stay live.
-          if (foundMissing.length > 1) {
-            const firstIssuer = ((targetDoc.fields as Record<string, unknown>).issuer_name as string) || '';
-            const dups = foundMissing.slice(1).filter(d => {
-              const di = (d.fields as Record<string, unknown>).issuer_name as string || '';
-              return di === firstIssuer;
-            });
-            for (const dup of dups) {
-              try {
-                await airtable.updateRecord(TABLES.DOCUMENTS, dup.id, { status: 'Waived' });
-              } catch (dupErr) {
-                console.error('[review-classification] DL-415: failed to waive duplicate stub', dup.id, (dupErr as Error).message);
-              }
-            }
-            if (dups.length > 0) {
-              console.log('[review-classification] DL-415: waived', dups.length, 'duplicate generic stubs for', reassign_template_id);
-            }
-          }
         } else {
           const foundAny = await airtable.listAllRecords(TABLES.DOCUMENTS, {
             filterByFormula: `AND({type} = '${reassign_template_id}', FIND('${reportId}', ARRAYJOIN({report})))`,
@@ -2324,32 +2302,6 @@ classifications.post('/review-classification', async (c) => {
         }
         await airtable.updateRecord(TABLES.DOCUMENTS, targetDoc.id, stripEmpty(updateFields));
         docTitle = (updateFields.issuer_name as string) || (targetDoc.fields as any).issuer_name || new_doc_name || '';
-
-        // DL-415 bug 4 (Path 1 dedup-on-fill): when a generic Required_Missing stub (no
-        // <b>...</b> period in issuer_name) gets filled, waive any sibling stubs that are
-        // exact duplicates (same template, same person, same generic issuer_name). Stub
-        // generator dupes are the documented case; period-encoded stubs are NEVER waived
-        // since they represent distinct contracts.
-        if (['T901', 'T902'].includes(templateForUpdate)) {
-          const origIssuer = ((targetDoc.fields as any).issuer_name as string) || '';
-          const wasGenericStub = origIssuer && !/<b>\d{1,2}\.\d{4}-\d{1,2}\.\d{4}<\/b>/.test(origIssuer);
-          if (wasGenericStub) {
-            try {
-              const dups = await airtable.listAllRecords(TABLES.DOCUMENTS, {
-                filterByFormula: `AND({type}='${templateForUpdate}', {status}='Required_Missing', {issuer_name}='${origIssuer.replace(/'/g, "\\'")}', FIND('${reportId}', ARRAYJOIN({report})))`,
-              });
-              const toWaive = dups.filter(d => d.id !== targetDoc.id);
-              for (const dup of toWaive) {
-                await airtable.updateRecord(TABLES.DOCUMENTS, dup.id, { status: 'Waived' });
-              }
-              if (toWaive.length > 0) {
-                console.log('[review-classification] DL-415 Path 1 dedup: waived', toWaive.length, 'sibling generic stubs for', templateForUpdate);
-              }
-            } catch (dedupErr) {
-              console.error('[review-classification] DL-415 Path 1 dedup failed:', (dedupErr as Error).message);
-            }
-          }
-        }
       }
     }
 

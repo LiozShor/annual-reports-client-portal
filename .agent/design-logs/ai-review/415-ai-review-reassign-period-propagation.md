@@ -229,7 +229,7 @@ J. **Cache-bust:** bump `script.js?v=NNN` in `frontend/admin/index.html` (check 
 
 - **Path 2 (general_doc create):** wrapped fields literal in `applyPeriodSuffixToDocFields(..., clsFields)` for defense-in-depth (no-op for non-rental templates).
 
-- **Path 3 (search-by-template):** rewritten to **prefer `Required_Missing` placeholders** over Received rows. When `foundMissing.length > 1` AND the duplicates share the same `issuer_name` as the chosen target, the extras are flipped to `Waived` — this is the **bug-4 dedup-on-fill** behavior. Period-specific stubs (those with `<b>...</b>` already encoded) are left alone because their `issuer_name` differs from the generic one.
+- **Path 3 (search-by-template):** rewritten to **prefer `Required_Missing` placeholders** over Received rows. Originally also auto-waived sibling generic stubs as a bug-4 dedup-on-fill behavior, but reverted (see Bug 4 design pivot below) — sibling stubs can represent distinct future contracts and the system shouldn't decide for the user.
 
 - **Path 3 create-on-the-fly:** same `applyPeriodSuffixToDocFields` wrap.
 
@@ -256,6 +256,10 @@ J. **Cache-bust:** bump `script.js?v=NNN` in `frontend/admin/index.html` (check 
 - Retroactive cleanup of pre-DL-415 corrupt rows on Documents table (admin can re-do them or run a one-shot fix script later).
 - `frontend/admin/js/script.js`'s `formatDocOptionLabel` extraction — proved unnecessary once `name_short` from the server is reliable (period × 1 via `buildShortName`) and the DL-410 helper no longer compounds. If pre-existing corrupt rows surface in the dropdown, revisit with a client-side strip in `getDisplayName`.
 - Stub generator (questionnaire/n8n workflow path that creates the initial Required_Missing rows) — bug 4 fix lives at the fill-time path; preventing duplicate STUBS at creation time is a separate concern. Existing T902 dupes on CPA-XXX will be Waived on the next reassign-fill.
+
+**Bug 4 design pivot (during live testing):**
+
+Original spec called for auto-waiving sibling generic stubs when one is filled (Path 1 + Path 3). After implementing both paths and setting up a live test on CPA-XXX with two duplicate generic T902 stubs, the user pushed back: duplicate-looking generic stubs may legitimately represent distinct upcoming contracts (e.g. two rental properties pending). Auto-waiving is a destructive guess the system shouldn't make. **Both auto-dedup paths reverted.** Sibling stubs stay `Required_Missing` after fill; office can waive manually if they're truly noise. The original "Bug 4" symptom (CPA-XXX having 2 identical missing T902 rows) is therefore acknowledged but treated as expected: the stub generator can legitimately emit per-instance placeholders.
 
 **Research principles applied:**
 
