@@ -25,7 +25,14 @@ import {
 } from './types';
 import { fetchAttachments, uploadToOneDrive, resolveOneDriveRoot, getFileExtension, parseDriveLinks, fetchDriveAttachment, stripDriveChipsFromHtml, type OneDriveRoot } from './attachment-utils';
 import { identifyClient } from './client-identifier';
-import { classifyAttachment, checkFileHashDuplicate, TEMPLATE_TITLES } from './document-classifier';
+import { classifyAttachment, checkFileHashDuplicate, MAX_CLASSIFIABLE_BYTES, TEMPLATE_TITLES } from './document-classifier';
+
+// DL-419: Hebrew sentinel placed in `pending_classifications.matched_doc_name`
+// when an attachment is too large for AI classification (>MAX_CLASSIFIABLE_BYTES).
+// The row still gets created with a working file_url + onedrive_item_id so the
+// office sees it in the AI Review tab and can reassign it via the normal flow.
+// Translation: "Large file — needs manual classification".
+const OVERSIZE_SENTINEL_DOC_NAME = 'קובץ גדול — דרוש סיווג ידני';
 import { resolveOneDriveFilename } from '../classification-helpers';
 import { buildTemplateMap } from '../doc-builder';
 import { getCachedOrFetch } from '../cache';
@@ -683,7 +690,24 @@ async function processAttachmentWithClassification(
     }
   }
 
+  // DL-419: free the attachment ArrayBuffer once the upload + Office→PDF
+  // download/page-count phases have completed. attachments[] holds one entry
+  // per file in the email — without this, an 8-attachment email accumulates
+  // 5+ MB ArrayBuffers across the whole processAttachment loop and pushes the
+  // isolate past the 128 MB Workers cap during the NEXT attachment's PUT.
+  // Skip when isDuplicate (we didn't allocate fresh upload memory anyway).
+  if (!isDuplicate) {
+    attachment.content = new ArrayBuffer(0);
+    contentToUpload = new ArrayBuffer(0);
+    officePdfContent = null;
+  }
+
   // Step 8: Create pending classification record (all fields matching n8n)
+  // DL-419: when classification was skipped due to oversize, surface a Hebrew
+  // sentinel in matched_doc_name so the office sees the row in AI Review with
+  // an unmistakable manual-sort hint. matched_template_id stays null so the
+  // existing reassign flow (DL-412) handles it normally.
+  const isOversizeNoAI = !classification && attachment.size > MAX_CLASSIFIABLE_BYTES;
   const classificationKey = `${clientMatch.clientId || 'unknown'}-${report.year}-${attachment.name}`;
   const classFields: Record<string, unknown> = {
     classification_key: classificationKey,
@@ -698,7 +722,7 @@ async function processAttachmentWithClassification(
     received_at: metadata.receivedAt,
     matched_template_id: classification?.templateId ?? null,
     ai_confidence: classification?.confidence ?? 0,
-    ai_reason: classification?.reason ?? '',
+    ai_reason: isOversizeNoAI ? '[DL-419] Skipped AI classification (oversize)' : (classification?.reason ?? ''),
     issuer_name: classification?.issuerName ?? '',
     file_url: upload.webUrl,
     onedrive_item_id: upload.itemId,
@@ -709,7 +733,7 @@ async function processAttachmentWithClassification(
     year: report.year,
     expected_filename: expectedFilename,
     issuer_match_quality: classification?.matchQuality ?? null,
-    matched_doc_name: classification?.matchedDocName ?? null,
+    matched_doc_name: classification?.matchedDocName ?? (isOversizeNoAI ? OVERSIZE_SENTINEL_DOC_NAME : null),
     notes: [
       isDuplicate ? '⚠️ קובץ כפול — אותו קובץ כבר קיים במערכת' : '',
       provenanceNote ?? '',
@@ -1193,6 +1217,16 @@ export async function processInboundEmail(
           primaryReport.stage === 'Waiting_For_Answers';
         const fallbackMode = requiredDocs.length === 0 || preQuestionnaireStage;
         const batchPromises = attachments.slice(batch, batchEnd).map(async (attachment) => {
+          // DL-419: skip AI classification for oversize attachments. The
+          // pending_classifications row will still be created (Phase B below)
+          // with matched_template_id=null + a Hebrew sentinel in
+          // matched_doc_name so the office triages manually in AI Review.
+          if (attachment.size > MAX_CLASSIFIABLE_BYTES) {
+            const sizeMB = Math.round(attachment.size / 1024 / 1024);
+            const limitMB = Math.round(MAX_CLASSIFIABLE_BYTES / 1024 / 1024);
+            console.warn(`[inbound][DL-419] Skipping AI classification for "${attachment.name}" (${sizeMB}MB > ${limitMB}MB) — pending_classifications row will be created with manual-sort sentinel`);
+            return null;
+          }
           try {
             return await classifyAttachment(pCtx, attachment, requiredDocs, primaryReport.clientName, {
               subject: metadata.subject,

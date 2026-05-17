@@ -297,6 +297,17 @@ export const FILING_TYPE_FOLDER: Record<string, string> = {
   capital_statement: 'הצהרת הון',
 };
 
+// DL-419: above this size we use createUploadSession + chunked PUT instead of
+// the simple `PUT /content` path. CF Workers' fetch() body buffer + a 32 MB
+// ArrayBuffer body produced ~64 MB peak per PUT and OOM'd inbound on
+// 2026-05-17. Chunked upload keeps peak ≈ chunk size + a few MB of HTTP
+// overhead. Threshold of 5 MB matches the >5 MB classifier-content threshold
+// in document-classifier.ts so they move together.
+const UPLOAD_SESSION_THRESHOLD = 5 * 1024 * 1024;
+// Fragment size MUST be a multiple of 320 KiB (327,680) per MS Graph spec;
+// non-multiples cause the LAST chunk to fail. 5 MiB = 16 × 320 KiB.
+const UPLOAD_CHUNK_SIZE = 5 * 1024 * 1024;
+
 /** Upload a file to the client's OneDrive folder */
 export async function uploadToOneDrive(
   graph: MSGraphClient,
@@ -309,12 +320,87 @@ export async function uploadToOneDrive(
 ): Promise<OneDriveUploadResult> {
   const safeName = sanitizeFilename(filename);
   const filingFolder = filingType ? FILING_TYPE_FOLDER[filingType] || FILING_TYPE_FOLDER.annual_report : FILING_TYPE_FOLDER.annual_report;
+
+  // DL-419: route large files through createUploadSession.
+  if (content.byteLength > UPLOAD_SESSION_THRESHOLD) {
+    return uploadLargeFileToOneDrive(graph, root, clientName, year, safeName, filingFolder, content);
+  }
+
   const path = `/drives/${root.driveId}/items/${root.rootFolderId}:/${encodeURIComponent(clientName)}/${year}/${encodeURIComponent(filingFolder)}/${encodeURIComponent(safeName)}:/content?@microsoft.graph.conflictBehavior=rename`;
   const response = await graph.putBinary(path, content);
   return {
     webUrl: response.webUrl,
     itemId: response.id,
     downloadUrl: response['@microsoft.graph.downloadUrl'],
+  };
+}
+
+/**
+ * DL-419: chunked upload for files larger than UPLOAD_SESSION_THRESHOLD.
+ *
+ * Sequence:
+ *   1. POST createUploadSession → uploadUrl (this is an unauthenticated short-lived URL).
+ *   2. For each 5 MiB slice: PUT with Content-Range header.
+ *   3. Final chunk's response carries the DriveItem (id, webUrl, downloadUrl).
+ *
+ * The uploadUrl returned by createUploadSession is a pre-authenticated URL —
+ * we hit it directly with `fetch()`, NOT through graph.putBinary (which would
+ * attach a Bearer token that the upload endpoint rejects).
+ */
+async function uploadLargeFileToOneDrive(
+  graph: MSGraphClient,
+  root: OneDriveRoot,
+  clientName: string,
+  year: string,
+  safeName: string,
+  filingFolder: string,
+  content: ArrayBuffer,
+): Promise<OneDriveUploadResult> {
+  const createPath = `/drives/${root.driveId}/items/${root.rootFolderId}:/${encodeURIComponent(clientName)}/${year}/${encodeURIComponent(filingFolder)}/${encodeURIComponent(safeName)}:/createUploadSession`;
+  const session = await graph.post(createPath, {
+    item: { '@microsoft.graph.conflictBehavior': 'rename', name: safeName },
+  });
+  const uploadUrl: string | undefined = session?.uploadUrl;
+  if (!uploadUrl) {
+    throw new Error('createUploadSession returned no uploadUrl');
+  }
+
+  const total = content.byteLength;
+  const bytes = new Uint8Array(content);
+  let lastResponse: { id?: string; webUrl?: string; '@microsoft.graph.downloadUrl'?: string } | null = null;
+
+  console.log(`[inbound][DL-419] Chunked upload start ${safeName} ${total} bytes (${Math.ceil(total / UPLOAD_CHUNK_SIZE)} chunks of ${UPLOAD_CHUNK_SIZE})`);
+
+  for (let start = 0; start < total; start += UPLOAD_CHUNK_SIZE) {
+    const end = Math.min(start + UPLOAD_CHUNK_SIZE, total) - 1; // inclusive
+    const chunk = bytes.subarray(start, end + 1);
+    const res = await fetch(uploadUrl, {
+      method: 'PUT',
+      headers: {
+        'Content-Length': String(chunk.byteLength),
+        'Content-Range': `bytes ${start}-${end}/${total}`,
+      },
+      body: chunk,
+    });
+    if (res.status === 200 || res.status === 201) {
+      lastResponse = await res.json();
+    } else if (res.status === 202) {
+      // Accepted — more chunks expected. Drain body to free the connection.
+      await res.arrayBuffer();
+    } else {
+      const errBody = await res.text().catch(() => '');
+      throw new Error(`[DL-419] Upload chunk ${start}-${end}/${total} failed: ${res.status} ${errBody.slice(0, 300)}`);
+    }
+  }
+
+  if (!lastResponse?.id) {
+    throw new Error('[DL-419] Upload session completed without DriveItem in final response');
+  }
+  console.log(`[inbound][DL-419] Chunked upload done ${safeName} itemId=${lastResponse.id}`);
+  return {
+    webUrl: lastResponse.webUrl ?? '',
+    itemId: lastResponse.id,
+    downloadUrl: lastResponse['@microsoft.graph.downloadUrl'] ?? '',
   };
 }
 

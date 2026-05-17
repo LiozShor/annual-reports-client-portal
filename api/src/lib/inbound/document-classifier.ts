@@ -565,12 +565,16 @@ When in doubt, set is_document=true and let a human decide. False negatives (dro
 // ---------------------------------------------------------------------------
 
 const LARGE_PDF_THRESHOLD = 5 * 1024 * 1024; // 5MB
-// DL-416: hard ceiling on attachments we will base64-encode for Anthropic.
-// Above this we skip the encode entirely and classify by filename + email
-// context only. Sizing math: buffer (N) + chunked binary (N) + base64 (~4N/3)
-// ≈ 3.4N peak per attachment. 20 MB → ~68 MB peak, comfortably under the
-// 128 MB per-isolate Workers cap (Drive fetch is capped at 50 MB by DL-414).
-const MAX_CLASSIFIABLE_BYTES = 20 * 1024 * 1024;
+// DL-416 / DL-419: hard ceiling on attachments we will send to Anthropic.
+// DL-419 moved the gate UPSTREAM into processor.ts (classify-batch loop):
+// attachments larger than this never reach this file. The constant is exported
+// so the upstream skip + the pending_classifications Hebrew sentinel both read
+// from the same source of truth.
+//
+// Sizing math (for the small-file branches that still encode): buffer (N) +
+// chunked binary (N) + base64 (~4N/3) ≈ 3.4N peak per attachment. 20 MB →
+// ~68 MB peak per attachment, under the 128 MB per-isolate Workers cap.
+export const MAX_CLASSIFIABLE_BYTES = 20 * 1024 * 1024;
 const PDF_EXT = /\.pdf$/i;
 const DOCX_EXT = /\.docx?$/i;
 const XLSX_EXT = /\.xlsx?$/i;
@@ -821,14 +825,14 @@ export async function classifyAttachment(
 
   const isPdfFile = PDF_EXT.test(attachment.name) || attachment.contentType === 'application/pdf';
   const isImageFile = IMG_TYPES.includes(attachment.contentType) || /\.(jpe?g|png|gif|webp)$/i.test(attachment.name);
-  // DL-416: oversize gate — skip Anthropic content upload entirely. Prevents
-  // exceededMemory failures (see 2026-05-17 inbound DLQ incident).
-  const isOversize = attachment.size > MAX_CLASSIFIABLE_BYTES;
   const isLargePdf = isPdfFile && attachment.size > LARGE_PDF_THRESHOLD;
 
   // DL-210 Bug 4: Validate PDF header before sending to Anthropic API.
-  // Only relevant when we'd actually send bytes (not oversize, not large-PDF placeholder).
-  const wouldSendPdfBytes = isPdfFile && !isLargePdf && !isOversize;
+  // Only relevant when we'd actually send bytes (not large-PDF placeholder).
+  // DL-419: oversize attachments are filtered upstream in processor.ts's
+  // classify-batch loop and never reach this function, so no isOversize gate
+  // is needed here.
+  const wouldSendPdfBytes = isPdfFile && !isLargePdf;
   const isInvalidPdf = wouldSendPdfBytes && (() => {
     try {
       const header = new Uint8Array(attachment.content as ArrayBuffer, 0, Math.min(4, attachment.content.byteLength));
@@ -837,11 +841,7 @@ export async function classifyAttachment(
     } catch { return true; }
   })();
 
-  if (isOversize) {
-    const limitMB = Math.round(MAX_CLASSIFIABLE_BYTES / 1024 / 1024);
-    console.warn(`[classifier] Oversize attachment "${attachment.name}" (${sizeKB}KB > ${limitMB}MB) — classifying by filename + email context only`);
-    content.push({ type: 'text', text: `[Attachment too large to send to AI (${sizeKB}KB exceeds ${limitMB}MB limit). Classify based on filename and email context only; set lower confidence.]` });
-  } else if (isInvalidPdf) {
+  if (isInvalidPdf) {
     console.warn(`[classifier] Invalid PDF header for "${attachment.name}" — falling back to filename classification`);
     content.push({ type: 'text', text: `[Invalid/corrupted PDF — content cannot be read. Classify based on filename and email context only.]\nFilename: ${attachment.name}\nFile size: ${sizeKB}KB` });
   } else if (isLargePdf) {
@@ -877,7 +877,7 @@ export async function classifyAttachment(
   }
 
   // Build user prompt with email context
-  const userPromptText = (isLargePdf || isOversize)
+  const userPromptText = isLargePdf
     ? `Classify this document based on filename and email context ONLY (file too large).\nFilename: ${attachment.name}\nEmail subject: ${emailMetadata.subject}\nEmail body: ${emailMetadata.bodyPreview}\nSender: ${emailMetadata.senderName} (${emailMetadata.senderEmail})\nFile type: ${attachment.contentType}\nFile size: ${sizeKB}KB (LARGE — classify by metadata only, set lower confidence)`
     : `Classify this document.\nFilename: ${attachment.name}\nEmail subject: ${emailMetadata.subject}\nEmail body: ${emailMetadata.bodyPreview}\nSender: ${emailMetadata.senderName} (${emailMetadata.senderEmail})\nFile type: ${attachment.contentType}\nFile size: ${sizeKB}KB`;
 
