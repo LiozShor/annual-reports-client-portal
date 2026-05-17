@@ -1,6 +1,6 @@
 # DL-418 — Client portal falsely shows "already submitted" when docs exist without questionnaire
 
-**Status:** [BEING IMPLEMENTED — DL-418]
+**Status:** [IMPLEMENTED — NEED TESTING]
 **Domain:** client-portal
 **Branch:** DL-418-portal-false-submission-flag
 **Created:** 2026-05-17
@@ -142,4 +142,25 @@ Keep `document_count` in the response (frontend still uses it to display the bad
 
 ## 8. Implementation Notes
 
-To be filled during/after implementation.
+**Shipped 2026-05-17:**
+
+- Single-file change as planned — `api/src/routes/submission.ts:82` → `hasSubmission = stageRank >= 3`. Added inline comment referencing DL-418 for the next reader.
+- `document_count` retained in response (used by `landing.js` for the "N docs received" badge on real-submitted clients).
+- Branch: `DL-418-portal-false-submission-flag` (pushed). Session worktree rebased onto `origin/main`, then FF-pushed `HEAD:main` — `4579089e..e26c00e9`.
+- Deploy: `bash .claude/workflows/deploy-worker.sh` from canonical clone — uploaded 2331.78 KiB, health endpoint 200, version `1d6c94a9-d21b-456e-bafe-91c7458bdefc`.
+
+**Live API verification (curl on CPA-XXX stuck report):**
+```
+{"ok":true,"has_submission":false,"document_count":4,
+ "stage":"Waiting_For_Answers","stage_rank":2, ...}
+```
+Before the fix: `has_submission` would have been `true`. After: correctly `false`. Frontend (`landing.js:130-133`) treats `has_submission:false` → `showLanguageSelection()`.
+
+**Open Section 7 items (Test Handoff):**
+- Browser walkthrough on the actual portal URL — confirm the language picker actually renders (API is correct; this is the belt-and-suspenders check).
+- Regression: pick a stage 3+ report and confirm the "already submitted" view still appears.
+- Regression: pick a stage 1, 0-docs report and confirm the language picker appears (no change expected — `stageRank >= 3` is `false` either way).
+- CS filing type: same endpoint, but verify on a real `capital_statement` report.
+- Worker error tail post-deploy (2 min) — no spike expected since the change cannot throw.
+
+**Deviations from plan:** None. Force-push to the DL branch (after rebase onto main) was denied by harness — remote DL branch ref is slightly stale vs. the commit on main; harmless because main is the canonical commit and deploys come from there.
