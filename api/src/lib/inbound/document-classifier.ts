@@ -401,13 +401,18 @@ function buildClassifyTool(
 // Helpers
 // ---------------------------------------------------------------------------
 
+// DL-416: chunked encoder. Per-byte `binary += String.fromCharCode(...)` is
+// O(n^2) memory in V8 and was a contributor to the 2026-05-17 inbound OOM
+// (32 MB PDF → exceededMemory → DLQ). 32 KB chunks via `apply` keep allocation
+// flat and let V8 free intermediates between iterations.
 function arrayBufferToBase64(buffer: ArrayBuffer): string {
   const bytes = new Uint8Array(buffer);
-  let binary = '';
-  for (let i = 0; i < bytes.length; i++) {
-    binary += String.fromCharCode(bytes[i]);
+  const CHUNK = 0x8000; // 32 KB
+  const parts: string[] = [];
+  for (let i = 0; i < bytes.length; i += CHUNK) {
+    parts.push(String.fromCharCode.apply(null, bytes.subarray(i, i + CHUNK) as unknown as number[]));
   }
-  return btoa(binary);
+  return btoa(parts.join(''));
 }
 
 // ---------------------------------------------------------------------------
@@ -560,6 +565,12 @@ When in doubt, set is_document=true and let a human decide. False negatives (dro
 // ---------------------------------------------------------------------------
 
 const LARGE_PDF_THRESHOLD = 5 * 1024 * 1024; // 5MB
+// DL-416: hard ceiling on attachments we will base64-encode for Anthropic.
+// Above this we skip the encode entirely and classify by filename + email
+// context only. Sizing math: buffer (N) + chunked binary (N) + base64 (~4N/3)
+// ≈ 3.4N peak per attachment. 20 MB → ~68 MB peak, comfortably under the
+// 128 MB per-isolate Workers cap (Drive fetch is capped at 50 MB by DL-414).
+const MAX_CLASSIFIABLE_BYTES = 20 * 1024 * 1024;
 const PDF_EXT = /\.pdf$/i;
 const DOCX_EXT = /\.docx?$/i;
 const XLSX_EXT = /\.xlsx?$/i;
@@ -807,14 +818,18 @@ export async function classifyAttachment(
   // Build content array based on file type
   const content: Array<Record<string, unknown>> = [];
   const sizeKB = Math.round(attachment.size / 1024);
-  const base64 = arrayBufferToBase64(attachment.content);
 
-  const isLargePdf = (PDF_EXT.test(attachment.name) || attachment.contentType === 'application/pdf')
-    && attachment.size > LARGE_PDF_THRESHOLD;
-
-  // DL-210 Bug 4: Validate PDF header before sending to Anthropic API
   const isPdfFile = PDF_EXT.test(attachment.name) || attachment.contentType === 'application/pdf';
-  const isInvalidPdf = isPdfFile && !isLargePdf && (() => {
+  const isImageFile = IMG_TYPES.includes(attachment.contentType) || /\.(jpe?g|png|gif|webp)$/i.test(attachment.name);
+  // DL-416: oversize gate — skip Anthropic content upload entirely. Prevents
+  // exceededMemory failures (see 2026-05-17 inbound DLQ incident).
+  const isOversize = attachment.size > MAX_CLASSIFIABLE_BYTES;
+  const isLargePdf = isPdfFile && attachment.size > LARGE_PDF_THRESHOLD;
+
+  // DL-210 Bug 4: Validate PDF header before sending to Anthropic API.
+  // Only relevant when we'd actually send bytes (not oversize, not large-PDF placeholder).
+  const wouldSendPdfBytes = isPdfFile && !isLargePdf && !isOversize;
+  const isInvalidPdf = wouldSendPdfBytes && (() => {
     try {
       const header = new Uint8Array(attachment.content as ArrayBuffer, 0, Math.min(4, attachment.content.byteLength));
       // Valid PDFs start with %PDF (0x25 0x50 0x44 0x46)
@@ -822,14 +837,20 @@ export async function classifyAttachment(
     } catch { return true; }
   })();
 
-  if (isInvalidPdf) {
+  if (isOversize) {
+    const limitMB = Math.round(MAX_CLASSIFIABLE_BYTES / 1024 / 1024);
+    console.warn(`[classifier] Oversize attachment "${attachment.name}" (${sizeKB}KB > ${limitMB}MB) — classifying by filename + email context only`);
+    content.push({ type: 'text', text: `[Attachment too large to send to AI (${sizeKB}KB exceeds ${limitMB}MB limit). Classify based on filename and email context only; set lower confidence.]` });
+  } else if (isInvalidPdf) {
     console.warn(`[classifier] Invalid PDF header for "${attachment.name}" — falling back to filename classification`);
     content.push({ type: 'text', text: `[Invalid/corrupted PDF — content cannot be read. Classify based on filename and email context only.]\nFilename: ${attachment.name}\nFile size: ${sizeKB}KB` });
   } else if (isLargePdf) {
     content.push({ type: 'text', text: `[Large PDF document — ${sizeKB}KB — content not included to save tokens. Classify based on filename and email context.]` });
   } else if (isPdfFile) {
+    const base64 = arrayBufferToBase64(attachment.content);
     content.push({ type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: base64 } });
-  } else if (IMG_TYPES.includes(attachment.contentType) || /\.(jpe?g|png|gif|webp)$/i.test(attachment.name)) {
+  } else if (isImageFile) {
+    const base64 = arrayBufferToBase64(attachment.content);
     const mt = attachment.contentType || 'image/jpeg';
     content.push({ type: 'image', source: { type: 'base64', media_type: mt, data: base64 } });
   } else if (DOCX_EXT.test(attachment.name)) {
@@ -856,7 +877,7 @@ export async function classifyAttachment(
   }
 
   // Build user prompt with email context
-  const userPromptText = isLargePdf
+  const userPromptText = (isLargePdf || isOversize)
     ? `Classify this document based on filename and email context ONLY (file too large).\nFilename: ${attachment.name}\nEmail subject: ${emailMetadata.subject}\nEmail body: ${emailMetadata.bodyPreview}\nSender: ${emailMetadata.senderName} (${emailMetadata.senderEmail})\nFile type: ${attachment.contentType}\nFile size: ${sizeKB}KB (LARGE — classify by metadata only, set lower confidence)`
     : `Classify this document.\nFilename: ${attachment.name}\nEmail subject: ${emailMetadata.subject}\nEmail body: ${emailMetadata.bodyPreview}\nSender: ${emailMetadata.senderName} (${emailMetadata.senderEmail})\nFile type: ${attachment.contentType}\nFile size: ${sizeKB}KB`;
 
