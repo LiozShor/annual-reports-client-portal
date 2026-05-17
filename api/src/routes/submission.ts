@@ -79,7 +79,10 @@ submission.get('/check-existing-submission', async (c) => {
 
   const stage = (report.stage as string) || 'Send_Questionnaire';
   const stageRank = STAGE_ORDER[stage] || 0;
-  const hasSubmission = stageRank >= 3 || documentCount > 0;
+  // DL-418: stage rank is the SSOT — docs can exist (office upload / inbound /
+  // AI classification) before the client ever submits, so documentCount > 0
+  // was producing false positives that gated stuck clients out of the language picker.
+  const hasSubmission = stageRank >= 3;
 
   const filingType = (report.filing_type as string) || 'annual_report';
   const ftConfig = FILING_CONFIG[filingType] || FILING_CONFIG.annual_report;
