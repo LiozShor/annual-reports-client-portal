@@ -9340,15 +9340,13 @@ function recalcAIStats() {
 // --- DL-227: Inline doc tag rendering + waive/receive ---
 
 function renderDocTag(d) {
-    const label = d.name_short || d.name || d.template_id || '';
+    let label = d.name_short || d.name || d.template_id || '';
+    // DL-415: T901/T902 short_name_he doesn't include {rent_*_monthly} placeholder, so buildShortName drops the period. Re-attach from issuer_name (d.name).
+    const pm = ['T901','T902'].includes(d.template_id) && String(d.name || '').match(/<b>(\d{1,2}\.\d{4}-\d{1,2}\.\d{4})<\/b>/);
+    if (pm && !label.includes(pm[1])) label = `${label.replace(/\s*<b>[^<]*<\/b>/g, '').trim()} ${pm[1]}`;
     const docId = d.doc_record_id || '';
     const status = d.status || 'Required_Missing';
-
-    const tagClasses = {
-        'Received': 'ai-doc-tag-received',
-        'Waived': 'ai-doc-tag-waived',
-        'Requires_Fix': 'ai-doc-tag-requires-fix',
-    };
+    const tagClasses = { 'Received': 'ai-doc-tag-received', 'Waived': 'ai-doc-tag-waived', 'Requires_Fix': 'ai-doc-tag-requires-fix' };
     const tagClass = tagClasses[status] || 'ai-missing-doc-tag';
     const prefixes = { 'Received': '&#x2713; ', 'Waived': '&mdash; ', 'Requires_Fix': '&#x26A0; ' };
     const prefix = prefixes[status] || '';
