@@ -121,6 +121,82 @@ function buildContractPeriod(startDate: string, endDate: string):
   return { json: JSON.stringify(contractPeriod), contractPeriod };
 }
 
+// DL-415: Strip any prior <b>MM.YYYY-MM.YYYY</b> from issuer_name/issuer_name_en and any
+// `_M-M` segment from document_key/document_uid, then re-apply the period derived from
+// the CLASSIFICATION's contract_period. Mutates and returns the same docFields object.
+// Only acts when matched_template_id ∈ {T901, T902} and contract_period is partial-year.
+function applyPeriodSuffixToDocFields(
+  docFields: Record<string, unknown>,
+  clsFields: Record<string, unknown>,
+): Record<string, unknown> {
+  const templateId = (clsFields.matched_template_id as string) || '';
+  if (!['T901', 'T902'].includes(templateId)) return docFields;
+  const cpRaw = clsFields.contract_period as string;
+  if (!cpRaw) return docFields;
+  let cp: { startDate?: string; endDate?: string; coversFullYear?: boolean };
+  try { cp = JSON.parse(cpRaw); } catch { return docFields; }
+  if (!cp || !cp.startDate || !cp.endDate || cp.coversFullYear) return docFields;
+  const startM = String(new Date(cp.startDate).getMonth() + 1).padStart(2, '0');
+  const endM = String(new Date(cp.endDate).getMonth() + 1).padStart(2, '0');
+  const year = (clsFields.year as string) || String(new Date(cp.endDate).getFullYear());
+  const html = `<b>${startM}.${year}-${endM}.${year}</b>`;
+  const keySuffix = `_${parseInt(startM, 10)}-${parseInt(endM, 10)}`;
+  const issuerPeriodRegex = /\s*<b>\d{1,2}\.\d{4}-\d{1,2}\.\d{4}<\/b>/g;
+  const partSuffixRegex = /\s*—\s*חלק\s*\d+\s*$/;
+  const keyPeriodRegex = /_\d+-\d+(?=(?:_part\d+)?$)/;
+  for (const field of ['issuer_name', 'issuer_name_en'] as const) {
+    const v = docFields[field];
+    if (typeof v === 'string' && v) {
+      // Strip any prior period HTML, then split off any trailing "— חלק N" so the new
+      // period lands BEFORE the part marker (matches the established T901 missing-row
+      // format: "<title> <b>MM.YYYY-MM.YYYY</b> — חלק 2").
+      const noPeriod = v.replace(issuerPeriodRegex, '').trim();
+      const partMatch = noPeriod.match(partSuffixRegex);
+      const partTail = partMatch ? partMatch[0] : '';
+      const head = partTail ? noPeriod.slice(0, -partTail.length).trim() : noPeriod;
+      docFields[field] = partTail ? `${head} ${html}${partTail}` : `${head} ${html}`;
+    }
+  }
+  for (const field of ['document_key', 'document_uid'] as const) {
+    const v = docFields[field];
+    if (typeof v === 'string' && v) {
+      const partMatch = v.match(/_part\d+$/);
+      const partSuffix = partMatch ? partMatch[0] : '';
+      const withoutPart = partSuffix ? v.slice(0, -partSuffix.length) : v;
+      const strippedKey = withoutPart.replace(keyPeriodRegex, '');
+      docFields[field] = `${strippedKey}${keySuffix}${partSuffix}`;
+    }
+  }
+  return docFields;
+}
+
+// DL-415: Parse <b>MM.YYYY-MM.YYYY</b> embedded in an issuer_name into an ISO range.
+// Used by the period-overlap conflict gate to decide if a "target Received" reassign
+// is actually a clash or a clearly-different period.
+function parseIssuerNamePeriod(issuerName: string): { startDate: string; endDate: string } | null {
+  const m = (issuerName || '').match(/<b>(\d{1,2})\.(\d{4})-(\d{1,2})\.(\d{4})<\/b>/);
+  if (!m) return null;
+  const [, sm, sy, em, ey] = m;
+  const startMonth = sm.padStart(2, '0');
+  const endMonth = em.padStart(2, '0');
+  const lastDay = new Date(Number(ey), Number(em), 0).getDate();
+  return {
+    startDate: `${sy}-${startMonth}-01`,
+    endDate: `${ey}-${endMonth}-${String(lastDay).padStart(2, '0')}`,
+  };
+}
+
+// DL-415: Returns true iff intervals [a.startDate, a.endDate] and [b.startDate, b.endDate]
+// overlap on the ISO date axis. Conservative on missing/unparseable input — returns true,
+// so the caller still prompts/conflicts rather than silently auto-keeping-both.
+function periodsOverlap(
+  a: { startDate?: string; endDate?: string } | null,
+  b: { startDate?: string; endDate?: string } | null,
+): boolean {
+  if (!a || !b || !a.startDate || !a.endDate || !b.startDate || !b.endDate) return true;
+  return a.startDate <= b.endDate && b.startDate <= a.endDate;
+}
+
 // GET /webhook/get-pending-classifications
 classifications.get('/get-pending-classifications', async (c) => {
   // DL-323: hoist perf state so catch block can log marks too
@@ -622,7 +698,11 @@ classifications.post('/review-classification', async (c) => {
 
     // ---- Step 1: Validate request ----
     const body = await c.req.json() as Record<string, unknown>;
-    const { token, classification_id, action, reassign_template_id, reassign_doc_record_id, notes, new_doc_name, force_overwrite, approve_mode, target_report_id, additional_targets, create_if_missing, template_id, contract_period, person: bodyPerson } = body as {
+    // DL-415: force_overwrite + approve_mode are `let` so the period-aware conflict
+    // gate (Step 3) can silently auto-promote a non-overlapping-period reassign to
+    // keep_both without bouncing through the frontend conflict dialog.
+    let { force_overwrite, approve_mode } = body as { force_overwrite?: boolean; approve_mode?: string };
+    const { token, classification_id, action, reassign_template_id, reassign_doc_record_id, notes, new_doc_name, target_report_id, additional_targets, create_if_missing, template_id, contract_period, person: bodyPerson } = body as {
       token: string;
       classification_id: string;
       action: string;
@@ -722,17 +802,41 @@ classifications.post('/review-classification', async (c) => {
     let sourceDoc = docId ? await airtable.getRecord(TABLES.DOCUMENTS, docId) : null;
 
     // ---- Step 3: DL-070/DL-224 conflict guard (reassign only) ----
+    // DL-415: period-aware gate — when both target and new request carry parseable
+    // contract periods AND they don't overlap, suppress the conflict prompt entirely.
+    // The user clearly wants a separate row for a different time range. Falls back to
+    // the legacy prompt when either period is missing/unparseable.
     if (action === 'reassign' && reassign_doc_record_id && !force_overwrite) {
       const targetCheck = await airtable.getRecord(TABLES.DOCUMENTS, reassign_doc_record_id);
-      if ((targetCheck.fields as any).status === 'Received' && (targetCheck.fields as any).onedrive_item_id) {
-        return c.json({
-          ok: false,
-          conflict: true,
-          conflict_doc_title: (targetCheck.fields as any).issuer_name || '',
-          conflict_existing_name: (targetCheck.fields as any).source_attachment_name || '',
-          conflict_new_name: clsFields.attachment_name || '',
-          error: 'Target document already has an approved file',
-        }, 409);
+      const targetFields = targetCheck.fields as Record<string, unknown>;
+      if (targetFields.status === 'Received' && targetFields.onedrive_item_id) {
+        const targetPeriod = parseIssuerNamePeriod(targetFields.issuer_name as string || '');
+        const newPeriod = (
+          contract_period &&
+          contract_period.startDate &&
+          contract_period.endDate &&
+          /^\d{4}-\d{2}-\d{2}$/.test(contract_period.startDate) &&
+          /^\d{4}-\d{2}-\d{2}$/.test(contract_period.endDate)
+        )
+          ? { startDate: contract_period.startDate, endDate: contract_period.endDate }
+          : null;
+        const overlap = periodsOverlap(targetPeriod, newPeriod);
+        if (overlap) {
+          return c.json({
+            ok: false,
+            conflict: true,
+            conflict_doc_title: (targetFields.issuer_name as string) || '',
+            conflict_existing_name: (targetFields.source_attachment_name as string) || '',
+            conflict_new_name: clsFields.attachment_name || '',
+            error: 'Target document already has an approved file',
+          }, 409);
+        }
+        // Non-overlapping periods → silently promote to keep_both with the new period.
+        force_overwrite = true;
+        approve_mode = 'keep_both';
+        console.log('[review-classification] DL-415: non-overlapping periods, auto keep_both', {
+          target: targetPeriod, new: newPeriod,
+        });
       }
     }
 
@@ -1897,6 +2001,28 @@ classifications.post('/review-classification', async (c) => {
     } else if (action === 'reassign') {
       // Reassign: clear source doc, find/create target doc, update target
 
+      // DL-415: Sync the NEW matched_template_id + contract_period onto in-memory
+      // clsFields BEFORE Step 4 target operations so the downstream period-suffix
+      // helper (applyPeriodSuffixToDocFields) and the existing OneDrive-rename
+      // getRentalPeriodLabel() both see the modal-supplied values. Previously
+      // this sync only happened at Step 5 (after target doc was already written),
+      // so the documents row never got the period suffix.
+      if (reassign_template_id) {
+        clsFields.matched_template_id = reassign_template_id;
+        if (
+          ['T901', 'T902'].includes(reassign_template_id) &&
+          contract_period &&
+          contract_period.startDate &&
+          contract_period.endDate
+        ) {
+          const builtEarly = buildContractPeriod(contract_period.startDate, contract_period.endDate);
+          if ('error' in builtEarly) {
+            return c.json({ ok: false, error: builtEarly.error }, 400);
+          }
+          clsFields.contract_period = builtEarly.json;
+        }
+      }
+
       // Clear source doc via inline PATCH (same null-clearing pattern as reject)
       // DL-248: Guard — don't clear if a different file was already approved to this doc
       if (docId) {
@@ -1936,28 +2062,61 @@ classifications.post('/review-classification', async (c) => {
         const issuerNameWithSpouse = appendSpouseSuffix(new_doc_name, personForDoc, spouseName);
         const issuerKey = issuerNameWithSpouse.toLowerCase().replace(/[^a-zA-Zא-ת0-9\s]/g, '').replace(/\s+/g, '_');
         const docUid = `${reportId}_general_doc_${personForDoc}_${issuerKey}`;
-        const created = await airtable.createRecords(TABLES.DOCUMENTS, [{
-          fields: {
-            type: 'general_doc',
-            issuer_name: issuerNameWithSpouse,
-            issuer_name_en: issuerNameWithSpouse,
-            issuer_key: issuerNameWithSpouse,
-            category: 'general',
-            person: personForDoc,
-            status: 'Required_Missing',
-            report: [reportId],
-            document_uid: docUid,
-            document_key: docUid,
-          }
-        }]);
+        // DL-415: apply period suffix on T901/T902 (general_doc itself is non-rental, so
+        // this is a no-op in practice — guarded for safety).
+        const path2Fields = applyPeriodSuffixToDocFields({
+          type: 'general_doc',
+          issuer_name: issuerNameWithSpouse,
+          issuer_name_en: issuerNameWithSpouse,
+          issuer_key: issuerNameWithSpouse,
+          category: 'general',
+          person: personForDoc,
+          status: 'Required_Missing',
+          report: [reportId],
+          document_uid: docUid,
+          document_key: docUid,
+        }, clsFields);
+        const created = await airtable.createRecords(TABLES.DOCUMENTS, [{ fields: path2Fields }]);
         targetDoc = created[0];
       } else {
         // Path 3: Search by template + report
-        const found = await airtable.listAllRecords(TABLES.DOCUMENTS, {
-          filterByFormula: `AND({type} = '${reassign_template_id}', FIND('${reportId}', ARRAYJOIN({report})))`,
-          maxRecords: 1,
+        // DL-415: Prefer Required_Missing placeholders (the user's intent when picking a
+        // generic template from the dropdown) over any already-Received row. Falls back to
+        // any matching row of that type only if no missing placeholder exists.
+        const foundMissing = await airtable.listAllRecords(TABLES.DOCUMENTS, {
+          filterByFormula: `AND({type} = '${reassign_template_id}', {status} = 'Required_Missing', FIND('${reportId}', ARRAYJOIN({report})))`,
         });
-        targetDoc = found[0];
+        if (foundMissing.length > 0) {
+          targetDoc = foundMissing[0];
+          // DL-415 (bug 4 dedup-on-fill): when the stub generator produced multiple
+          // identical generic missing placeholders for the same (template, person) tuple,
+          // fill the first and waive the rest so the report no longer carries phantom
+          // missing rows. Only same-issuer_name duplicates qualify — period-specific stubs
+          // (those with <b>MM.YYYY-MM.YYYY</b> in issuer_name) stay live.
+          if (foundMissing.length > 1) {
+            const firstIssuer = ((targetDoc.fields as Record<string, unknown>).issuer_name as string) || '';
+            const dups = foundMissing.slice(1).filter(d => {
+              const di = (d.fields as Record<string, unknown>).issuer_name as string || '';
+              return di === firstIssuer;
+            });
+            for (const dup of dups) {
+              try {
+                await airtable.updateRecord(TABLES.DOCUMENTS, dup.id, { status: 'Waived' });
+              } catch (dupErr) {
+                console.error('[review-classification] DL-415: failed to waive duplicate stub', dup.id, (dupErr as Error).message);
+              }
+            }
+            if (dups.length > 0) {
+              console.log('[review-classification] DL-415: waived', dups.length, 'duplicate generic stubs for', reassign_template_id);
+            }
+          }
+        } else {
+          const foundAny = await airtable.listAllRecords(TABLES.DOCUMENTS, {
+            filterByFormula: `AND({type} = '${reassign_template_id}', FIND('${reportId}', ARRAYJOIN({report})))`,
+            maxRecords: 1,
+          });
+          targetDoc = foundAny[0];
+        }
 
         // DL-350: When picker (DL-336) returns a real template_id for a doc
         // that doesn't yet exist on this report, create it on the fly. Mirrors
@@ -1996,20 +2155,20 @@ classifications.post('/review-classification', async (c) => {
           const finalName = appendSpouseSuffix(derivedName, personForDoc, spouseName);
           const issuerKey = finalName.toLowerCase().replace(/[^a-zA-Zא-ת0-9\s]/g, '').replace(/\s+/g, '_');
           const docUid = `${reportId}_${reassign_template_id}_${issuerKey}`;
-          const created = await airtable.createRecords(TABLES.DOCUMENTS, [{
-            fields: {
-              type: reassign_template_id,
-              issuer_name: finalName,
-              issuer_name_en: finalName,
-              issuer_key: finalName,
-              category: (tplFields.category as string) || 'general',
-              person: personForDoc,
-              status: 'Required_Missing',
-              report: [reportId],
-              document_uid: docUid,
-              document_key: docUid,
-            }
-          }]);
+          // DL-415: bake the period into issuer_name + document_key for T901/T902.
+          const path3Fields = applyPeriodSuffixToDocFields({
+            type: reassign_template_id,
+            issuer_name: finalName,
+            issuer_name_en: finalName,
+            issuer_key: finalName,
+            category: (tplFields.category as string) || 'general',
+            person: personForDoc,
+            status: 'Required_Missing',
+            report: [reportId],
+            document_uid: docUid,
+            document_key: docUid,
+          }, clsFields);
+          const created = await airtable.createRecords(TABLES.DOCUMENTS, [{ fields: path3Fields }]);
           targetDoc = created[0];
         }
       }
@@ -2064,26 +2223,36 @@ classifications.post('/review-classification', async (c) => {
         const reportId = getField(clsFields.report) as string;
         const templateId = (reassign_template_id || targetDocFields_r.type) as string;
 
+        // DL-415: dedup the "— חלק N" counter on a base WITHOUT the target's embedded
+        // <b>MM.YYYY-MM.YYYY</b> period, so non-overlapping siblings count together.
         const keepBothIssuer = targetDocFields_r.issuer_name as string || '';
-        const keepBothIssuerClause = keepBothIssuer
-          ? `, {issuer_name} = '${keepBothIssuer.replace(/ — חלק \d+$/, '').replace(/'/g, "\\'")}'`
+        const periodStripRegex = / *<b>\d{1,2}\.\d{4}-\d{1,2}\.\d{4}<\/b>/g;
+        const titleSansPeriod = keepBothIssuer
+          .replace(/ — חלק \d+$/, '')
+          .replace(periodStripRegex, '')
+          .trim();
+        const keepBothIssuerClause = titleSansPeriod
+          ? `, FIND('${titleSansPeriod.replace(/'/g, "\\'")}', {issuer_name})`
           : '';
         const existingDocs = await airtable.listAllRecords(TABLES.DOCUMENTS, {
           filterByFormula: `AND({type} = '${templateId}', FIND('${reportId}', ARRAYJOIN({report_record_id}))${keepBothIssuerClause})`,
         });
         const partNumber = existingDocs.length + 1;
-        const existingTitle = targetDocFields_r.issuer_name as string || '';
-        const baseTitle = existingTitle.replace(/ — חלק \d+$/, '');
-        const suffixedTitle = `${baseTitle} — חלק ${partNumber}`;
+        const suffixedTitle = `${titleSansPeriod} — חלק ${partNumber}`;
 
-        // DL-231: Derive document_uid/key from original doc's key + part suffix
+        // DL-231 + DL-415: Derive document_uid/key from the target's key WITHOUT any prior
+        // `_M-M` period segment; applyPeriodSuffixToDocFields below will re-stamp the NEW
+        // period (from the modal's contract_period) before insert.
         const origKey_r = (targetDocFields_r.document_uid || targetDocFields_r.document_key || '') as string;
+        const keyPeriodStripRegex = /_\d+-\d+(?=(?:_part\d+)?$)/;
+        const baseKey_r = origKey_r.replace(keyPeriodStripRegex, '');
         const partSuffix_r = `_part${partNumber}`;
-        const docUid_r = origKey_r ? `${origKey_r}${partSuffix_r}` : '';
+        const docUid_r = baseKey_r ? `${baseKey_r}${partSuffix_r}` : '';
 
         const newDocFields: Record<string, unknown> = {
           type: templateId,
           issuer_name: suffixedTitle,
+          issuer_name_en: suffixedTitle,
           issuer_key: targetDocFields_r.issuer_key || null,
           document_uid: docUid_r || null,
           document_key: docUid_r || null,
@@ -2103,10 +2272,14 @@ classifications.post('/review-classification', async (c) => {
           person: targetDocFields_r.person || null,
           category: targetDocFields_r.category || null,
         };
+        // DL-415: stamp the NEW period (from modal-supplied contract_period synced onto
+        // clsFields above) into issuer_name + document_key. Inserts <b>MM.YYYY-MM.YYYY</b>
+        // immediately before the " — חלק N" suffix and `_M-M` immediately before `_partN`.
+        applyPeriodSuffixToDocFields(newDocFields, clsFields);
         const created = await airtable.createRecords(TABLES.DOCUMENTS, [{ fields: stripEmpty(newDocFields) }]);
         targetDoc = created[0];
-        docTitle = suffixedTitle;
-        console.log('[review-classification] reassign keep_both: created doc', targetDoc.id, 'as', suffixedTitle);
+        docTitle = (newDocFields.issuer_name as string) || suffixedTitle;
+        console.log('[review-classification] reassign keep_both: created doc', targetDoc.id, 'as', docTitle);
 
       } else {
         // Standard reassign or override
@@ -2121,7 +2294,11 @@ classifications.post('/review-classification', async (c) => {
             console.log('[review-classification] reassign override: skip archive — file still referenced by siblings', oldItemId);
           }
         }
-        await airtable.updateRecord(TABLES.DOCUMENTS, targetDoc.id, stripEmpty({
+        // DL-415: rewrite issuer_name + document_key with period suffix when target is
+        // T901/T902 and modal supplied contract_period. Picks up target's existing
+        // issuer_name/document_key so we strip-then-reapply (instead of preserving stale
+        // period from a prior assignment).
+        const updateFields: Record<string, unknown> = {
           status: 'Received',
           review_status: 'confirmed',
           reviewed_by: 'Natan',
@@ -2134,8 +2311,19 @@ classifications.post('/review-classification', async (c) => {
           source_attachment_name: clsFields.attachment_name || null,
           source_sender_email: sanitizeEmail(clsFields.sender_email),
           uploaded_at: clsFields.received_at || null,
-        }));
-        docTitle = (targetDoc.fields as any).issuer_name || new_doc_name || '';
+        };
+        const templateForUpdate = (reassign_template_id || (targetDoc.fields as any).type) as string;
+        if (['T901', 'T902'].includes(templateForUpdate) && clsFields.contract_period) {
+          updateFields.issuer_name = (targetDoc.fields as any).issuer_name as string;
+          updateFields.issuer_name_en = (targetDoc.fields as any).issuer_name_en as string
+            || (targetDoc.fields as any).issuer_name as string;
+          updateFields.document_key = (targetDoc.fields as any).document_key as string;
+          updateFields.document_uid = (targetDoc.fields as any).document_uid as string
+            || (targetDoc.fields as any).document_key as string;
+          applyPeriodSuffixToDocFields(updateFields, clsFields);
+        }
+        await airtable.updateRecord(TABLES.DOCUMENTS, targetDoc.id, stripEmpty(updateFields));
+        docTitle = (updateFields.issuer_name as string) || (targetDoc.fields as any).issuer_name || new_doc_name || '';
       }
     }
 
@@ -2241,6 +2429,19 @@ classifications.post('/review-classification', async (c) => {
               templateMap,
               suffix: periodForReassign?.filename ?? null,
             });
+
+            // DL-415: refresh classifications.expected_filename so the AI-review tab
+            // shows the correct target name after a template change (e.g. T501 → T902
+            // used to stay as the old broker-cert filename). Non-fatal on failure.
+            if (newFilename) {
+              try {
+                await airtable.updateRecord(TABLES.CLASSIFICATIONS, classification_id, {
+                  expected_filename: newFilename,
+                });
+              } catch (efErr) {
+                console.error('[review-classification] DL-415: classifications.expected_filename PATCH failed:', (efErr as Error).message);
+              }
+            }
           }
         }
 

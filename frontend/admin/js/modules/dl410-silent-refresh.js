@@ -54,11 +54,25 @@
     }
   }
 
+  // DL-415: strip any existing MM.YYYY-MM.YYYY (with or without surrounding <b> tags) so the
+  // single source of truth lives at the call site that knows the canonical period.
+  function stripPeriod(s) {
+    if (!s) return '';
+    return String(s)
+      .replace(/\s*<b>\d{1,2}\.\d{4}-\d{1,2}\.\d{4}<\/b>/g, '')
+      .replace(/\s+\d{1,2}\.\d{4}-\d{1,2}\.\d{4}/g, '')
+      .trim();
+  }
+
   function insertReassignedDocAndRefresh(item, data, templateId, extras, arrLive) {
     if (!item || !data || !data.doc_id) return;
     try {
       var period = periodLabel(extras && extras.contract_period);
-      var base = data.matched_short_name || data.doc_title || '';
+      // DL-415: server's matched_short_name may already include <b>MM.YYYY-MM.YYYY</b>
+      // (buildShortName substitutes the period as a variable into the short_name_he
+      // pattern). Stripping first guarantees exactly one period in the final label.
+      var baseRaw = data.matched_short_name || data.doc_title || '';
+      var base = stripPeriod(baseRaw);
       var label = period ? base + ' ' + period : base;
       var arr = arrLive || window.aiClassificationsData || [];
       for (var i = 0; i < arr.length; i++) {

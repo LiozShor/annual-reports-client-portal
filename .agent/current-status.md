@@ -1,6 +1,38 @@
 # Annual Reports CRM - Current Status
 
-**Last Updated:** 2026-05-14 (DL-414 implemented — doc upload size limit 10 MB → 50 MB)
+**Last Updated:** 2026-05-17 (DL-415 implemented — AI-review reassign period propagation + label dedup + period-aware merge trigger)
+
+## OPEN: DL-415 — AI-Review Reassign Period Propagation
+
+DL: `.agent/design-logs/ai-review/415-ai-review-reassign-period-propagation.md`
+Status: **IMPLEMENTED — NEED TESTING**
+
+Six bugs surfaced via live testing on CPA-XXX in the AI-review [H:reassign] + duplicate-confirmation dialog for T901/T902 contracts. Root cause: DL-397 persists `matched_template_id` + `contract_period` on the CLASSIFICATIONS row but the period never propagated to the DOCUMENTS row (`issuer_name` / `document_key`). OneDrive filenames were correct, admin/portal weren't.
+
+Server (`api/src/routes/classifications.ts`): new `applyPeriodSuffixToDocFields` + `parseIssuerNamePeriod` + `periodsOverlap` helpers. Reassign block now syncs `clsFields.matched_template_id` + `clsFields.contract_period` BEFORE Step 4 (target ops). Helper hooked into general_doc create, Path 3 create, standard UPDATE branch, and keep_both. Path 3 now prefers `Required_Missing` placeholders + waives duplicate generic stubs on fill (bug 4 dedup-on-fill). Keep_both strips OLD period from baseTitle/baseKey and re-applies the MODAL's period before insert. Step 3 conflict guard is now period-aware — non-overlapping periods auto-promote to silent `keep_both`. Step 6 (reassign branch) PATCHes `classifications.expected_filename` after computing newFilename so T501→T902 staleness is fixed. `force_overwrite`/`approve_mode` switched to `let` to support the auto-promotion.
+
+Frontend (`frontend/admin/js/modules/dl410-silent-refresh.js`): new `stripPeriod()` helper, `insertReassignedDocAndRefresh` now strips `data.matched_short_name` before appending the canonical period — single-source-of-truth ends the triple-render in dropdown labels + merge dialog titles. Cache-bust `?v=3 → ?v=4`.
+
+`tsc --noEmit` clean (only pre-existing DL-397 errors remain). No `script.js` touches → no monolith ratchet impact.
+
+### Active TODOs (validation — Phase E)
+- [ ] **Bug 1a — [H:reassign] to generic placeholder (UPDATE in place):** generate a fresh missing T902 stub for CPA-XXX (no period); assign a doc with period 02.2025–04.2025 via [H:reassign]. Verify chosen placeholder row now has `issuer_name = …([H:expense]) <b>02.2025-04.2025</b>`, `document_key = …_T902_client_2-4`, status=Received. No new Documents row created.
+- [ ] **Bug 1b — [H:reassign] when no target row exists (Path 3 INSERT):** assign a doc to a T901/T902 with no matching missing placeholder; verify new row carries period suffix in `issuer_name` + `document_key`.
+- [ ] **Bug 2 — Keep-both uses MODAL period, not target period:** existing Received T902 at `01.2025-01.2025`, assign new doc same template with period `06.2025-07.2025`, click "Keep both". New row's `issuer_name = …([H:expense]) <b>06.2025-07.2025</b> — [H:part] 2`, `document_key = …_6-7_part2`. Original `01.2025-01.2025` row unchanged.
+- [ ] **Bug 3 — `expected_filename` regen:** classify a doc as T501; manually reassign to T902 with period; verify `pending_classifications.expected_filename` reflects new T902 short name + period.
+- [ ] **Bug 4 — Stub dedup-on-fill:** CPA-XXX has 2 identical missing T902 rows today. Next reassign that picks one of them should waive the other(s) automatically. Verify via Airtable query.
+- [ ] **Bug 5 — Label single-render:** open [H:reassign] modal on a doc with T902 target carrying period; verify dropdown option shows period exactly once. Trigger conflict (target Received with overlapping period) → dialog title shows period once.
+- [ ] **Bug 6a — Overlap trigger:** existing T902 Received at `01.2025-06.2025`, assign new with `03.2025-08.2025` → dialog fires (overlap).
+- [ ] **Bug 6b — Silent keep-both:** existing T902 Received at `01.2025-01.2025`, assign new with `06.2025-07.2025` → no dialog, new row created directly with period 06-07 and `_part2` suffix.
+- [ ] **Regression — OneDrive filename:** all flows produce `[H:rental-contract] ([H:expense]) MM.YYYY-MM.YYYY.pdf`.
+- [ ] **Regression — DL-397 contract-months input:** reassign modal still reveals months input on T901/T902 selection; chip menu + add-doc popover unchanged.
+- [ ] **Regression — DL-386 add-required-doc:** still creates row with embedded period correctly (verified working pre-DL-415).
+- [ ] **Regression — non-rental reassign (T501, T1102, etc.):** no period logic kicks in; behavior unchanged.
+- [ ] **Worker deploy:** `bash .claude/workflows/deploy-worker.sh` from canonical clone after merge; `/health` returns 200.
+- [ ] **Cache-bust:** `curl -sI https://docs.moshe-atsits.com/admin/index.html | grep dl410-silent-refresh.js` shows `?v=4`.
+- [ ] **Activity log:** `node scripts/query-worker-logs.mjs --since=1h --search="DL-415"` shows the auto-keep_both and dup-waive log lines firing in live testing.
+
+---
 
 ## OPEN: DL-414 — Doc Upload Size Limit (10 MB → 50 MB)
 
@@ -27,12 +59,12 @@ Office hit the 10 MB cap on a real-world tax document. Four constants flipped to
 DL: `.agent/design-logs/admin-ui/410-rental-contract-nan-and-silent-refresh.md`
 Status: **IMPLEMENTED — NEED TESTING**
 
-Symptom (reported by client via screenshot): green "AI חושב שזה: חוזה שכירות (הכנסה)" pill renders `NaN.2025-NaN.2025`; clicking "+ בקש חוזה MM.YYYY-MM.YYYY" creates the follow-up doc but doesn't refresh the UI — must reload. Fixed: NaN guards in `appendContractPeriod` (`script.js:5973`) and reviewed-card period-buttons block (`script.js:6346`) — partial cp shapes now render `__.__-__.____` placeholder; added silent refresh to `requestMissingPeriod` reusing `refreshItemDom` + `updateClientDocState` (DL-385/DL-359 pattern). Cache-bust `script.js?v=419→420`. Deleted unused `requestRemainingContract` shim to fit ratchet.
+Symptom (reported by client via screenshot): green "AI חושב שזה: [H:rental-contract] ([H:income])" pill renders `NaN.2025-NaN.2025`; clicking "+ [H:request-contract] MM.YYYY-MM.YYYY" creates the follow-up doc but doesn't refresh the UI — must reload. Fixed: NaN guards in `appendContractPeriod` (`script.js:5973`) and reviewed-card period-buttons block (`script.js:6346`) — partial cp shapes now render `__.__-__.____` placeholder; added silent refresh to `requestMissingPeriod` reusing `refreshItemDom` + `updateClientDocState` (DL-385/DL-359 pattern). Cache-bust `script.js?v=419→420`. Deleted unused `requestRemainingContract` shim to fit ratchet.
 
 ### Active TODOs (validation — Phase E)
 - [ ] Live test on reported client: AI-review pill renders `MM.YYYY-MM.YYYY` (when dates present) or `__.__-__.____` (when missing). Never `NaN`.
-- [ ] Reviewed-card with missing dates: "+ בקש חוזה" buttons hidden (no NaN labels).
-- [ ] Silent refresh end-to-end: pick partial T901 → click "+ בקש חוזה MM.YYYY-MM.YYYY" → new follow-up doc appears in admin dashboard expanded row + Doc Manager (if open) without reload. Toast shows `נוסף מסמך חסר: חוזה שכירות MM.YYYY-MM.YYYY`. No flicker, no scroll jump.
+- [ ] Reviewed-card with missing dates: "+ [H:request-contract]" buttons hidden (no NaN labels).
+- [ ] Silent refresh end-to-end: pick partial T901 → click "+ [H:request-contract] MM.YYYY-MM.YYYY" → new follow-up doc appears in admin dashboard expanded row + Doc Manager (if open) without reload. Toast shows `נוסף מסמך חסר: [H:rental-contract] MM.YYYY-MM.YYYY`. No flicker, no scroll jump.
 - [ ] Duplicate-press: rapid double-click → only one follow-up doc created.
 - [ ] Hebrew RTL: `__.__-__.____` placeholder renders LTR-correctly inside Hebrew pill.
 - [ ] Regression — DL-359 full-year badge: clicking ✓ badge still expands to editor.
@@ -49,7 +81,7 @@ Symptom (reported by client via screenshot): green "AI חושב שזה: חוזה
 DL: `.agent/design-logs/admin-ui/408-doc-manager-rental-multi-instance.md`
 Status: **IMPLEMENTED — NEED TESTING**
 
-Symptom (CPA-XXX): T901 ("דירה מושכרת – הכנסה") missing from add-doc dropdown. Root cause: T901's Airtable `variables` field was empty + the `userVars.length === 0 && existingTemplateIds.has(...)` filter at `document-manager.js:771` swallowed it once on the report. Fixed both: PATCHed Airtable T901 row to set `variables = "rent_income_monthly"` AND added `MULTI_INSTANCE_TEMPLATES = new Set(['T901','T902'])` allowlist bypass as defense-in-depth.
+Symptom (CPA-XXX): T901 ("[H:rented-out] – [H:income]") missing from add-doc dropdown. Root cause: T901's Airtable `variables` field was empty + the `userVars.length === 0 && existingTemplateIds.has(...)` filter at `document-manager.js:771` swallowed it once on the report. Fixed both: PATCHed Airtable T901 row to set `variables = "rent_income_monthly"` AND added `MULTI_INSTANCE_TEMPLATES = new Set(['T901','T902'])` allowlist bypass as defense-in-depth.
 
 ### Active TODOs (validation — Phase E)
 - [ ] CPA-XXX (reporter's client) AR doc-manager: confirm T901 + T902 both render under the housing category.
@@ -219,7 +251,7 @@ Open-test items from Section 7 (frontend-only; Pages auto-deploys on push):
 
 - **2026-05-03 · DL-399 COMPLETED.** Email bounce / NDR handling shipped + live-verified end-to-end. Worker version `40392bcc-7d21-45e0-9abc-1c92f01c67c6`. New `bounce-detector.ts` parses Outlook NDRs (Hebrew + EN subject prefixes, body recipient extraction with office+sender domain exclusion) before the auto-reply short-circuit; `bounce-handler.ts` clears the matched client's email, writes 4 audit fields, reverts Stage-2 reports to Stage-1, logs to activity-logger. Frontend (extracted to `modules/bounce-warning.js` due to monolith size ratchet): clickable warning button next to the stage badge (desktop + mobile) opens a bounce-detail modal; pin bounced clients to top of table; Stage-1 stat-card pulses blue (distinct from Stage-3 amber); paper-plane row button + bulk-send gated on non-empty email; post-edit-save confirm in Stage-1. Schema: 4 new fields on the clients table, `Bounced` option on `email_events.processing_status`. Mid-flight fixes folded in: regex anchors broken by Hebrew NDR subject prefix → word-boundaries; sender-NDR-robot fallback defaults to isHard true; recipient-extraction fallback excludes office + sender domains; admin-dashboard route extended to expose the 4 bounce fields per client; bounce-modal lookup switched from `window.clientsData` (was let-scoped, undefined inside the module) to button data-* attrs; nav count badges enlarged 11px → 14px. DL: `.agent/design-logs/admin-ui/399-email-bounce-handling.md`.
 - **2026-05-03 · review-tab additions (shipped alongside DL-399).** Review-queue tab now: (a) waiting badge renders months instead of days when over 31 days; (b) pagination via the existing renderPagination helper (DL-256), PAGE_SIZE=50, FIFO numbering preserved across pages; (c) search bar filters by name OR email, resets to page 1; (d) X-clear button inside the input (RTL-aware via inset-inline-end). All new logic in `frontend/admin/js/modules/review-tab.js`. Cache-bust script.js v=413, review-tab.js v=1.
-- **2026-05-03 · DL-397 — COMPLETED.** Capture contract months on manual T901/T902 assign across 3 flows (reassign modal / chip "assign to this doc" / add-doc inline prompt). Backend `reassign` action atomically persists `matched_template_id` + optional `contract_period` in Step 5 PATCH. Live-verified: (a) Reassign modal — selected T901, filled months, saved successfully; (b) Add-doc popover — T902 chip created via "+", inline prompt with months popped, submit produced `חוזה שכירות (הוצאה) 01.2025-09.2025.pdf` in OneDrive (after follow-up); (c) Chip-menu sub-popover — "📎 שייך…" on a Required_Missing T902 chip rendered the months mini-form and saved. **Follow-up fix**: Step 6 OneDrive rename (`getRentalPeriodLabel()`) reads `clsFields` snapshot loaded at Step 2 — without sync, manual reassign produced filenames missing the period suffix. Now sync `clsFields.matched_template_id` and `contract_period` in-memory when building Step 5 PATCH. Cache-bust v=400→403 (rebase race + follow-up bumps). Worker `4867ed44-45e7-45b0-92a9-fc5d02a0101c`. DL: `.agent/design-logs/ai-review/397-manual-assign-contract-months-and-stale-template-id.md`.
+- **2026-05-03 · DL-397 — COMPLETED.** Capture contract months on manual T901/T902 assign across 3 flows (reassign modal / chip "assign to this doc" / add-doc inline prompt). Backend `reassign` action atomically persists `matched_template_id` + optional `contract_period` in Step 5 PATCH. Live-verified: (a) Reassign modal — selected T901, filled months, saved successfully; (b) Add-doc popover — T902 chip created via "+", inline prompt with months popped, submit produced `[H:rental-contract] ([H:expense]) 01.2025-09.2025.pdf` in OneDrive (after follow-up); (c) Chip-menu sub-popover — "📎 שייך…" on a Required_Missing T902 chip rendered the months mini-form and saved. **Follow-up fix**: Step 6 OneDrive rename (`getRentalPeriodLabel()`) reads `clsFields` snapshot loaded at Step 2 — without sync, manual reassign produced filenames missing the period suffix. Now sync `clsFields.matched_template_id` and `contract_period` in-memory when building Step 5 PATCH. Cache-bust v=400→403 (rebase race + follow-up bumps). Worker `4867ed44-45e7-45b0-92a9-fc5d02a0101c`. DL: `.agent/design-logs/ai-review/397-manual-assign-contract-months-and-stale-template-id.md`.
 - **2026-05-03 · DL-396 — COMPLETED.** Dashboard "הודעות אחרונות מלקוחות" panel groups multiple emails per client into one card. Two ships in one day: (a) v=401 baseline grouping by `client_name|client_id` composite key with collapsible expanded body; (b) v=402 follow-up UX redesign driven by `/tech-researcher` (PatternFly notification-drawer + iOS WWDC18 grouped notifications + Smashing 2025 notifications UX) — header shows latest snippet ONCE, header IS action surface (✓-all + 💬-reply-latest + 📁), older rows dim with hidden client name, soft counter pill, trailing-edge chevron, iOS stack-peek ghost. Group-level ✓ via new `markGroupHandled` (Promise.all of existing `delete-client-note`). Frontend-only. Branches `claude-session-20260503-115728` (c6cab9ae) + `DL-396-followup-ux-redesign` (22da373a). DL: `.agent/design-logs/admin-ui/396-recent-messages-group-by-client.md`.
 
 ## NEXT (deferred): allow multi-instance template adds (needs fresh DL number — 398 consumed by stat-card percentages)
