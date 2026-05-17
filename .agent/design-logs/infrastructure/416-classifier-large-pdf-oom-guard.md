@@ -1,6 +1,6 @@
 # Design Log 416: Inbound Classifier — Large-PDF OOM Guard
 
-**Status:** [BEING IMPLEMENTED — DL-416]
+**Status:** [COMPLETED — 2026-05-17 — superseded in effect by DL-419]
 **Date:** 2026-05-17
 **Branch:** `DL-416-classifier-oom-guard`
 **Related Logs:**

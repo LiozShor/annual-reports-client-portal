@@ -1,6 +1,6 @@
 # Design Log 419: Inbound Large-File Passthrough (OneDrive Upload Sessions + Classifier Skip)
 
-**Status:** [IMPLEMENTED — NEED TESTING]
+**Status:** [COMPLETED — 2026-05-17]
 **Date:** 2026-05-17
 **Branch:** `DL-419-inbound-large-file-passthrough`
 **Related Logs:**
