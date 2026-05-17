@@ -183,7 +183,7 @@
         var tier = ageTier(r.received_at);
         var ageStr = fmtAge(r.age_hours);
         var bucketClass = 'bucket-' + r.bucket;
-        var senderAtMasked = r.sender_email ? r.sender_email.replace(/(^.).*(@.*$)/, '$1•••$2') : '—';
+        var sender = r.sender_email || '—';
         var subject = r.subject || '(no subject)';
         var badges = '';
         if (r.has_pending_classifications) badges += '<span class="badge ok">📎 PC</span>';
@@ -200,7 +200,7 @@
             + '<span class="age ' + tier.cls + '">' + escapeHtml(ageStr) + '</span>'
             + '</div>'
             + '<div class="subject">' + escapeHtml(subject) + '</div>'
-            + '<div class="meta">' + escapeHtml(senderAtMasked) + ' · ' + escapeHtml(r.received_at || '—') + '</div>'
+            + '<div class="meta">' + escapeHtml(sender) + ' · ' + escapeHtml(r.received_at || '—') + '</div>'
             + (badges ? '<div class="badges">' + badges + '</div>' : '')
             + (r.error_message ? '<div class="err">' + (r.last_error_step ? '[' + escapeHtml(r.last_error_step) + '] ' : '') + escapeHtml(r.error_message) + '</div>' : '')
             + '<div style="margin-top:4px"><a class="airtable" href="' + escapeHtml(r.airtable_url) + '" target="_blank" rel="noopener">פתח ב-Airtable ↗</a></div>'
