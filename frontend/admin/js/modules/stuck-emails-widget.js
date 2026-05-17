@@ -18,7 +18,8 @@
     var params = new URLSearchParams(window.location.search);
     if (params.get('dev') !== '1') return; // gate: dev-only
 
-    var API_BASE = (window.WORKER_API_BASE || 'https://annual-reports-api.liozshor1.workers.dev') + '/webhook/admin-stuck-emails';
+    var API_BASE = (window.API_BASE || 'https://annual-reports-api.liozshor1.workers.dev/webhook') + '/admin-stuck-emails';
+    var TOKEN_KEY = window.ADMIN_TOKEN_KEY || 'admin_token';
     var TIERS = [
         { maxHours: 24,       cls: 'aging-fresh', label: 'חדש' },
         { maxHours: 72,       cls: 'aging-day1',  label: '1-3 ימים' },
@@ -27,8 +28,11 @@
     ];
 
     function getToken() {
-        try { return localStorage.getItem('adminToken') || ''; }
-        catch (_e) { return ''; }
+        try {
+            // Match admin panel: real key is in window.ADMIN_TOKEN_KEY ('admin_token').
+            // Fall back to the in-memory authToken variable script.js sets at login.
+            return localStorage.getItem(TOKEN_KEY) || (window.authToken || '') || '';
+        } catch (_e) { return ''; }
     }
 
     function ageTier(iso) {
