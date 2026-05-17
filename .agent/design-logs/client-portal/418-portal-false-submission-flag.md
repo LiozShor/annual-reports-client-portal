@@ -1,6 +1,6 @@
 # DL-418 — Client portal falsely shows "already submitted" when docs exist without questionnaire
 
-**Status:** [IMPLEMENTED — NEED TESTING]
+**Status:** [COMPLETED — 2026-05-17]
 **Domain:** client-portal
 **Branch:** DL-418-portal-false-submission-flag
 **Created:** 2026-05-17
