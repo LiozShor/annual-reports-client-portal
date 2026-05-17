@@ -3918,7 +3918,7 @@ async function loadDocPreview(recordId) {
     openTab.href = item.file_url || '#';
     openTab.style.display = item.file_url ? '' : 'none';
     header.style.display = '';
-    applyPreviewReviewState(item.review_status || null);
+    applyPreviewReviewState(item.review_status || null); window.attachDL420DriveLink && window.attachDL420DriveLink(item);
 
     // DL-334 v3.1: preview latency instrumentation — gated on localStorage.ADMIN_PERF='1'.
     // Logs two durations per click:

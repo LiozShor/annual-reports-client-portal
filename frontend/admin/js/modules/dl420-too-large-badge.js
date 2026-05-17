@@ -28,6 +28,37 @@
             .replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
     }
 
+    /**
+     * For any PC whose attachment_name is the `drive_{id}.{ext}` placeholder
+     * (pre-Phase-2 rows, or any future Drive smart-link attachment), inject a
+     * "📂 פתח בדרייב" link into the preview header. The original Drive URL is
+     * reconstructed from the embedded fileId. Idempotent — only adds once per
+     * preview open.
+     *
+     * Helps the stale rows from before Content-Disposition parsing landed:
+     * when SharePoint's preview can't render the file (because the bytes
+     * don't match `.pdf`), the office clicks through to Drive instead.
+     */
+    var DRIVE_NAME_RE = /^drive_([A-Za-z0-9_-]{20,})\./;
+    window.attachDL420DriveLink = function (item) {
+        if (!item || !item.attachment_name) return;
+        var m = DRIVE_NAME_RE.exec(item.attachment_name);
+        if (!m) return;
+        var header = document.getElementById('previewHeaderBar');
+        if (!header) return;
+        var existing = header.querySelector('.dl420-drive-link');
+        if (existing) existing.remove();
+        var a = document.createElement('a');
+        a.className = 'dl420-drive-link';
+        a.href = 'https://drive.google.com/file/d/' + encodeURIComponent(m[1]) + '/view';
+        a.target = '_blank';
+        a.rel = 'noopener';
+        a.title = 'פתח את הקובץ ב-Drive';
+        a.style.cssText = 'margin-inline-start:var(--sp-2);padding:4px 8px;border:1px solid #d1d5db;border-radius:4px;font-size:12px;color:#2563eb;text-decoration:none;display:inline-block';
+        a.textContent = '📂 פתח בדרייב';
+        header.appendChild(a);
+    };
+
     window.renderDL420TooLargeBadge = function (item, errorMsgEl) {
         if (!item || !errorMsgEl) return false;
         if (!item.ai_reason || !/^\[DL-420\]\s*Too large/i.test(item.ai_reason)) return false;
