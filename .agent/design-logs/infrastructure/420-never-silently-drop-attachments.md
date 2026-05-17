@@ -124,7 +124,36 @@ The "duplicate OneDrive files" risk only materializes if you re-process the
 - [ ] Happy-path regression: clean 1-PDF email still produces 1 PC + 0 failed.
 - [ ] Unidentified-client path (DL-361) still creates one PC per attachment.
 
-## 7. Out of Scope
+## 7. Phase 2 (2026-05-17, live deploy)
+
+Phase 1 surfaced two follow-up gaps during live testing on the CPA-XXX retry:
+
+1. **Drive smart-link filenames were placeholders.** `parseDriveLinks()` names
+   every chip `drive_{fileId}.pdf` and `fetchDriveAttachment()` never
+   overwrites it with the real filename. So a real `U9744004.2025.tax.zip`
+   landed in OneDrive as `drive_xxx.pdf` — and `expandArchiveAttachments()`'s
+   `.pdf` extension check skipped it entirely, sending raw ZIP bytes to the
+   LLM classifier.
+
+2. **Fallback PC path didn't upload bytes.** When the per-attachment catch
+   fired with `outcome.pcCreated === false`, the PC was written but bytes
+   never reached OneDrive. The "always in OneDrive AND always in PC queue"
+   half of the invariant was only half-enforced.
+
+3. **Large ZIPs OOM'd the extractor.** A 30+ MB archive's raw bytes plus
+   decompressed buffer plus the WASM heap blew past the 128 MB Workers cap.
+
+### Phase 2 changes
+
+| File | Change |
+|---|---|
+| `attachment-utils.ts:fetchDriveAttachment` | Parse RFC 5987 `filename*=UTF-8''…` first (Hebrew filenames survive URL-decode), fall back to plain `filename="…"`. Overwrite `attachment.name` with the real value before returning. |
+| `archive-expander.ts` | New `MAX_ARCHIVE_PREEXTRACT_BYTES = 30 MB`. Archives over this size skip extraction entirely (`action: 'skipped_too_heavy'`) and pass through as raw uploads. New ArchiveLogEntry action variant. |
+| `processor.ts` classify batch | Skip AI classification for `ARCHIVE_EXTENSIONS.has(ext)` attachments — they should never be base64'd into an LLM call. Returns `null` so the existing upload + PC path runs as if it were a DL-419 oversize-no-AI file. |
+| `processor.ts:createFallbackPendingClassification` | Now takes an optional `oneDriveRoot`. When `attachment.content.byteLength > 0` and we have a root, attempts `uploadToOneDrive` BEFORE writing the PC (best-effort). PC's `file_url` + `onedrive_item_id` reflect the upload result; upload error is prepended to `ai_reason`. |
+| Loop call sites | Both `tooLarge` and catch-path calls to the fallback helper now pass `oneDriveRoot`. |
+
+## 8. Out of Scope
 
 - Bulk-recovery script for past dropped attachments (would need MS Graph
   re-fetch + dedupe against existing PCs). Defer to a follow-up DL if needed.

@@ -211,6 +211,25 @@ export async function fetchDriveAttachment(
     return { ok: false, error: `not_binary_${ct || 'unknown'}` };
   }
 
+  // DL-420 follow-up: parse the real filename from Content-Disposition so the
+  // attachment carries `U9744004.2025.tax.zip` rather than the
+  // `drive_{fileId}.pdf` placeholder set by parseDriveLinks. Without this fix
+  // ZIPs from Gmail Drive smart-links land in OneDrive named `*.pdf`, and
+  // archive-expander's `getFileExtension` lookup skips them entirely.
+  const cd = resp.headers.get('content-disposition') || '';
+  // Prefer RFC 5987 `filename*=UTF-8''...` (URL-encoded, supports Hebrew); fall
+  // back to plain `filename="..."`.
+  const parsedFilename = (() => {
+    const star = /filename\*=(?:UTF-8|utf-8)''([^;]+)/i.exec(cd);
+    if (star) {
+      try { return decodeURIComponent(star[1].trim().replace(/^"|"$/g, '')); } catch { /* fall through */ }
+    }
+    const plain = /filename="([^"]+)"|filename=([^;]+)/i.exec(cd);
+    if (plain) return (plain[1] ?? plain[2] ?? '').trim();
+    return '';
+  })();
+  const realFilename = parsedFilename || filename;
+
   // Stream-read into chunks with hard byte cap.
   const reader = resp.body?.getReader();
   if (!reader) {
@@ -244,7 +263,7 @@ export async function fetchDriveAttachment(
     ok: true,
     attachment: {
       id: `drive:${fileId}`,
-      name: filename,
+      name: realFilename,
       contentType: ct.split(';')[0].trim() || 'application/octet-stream',
       size: total,
       content,

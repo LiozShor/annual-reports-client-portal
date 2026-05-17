@@ -22,6 +22,7 @@ import {
   MAILBOX,
   OFFICE_CONVERTIBLE,
   IMAGE_EXTENSIONS,
+  ARCHIVE_EXTENSIONS,
 } from './types';
 import { fetchAttachments, uploadToOneDrive, resolveOneDriveRoot, getFileExtension, parseDriveLinks, fetchDriveAttachment, stripDriveChipsFromHtml, type OneDriveRoot } from './attachment-utils';
 import { identifyClient } from './client-identifier';
@@ -552,9 +553,40 @@ async function createFallbackPendingClassification(
   emailEventRecordId: string,
   classification: ClassificationResult | null,
   failureReason: string,
+  oneDriveRoot?: OneDriveRoot,
 ): Promise<void> {
-  const classificationKey = `${clientMatch.clientId || 'unknown'}-${report.year}-${attachment.name}-dl420-${Date.now()}`;
   const isTooLarge = !!attachment.tooLarge;
+
+  // DL-420 follow-up: enforce the "always in OneDrive when bytes available"
+  // half of the invariant. If we have non-empty content and a OneDrive root,
+  // upload best-effort BEFORE writing the PC so file_url + onedrive_item_id
+  // can point at the real file. Failure here is non-fatal — PC still lands
+  // (with driveUrl fallback for tooLarge or empty fields otherwise) and the
+  // upload error gets prepended to ai_reason for triage.
+  let fileUrl = attachment.driveUrl ?? '';
+  let onedriveItemId = '';
+  let mergedReason = failureReason;
+  if (!isTooLarge && oneDriveRoot && attachment.content && attachment.content.byteLength > 0) {
+    try {
+      const upload = await uploadToOneDrive(
+        pCtx.graph,
+        oneDriveRoot,
+        clientMatch.clientName,
+        String(report.year),
+        attachment.name,
+        attachment.content,
+        report.filingType,
+      );
+      fileUrl = upload.webUrl || fileUrl;
+      onedriveItemId = upload.itemId || '';
+    } catch (uploadErr) {
+      const msg = (uploadErr as Error).message || 'unknown';
+      console.error(`[inbound][DL-420] fallback OneDrive upload failed for "${attachment.name}":`, msg);
+      mergedReason = `Upload failed: ${msg.slice(0, 200)} | ${failureReason}`;
+    }
+  }
+
+  const classificationKey = `${clientMatch.clientId || 'unknown'}-${report.year}-${attachment.name}-dl420-${Date.now()}`;
   const fields: Record<string, unknown> = {
     classification_key: classificationKey,
     report: [report.reportRecordId],
@@ -568,10 +600,10 @@ async function createFallbackPendingClassification(
     received_at: metadata.receivedAt,
     matched_template_id: null,
     ai_confidence: classification?.confidence ?? 0,
-    ai_reason: `[DL-420] ${failureReason}`,
+    ai_reason: `[DL-420] ${mergedReason}`,
     issuer_name: classification?.issuerName ?? '',
-    file_url: attachment.driveUrl ?? '',
-    onedrive_item_id: '',
+    file_url: fileUrl,
+    onedrive_item_id: onedriveItemId,
     file_hash: attachment.sha256 || '',
     review_status: 'pending',
     client_name: clientMatch.clientName,
@@ -1296,6 +1328,15 @@ export async function processInboundEmail(
           primaryReport.stage === 'Waiting_For_Answers';
         const fallbackMode = requiredDocs.length === 0 || preQuestionnaireStage;
         const batchPromises = attachments.slice(batch, batchEnd).map(async (attachment) => {
+          // DL-420 follow-up: skip AI classification for raw archives that
+          // survived archive-expander (either `skipped_too_heavy` or
+          // extract_failed). LLM-classifying ZIP bytes is wasted spend and
+          // returns garbage anyway. The Phase B upload + PC create still runs
+          // so the office sees the raw archive in OneDrive + AI Review.
+          if (ARCHIVE_EXTENSIONS.has(getFileExtension(attachment.name))) {
+            console.warn(`[inbound][DL-420] Skipping classification for archive "${attachment.name}" — raw passthrough`);
+            return null;
+          }
           // DL-419: skip AI classification for oversize attachments. The
           // pending_classifications row will still be created (Phase B below)
           // with matched_template_id=null + a Hebrew sentinel in
@@ -1356,6 +1397,7 @@ export async function processInboundEmail(
               emailEventId,
               null,
               'Too large to fetch from Drive — open via link',
+              oneDriveRoot,
             );
           } catch (pcErr) {
             console.error(`[inbound][DL-420] tooLarge PC create failed for "${currentAtt.name}":`, (pcErr as Error).message);
@@ -1465,6 +1507,7 @@ export async function processInboundEmail(
                 emailEventId,
                 classificationResults[i],
                 `Processing failed: ${errMsg}`.slice(0, 500),
+                oneDriveRoot,
               );
             } catch (pcErr) {
               console.error(

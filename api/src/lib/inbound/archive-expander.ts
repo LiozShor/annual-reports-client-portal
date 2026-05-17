@@ -18,6 +18,12 @@ import { getFileExtension, computeSha256 } from './attachment-utils';
 const MAX_FILES_PER_ARCHIVE = 50;
 const MAX_TOTAL_DECOMPRESSED_BYTES = 50 * 1024 * 1024; // 50 MB
 const MAX_SINGLE_FILE_BYTES = 25 * 1024 * 1024; // 25 MB
+// DL-420 follow-up: archives larger than this skip extraction entirely and pass
+// through as raw `.zip`/`.rar`/`.7z` uploads. Decompression of a 30+ MB archive
+// inside a 128 MB Workers isolate routinely OOMs (raw bytes + decompressed
+// buffer + WASM heap together exceed the cap). Office triages manually via the
+// fallback PC's onedrive link.
+const MAX_ARCHIVE_PREEXTRACT_BYTES = 30 * 1024 * 1024; // 30 MB
 
 // ── MIME map for extracted files ──
 
@@ -50,7 +56,7 @@ function guessMime(filename: string): string {
 
 export interface ArchiveLogEntry {
   archive: string;
-  action: 'extracted' | 'skipped_traversal' | 'skipped_nested' | 'skipped_oversize' | 'limit_reached' | 'extract_failed';
+  action: 'extracted' | 'skipped_traversal' | 'skipped_nested' | 'skipped_oversize' | 'limit_reached' | 'extract_failed' | 'skipped_too_heavy';
   file?: string;
   reason?: string;
 }
@@ -247,6 +253,24 @@ export async function expandArchiveAttachments(
       const ext = getFileExtension(att.name);
 
       if (!ARCHIVE_EXTENSIONS.has(ext)) {
+        result.attachments.push(att);
+        continue;
+      }
+
+      // DL-420 follow-up: oversized archives skip extraction and pass through
+      // as raw uploads so they always end up in OneDrive + AI Review. The
+      // office triages manually rather than risk an isolate OOM that drops the
+      // whole batch (and any other attachments in this email with it).
+      if (att.size > MAX_ARCHIVE_PREEXTRACT_BYTES) {
+        const mb = (att.size / 1024 / 1024).toFixed(1);
+        const limitMb = (MAX_ARCHIVE_PREEXTRACT_BYTES / 1024 / 1024).toFixed(0);
+        console.log(`[archive] Skipping extraction for "${att.name}" — too heavy (${mb}MB > ${limitMb}MB), passing raw`);
+        result.log.push({
+          archive: att.name,
+          action: 'skipped_too_heavy',
+          reason: `${mb}MB > ${limitMb}MB — raw passthrough`,
+        });
+        result.failedArchives.push(att.name);
         result.attachments.push(att);
         continue;
       }
