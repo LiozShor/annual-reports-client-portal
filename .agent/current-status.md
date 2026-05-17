@@ -1,6 +1,22 @@
 # Annual Reports CRM - Current Status
 
-**Last Updated:** 2026-05-17 (DL-419 implemented + V1 verified live — inbound large-file passthrough via MS Graph upload sessions + classifier skip; the 32 MB Drive PDF for CPA-XXX successfully landed in OneDrive + AI Review queue with Hebrew manual-sort sentinel)
+**Last Updated:** 2026-05-17 evening (DL-420 shipped in 3 phases + drive-link backup + admin/pc-patch ops endpoint — inbound pipeline now hits "every attachment in OneDrive AND PC queue" invariant end-to-end. Verified live on CPA-XXX 2nd retry: real Hebrew filenames via Content-Disposition, U13779324.tax.zip auto-extracted into 3 inner PCs, U9744004.tax.zip (68 MB) landed as too_large fallback with real size + Drive button.)
+
+## OPEN: DL-420 — Inbound never silently drops attachments
+
+DL: `.agent/design-logs/infrastructure/420-never-silently-drop-attachments.md`
+Status: **IMPLEMENTED — VERIFIED LIVE (Phase 1+2+3 + drive-link backup + admin/pc-patch endpoint)**
+
+Hard invariant: every inbound attachment lands in BOTH OneDrive (when bytes available) AND `pending_classifications`. Phase 1 — fallback PC for classify/upload throws + too_large stub. Phase 2 — `fetchDriveAttachment` parses Content-Disposition for real filenames, `archive-expander` `skipped_too_heavy` for archives >30 MB, classifier skips `ARCHIVE_EXTENSIONS`, fallback path also uploads bytes to OneDrive. Phase 3 — Content-Length parsing surfaces real size on too_large fallback; AI Review badge renders "🚫 קובץ גדול מדי (62 MB)" + "📂 פתח בדרייב" button. Plus: drive-link backup module shows the Drive button on any `drive_*.*`-named PC (stale rows from before Phase 2). Plus: `admin/pc-patch` endpoint (N8N_INTERNAL_KEY gated, allowlisted fields) for surgical PC fixes.
+
+Verified live on second CPA-XXX retry: 15 real-named attachments arrived; U13779324.2025.tax.zip got auto-extracted into 3 inner PCs with `📦 חולץ מ:` provenance; U9744004.2025.tax.zip (68 MB, over 50 MB Drive cap) landed as too_large fallback PC with real `attachment_size = 71663693`. Hash dedup correctly skipped the 11 attachments already represented in documents/pending_classifications from the first run.
+
+### Active TODOs / known caveats
+- [ ] **`attachments_failed_count` field not auto-creating** on email_events despite `typecast: true`. Schema permissions may differ from documents:write scope. Pre-create the field in Airtable UI or investigate further.
+- [ ] **Office still needs to manually handle the 68 MB U9744004 ZIP.** Click Drive button → download → unzip → upload each inner file via admin doc-manager. Wrapper PC then gets marked rejected.
+- [ ] **HTML attachments don't classify well.** Consider adding `.html` to skip-extensions or building a small HTML→text adapter (follow-up).
+- [ ] **Mobile preview pane** — DL-420 too_large badge fires but the drive-backup link injection only wires the desktop preview header.
+- [ ] **Drive streaming for >50 MB files (DL-421 candidate).** Stream Drive → OneDrive upload session without buffering in Worker memory. ~80-100 lines.
 
 ## OPEN: DL-419 — Inbound Large-File Passthrough (Upload Sessions + Classifier Skip)
 
