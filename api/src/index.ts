@@ -39,6 +39,7 @@ import adminDevActivity from './routes/admin-dev-activity'; // DL-365 Phase 3
 import webhookTelegram from './routes/webhook-telegram'; // DL-402 Telegram ops bot
 import adminMergeClients from './routes/admin-merge-clients'; // DL-404 merge clients
 import adminStuckEmails from './routes/admin-stuck-emails'; // DL-417 stuck email_events monitor
+import adminPcPatch from './routes/admin-pc-patch'; // DL-420 ops endpoint — surgical PC PATCH
 import { logError } from './lib/error-logger';
 import { withEventBuffer } from './lib/activity-logger';
 import { handleInboundQueue } from './lib/inbound/queue-consumer';
@@ -111,6 +112,7 @@ app.route('/webhook', adminDevActivity); // DL-365 Phase 3
 app.route('/webhook', webhookTelegram); // DL-402 Telegram ops bot
 app.route('/webhook', adminMergeClients); // DL-404 merge clients
 app.route('/webhook', adminStuckEmails); // DL-417 stuck email_events monitor
+app.route('/webhook', adminPcPatch); // DL-420 ops endpoint — surgical PC PATCH
 
 // Health check
 app.get('/health', (c) => c.json({ ok: true, service: 'annual-reports-api' }));
