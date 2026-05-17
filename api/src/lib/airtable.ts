@@ -109,12 +109,15 @@ export class AirtableClient {
   async updateRecord(
     table: string,
     recordId: string,
-    fields: Record<string, unknown>
+    fields: Record<string, unknown>,
+    opts: { typecast?: boolean } = {}
   ): Promise<AirtableRecord> {
+    const body: Record<string, unknown> = { fields };
+    if (opts.typecast) body.typecast = true;
     const res = await fetch(this.url(table, recordId), {
       method: 'PATCH',
       headers: this.headers,
-      body: JSON.stringify({ fields }),
+      body: JSON.stringify(body),
     });
 
     if (!res.ok) {

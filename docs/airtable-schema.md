@@ -339,6 +339,8 @@ These three tables together replace all hardcoded document generation logic. The
 | last_error_step | singleLineText | Last step where error occurred |
 | pending_classifications | link → pending_classifications | Reverse link from pending_classifications |
 | match_method | singleSelect | How sender was identified: `email_match` / `forwarded_email` / `sender_name` / `ai_identification` / `unidentified` |
+| attachments_failed_count | number | DL-420: count of attachments that failed to fully process (classify/upload/too_large). Auto-created on first failure PATCH via `typecast:true`. Combined with `processing_status='Completed'` it indicates partial-failure (some PCs created via fallback). |
+| failed_attachments | multilineText | DL-420: newline-separated list of `${name} \| ${reason}` for attachments that took the fallback path. Auto-created on first failure PATCH. |
 | created_at | createdTime | Record creation time |
 
 ### system_config (`tblqHOkDnvb95YL3O`)

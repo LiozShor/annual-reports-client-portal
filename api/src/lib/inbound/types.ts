@@ -88,6 +88,15 @@ export interface AttachmentInfo {
   size: number;
   content: ArrayBuffer;
   sha256: string;
+  /**
+   * DL-420: synthetic stub for Drive files we never managed to download
+   * (e.g. `too_large` rejects from `fetchDriveAttachment`). When `tooLarge`
+   * is true the loop must NOT classify/upload — it should create a
+   * metadata-only pending_classifications row whose `file_url` points at
+   * `driveUrl` so the office can open the file directly in Drive.
+   */
+  tooLarge?: boolean;
+  driveUrl?: string;
 }
 
 // ---------------------------------------------------------------------------

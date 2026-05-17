@@ -533,6 +533,59 @@ function buildExpectedFilename(
   return `${base}.${ext}`;
 }
 
+/**
+ * DL-420: fallback pending_classifications row for attachments that never made
+ * it through the happy path (classify failure, upload failure, or `tooLarge`
+ * Drive stub). The office's only inbox for inbound docs is the AI Review tab —
+ * if we don't write a PC, the file effectively does not exist for them.
+ *
+ * `failureReason` is surfaced verbatim in `ai_reason` so the office sees what
+ * went wrong. For `tooLarge` stubs we set `file_url` to the original Drive URL
+ * so the "open" button in AI Review takes the office straight to the file.
+ */
+async function createFallbackPendingClassification(
+  pCtx: ProcessingContext,
+  attachment: AttachmentInfo,
+  metadata: EmailMetadata,
+  clientMatch: { clientId: string; clientName: string },
+  report: ActiveReport,
+  emailEventRecordId: string,
+  classification: ClassificationResult | null,
+  failureReason: string,
+): Promise<void> {
+  const classificationKey = `${clientMatch.clientId || 'unknown'}-${report.year}-${attachment.name}-dl420-${Date.now()}`;
+  const isTooLarge = !!attachment.tooLarge;
+  const fields: Record<string, unknown> = {
+    classification_key: classificationKey,
+    report: [report.reportRecordId],
+    document: [],
+    email_event: emailEventRecordId ? [emailEventRecordId] : [],
+    attachment_name: attachment.name,
+    attachment_content_type: attachment.contentType,
+    attachment_size: attachment.size,
+    sender_email: metadata.senderEmail,
+    sender_name: metadata.senderName,
+    received_at: metadata.receivedAt,
+    matched_template_id: null,
+    ai_confidence: classification?.confidence ?? 0,
+    ai_reason: `[DL-420] ${failureReason}`,
+    issuer_name: classification?.issuerName ?? '',
+    file_url: attachment.driveUrl ?? '',
+    onedrive_item_id: '',
+    file_hash: attachment.sha256 || '',
+    review_status: 'pending',
+    client_name: clientMatch.clientName,
+    client_id: clientMatch.clientId,
+    year: report.year,
+    expected_filename: attachment.name,
+    notes: isTooLarge
+      ? '⚠️ קובץ גדול מדי להורדה אוטומטית — פתח בקישור Drive'
+      : '⚠️ שגיאת עיבוד — דרוש סיווג ידני',
+    email_body_text: (metadata.bodyPreview || '').substring(0, 500),
+  };
+  await pCtx.airtable.createRecords(TABLES.PENDING_CLASSIFICATIONS, [{ fields }]);
+}
+
 /** Process a single attachment with a pre-computed classification result (from parallel Phase A) */
 async function processAttachmentWithClassification(
   pCtx: ProcessingContext,
@@ -545,6 +598,7 @@ async function processAttachmentWithClassification(
   oneDriveRoot: OneDriveRoot,
   classification: ClassificationResult | null,
   provenanceNote?: string,
+  outcome?: { pcCreated: boolean },
 ): Promise<void> {
   // DL-321: Short-circuit non-document images (decorative headers, signature images, blank pages).
   // Classifier can explicitly set isDocument=false when the attachment has no document content.
@@ -563,6 +617,10 @@ async function processAttachmentWithClassification(
       + `conf=${classification.confidence} client=${clientMatch.clientId} `
       + `evidence="${(classification.reason || '').slice(0, 120)}"`
     );
+    // DL-420: intentional skip (decorative/signature/blank-page image) — the
+    // file legitimately doesn't deserve a PC row, so mark the invariant
+    // satisfied to suppress fallback creation.
+    if (outcome) outcome.pcCreated = true;
     return;
   }
 
@@ -768,12 +826,16 @@ async function processAttachmentWithClassification(
         attachment_name: attachment.name,
       },
     });
+    // DL-420: duplicate skip — the original PC/document already represents
+    // this attachment, so the invariant is satisfied; do NOT create a fallback.
+    if (outcome) outcome.pcCreated = true;
     return;
   }
 
   await pCtx.airtable.createRecords(TABLES.PENDING_CLASSIFICATIONS, [
     { fields: classFields },
   ]);
+  if (outcome) outcome.pcCreated = true;
 
   // Step 7: Update document record if matched (and not duplicate)
   if (classification?.matchedDocRecordId && !isDuplicate) {
@@ -1029,13 +1091,30 @@ export async function processInboundEmail(
           driveSuccessCount++;
           console.log(`[inbound][DL-367] Fetched ${link.filename} (${r.attachment.size} bytes)`);
         } else {
+          const driveUrl = `https://drive.google.com/file/d/${link.fileId}/view`;
           driveFailures.push({
             fileId: link.fileId,
             filename: link.filename,
             error: r.error,
-            url: `https://drive.google.com/file/d/${link.fileId}/view`,
+            url: driveUrl,
           });
           console.warn(`[inbound][DL-367] Drive fetch failed for ${link.filename}: ${r.error}`);
+          // DL-420: too_large Drive files MUST still appear in AI Review. Synthesize
+          // a stub attachment so the per-attachment loop creates a metadata-only PC
+          // whose file_url points back to Drive. Other Drive errors (permission /
+          // network) stay in driveFailures and surface via NeedsHuman + error_message.
+          if (r.error === 'too_large') {
+            attachments.push({
+              id: `drive:${link.fileId}`,
+              name: link.filename,
+              contentType: 'application/pdf',
+              size: 0,
+              content: new ArrayBuffer(0),
+              sha256: '',
+              tooLarge: true,
+              driveUrl,
+            });
+          }
         }
         // Polite spacing between Drive requests
         await new Promise((resolve) => setTimeout(resolve, 500));
@@ -1254,7 +1333,38 @@ export async function processInboundEmail(
       // Phase B: Upload and create records sequentially (avoids OneDrive/Airtable rate limits)
       // Route each attachment to the correct report based on matched template prefix
       // Supports dual-filing: one attachment may match both AR and CS (DL-225)
+      //
+      // DL-420 invariant: every attachment MUST end up with a pending_classifications
+      // row, regardless of classify/upload failures. The office's only inbox is AI
+      // Review; if a row isn't there, the file effectively does not exist to them.
+      // `failedAttachments` accumulates so we can stamp the count on email_events.
+      const failedAttachments: Array<{ name: string; reason: string }> = [];
+
       for (let i = 0; i < attachments.length; i++) {
+        const currentAtt = attachments[i];
+
+        // DL-420: too_large Drive stubs never had bytes — skip classify+upload and
+        // write a metadata-only PC that points back at the Drive link.
+        if (currentAtt.tooLarge) {
+          try {
+            await createFallbackPendingClassification(
+              pCtx,
+              currentAtt,
+              metadata,
+              { clientId: clientMatch.clientId, clientName: clientMatch.clientName },
+              primaryReport,
+              emailEventId,
+              null,
+              'Too large to fetch from Drive — open via link',
+            );
+          } catch (pcErr) {
+            console.error(`[inbound][DL-420] tooLarge PC create failed for "${currentAtt.name}":`, (pcErr as Error).message);
+          }
+          failedAttachments.push({ name: currentAtt.name, reason: 'too_large (Drive)' });
+          continue;
+        }
+
+        const outcome = { pcCreated: false };
         try {
           const classification = classificationResults[i];
           let targetReport = primaryReport;
@@ -1293,6 +1403,7 @@ export async function processInboundEmail(
             oneDriveRoot,
             classification,
             provenance,
+            outcome,
           );
 
           // Process additional matches (dual-filing — DL-225)
@@ -1335,11 +1446,59 @@ export async function processInboundEmail(
             }
           }
         } catch (err) {
+          const errMsg = (err as Error).message;
           console.error(
             `[inbound] Attachment "${attachments[i].name}" failed:`,
-            (err as Error).message,
+            errMsg,
           );
+          // DL-420: the loop body threw before/during the PC create. If no PC
+          // landed yet, write a fallback so the office still sees the file in
+          // AI Review. Diagnostics live in `ai_reason`.
+          if (!outcome.pcCreated) {
+            try {
+              await createFallbackPendingClassification(
+                pCtx,
+                attachments[i],
+                metadata,
+                { clientId: clientMatch.clientId, clientName: clientMatch.clientName },
+                primaryReport,
+                emailEventId,
+                classificationResults[i],
+                `Processing failed: ${errMsg}`.slice(0, 500),
+              );
+            } catch (pcErr) {
+              console.error(
+                `[inbound][DL-420] fallback PC create failed for "${attachments[i].name}":`,
+                (pcErr as Error).message,
+              );
+            }
+          }
+          failedAttachments.push({ name: attachments[i].name, reason: errMsg.slice(0, 200) });
           // Continue with next attachment
+        }
+      }
+
+      // DL-420: surface per-attachment failures on the email_events row so the
+      // DL-417 dev widget can show a "❗ N failed" badge alongside Completed.
+      // `typecast:true` auto-creates these fields on first PATCH; subsequent
+      // reads must gate in JS until Airtable confirms field existence
+      // (memory: feedback_airtable_typecast_field_existence).
+      if (failedAttachments.length > 0 && emailEventId) {
+        try {
+          await airtable.updateRecord(
+            TABLES.EMAIL_EVENTS,
+            emailEventId,
+            {
+              attachments_failed_count: failedAttachments.length,
+              failed_attachments: failedAttachments
+                .map((f) => `${f.name} | ${f.reason}`)
+                .join('\n')
+                .slice(0, 5000),
+            },
+            { typecast: true },
+          );
+        } catch (e) {
+          console.warn('[inbound][DL-420] failed to stamp attachments_failed_count:', (e as Error).message);
         }
       }
     }

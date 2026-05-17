@@ -90,6 +90,8 @@
             + '#dl417-panel .row .badges{display:inline-flex;gap:4px;margin-top:4px}'
             + '#dl417-panel .row .badge{display:inline-block;padding:1px 6px;border-radius:8px;font-size:10px;background:#e5e7eb;color:#374151}'
             + '#dl417-panel .row .badge.ok{background:#d1fae5;color:#065f46}'
+            + '#dl417-panel .row .badge.fail{background:#fee2e2;color:#991b1b;font-weight:600}'
+            + '#dl417-panel .row.bucket-partial-failure{border-inline-start:3px solid #f59e0b}'
             + '#dl417-panel .row.bucket-stuck{border-inline-start:3px solid #dc2626}'
             + '#dl417-panel .row.bucket-action-required{border-inline-start:3px solid #d97706}'
             + '#dl417-panel .row.bucket-terminal{border-inline-start:3px solid #6b7280}'
@@ -131,7 +133,8 @@
         if (state.open) panel.classList.add('open');
         else panel.classList.remove('open');
 
-        var c = (state.data && state.data.counts) || { stuck: 0, 'action-required': 0, terminal: 0, unknown: 0 };
+        var c = (state.data && state.data.counts) || { stuck: 0, 'action-required': 0, terminal: 0, unknown: 0, 'partial-failure': 0 };
+        var partial = c['partial-failure'] || 0;
         var rows = (state.data && state.data.rows) || [];
 
         var html = ''
@@ -141,9 +144,10 @@
             + '<button type="button" data-action="close">סגור</button>'
             + '</header>'
             + '<div class="counts">'
-            + countPill('all',              'הכל (' + (c.stuck + c['action-required'] + c.terminal + c.unknown) + ')', '')
+            + countPill('all',              'הכל (' + (c.stuck + c['action-required'] + c.terminal + c.unknown + partial) + ')', '')
             + countPill('stuck',            'תקוע (' + c.stuck + ')', 'stuck')
             + countPill('action-required',  'דורש פעולה (' + c['action-required'] + ')', 'action')
+            + countPill('partial-failure',  '❗ כשל חלקי (' + partial + ')', 'stuck')
             + countPill('terminal',         'סופי (' + c.terminal + ')', 'terminal')
             + '</div>';
 
@@ -190,6 +194,11 @@
         if (r.has_matched_document) badges += '<span class="badge ok">📄 doc</span>';
         if (r.has_linked_report) badges += '<span class="badge">👤 client</span>';
         if (r.match_method) badges += '<span class="badge">' + escapeHtml(r.match_method) + '</span>';
+        // DL-420: partial-failure indicator (some attachments dropped during processing)
+        if (r.attachments_failed_count && r.attachments_failed_count > 0) {
+            var ttl = r.failed_attachments ? ' title="' + escapeHtml(r.failed_attachments) + '"' : '';
+            badges += '<span class="badge fail"' + ttl + '>❗ ' + escapeHtml(r.attachments_failed_count) + ' נכשלו</span>';
+        }
 
         if (state.bucket !== 'all' && r.bucket !== state.bucket) return '';
 

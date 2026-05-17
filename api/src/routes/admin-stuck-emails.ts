@@ -37,6 +37,10 @@ type EmailEventFields = {
   report?: string[];
   pending_classifications?: string[];
   document?: string[];
+  // DL-420: partial-failure counters. Auto-created by inbound on first PATCH
+  // (typecast). Until Airtable confirms the field exists in the schema, the
+  // listAllRecords call below MUST NOT reference them in `fields:[]` or it
+  // 422s — we read them post-fetch via `unknown` cast.
 };
 
 function parseSinceDays(s: string | undefined): number {
@@ -47,7 +51,9 @@ function parseSinceDays(s: string | undefined): number {
   return m[2] === 'h' ? n / 24 : n;
 }
 
-function bucketOf(status: string | undefined): 'stuck' | 'action-required' | 'terminal' | 'unknown' {
+type Bucket = 'stuck' | 'action-required' | 'terminal' | 'unknown' | 'partial-failure';
+
+function bucketOf(status: string | undefined): Bucket {
   if (!status) return 'stuck';
   if (BUCKETS.stuck.has(status)) return 'stuck';
   if (BUCKETS['action-required'].has(status)) return 'action-required';
@@ -79,6 +85,10 @@ adminStuckEmails.get('/admin-stuck-emails', async (c) => {
 
   const airtable = new AirtableClient(c.env.AIRTABLE_BASE_ID, c.env.AIRTABLE_PAT);
 
+  // DL-420: omit `fields:[]` so we transparently pick up `attachments_failed_count` +
+  // `failed_attachments` once inbound's first failure-typecast PATCH creates them.
+  // Per memory feedback_airtable_typecast_field_existence we must NOT reference
+  // these in filterByFormula or `fields:[]` until Airtable confirms existence.
   let records: AirtableRecord<EmailEventFields>[];
   try {
     records = await airtable.listAllRecords<EmailEventFields>(TABLES.EMAIL_EVENTS, {
@@ -86,18 +96,31 @@ adminStuckEmails.get('/admin-stuck-emails', async (c) => {
       pageSize: 100,
       maxRecords: limit,
       sort: [{ field: 'received_at', direction: 'desc' }],
-      fields: [
-        'source_message_id', 'source_internet_message_id', 'received_at',
-        'processing_status', 'sender_email', 'subject',
-        'error_message', 'last_error_step', 'match_method',
-        'report', 'pending_classifications', 'document',
-      ],
     });
   } catch (e) {
     return c.json({ ok: false, error: `airtable_query_failed: ${(e as Error).message.slice(0, 200)}` }, 500);
   }
 
-  const counts = { stuck: 0, 'action-required': 0, terminal: 0, unknown: 0 };
+  // DL-420: also surface Completed emails that have partial-failure markers.
+  // Wrapped in try/catch — if the typecast fields haven't been autocreated yet
+  // (no inbound failure has happened post-DL-420 deploy), Airtable 422s and we
+  // skip silently. Once the first failure lands, this query starts returning rows.
+  try {
+    const completedWithFailures = await airtable.listAllRecords<EmailEventFields>(TABLES.EMAIL_EVENTS, {
+      filterByFormula: `AND({processing_status}='Completed',{attachments_failed_count}>0,OR({received_at}='',IS_AFTER({received_at},'${sinceIso}')))`,
+      pageSize: 100,
+      maxRecords: limit,
+      sort: [{ field: 'received_at', direction: 'desc' }],
+    });
+    const seen = new Set(records.map((r) => r.id));
+    for (const r of completedWithFailures) {
+      if (!seen.has(r.id)) records.push(r);
+    }
+  } catch {
+    // Typecast field not yet in schema — first inbound failure post-deploy creates it.
+  }
+
+  const counts = { stuck: 0, 'action-required': 0, terminal: 0, unknown: 0, 'partial-failure': 0 };
   const rows: Array<{
     id: string;
     bucket: string;
@@ -113,14 +136,24 @@ adminStuckEmails.get('/admin-stuck-emails', async (c) => {
     last_error_step: string;
     match_method: string;
     airtable_url: string;
+    /** DL-420 */
+    attachments_failed_count: number;
+    failed_attachments: string;
   }> = [];
 
   const now = Date.now();
 
   for (const rec of records) {
-    const f = rec.fields;
-    const bkt = bucketOf(f.processing_status);
-    counts[bkt]++;
+    const f = rec.fields as EmailEventFields & {
+      attachments_failed_count?: number;
+      failed_attachments?: string;
+    };
+    const failedCount = typeof f.attachments_failed_count === 'number' ? f.attachments_failed_count : 0;
+    // DL-420: Completed emails with partial failures get their own bucket so the
+    // widget shows them separately from full pipeline aborts.
+    const isCompletedWithFailures = f.processing_status === 'Completed' && failedCount > 0;
+    const bkt = isCompletedWithFailures ? 'partial-failure' : bucketOf(f.processing_status);
+    (counts as Record<string, number>)[bkt]++;
 
     if (bucketParam !== 'all' && bkt !== bucketParam) continue;
 
@@ -142,6 +175,8 @@ adminStuckEmails.get('/admin-stuck-emails', async (c) => {
       last_error_step: f.last_error_step || '',
       match_method: f.match_method || '',
       airtable_url: `https://airtable.com/${c.env.AIRTABLE_BASE_ID}/${TABLES.EMAIL_EVENTS}/${rec.id}`,
+      attachments_failed_count: failedCount,
+      failed_attachments: (f.failed_attachments || '').slice(0, 1000),
     });
   }
 
