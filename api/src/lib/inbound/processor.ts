@@ -359,6 +359,15 @@ async function summarizeAndSaveNote(
       /\bpwd\s*[:：]/i.test(cleanBody) ||
       /\bקוד\b/.test(cleanBody);
 
+    // Hard override: never skip emails containing a question, doubt, or dispute.
+    // Sivan 2026-05-17 incident: "הי זכור לי שמיליתי, אני טועה?" was llm_skip'd
+    // even though it's an actual question the office must respond to.
+    const hasQuestion =
+      /[?؟]/.test(cleanBody) ||
+      /\b(האם|למה|מתי|איפה|איך|מדוע|כמה|מי|מה)\b/.test(cleanBody) ||
+      /אני\s+טועה/.test(cleanBody) ||
+      /(לא\s+הבנתי|לא\s+ברור|זה\s+נכון|אתם\s+בטוחים|אני\s+חושב|אני\s+חושבת|זכור\s+לי|נדמה\s+לי)/.test(cleanBody);
+
     // Call LLM with tool_use for structured extraction (DL-262)
     const systemPrompt = `You are a CPA office assistant at an Israeli accounting firm. Parse a client email for an internal timeline.
 
@@ -368,7 +377,8 @@ Rules:
 - Focus on: what the client wants/needs, any urgency, documents or forms mentioned
 - Always summarize in Hebrew, even if the email is in English
 - clean_text should contain only the client's own words, in the original language
-- Set skip=true if the email has no meaningful client communication (only attachments, auto-replies, delivery receipts, signature-only, or forwarded without new text)`;
+- Set skip=true ONLY if the email has no meaningful client communication (auto-replies, delivery receipts, signature-only, attachment-only with no prose, or forwarded without new text)
+- NEVER skip if the client asks a question, expresses doubt, disputes a claim, asks for clarification, or pushes back — even short messages like "אני טועה?" or "זה נכון?" must be kept`;
 
     const tool = {
       name: 'parse_client_email',
@@ -412,16 +422,19 @@ Rules:
       };
       const toolBlock = data.content?.find((b) => b.type === 'tool_use');
       if (toolBlock?.input) {
-        if (toolBlock.input.skip && !hasCredential) {
+        if (toolBlock.input.skip && !hasCredential && !hasQuestion) {
           logSkip('llm_skip');
           return;
         }
         summary = String(toolBlock.input.summary || '');
         cleanText = String(toolBlock.input.clean_text || '');
-        // If the LLM tried to skip a credential-bearing email, force a
-        // sensible summary + raw_snippet from the cleaned body itself.
-        if (toolBlock.input.skip && hasCredential) {
-          if (!summary) summary = subject || cleanBody.split('\n')[0] || 'סיסמה למסמך';
+        // If the LLM tried to skip a credential- or question-bearing email,
+        // force a sensible summary + raw_snippet from the cleaned body itself.
+        if (toolBlock.input.skip && (hasCredential || hasQuestion)) {
+          if (!summary) {
+            const fallback = hasQuestion ? 'שאלה מהלקוח' : 'סיסמה למסמך';
+            summary = subject || cleanBody.split('\n')[0] || fallback;
+          }
           if (!cleanText) cleanText = cleanBody;
         }
       }
