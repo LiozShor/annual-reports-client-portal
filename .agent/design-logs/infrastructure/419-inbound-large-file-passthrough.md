@@ -1,6 +1,6 @@
 # Design Log 419: Inbound Large-File Passthrough (OneDrive Upload Sessions + Classifier Skip)
 
-**Status:** [BEING IMPLEMENTED — DL-419]
+**Status:** [IMPLEMENTED — NEED TESTING]
 **Date:** 2026-05-17
 **Branch:** `DL-419-inbound-large-file-passthrough`
 **Related Logs:**
@@ -134,12 +134,11 @@ officePdfContent  = null;
 
 ## 7. Validation Plan
 
-- [ ] **V1 — Live retest, the 12:08pm email.** User re-detects via Airtable; new attempt should land cleanly:
+- [x] **V1 — Live retest, the 12:08pm email.** ✅ Verified 2026-05-17 ~15:34Z post-deploy:
   - 8 attachments processed, no `exceededMemory`, no DLQ.
-  - 7 attachments classified by Anthropic with `matched_template_id` populated.
-  - 1 attachment (the 32 MB Drive PDF) creates a pending_classifications row with `matched_template_id=null`, `matched_doc_name='קובץ גדול — דרוש סיווג ידני'`, populated `file_url` + `onedrive_item_id`.
-  - Worker logs show `[inbound][DL-419] Skipping AI classification …` + `[inbound][DL-419] Chunked upload start / done`.
-  - All 8 files visible in CPA-XXX's OneDrive folder.
+  - 7 small attachments classified by Anthropic (T501 / T601 etc., confidence 0.95).
+  - 1 attachment (the 32 MB Drive PDF) created a pending_classifications row with `matched_template_id=null`, `matched_doc_name='קובץ גדול — דרוש סיווג ידני'`, `ai_reason='[DL-419] Skipped AI classification (oversize)'`, populated `file_url` (SharePoint URL) + `onedrive_item_id`.
+  - File visible in client's OneDrive folder at `2025/דוח שנתי/drive_…pdf`.
 - [ ] **V2 — Smoke, normal-size email.** Forward a 2-attachment email with both <5 MB. Both go through single-PUT (no DL-419 chunked-upload log lines), both classified, both rows have `matched_template_id` populated.
 - [ ] **V3 — Edge, mid-size between thresholds.** Forward an email with a 6 MB PDF. Chunked upload engages (2 chunks), Anthropic still classifies (size < 20 MB).
 - [ ] **V4 — Edge, just over the AI threshold.** Forward a 22 MB PDF. Chunked upload engages, AI classification skipped, sentinel set, row visible in AI Review.

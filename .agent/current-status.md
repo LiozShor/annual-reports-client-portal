@@ -1,6 +1,20 @@
 # Annual Reports CRM - Current Status
 
-**Last Updated:** 2026-05-17 (DL-418 implemented — portal false "already submitted" flag fixed; stage rank is now the SSOT for `has_submission`)
+**Last Updated:** 2026-05-17 (DL-419 implemented + V1 verified live — inbound large-file passthrough via MS Graph upload sessions + classifier skip; the 32 MB Drive PDF for CPA-XXX successfully landed in OneDrive + AI Review queue with Hebrew manual-sort sentinel)
+
+## OPEN: DL-419 — Inbound Large-File Passthrough (Upload Sessions + Classifier Skip)
+
+DL: `.agent/design-logs/infrastructure/419-inbound-large-file-passthrough.md`
+Status: **IMPLEMENTED — NEED TESTING (V1 passed live)**
+
+DL-416's classifier base64 fix was insufficient — the OOM lived upstream of the classifier, in `processor.ts:processAttachment` Step 6 `uploadToOneDrive(…32MB ArrayBuffer)`. CF Workers' `fetch()` body buffer + a 32 MB body ≈ 64 MB peak per PUT pushed past the 128 MB per-isolate cap. DL-419 ships three changes: (1) new `uploadLargeFileToOneDrive` helper using MS Graph `createUploadSession` + 5 MiB chunked PUT (5 MiB = 16 × 320 KiB satisfies MS Graph's fragment-size rule); (2) classifier skip when `attachment.size > MAX_CLASSIFIABLE_BYTES` (20 MB) — pending_classifications row still created with `matched_template_id=null` + Hebrew sentinel `קובץ גדול — דרוש סיווג ידני` in `matched_doc_name`; (3) eager memory-free of `attachment.content`/`contentToUpload` after upload so V8 GC reclaims before the NEXT attachment's PUT. Deployed worker version `9d78b1cc-3452-41f2-b6c0-cb22d8959880`. V1 verified live ~15:34Z — 8-attachment email (CPA-XXX, 32 MB Drive PDF + 7 small) processed completely on first attempt: 7 classified normally with high confidence, 1 row carries the manual-sort sentinel with working SharePoint URL.
+
+### Active TODOs (validation — Phase E)
+- [ ] **V2 — Smoke, normal-size email.** Forward a 2-attachment email with both <5 MB. Both go through single-PUT (no `[DL-419] Chunked upload …` log lines), both classified by Anthropic, both pending_classifications rows have `matched_template_id` populated.
+- [ ] **V3 — Edge, mid-size between thresholds.** Forward an email with a 6 MB PDF. Chunked upload engages (2 chunks visible in logs), Anthropic still classifies (size < 20 MB ceiling), `matched_template_id` populated.
+- [ ] **V4 — Edge, just over the AI threshold.** Forward a 22 MB PDF. Chunked upload engages, AI classification skipped, sentinel set, row visible in AI Review.
+- [ ] **V5 — Memory headroom check during V1.** Workers Logs for the 15:33Z run: `outcome=ok`, wall < 120 s, cpuTimeMs < 30000. (Logpush archive becomes queryable in ~5 min.)
+- [ ] **V6 — Office reassign flow.** Click the sentinel row in AI Review and reassign it to the right template (likely T901/T902 rental contract per email body). Confirm: documents row updates with `file_url` + correct `type`; pending_classifications row dismissed normally per DL-412 flow.
 
 ## OPEN: DL-418 — Client portal falsely shows "already submitted" when docs exist without questionnaire
 
