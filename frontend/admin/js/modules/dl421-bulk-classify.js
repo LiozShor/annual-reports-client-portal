@@ -349,6 +349,16 @@
         var selectedValue = combobox ? (combobox.dataset.selectedValue || '') : '';
         var docRecordId = combobox ? (combobox.dataset.selectedDocId || '') : '';
         var newDocName = combobox ? (combobox.dataset.newDocName || '').trim() : '';
+        // When user picks an existing chip from the combobox dropdown, the
+        // combobox stores the doc id in selectedDocId but leaves newDocName
+        // empty. The substituted display name lives in the input value
+        // (set by createDocCombobox from opt.dataset.name). Capture it so the
+        // backend can fill issuer_name on placeholder-only docs.
+        if (!newDocName && docRecordId && combobox) {
+            var inputEl = combobox.querySelector('.doc-combobox-input');
+            var displayed = (inputEl && inputEl.value || '').trim();
+            if (displayed) newDocName = displayed;
+        }
         var templateId = selectedValue;
         if (selectedValue === '__NEW__') {
             if (!newDocName) {

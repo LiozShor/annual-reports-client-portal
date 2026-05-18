@@ -3316,7 +3316,23 @@ classifications.post('/bulk-merge-classifications', async (c) => {
       file_url: mergedWebUrl,
       onedrive_item_id: mergedItemId,
       file_hash: mergedHash,
+      status: 'Received',
     };
+    // When admin picked an existing chip and the chip's underlying doc has empty
+    // issuer_name (template placeholder leaks `{var}` into the UI), fill it from
+    // the chip's displayed (substituted) name so the required-docs list renders
+    // properly. Mirrors how single-reassign collects substituted names via
+    // _buildDocTemplatePicker.renderVars (script.js:8164+).
+    if (bulkNewDocName && bulkTargetDocId) {
+      const trimmed = bulkNewDocName.trim();
+      const existingIssuer = (existingReceivedDoc?.fields.issuer_name as string) || '';
+      const placeholderRe = /\{[a-zA-Z_][a-zA-Z0-9_]*\}/;
+      if (!existingIssuer || placeholderRe.test(existingIssuer)) {
+        docPatchFields.issuer_name = trimmed;
+        docPatchFields.issuer_name_en = trimmed;
+        docPatchFields.issuer_key = trimmed;
+      }
+    }
     void mergedSize; // computed for API response only — schema-absent on documents
 
     if (!bulkDocId) {
