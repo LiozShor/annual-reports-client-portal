@@ -249,6 +249,14 @@ export async function expandArchiveAttachments(
   for (let depth = 0; depth < MAX_EXTRACTION_DEPTH; depth++) {
     const nextRound: AttachmentInfo[] = [];
 
+    // INVARIANT (DL-423): On extract success, parent archive is dropped — only
+    // extracted children land in result.attachments. On any failure path
+    // (skipped_too_heavy / extract_failed / empty), the raw archive stays as
+    // the SOLE representative of that attachment. ZIP and its children must
+    // never co-occur in the downstream PC queue. Guarded by
+    // api/test/archive-expander-invariant.test.mjs — do not add
+    // `result.attachments.push(att)` to the extract-success branch without
+    // updating that test.
     for (const att of pending) {
       const ext = getFileExtension(att.name);
 

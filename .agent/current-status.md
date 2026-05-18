@@ -19,6 +19,21 @@ Verified live on second CPA-XXX retry: 15 real-named attachments arrived; U13779
 - [ ] **Drive streaming for >50 MB files (DL-421 candidate).** Stream Drive → OneDrive upload session without buffering in Worker memory. ~80-100 lines.
 
 ## OPEN: DL-419 — Inbound Large-File Passthrough (Upload Sessions + Classifier Skip)
+**Last Updated:** 2026-05-18 (DL-423 implemented — verified live + locked down the "ZIP never alongside its extracted children" invariant in `archive-expander.ts` via a tripwire test that catches the realistic regression without WASM in the test runner)
+
+## OPEN: DL-423 — ZIP never alongside its extracted children in PC queue
+
+DL: `.agent/design-logs/documents/423-zip-extraction-no-parent-pc.md`
+Status: **IMPLEMENTED — NEED TESTING**
+
+Preventive follow-up to DL-260 + DL-420. Office expectation: successful ZIP extraction = children-only PCs; failed extraction (corrupt / password-protected / >30 MB) = raw ZIP as fallback PC. Never both. Live spot-check on CPA-XXX `U13779324.2025.tax.zip` confirmed correct behavior (3 child PCs, zero parent PC). Code in `archive-expander.ts:264–331` already correct; only gap was no regression test guarding it. Added: (a) load-bearing `INVARIANT (DL-423)` comment above the per-attachment loop pointing at the test, (b) `api/test/archive-expander-invariant.test.mjs` — structural tripwire over the `.ts` source: success branch must push `synth` not `att`; each failure branch must push raw `att`; marker present. 5 new tests pass. No behavior change, no script.js bump.
+
+### Active TODOs (validation — Phase E)
+- [ ] **V1 — npm test green.** `cd api && npm test` runs 24 tests, all pass (5 new tripwire + 19 existing).
+- [ ] **V2 — Tripwire fires when invariant broken.** Temporarily edit `archive-expander.ts` to add `result.attachments.push(att)` inside the extract-success branch; rerun the new test; confirm at least one assertion fails. Revert.
+- [ ] **V3 — Tripwire fires when failure-branch passthrough removed.** Temporarily remove the `result.attachments.push(att)` inside the `extract_failed` branch; rerun; confirm the "extract-failure branch pushes raw parent" test fails. Revert.
+- [ ] **V4 — TS clean for archive-expander.ts.** `./node_modules/.bin/tsc --noEmit` shows zero new errors attributable to the comment-only edit (4 pre-existing errors in unrelated files OK).
+- [ ] **V5 — Live spot-check next inbound ZIP.** On the next ZIP-bearing email processed in production, verify AI Review shows only children (or only the raw ZIP if extraction failed), never both.
 
 ## OPEN: DL-419 — Inbound Large-File Passthrough (Upload Sessions + Classifier Skip)
 
