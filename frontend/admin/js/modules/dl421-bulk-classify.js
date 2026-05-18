@@ -46,8 +46,12 @@
     }
 
     function silentRefresh() {
+        // (silent=true, prefetchOnly=false) — uses fingerprint short-circuit +
+        // in-place merge so the active accordion / client / preview stays put.
+        // Was (false, false), which forced a full re-render and dropped the
+        // user back to the first client (DL-410 silent-refresh contract).
         if (typeof window.loadAIClassifications === 'function') {
-            window.loadAIClassifications(false, false);
+            window.loadAIClassifications(true, false);
         }
     }
 
