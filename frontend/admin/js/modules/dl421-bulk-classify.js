@@ -180,7 +180,7 @@
             var ownDocs = item.all_docs || item.missing_docs || [];
             window.createDocCombobox(containerEl, ownDocs, {
                 currentMatchId: item.matched_template_id || null,
-                allowCreate: false,
+                allowCreate: true,
                 onSelect: function (tid) {
                     containerEl.dataset.selectedTemplate = tid || '';
                 }
