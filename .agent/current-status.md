@@ -34,6 +34,31 @@ Preventive follow-up to DL-260 + DL-420. Office expectation: successful ZIP extr
 - [x] **V3 — Tripwire fires when failure-branch passthrough removed.** Confirmed in-session: removed `result.attachments.push(att)` from `extract_failed` branch; test 4 failed as expected; source restored.
 - [x] **V4 — TS clean for archive-expander.ts.** `./node_modules/.bin/tsc --noEmit` shows the same 4 pre-existing errors in unrelated files; none in `archive-expander.ts` or the new test.
 - [ ] **V5 — Live spot-check next inbound ZIP.** On the next ZIP-bearing email processed in production, verify AI Review shows only children (or only the raw ZIP if extraction failed), never both. (Deferred to natural inbound traffic — non-blocking.)
+**Last Updated:** 2026-05-18 (DL-421 implemented — bulk multi-select in AI Review: merge N PDFs into one doc + move N attachments to another client; backend dedicated routes + frontend module with SortableJS drag-reorder; needs live validation before COMPLETED)
+
+## OPEN: DL-421 — Bulk Multi-Select in AI Review (Merge + Move-to-Client)
+
+DL: `.agent/design-logs/ai-review/421-bulk-multi-select-classify.md`
+Status: **IMPLEMENTED — NEED TESTING**
+
+Bulk multi-select in admin AI Review queue with two sibling actions. **Merge:** checkboxes on every card (cap 20, single client, cross-template allowed); confirm modal with drag-reorder (SortableJS lazy-loaded from CDN) + target template picker; existing target doc silently appended (DL-222 merge primitive generalized to `mergePdfsN`); originals marked `approved` + `merged_into=<new_id>` (DL-237 mark-don't-delete pattern, Airtable typecast on first PATCH per DL-404). **Move:** checkboxes (single source client); target client picker; sequential MS Graph moves with download→upload→delete fallback. New backend routes: `POST /webhook/bulk-merge-classifications` + `POST /webhook/bulk-move-classification-client` (mirrors single-move folder-path code from `classifications.ts:2716`). Frontend: new module `frontend/admin/js/modules/dl421-bulk-classify.js` (497 LOC) + ratchet-safe monolith hook (script.js net delta = 0). Initial attempt had `bulk_merge` embedded in `/review-classification` — fix-up commit `5432d373` extracted it to a dedicated route after holistic review caught the pre-existing route guards at lines 786 + 790 blocking it. Commits: `ce33d022`, `8533abe0`, `5432d373`. Wrangler dry-run clean. **NOT YET DEPLOYED** — needs explicit approval before deploy (project policy + ratchet of in-flight DL-419 testing).
+
+### Active TODOs (validation — Phase E)
+- [ ] **V1 — Smoke (golden path).** Pick a real client with 3+ attachments classified to the same template in AI Review. Check 3, click "מזג למסמך אחד", accept default chronological order, confirm. Verify: Airtable shows 3 classifications `status=approved` + `merged_into` populated; documents table has 1 new (or updated existing) record; OneDrive has 1 merged PDF with 3 pages in correct chronological order.
+- [ ] **V2 — Drag-reorder.** Repeat V1 but drag rows in the SortableJS list. Verify merged PDF page order matches the dragged order, not chronological.
+- [ ] **V3 — Existing-doc silent append.** Merge into a template that already has 1 approved doc → existing doc's PDF gets appended pages, NO new doc record created, existing `file_url` shape unchanged.
+- [ ] **V4 — Cross-template merge.** Check 2 cards from 2 different templates, pick a 3rd template as target in the confirm modal. Verify silent merge into target template, originals marked approved.
+- [ ] **V5 — Cross-client guard.** Check a card on Client A; verify checkboxes on cards belonging to other clients become disabled with Hebrew tooltip ("פעולות בכמות הן ללקוח אחד").
+- [ ] **V6 — Cap of 20.** Try to check 21 cards; the 21st refuses + toast appears.
+- [ ] **V7 — Large PDFs (>25 MB merged).** Merge 5 PDFs whose combined size > 30 MB. Verify the upload path engages the DL-419 `createUploadSession` chunked-upload (visible in Worker logs as `[DL-419] Chunked upload …`) and succeeds.
+- [ ] **V8 — Bulk move (golden path).** Select 3 attachments on Client A → click "העבר ללקוח אחר" → pick Client B → confirm. Verify Airtable `client_id` flipped on all 3; OneDrive files now under Client B's folder; cards appear in Client B's AI Review queue; Client A's queue empty of those 3.
+- [ ] **V9 — Cross-client move guard.** Cannot select cards from 2 different source clients (UI prevents it before the bulk bar appears).
+- [ ] **V10 — Silent refresh (project rule P6).** After every bulk action, AI Review queue updates in-place — no page reload, no scroll jump, no flicker, no "refresh to see changes" prompt.
+- [ ] **V11 — No regression on single-card path.** Approve / Reassign / Reject on an UNCHECKED card still works exactly as before. DL-222 2-PDF approve-conflict still fires for the legacy pair case.
+- [ ] **V12 — PII in logs.** Inspect `activity-logs-archive` after a test bulk_merge + bulk_move. Confirm `event_type:'bulk_merge'` / `bulk_move_client` entries contain ONLY IDs + counts — no filenames, no Hebrew names, no emails (DL-365).
+- [ ] **V13 — Mobile.** On mobile width (≤768px), checkboxes are reachable, floating bar is usable, confirm modals are responsive.
+- [ ] **V14 — Airtable `merged_into` field exists.** After V1, confirm in Airtable that the `merged_into` field appears on the classifications table (auto-created via typecast). It should be a Link-to-Record pointing to `documents`. From this point forward, do NOT reference it in `filterByFormula` or `fields:[]` without first JS-checking existence (DL-404 lesson).
+- [ ] **V15 — Pre-deploy check.** Before `wrangler deploy`: confirm DL-419 V2-V6 testing is complete OR that bundling DL-419 + DL-421 deploys is intentional. The office reports to the boss every morning — coordinate deploy timing.
 
 ## OPEN: DL-419 — Inbound Large-File Passthrough (Upload Sessions + Classifier Skip)
 
