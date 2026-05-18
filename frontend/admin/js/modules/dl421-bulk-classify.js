@@ -174,13 +174,45 @@
 
     // ── Template picker (reuse combobox from reassign modal) ──────────────────
 
+    // Module-level capture for the expanded (full-template) picker target.
+    // Mirrors _aiReassignExpandedTarget in script.js — when set, takes priority
+    // over the combobox dataset at submit time (see _dl421SubmitMerge).
+    var _dl421ExpandedTarget = null;
+
     function buildTemplatePicker(containerEl, item) {
+        _dl421ExpandedTarget = null;
         // Use createDocCombobox if available (same as reassign modal)
-        if (typeof window.createDocCombobox === 'function' && item) {
+        if (typeof window.createDocCombobox === 'function' && item && typeof window._buildDocTemplatePicker === 'function') {
             // Mirror showAIReassignModal exactly (script.js:7466-7468)
             var ownDocs = item.all_docs || item.missing_docs || [];
-            console.log('[DL-421] template picker — item:', item.id, 'tpl:', item.matched_template_id, 'all_docs:', (item.all_docs||[]).length, 'missing_docs:', (item.missing_docs||[]).length, 'sibling counts:', (window.aiClassificationsData||[]).filter(function(i){return i.client_id===item.client_id;}).map(function(i){return {id:i.id,all:(i.all_docs||[]).length,miss:(i.missing_docs||[]).length};}));
             window.createDocCombobox(containerEl, ownDocs, {
+                currentMatchId: item.matched_template_id || null,
+                allowCreate: true,
+                onSelect: function (tid) {
+                    containerEl.dataset.selectedTemplate = tid || '';
+                    _dl421ExpandedTarget = null;
+                    var ep = document.getElementById('dl421ExpandedPicker');
+                    if (ep) { ep.style.display = 'none'; ep.innerHTML = ''; }
+                    containerEl.style.display = '';
+                },
+                onExpand: function () {
+                    // Mirror showAIReassignModal onExpand (script.js:7503-7519)
+                    _dl421ExpandedTarget = null;
+                    var picker = document.getElementById('dl421ExpandedPicker');
+                    if (!picker) return;
+                    containerEl.style.display = 'none';
+                    picker.style.display = '';
+                    window._buildDocTemplatePicker(picker, item, {
+                        onPick: function (target) {
+                            _dl421ExpandedTarget = target;
+                        }
+                    });
+                }
+            });
+        } else if (typeof window.createDocCombobox === 'function' && item) {
+            // Fallback: no _buildDocTemplatePicker available — combobox only.
+            var ownDocs2 = item.all_docs || item.missing_docs || [];
+            window.createDocCombobox(containerEl, ownDocs2, {
                 currentMatchId: item.matched_template_id || null,
                 allowCreate: true,
                 onSelect: function (tid) {
@@ -240,6 +272,7 @@
             '<ul id="dl421SortList" style="padding:0;margin:0 0 14px 0;">' + listRowsHtml + '</ul>' +
             '<div style="font-size:13px;font-weight:500;margin-bottom:6px;">בחר תבנית יעד:</div>' +
             '<div id="dl421TemplatePicker" data-selected-template="' + esc((refItem && refItem.matched_template_id) || '') + '"></div>' +
+            '<div id="dl421ExpandedPicker" style="display:none;margin-top:10px;"></div>' +
             '</div>' +
             '<div class="ai-modal-panel-footer" style="display:flex;justify-content:flex-end;gap:10px;padding:12px 18px;border-top:1px solid var(--gray-200);">' +
             '<button class="btn btn-secondary" onclick="closeMergeModal()">ביטול</button>' +
@@ -280,6 +313,14 @@
             ? Array.from(listEl.querySelectorAll('.dl421-sort-item')).map(function (li) { return li.dataset.id; })
             : Array.from(selectedSet);
 
+        // Priority 1 — expanded-picker pick (mirrors confirmAIReassign DL-336 branch
+        // at script.js:7938-7945). Set by the full-template picker's onPick.
+        if (_dl421ExpandedTarget && _dl421ExpandedTarget.template_id) {
+            var et = _dl421ExpandedTarget;
+            await _dl421DoMerge(orderedIds, et.template_id, et.new_doc_name || '', '');
+            return;
+        }
+
         // Get selected template — mirror confirmAIReassign (script.js:7960-7977).
         // The combobox writes selectedValue / selectedDocId / newDocName onto the
         // .doc-combobox child; selectedValue==='__NEW__' means "create a new doc
@@ -304,6 +345,10 @@
             return;
         }
 
+        await _dl421DoMerge(orderedIds, templateId, newDocName, docRecordId);
+    };
+
+    async function _dl421DoMerge(orderedIds, templateId, newDocName, docRecordId) {
         var confirmBtn = document.getElementById('dl421MergeConfirmBtn');
         if (confirmBtn) { confirmBtn.disabled = true; confirmBtn.textContent = 'ממזג...'; }
 
@@ -344,7 +389,7 @@
                 window.showModal('error', 'שגיאה', String(err && err.message ? err.message : err));
             }
         }
-    };
+    }
 
     // ── Move modal ────────────────────────────────────────────────────────────
 
