@@ -3731,7 +3731,7 @@ function createDocCombobox(container, docs, { currentMatchId = null, onSelect = 
 
 // ==================== AI REVIEW ====================
 
-let aiClassificationsData = []; Object.defineProperty(window, 'aiClassificationsData', { get: () => aiClassificationsData }); window.createDocCombobox = createDocCombobox; window.transitionCardToReviewed = transitionCardToReviewed; window.updateClientDocState = updateClientDocState; // DL-421
+let aiClassificationsData = []; Object.defineProperty(window, 'aiClassificationsData', { get: () => aiClassificationsData }); window.createDocCombobox = createDocCombobox; window.transitionCardToReviewed = transitionCardToReviewed; window.updateClientDocState = updateClientDocState; window.renderContractMonthsInput = renderContractMonthsInput; window.isRentalTemplate = isRentalTemplate; // DL-421 + DL-425
 let aiCurrentReassignId = null;
 let aiReviewLoaded = false;
 let aiReviewLoadedAt = 0;

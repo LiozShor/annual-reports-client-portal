@@ -183,6 +183,29 @@
     // over the combobox dataset at submit time (see _dl421SubmitMerge).
     var _dl421ExpandedTarget = null;
 
+    // DL-425: Contract-months control for T901/T902 bulk-merge. Mirrors
+    // _dl397ReassignMonthsCtrl pattern from script.js:7897-7935. Mounted into
+    // #dl421MergeContractMonths whenever the picked template is rental.
+    var _dl425MergeMonthsCtrl = null;
+    function _dl425SyncMergeMonths(templateId, refItem) {
+        var section = document.getElementById('dl421MergeContractMonths');
+        if (!section) return;
+        var isRental = (typeof window.isRentalTemplate === 'function') && window.isRentalTemplate(templateId);
+        if (isRental && typeof window.renderContractMonthsInput === 'function') {
+            var year = (refItem && refItem.year) || new Date().getFullYear();
+            section.style.display = '';
+            _dl425MergeMonthsCtrl = window.renderContractMonthsInput({
+                containerEl: section,
+                year: year,
+                idPrefix: 'dl425-bulk',
+            });
+        } else {
+            section.style.display = 'none';
+            section.innerHTML = '';
+            _dl425MergeMonthsCtrl = null;
+        }
+    }
+
     function buildTemplatePicker(containerEl, item) {
         _dl421ExpandedTarget = null;
         // Use createDocCombobox if available (same as reassign modal)
@@ -198,6 +221,7 @@
                     var ep = document.getElementById('dl421ExpandedPicker');
                     if (ep) { ep.style.display = 'none'; ep.innerHTML = ''; }
                     containerEl.style.display = '';
+                    _dl425SyncMergeMonths(tid || '', item); // DL-425
                 },
                 onExpand: function () {
                     // Mirror showAIReassignModal onExpand (script.js:7503-7519)
@@ -209,6 +233,7 @@
                     window._buildDocTemplatePicker(picker, item, {
                         onPick: function (target) {
                             _dl421ExpandedTarget = target;
+                            _dl425SyncMergeMonths((target && target.template_id) || '', item); // DL-425
                         }
                     });
                 }
@@ -221,6 +246,7 @@
                 allowCreate: true,
                 onSelect: function (tid) {
                     containerEl.dataset.selectedTemplate = tid || '';
+                    _dl425SyncMergeMonths(tid || '', item); // DL-425
                 }
             });
         } else {
@@ -292,6 +318,7 @@
             '<div style="font-size:13px;font-weight:500;margin-bottom:6px;">בחר תבנית יעד:</div>' +
             '<div id="dl421TemplatePicker" data-selected-template="' + esc((refItem && refItem.matched_template_id) || '') + '"></div>' +
             '<div id="dl421ExpandedPicker" style="display:none;margin-top:10px;"></div>' +
+            '<div id="dl421MergeContractMonths" style="display:none;margin-top:12px;"></div>' + // DL-425
             '</div>' +
             '<div class="ai-modal-panel-footer" style="display:flex;justify-content:flex-end;gap:10px;padding:12px 18px;border-top:1px solid var(--gray-200);">' +
             '<button class="btn btn-secondary" onclick="closeMergeModal()">ביטול</button>' +
@@ -303,6 +330,10 @@
         // Build template picker
         var pickerEl = document.getElementById('dl421TemplatePicker');
         if (pickerEl) buildTemplatePicker(pickerEl, refItem);
+
+        // DL-425: prime the contract-months section based on the initial template
+        // (only mounts the control if T901/T902; otherwise stays hidden).
+        _dl425SyncMergeMonths((refItem && refItem.matched_template_id) || '', refItem);
 
         // Init SortableJS
         ensureSortable().then(function () {
@@ -320,6 +351,7 @@
     window.closeMergeModal = function () {
         var el = document.getElementById('dl421MergeOverlay');
         if (el) el.remove();
+        _dl425MergeMonthsCtrl = null; // DL-425
     };
 
     window._dl421SubmitMerge = async function () {
@@ -332,11 +364,29 @@
             ? Array.from(listEl.querySelectorAll('.dl421-sort-item')).map(function (li) { return li.dataset.id; })
             : Array.from(selectedSet);
 
+        // DL-425: collect + validate contract-months for T901/T902 targets.
+        // Returns {} for non-rental, {contract_period:{...}} when valid, or null
+        // when validation fails (toast already shown by ctrl.validate()).
+        function collectExtras(tplId) {
+            if (typeof window.isRentalTemplate !== 'function' || !window.isRentalTemplate(tplId)) return {};
+            if (!_dl425MergeMonthsCtrl) return null;
+            var v = _dl425MergeMonthsCtrl.validate();
+            if (!v.ok) {
+                if (typeof window.showAIToast === 'function') {
+                    window.showAIToast(v.error || 'נא למלא את חודשי החוזה', 'danger');
+                }
+                return null;
+            }
+            return { contract_period: _dl425MergeMonthsCtrl.getValues() };
+        }
+
         // Priority 1 — expanded-picker pick (mirrors confirmAIReassign DL-336 branch
         // at script.js:7938-7945). Set by the full-template picker's onPick.
         if (_dl421ExpandedTarget && _dl421ExpandedTarget.template_id) {
             var et = _dl421ExpandedTarget;
-            await _dl421DoMerge(orderedIds, et.template_id, et.new_doc_name || '', '');
+            var etExtras = collectExtras(et.template_id);
+            if (etExtras === null) return; // validation failed — keep modal open
+            await _dl421DoMerge(orderedIds, et.template_id, et.new_doc_name || '', '', etExtras.contract_period || null);
             return;
         }
 
@@ -374,10 +424,12 @@
             return;
         }
 
-        await _dl421DoMerge(orderedIds, templateId, newDocName, docRecordId);
+        var cbExtras = collectExtras(templateId);
+        if (cbExtras === null) return; // DL-425: validation failed — keep modal open
+        await _dl421DoMerge(orderedIds, templateId, newDocName, docRecordId, cbExtras.contract_period || null);
     };
 
-    async function _dl421DoMerge(orderedIds, templateId, newDocName, docRecordId) {
+    async function _dl421DoMerge(orderedIds, templateId, newDocName, docRecordId, contractPeriod) {
         var confirmBtn = document.getElementById('dl421MergeConfirmBtn');
         if (confirmBtn) { confirmBtn.disabled = true; confirmBtn.textContent = 'ממזג...'; }
 
@@ -393,7 +445,8 @@
                     target_template_id: templateId,
                     new_doc_name: newDocName || undefined,
                     target_doc_record_id: docRecordId || undefined,
-                    ordered_classification_ids: orderedIds
+                    ordered_classification_ids: orderedIds,
+                    contract_period: contractPeriod || undefined // DL-425
                 })
             });
             var data = await resp.json();

@@ -136,7 +136,7 @@ Mirrors single-card approve (`script.js:6818-6823`).
 ## 7. Out of scope (today)
 
 - **Spouse threading.** All bulk-merge new docs are created with `person: 'client'`. Reassign supports a per-pick spouse tab — bulk-merge would need a similar control in the modal. Defer until a real use case lands.
-- **T901/T902 contract-period prompts.** Single-reassign collects `contract_period` for rental docs. Bulk-merge skips this; if admin picks T901/T902 the period won't be captured (donations / receipts are the primary case).
+- ~~**T901/T902 contract-period prompts.**~~ **CLOSED — DL-425 (2026-05-18).** Bulk-merge now mirrors single-reassign's DL-397 months prompt and writes `contract_period` to every merged PC plus applies the DL-415 `<b>MM.YYYY-MM.YYYY</b>` suffix to the merged doc.
 - **Re-classify on move-to-client.** The sibling `/bulk-move-classification-client` route keeps each attachment's existing template (DL-421 §6.2).
 - **Undo button.** Originals are recoverable via the `merged_into` reverse link (auto-created via Schema API on 2026-05-18, field id `fldJ4MsZdxHflXbbf`) — no UI surface yet.
 

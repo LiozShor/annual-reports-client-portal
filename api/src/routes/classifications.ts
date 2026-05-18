@@ -3138,6 +3138,8 @@ classifications.post('/bulk-merge-classifications', async (c) => {
     new_doc_name?: string;
     target_doc_record_id?: string;
     ordered_classification_ids?: string[];
+    // DL-425: contract months for T901/T902 bulk-merge (mirrors single-reassign DL-397)
+    contract_period?: { startDate?: string; endDate?: string };
   };
   try { body = await c.req.json(); } catch { return c.json({ ok: false, error: 'Invalid JSON' }, 400); }
 
@@ -3149,7 +3151,7 @@ classifications.post('/bulk-merge-classifications', async (c) => {
   }
 
   // ---- Validate body ----
-  const { client_id: bulkClientId, target_template_id: bulkTemplateId, new_doc_name: bulkNewDocName, target_doc_record_id: bulkTargetDocId, ordered_classification_ids: orderedIds } = body;
+  const { client_id: bulkClientId, target_template_id: bulkTemplateId, new_doc_name: bulkNewDocName, target_doc_record_id: bulkTargetDocId, ordered_classification_ids: orderedIds, contract_period: bulkContractPeriod } = body;
 
   if (!bulkClientId || typeof bulkClientId !== 'string') {
     return c.json({ ok: false, error: 'invalid_request', detail: 'client_id required' }, 400);
@@ -3163,6 +3165,26 @@ classifications.post('/bulk-merge-classifications', async (c) => {
   if (!Array.isArray(orderedIds) || orderedIds.length < 1 || orderedIds.length > 20) {
     return c.json({ ok: false, error: 'invalid_request', detail: 'ordered_classification_ids must be an array of 1..20 ids' }, 400);
   }
+
+  // DL-425: Validate + serialize contract_period for T901/T902 rental bulk-merges.
+  // Mirrors single-reassign path in /review-classification (this file, ~L865-873).
+  // Permissive when missing: rental templates without months proceed without
+  // contract_period (frontend prevention is the primary gate). Strict when present:
+  // reject malformed dates with 400.
+  let builtPeriod: { json: string; contractPeriod: { startDate: string; endDate: string; coversFullYear: boolean } } | null = null;
+  if (['T901', 'T902'].includes(bulkTemplateId) && bulkContractPeriod && bulkContractPeriod.startDate && bulkContractPeriod.endDate) {
+    const built = buildContractPeriod(bulkContractPeriod.startDate, bulkContractPeriod.endDate);
+    if ('error' in built) {
+      return c.json({ ok: false, error: 'invalid_contract_period', detail: built.error }, 400);
+    }
+    builtPeriod = built;
+  }
+  // Synthetic clsFields for applyPeriodSuffixToDocFields — same shape as a real
+  // CLASSIFICATION row's relevant fields. Reused by both the new-doc CREATE and
+  // existing-doc PATCH branches below.
+  const periodClsFields: Record<string, unknown> = builtPeriod
+    ? { matched_template_id: bulkTemplateId, contract_period: builtPeriod.json }
+    : {};
 
   try {
     // ---- Step 1: validate all classification rows exist and belong to the given client ----
@@ -3364,6 +3386,10 @@ classifications.post('/bulk-merge-classifications', async (c) => {
     }
     void mergedSize; // computed for API response only — schema-absent on documents
 
+    // DL-425: re-apply MM.YYYY-MM.YYYY suffix on issuer_name / document_key / uid
+    // for the existing-doc PATCH path (DL-415 helper is idempotent — strips prior).
+    if (builtPeriod) applyPeriodSuffixToDocFields(docPatchFields, periodClsFields);
+
     if (!bulkDocId) {
       // Create new documents row — derive reportId from first classification (Fix 2: scope-leak fix)
       const reportId = getField((clsRecords[0].fields as Record<string, unknown>).report) as string;
@@ -3403,6 +3429,9 @@ classifications.post('/bulk-merge-classifications', async (c) => {
         ...(reportId ? { report: [reportId] } : {}),
         ...docExtraFields,
       };
+      // DL-425: apply MM.YYYY-MM.YYYY suffix to issuer_name / document_key / uid
+      // on the new-doc CREATE branch (same SSOT as existing-doc PATCH above).
+      if (builtPeriod) applyPeriodSuffixToDocFields(newDocRow, periodClsFields);
       const stripEmpBulk = (obj: Record<string, unknown>): Record<string, unknown> =>
         Object.fromEntries(Object.entries(obj).filter(([, v]) => v != null && v !== ''));
       const createdBulk = await airtable.createRecords(TABLES.DOCUMENTS, [{ fields: stripEmpBulk(newDocRow) }], { typecast: true });
@@ -3432,13 +3461,18 @@ classifications.post('/bulk-merge-classifications', async (c) => {
         // Also overwrite matched_template_id / matched_doc_name on every merged
         // PC so the AI Review "תואם ל" label reflects the admin's chosen target
         // (was: PCs the classifier didn't match showed "לא ידוע" post-merge).
-        await airtable.updateRecord(TABLES.CLASSIFICATIONS, rec.id, {
+        const pcPatch: Record<string, unknown> = {
           review_status: 'approved',
           merged_into: [bulkDocId],
           matched_template_id: bulkTemplateId,
           matched_doc_name: bulkTemplateId === 'general_doc' ? (bulkNewDocName || '') : '',
           reviewed_at: new Date().toISOString(),
-        }, { typecast: true });
+        };
+        // DL-425: persist contract_period (JSON string) on every merged PC so
+        // downstream consumers (banner swap, missing-period button, period-edit
+        // dialog) see the same shape as single-reassign.
+        if (builtPeriod) pcPatch.contract_period = builtPeriod.json;
+        await airtable.updateRecord(TABLES.CLASSIFICATIONS, rec.id, pcPatch, { typecast: true });
       } catch (clsPatchErr) {
         // Log loudly but continue — partial state is alarmed, not fatal
         logError(c.executionCtx, c.env, {
@@ -3460,6 +3494,7 @@ classifications.post('/bulk-merge-classifications', async (c) => {
         count: orderedIds.length,
         template_id: bulkTemplateId,
         doc_id: bulkDocId,
+        has_contract_period: !!builtPeriod, // DL-425 — boolean only, no date PII
       },
     });
 
