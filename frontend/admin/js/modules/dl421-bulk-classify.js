@@ -60,7 +60,7 @@
             if (sortableLoading) return;
             sortableLoading = true;
             var script = document.createElement('script');
-            script.src = 'https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js';
+            script.src = 'https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.2/Sortable.min.js';
             script.onload = function () {
                 sortableLoaded = true;
                 sortableLoading = false;
@@ -98,7 +98,7 @@
             bar = document.createElement('div');
             bar.id = 'dl421BulkBar';
             bar.className = 'floating-bulk-bar';
-            bar.style.cssText = 'position:fixed;bottom:24px;inset-inline-start:50%;transform:translateX(-50%);' +
+            bar.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);' +
                 'background:#1e293b;color:#f8fafc;border-radius:10px;padding:10px 18px;display:flex;' +
                 'align-items:center;gap:12px;z-index:9998;box-shadow:0 4px 20px rgba(0,0,0,.4);' +
                 'font-size:14px;white-space:nowrap;';
