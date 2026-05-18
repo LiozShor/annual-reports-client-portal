@@ -1,6 +1,6 @@
 # DL-424: Approve & Send "send again" silently dedup'd — admin UI missing `force=1`
 
-**Status:** [IMPLEMENTED — NEED TESTING]
+**Status:** [COMPLETED — 2026-05-18]
 **Created:** 2026-05-18
 **Implemented:** 2026-05-18
 **Branch:** claude-session-20260518-102636
