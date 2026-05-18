@@ -3359,8 +3359,10 @@ classifications.post('/bulk-merge-classifications', async (c) => {
     // PATCH each pending_classifications row
     for (const rec of clsRecords) {
       try {
+        // pending_classifications uses `review_status` not `status` (verified
+        // live 2026-05-18). merged_into is a new field auto-created by typecast.
         await airtable.updateRecord(TABLES.CLASSIFICATIONS, rec.id, {
-          status: 'approved',
+          review_status: 'approved',
           merged_into: bulkDocId,
         }, { typecast: true });
       } catch (clsPatchErr) {
