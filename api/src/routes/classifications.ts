@@ -3149,7 +3149,7 @@ classifications.post('/bulk-merge-classifications', async (c) => {
   }
 
   // ---- Validate body ----
-  const { client_id: bulkClientId, target_template_id: bulkTemplateId, new_doc_name: bulkNewDocName, ordered_classification_ids: orderedIds } = body;
+  const { client_id: bulkClientId, target_template_id: bulkTemplateId, new_doc_name: bulkNewDocName, target_doc_record_id: bulkTargetDocId, ordered_classification_ids: orderedIds } = body;
 
   if (!bulkClientId || typeof bulkClientId !== 'string') {
     return c.json({ ok: false, error: 'invalid_request', detail: 'client_id required' }, 400);
@@ -3193,29 +3193,34 @@ classifications.post('/bulk-merge-classifications', async (c) => {
       pdfBuffers.push(buf);
     }
 
-    // ---- Step 3: check for existing Received doc for this report + template ----
+    // ---- Step 3: resolve target doc ----
+    // Priority: (a) explicit target_doc_record_id from the picker (admin chose
+    // an existing chip — that exact doc is the target); (b) general_doc OR
+    // new_doc_name (always create a fresh row); (c) look up the latest Received
+    // doc of this template on the report (silent-append path).
     // DL-404 typecast gate: do NOT reference merged_into in filterByFormula AND
-    // do not include typecast-created fields (file_sha256, file_size, page_count)
-    // in `fields:[]` — they 422 with UNKNOWN_FIELD_NAME until first PATCH creates
-    // them. Drop the allowlist entirely; we read what's there post-fetch.
-    // For general_doc OR any templated pick with new_doc_name (admin used the
-    // expanded picker / typed a custom name → wants a NEW instance, mirrors
-    // reassign DL-391 at classifications.ts:1437-1469), skip the lookup.
+    // do not include typecast-created fields in `fields:[]`.
     // Filter by report_record_id (the documents→reports link).
     const lookupReportId = getField((clsRecords[0].fields as Record<string, unknown>).report) as string;
-    const existingDocsForMerge = (bulkTemplateId === 'general_doc' || !!bulkNewDocName || !lookupReportId)
-      ? []
-      : await airtable.listAllRecords(TABLES.DOCUMENTS, {
-          filterByFormula: `AND({type} = '${escapeAirtableValue(bulkTemplateId)}', FIND('${escapeAirtableValue(lookupReportId)}', ARRAYJOIN({report_record_id})), {status} = 'Received')`,
-          maxRecords: 1,
-        });
+    let existingReceivedDoc: { id: string; fields: Record<string, unknown> } | null = null;
+    if (bulkTargetDocId) {
+      try {
+        existingReceivedDoc = await airtable.getRecord(TABLES.DOCUMENTS, bulkTargetDocId) as { id: string; fields: Record<string, unknown> };
+      } catch {
+        return c.json({ ok: false, error: 'target_doc_not_found' }, 400);
+      }
+    } else if (!(bulkTemplateId === 'general_doc' || !!bulkNewDocName || !lookupReportId)) {
+      const found = await airtable.listAllRecords(TABLES.DOCUMENTS, {
+        filterByFormula: `AND({type} = '${escapeAirtableValue(bulkTemplateId)}', FIND('${escapeAirtableValue(lookupReportId)}', ARRAYJOIN({report_record_id})), {status} = 'Received')`,
+        maxRecords: 1,
+      });
+      existingReceivedDoc = found.length > 0 ? (found[0] as { id: string; fields: Record<string, unknown> }) : null;
+    }
 
     let bulkDocId: string;
     let finalMergedBytes: Uint8Array;
     let existingDocItemId: string | null = null;
     let isAppendMode = false;
-
-    const existingReceivedDoc = existingDocsForMerge.length > 0 ? existingDocsForMerge[0] : null;
     if (existingReceivedDoc) {
       const ef = existingReceivedDoc.fields as Record<string, unknown>;
       existingDocItemId = ef.onedrive_item_id as string | null;
