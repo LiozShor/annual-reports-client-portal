@@ -3731,7 +3731,7 @@ function createDocCombobox(container, docs, { currentMatchId = null, onSelect = 
 
 // ==================== AI REVIEW ====================
 
-let aiClassificationsData = [];
+let aiClassificationsData = []; Object.defineProperty(window, 'aiClassificationsData', { get: () => aiClassificationsData }); window.createDocCombobox = createDocCombobox; // DL-421
 let aiCurrentReassignId = null;
 let aiReviewLoaded = false;
 let aiReviewLoadedAt = 0;
