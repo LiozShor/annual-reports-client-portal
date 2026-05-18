@@ -1,6 +1,6 @@
 # DL-423 — ZIP never alongside its extracted children in PC queue
 
-**Status:** [IMPLEMENTED — NEED TESTING]
+**Status:** [COMPLETED — 2026-05-18]
 **Domain:** documents/
 **Branch:** `claude-session-20260518-083045`
 **Trigger:** Preventive — follow-up to DL-420. Real `U13779324.2025.tax.zip` from CPA-XXX was extracted into 3 children PCs; office asked whether the parent ZIP also lands in AI Review.
@@ -91,11 +91,11 @@ This catches the realistic regression (someone adds `result.attachments.push(att
 
 ## 7. Validation Plan
 
-- [ ] `cd api && npm test` runs all `.mjs` tests including the new `archive-expander-invariant.test.mjs`. All assertions pass.
-- [ ] Manually attempt a regression: temporarily edit `archive-expander.ts` to add `result.attachments.push(att)` inside the extract-success `else` branch; rerun tests; verify the tripwire fires. Revert.
-- [ ] `cd api && ./node_modules/.bin/tsc --noEmit` — clean (no TS errors from comment-only change).
-- [ ] Live spot-check on the next ZIP-bearing email received → confirm only children appear in AI Review.
-- [ ] Mark `[COMPLETED]` only after all four items checked.
+- [x] `cd api && npm test` runs all `.mjs` tests including the new `archive-expander-invariant.test.mjs`. All assertions pass.
+- [x] Manually attempt a regression: temporarily edit `archive-expander.ts` to add `result.attachments.push(att)` inside the extract-success `else` branch; rerun tests; verify the tripwire fires. Revert.
+- [x] `cd api && ./node_modules/.bin/tsc --noEmit` — clean (no TS errors from comment-only change).
+- [x] Live spot-check on the next ZIP-bearing email received → confirm only children appear in AI Review.
+- [x] Mark `[COMPLETED]` only after all four items checked.
 
 ## 8. Implementation Notes
 
