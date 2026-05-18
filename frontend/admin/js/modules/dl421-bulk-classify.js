@@ -293,8 +293,8 @@
         if (confirmBtn) { confirmBtn.disabled = true; confirmBtn.textContent = 'ממזג...'; }
 
         try {
-            var mergeUrl = (window.ENDPOINTS && window.ENDPOINTS.REVIEW_CLASSIFICATION)
-                || 'https://annual-reports-api.liozshor1.workers.dev/webhook/review-classification';
+            var mergeUrl = (window.ENDPOINTS && window.ENDPOINTS.BULK_MERGE_CLASSIFICATIONS)
+                || 'https://annual-reports-api.liozshor1.workers.dev/webhook/bulk-merge-classifications';
             var resp = await fetch(mergeUrl, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + getAuthToken() },

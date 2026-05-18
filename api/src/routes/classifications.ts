@@ -1663,240 +1663,6 @@ classifications.post('/review-classification', async (c) => {
       });
     }
 
-    // ---- DL-421: bulk_merge — merge N classifications into a single document ----
-    if (action === 'bulk_merge') {
-      const {
-        client_id: bulkClientId,
-        target_template_id: bulkTemplateId,
-        ordered_classification_ids: orderedIds,
-      } = body as {
-        client_id?: string;
-        target_template_id?: string;
-        ordered_classification_ids?: string[];
-      };
-
-      if (!bulkClientId || typeof bulkClientId !== 'string') {
-        return c.json({ ok: false, error: 'client_id required' }, 400);
-      }
-      if (!bulkTemplateId || typeof bulkTemplateId !== 'string') {
-        return c.json({ ok: false, error: 'target_template_id required' }, 400);
-      }
-      if (!Array.isArray(orderedIds) || orderedIds.length < 1 || orderedIds.length > 20) {
-        return c.json({ ok: false, error: 'ordered_classification_ids must be an array of 1..20 ids' }, 400);
-      }
-
-      // Step 1: validate all classification rows exist and belong to the given client
-      const clsRecords: Array<{ id: string; fields: Record<string, unknown> }> = [];
-      for (const cid of orderedIds) {
-        let rec: { id: string; fields: Record<string, unknown> };
-        try {
-          rec = await airtable.getRecord(TABLES.CLASSIFICATIONS, cid) as { id: string; fields: Record<string, unknown> };
-        } catch {
-          return c.json({ ok: false, error: 'cross_client_or_missing' }, 400);
-        }
-        const recClientId = getField((rec.fields as Record<string, unknown>).client_id) as string;
-        if (recClientId !== bulkClientId) {
-          return c.json({ ok: false, error: 'cross_client_or_missing' }, 400);
-        }
-        clsRecords.push(rec);
-      }
-
-      // Step 2: fetch each PDF from OneDrive in declared order
-      const msGraphBulk = new MSGraphClient(env, c.executionCtx);
-      const pdfBuffers: ArrayBuffer[] = [];
-      for (const rec of clsRecords) {
-        const itemId = (rec.fields as Record<string, unknown>).onedrive_item_id as string;
-        if (!itemId) {
-          return c.json({ ok: false, error: `Classification ${rec.id} has no onedrive_item_id` }, 400);
-        }
-        const buf = await msGraphBulk.getBinary(`/drives/${DRIVE_ID}/items/${itemId}/content`);
-        pdfBuffers.push(buf);
-      }
-
-      // Step 3: check for existing Received doc for this client + template
-      // DL-404 typecast gate: do NOT reference merged_into in filterByFormula
-      const existingDocsForMerge = await airtable.listAllRecords(TABLES.DOCUMENTS, {
-        filterByFormula: `AND({type} = '${escapeAirtableValue(bulkTemplateId)}', FIND('${escapeAirtableValue(bulkClientId)}', ARRAYJOIN({client_id_lookup})), {status} = 'Received')`,
-        fields: ['status', 'onedrive_item_id', 'file_url', 'file_sha256', 'file_size', 'page_count'],
-        maxRecords: 1,
-      });
-
-      let bulkDocId: string;
-      let finalMergedBytes: Uint8Array;
-      let existingDocItemId: string | null = null;
-      let isAppendMode = false;
-
-      const existingReceivedDoc = existingDocsForMerge.length > 0 ? existingDocsForMerge[0] : null;
-      if (existingReceivedDoc) {
-        const ef = existingReceivedDoc.fields as Record<string, unknown>;
-        existingDocItemId = ef.onedrive_item_id as string | null;
-        if (existingDocItemId && ef.file_url) {
-          isAppendMode = true;
-          bulkDocId = existingReceivedDoc.id;
-          // Download existing doc and prepend it
-          const existingBuf = await msGraphBulk.getBinary(`/drives/${DRIVE_ID}/items/${existingDocItemId}/content`);
-          finalMergedBytes = await mergePdfsN([existingBuf, ...pdfBuffers]);
-        } else {
-          // Existing doc row but no file — treat as create
-          bulkDocId = existingReceivedDoc.id;
-          isAppendMode = false;
-          finalMergedBytes = await mergePdfsN(pdfBuffers);
-        }
-      } else {
-        // Will create a new doc row below after upload
-        bulkDocId = '';
-        finalMergedBytes = await mergePdfsN(pdfBuffers);
-      }
-
-      const mergedBuf = finalMergedBytes.buffer as ArrayBuffer;
-      const mergedHash = await computeSha256(mergedBuf);
-      const mergedSize = mergedBuf.byteLength;
-
-      // Step 4: compute page count (best-effort from pdf-lib)
-      // We don't import pdf-lib directly here; we proxy via mergePdfsN output size.
-      // page_count: count from the Uint8Array (approximate). Use array length of buffers as fallback.
-      // Actually count properly: sum clsRecords page_count fields
-      let mergedPageCount = 0;
-      for (const rec of clsRecords) {
-        mergedPageCount += Number((rec.fields as Record<string, unknown>).page_count || 0);
-      }
-      if (isAppendMode) {
-        const ef = (existingReceivedDoc as { id: string; fields: Record<string, unknown> }).fields;
-        mergedPageCount += Number(ef.page_count || 0);
-      }
-
-      // Step 5: upload merged PDF to OneDrive
-      const LARGE_THRESHOLD = 25 * 1024 * 1024;
-      let mergedWebUrl: string;
-      let mergedItemId: string;
-
-      if (isAppendMode && existingDocItemId) {
-        // Re-upload over the same item (preserves URL)
-        if (mergedSize > LARGE_THRESHOLD) {
-          // For append mode over existing item, use putBinary chunked path via createUploadSession
-          // but targeting the existing item's content endpoint
-          const uploadPath = `/drives/${DRIVE_ID}/items/${existingDocItemId}/content`;
-          const uploadResult = await msGraphBulk.putBinary(uploadPath, mergedBuf);
-          mergedWebUrl = uploadResult.webUrl || '';
-          mergedItemId = uploadResult.id || existingDocItemId;
-        } else {
-          const uploadResult = await msGraphBulk.putBinary(
-            `/drives/${DRIVE_ID}/items/${existingDocItemId}/content`,
-            mergedBuf,
-          );
-          mergedWebUrl = uploadResult.webUrl || '';
-          mergedItemId = uploadResult.id || existingDocItemId;
-        }
-      } else {
-        // New upload — use uploadToOneDrive which handles large files via createUploadSession
-        const oneDriveRootBulk = await resolveOneDriveRoot(msGraphBulk);
-        // Derive client name and year from first classification record
-        const firstCls = clsRecords[0].fields as Record<string, unknown>;
-        const clientNameBulk = (getField(firstCls.client_name) as string) || bulkClientId;
-        const yearBulk = String((firstCls.year as number) || new Date().getFullYear());
-        const filingTypeBulk = (firstCls.filing_type as string) || 'annual_report';
-        const mergedFilename = `merged_${bulkTemplateId}_${Date.now()}.pdf`;
-        const uploadResult = await uploadToOneDrive(
-          msGraphBulk,
-          oneDriveRootBulk,
-          clientNameBulk,
-          yearBulk,
-          mergedFilename,
-          mergedBuf,
-          filingTypeBulk,
-        );
-        mergedWebUrl = uploadResult.webUrl;
-        mergedItemId = uploadResult.itemId;
-      }
-
-      // Step 6: Airtable writes — Drive first, then Airtable (atomicity rule)
-      const docPatchFields: Record<string, unknown> = {
-        file_url: mergedWebUrl,
-        onedrive_item_id: mergedItemId,
-        file_sha256: mergedHash,
-        file_size: mergedSize,
-        page_count: mergedPageCount || null,
-      };
-
-      if (!bulkDocId) {
-        // Create new documents row
-        const reportId = getField(clsFields.report) as string;
-        const newDocRow: Record<string, unknown> = {
-          type: bulkTemplateId,
-          status: 'Received',
-          review_status: 'confirmed',
-          reviewed_by: 'Natan',
-          reviewed_at: new Date().toISOString(),
-          file_url: mergedWebUrl,
-          onedrive_item_id: mergedItemId,
-          file_sha256: mergedHash,
-          file_size: mergedSize,
-          page_count: mergedPageCount || null,
-          received_at: new Date().toISOString(),
-          ...(reportId ? { report: [reportId] } : {}),
-        };
-        const stripEmpBulk = (obj: Record<string, unknown>): Record<string, unknown> =>
-          Object.fromEntries(Object.entries(obj).filter(([, v]) => v != null && v !== ''));
-        const createdBulk = await airtable.createRecords(TABLES.DOCUMENTS, [{ fields: stripEmpBulk(newDocRow) }], { typecast: true });
-        bulkDocId = createdBulk[0].id;
-      } else {
-        // PATCH existing doc row — if fails, abort before touching classifications
-        try {
-          await airtable.updateRecord(TABLES.DOCUMENTS, bulkDocId, docPatchFields);
-        } catch (patchErr) {
-          logError(c.executionCtx, c.env, {
-            endpoint: '/webhook/review-classification',
-            category: 'DEPENDENCY',
-            error: patchErr as Error,
-            details: `CRITICAL: bulk_merge doc PATCH failed for ${bulkDocId}`,
-          });
-          return c.json({ ok: false, error: 'documents PATCH failed', details: (patchErr as Error).message }, 500);
-        }
-      }
-
-      // PATCH each pending_classifications row
-      for (const rec of clsRecords) {
-        try {
-          await airtable.updateRecord(TABLES.CLASSIFICATIONS, rec.id, {
-            status: 'approved',
-            merged_into: bulkDocId,
-          }, { typecast: true });
-        } catch (clsPatchErr) {
-          // Log loudly but continue — partial state is alarmed, not fatal
-          logError(c.executionCtx, c.env, {
-            endpoint: '/webhook/review-classification',
-            category: 'DEPENDENCY',
-            error: clsPatchErr as Error,
-            details: `CRITICAL: bulk_merge classifications PATCH failed for ${rec.id} → doc ${bulkDocId}`,
-          });
-        }
-      }
-
-      // Step 7: log (PII-safe — IDs and counts only)
-      logEvent({
-        event_type: 'bulk_merge',
-        category: 'ADMIN',
-        source: 'admin-ui',
-        client_id: bulkClientId,
-        details: {
-          count: orderedIds.length,
-          template_id: bulkTemplateId,
-          doc_id: bulkDocId,
-        },
-      });
-
-      invalidateCache(
-        c.env.CACHE_KV,
-        'cache:documents_non_waived_v2',
-        'pending-classifications:annual_report',
-        'pending-classifications:capital_statements',
-        'pending-classifications:all',
-      );
-
-      return c.json({ ok: true, doc_id: bulkDocId, merged_page_count: mergedPageCount });
-    }
-    // ---- end DL-421 bulk_merge ----
-
     if (action === 'approve') {
       // Approve: update source document with classification data
       // If no direct document link, look up by matched_template_id + report
@@ -2409,7 +2175,7 @@ classifications.post('/review-classification', async (c) => {
           ? [existingPdf, newPdf]
           : [newPdf, existingPdf];
 
-        const mergedBytes = await mergePdfs(firstPdf, secondPdf);
+        const mergedBytes = await mergePdfsN([firstPdf, secondPdf]);
         const mergedHash = await computeSha256(mergedBytes.buffer as ArrayBuffer);
 
         await msGraph.putBinary(
@@ -3349,6 +3115,261 @@ classifications.post('/bulk-move-classification-client', async (c) => {
       error_message: (err as Error).message,
     });
     return c.json({ ok: false, error: 'Bulk move failed', details: (err as Error).message }, 500);
+  }
+});
+
+// =====================================================================
+// DL-421: POST /webhook/bulk-merge-classifications
+// =====================================================================
+// Merge N AI Review classification rows (and their OneDrive PDFs) into a
+// single merged document. Extracted from /review-classification where it
+// was dead code (blocked by pre-existing gates at L786 + L790).
+// Body: { token?, client_id, target_template_id, ordered_classification_ids: string[] }
+// =====================================================================
+classifications.post('/bulk-merge-classifications', async (c) => {
+  const env = c.env;
+  const airtable = new AirtableClient(env.AIRTABLE_BASE_ID, env.AIRTABLE_PAT);
+
+  let body: {
+    token?: string;
+    action?: string;
+    client_id?: string;
+    target_template_id?: string;
+    ordered_classification_ids?: string[];
+  };
+  try { body = await c.req.json(); } catch { return c.json({ ok: false, error: 'Invalid JSON' }, 400); }
+
+  const authHeader = c.req.header('Authorization') || '';
+  const bearer = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : '';
+  const tokenResult = await verifyToken(body.token || bearer || '', env.SECRET_KEY);
+  if (!tokenResult.valid) {
+    return c.json({ ok: false, error: 'Unauthorized' }, 401);
+  }
+
+  // ---- Validate body ----
+  const { client_id: bulkClientId, target_template_id: bulkTemplateId, ordered_classification_ids: orderedIds } = body;
+
+  if (!bulkClientId || typeof bulkClientId !== 'string') {
+    return c.json({ ok: false, error: 'invalid_request', detail: 'client_id required' }, 400);
+  }
+  if (!bulkTemplateId || typeof bulkTemplateId !== 'string') {
+    return c.json({ ok: false, error: 'invalid_request', detail: 'target_template_id required' }, 400);
+  }
+  if (!Array.isArray(orderedIds) || orderedIds.length < 1 || orderedIds.length > 20) {
+    return c.json({ ok: false, error: 'invalid_request', detail: 'ordered_classification_ids must be an array of 1..20 ids' }, 400);
+  }
+
+  try {
+    // ---- Step 1: validate all classification rows exist and belong to the given client ----
+    const clsRecords: Array<{ id: string; fields: Record<string, unknown> }> = [];
+    for (const cid of orderedIds) {
+      let rec: { id: string; fields: Record<string, unknown> };
+      try {
+        rec = await airtable.getRecord(TABLES.CLASSIFICATIONS, cid) as { id: string; fields: Record<string, unknown> };
+      } catch {
+        return c.json({ ok: false, error: 'cross_client_or_missing' }, 400);
+      }
+      const recClientId = getField((rec.fields as Record<string, unknown>).client_id) as string;
+      if (recClientId !== bulkClientId) {
+        return c.json({ ok: false, error: 'cross_client_or_missing' }, 400);
+      }
+      clsRecords.push(rec);
+    }
+
+    // ---- Step 2: fetch each PDF from OneDrive in declared order ----
+    const msGraphBulk = new MSGraphClient(env, c.executionCtx);
+    const pdfBuffers: ArrayBuffer[] = [];
+    for (const rec of clsRecords) {
+      const itemId = (rec.fields as Record<string, unknown>).onedrive_item_id as string;
+      if (!itemId) {
+        return c.json({ ok: false, error: `Classification ${rec.id} has no onedrive_item_id` }, 400);
+      }
+      const buf = await msGraphBulk.getBinary(`/drives/${DRIVE_ID}/items/${itemId}/content`);
+      pdfBuffers.push(buf);
+    }
+
+    // ---- Step 3: check for existing Received doc for this client + template ----
+    // DL-404 typecast gate: do NOT reference merged_into in filterByFormula
+    const existingDocsForMerge = await airtable.listAllRecords(TABLES.DOCUMENTS, {
+      filterByFormula: `AND({type} = '${escapeAirtableValue(bulkTemplateId)}', FIND('${escapeAirtableValue(bulkClientId)}', ARRAYJOIN({client_id_lookup})), {status} = 'Received')`,
+      fields: ['status', 'onedrive_item_id', 'file_url', 'file_sha256', 'file_size', 'page_count'],
+      maxRecords: 1,
+    });
+
+    let bulkDocId: string;
+    let finalMergedBytes: Uint8Array;
+    let existingDocItemId: string | null = null;
+    let isAppendMode = false;
+
+    const existingReceivedDoc = existingDocsForMerge.length > 0 ? existingDocsForMerge[0] : null;
+    if (existingReceivedDoc) {
+      const ef = existingReceivedDoc.fields as Record<string, unknown>;
+      existingDocItemId = ef.onedrive_item_id as string | null;
+      if (existingDocItemId && ef.file_url) {
+        isAppendMode = true;
+        bulkDocId = existingReceivedDoc.id;
+        // Download existing doc and prepend it
+        const existingBuf = await msGraphBulk.getBinary(`/drives/${DRIVE_ID}/items/${existingDocItemId}/content`);
+        finalMergedBytes = await mergePdfsN([existingBuf, ...pdfBuffers]);
+      } else {
+        // Existing doc row but no file — treat as create
+        bulkDocId = existingReceivedDoc.id;
+        isAppendMode = false;
+        finalMergedBytes = await mergePdfsN(pdfBuffers);
+      }
+    } else {
+      // Will create a new doc row below after upload
+      bulkDocId = '';
+      finalMergedBytes = await mergePdfsN(pdfBuffers);
+    }
+
+    const mergedBuf = finalMergedBytes.buffer as ArrayBuffer;
+    const mergedHash = await computeSha256(mergedBuf);
+    const mergedSize = mergedBuf.byteLength;
+
+    // ---- Step 4: compute page count — sum from classification records ----
+    let mergedPageCount = 0;
+    for (const rec of clsRecords) {
+      mergedPageCount += Number((rec.fields as Record<string, unknown>).page_count || 0);
+    }
+    if (isAppendMode) {
+      const ef = (existingReceivedDoc as { id: string; fields: Record<string, unknown> }).fields;
+      mergedPageCount += Number(ef.page_count || 0);
+    }
+
+    // ---- Step 5: upload merged PDF to OneDrive ----
+    const LARGE_THRESHOLD = 25 * 1024 * 1024;
+    let mergedWebUrl: string;
+    let mergedItemId: string;
+
+    if (isAppendMode && existingDocItemId) {
+      // Re-upload over the same item (preserves URL)
+      if (mergedSize > LARGE_THRESHOLD) {
+        const uploadPath = `/drives/${DRIVE_ID}/items/${existingDocItemId}/content`;
+        const uploadResult = await msGraphBulk.putBinary(uploadPath, mergedBuf);
+        mergedWebUrl = uploadResult.webUrl || '';
+        mergedItemId = uploadResult.id || existingDocItemId;
+      } else {
+        const uploadResult = await msGraphBulk.putBinary(
+          `/drives/${DRIVE_ID}/items/${existingDocItemId}/content`,
+          mergedBuf,
+        );
+        mergedWebUrl = uploadResult.webUrl || '';
+        mergedItemId = uploadResult.id || existingDocItemId;
+      }
+    } else {
+      // New upload — use uploadToOneDrive which handles large files via createUploadSession
+      const oneDriveRootBulk = await resolveOneDriveRoot(msGraphBulk);
+      const firstCls = clsRecords[0].fields as Record<string, unknown>;
+      const clientNameBulk = (getField(firstCls.client_name) as string) || bulkClientId;
+      const yearBulk = String((firstCls.year as number) || new Date().getFullYear());
+      const filingTypeBulk = (firstCls.filing_type as string) || 'annual_report';
+      const mergedFilename = `merged_${bulkTemplateId}_${Date.now()}.pdf`;
+      const uploadResult = await uploadToOneDrive(
+        msGraphBulk,
+        oneDriveRootBulk,
+        clientNameBulk,
+        yearBulk,
+        mergedFilename,
+        mergedBuf,
+        filingTypeBulk,
+      );
+      mergedWebUrl = uploadResult.webUrl;
+      mergedItemId = uploadResult.itemId;
+    }
+
+    // ---- Step 6: Airtable writes — Drive first, then Airtable (atomicity rule) ----
+    const docPatchFields: Record<string, unknown> = {
+      file_url: mergedWebUrl,
+      onedrive_item_id: mergedItemId,
+      file_sha256: mergedHash,
+      file_size: mergedSize,
+      page_count: mergedPageCount || null,
+    };
+
+    if (!bulkDocId) {
+      // Create new documents row — derive reportId from first classification (Fix 2: scope-leak fix)
+      const reportId = getField((clsRecords[0].fields as Record<string, unknown>).report) as string;
+      const newDocRow: Record<string, unknown> = {
+        type: bulkTemplateId,
+        status: 'Received',
+        review_status: 'confirmed',
+        reviewed_by: 'Natan',
+        reviewed_at: new Date().toISOString(),
+        file_url: mergedWebUrl,
+        onedrive_item_id: mergedItemId,
+        file_sha256: mergedHash,
+        file_size: mergedSize,
+        page_count: mergedPageCount || null,
+        received_at: new Date().toISOString(),
+        ...(reportId ? { report: [reportId] } : {}),
+      };
+      const stripEmpBulk = (obj: Record<string, unknown>): Record<string, unknown> =>
+        Object.fromEntries(Object.entries(obj).filter(([, v]) => v != null && v !== ''));
+      const createdBulk = await airtable.createRecords(TABLES.DOCUMENTS, [{ fields: stripEmpBulk(newDocRow) }], { typecast: true });
+      bulkDocId = createdBulk[0].id;
+    } else {
+      // PATCH existing doc row — if fails, abort before touching classifications
+      try {
+        await airtable.updateRecord(TABLES.DOCUMENTS, bulkDocId, docPatchFields);
+      } catch (patchErr) {
+        logError(c.executionCtx, c.env, {
+          endpoint: '/webhook/bulk-merge-classifications',
+          category: 'DEPENDENCY',
+          error: patchErr as Error,
+          details: `CRITICAL: bulk_merge doc PATCH failed for ${bulkDocId}`,
+        });
+        return c.json({ ok: false, error: 'documents PATCH failed', details: (patchErr as Error).message }, 500);
+      }
+    }
+
+    // PATCH each pending_classifications row
+    for (const rec of clsRecords) {
+      try {
+        await airtable.updateRecord(TABLES.CLASSIFICATIONS, rec.id, {
+          status: 'approved',
+          merged_into: bulkDocId,
+        }, { typecast: true });
+      } catch (clsPatchErr) {
+        // Log loudly but continue — partial state is alarmed, not fatal
+        logError(c.executionCtx, c.env, {
+          endpoint: '/webhook/bulk-merge-classifications',
+          category: 'DEPENDENCY',
+          error: clsPatchErr as Error,
+          details: `CRITICAL: bulk_merge classifications PATCH failed for ${rec.id} → doc ${bulkDocId}`,
+        });
+      }
+    }
+
+    // ---- Step 7: log (PII-safe — IDs and counts only) ----
+    logEvent({
+      event_type: 'bulk_merge',
+      category: 'ADMIN',
+      source: 'admin-ui',
+      client_id: bulkClientId,
+      details: {
+        count: orderedIds.length,
+        template_id: bulkTemplateId,
+        doc_id: bulkDocId,
+      },
+    });
+
+    invalidateCache(
+      c.env.CACHE_KV,
+      'cache:documents_non_waived_v2',
+      'pending-classifications:annual_report',
+      'pending-classifications:capital_statements',
+      'pending-classifications:all',
+    );
+
+    return c.json({ ok: true, doc_id: bulkDocId, merged_page_count: mergedPageCount });
+  } catch (err) {
+    logError(c.executionCtx, c.env, {
+      endpoint: '/webhook/bulk-merge-classifications',
+      category: 'INTERNAL',
+      error: err as Error,
+    });
+    return c.json({ ok: false, error: 'Bulk merge failed', details: (err as Error).message }, 500);
   }
 });
 
