@@ -3194,14 +3194,16 @@ classifications.post('/bulk-merge-classifications', async (c) => {
     }
 
     // ---- Step 3: check for existing Received doc for this client + template ----
-    // DL-404 typecast gate: do NOT reference merged_into in filterByFormula.
+    // DL-404 typecast gate: do NOT reference merged_into in filterByFormula AND
+    // do not include typecast-created fields (file_sha256, file_size, page_count)
+    // in `fields:[]` — they 422 with UNKNOWN_FIELD_NAME until first PATCH creates
+    // them. Drop the allowlist entirely; we read what's there post-fetch.
     // For general_doc (new doc creation), skip the lookup — each general_doc is
     // unique-by-name and we always create a fresh row.
     const existingDocsForMerge = bulkTemplateId === 'general_doc'
       ? []
       : await airtable.listAllRecords(TABLES.DOCUMENTS, {
           filterByFormula: `AND({type} = '${escapeAirtableValue(bulkTemplateId)}', FIND('${escapeAirtableValue(bulkClientId)}', ARRAYJOIN({client_id_lookup})), {status} = 'Received')`,
-          fields: ['status', 'onedrive_item_id', 'file_url', 'file_sha256', 'file_size', 'page_count'],
           maxRecords: 1,
         });
 
