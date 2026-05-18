@@ -1,6 +1,6 @@
 # Design Log 421: Bulk Multi-Select in AI Review — Merge + Move-to-Client
 
-**Status:** [BEING IMPLEMENTED — DL-421]
+**Status:** [IMPLEMENTED — NEED TESTING]
 **Date:** 2026-05-18
 **Branch:** `claude-session-20260518-093638`
 **Related Logs:** DL-222 (2-PDF merge), DL-237 (split + pdf.js thumbnails), DL-257 / DL-236 (bulk caps + bar), DL-382 (batch password pre-checked modal), DL-295 (PA queue inline status), DL-419 (chunked upload OOM fix), DL-404 (Airtable typecast gating), DL-410 (silent refresh)
