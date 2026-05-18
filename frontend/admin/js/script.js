@@ -4505,12 +4505,8 @@ function renderDocRow(item) {
     // .ai-doc-row__filename. Earlier dir="auto" flipped flex alignment on
     // pure-Latin filenames — removed.
     return `<div class="ai-doc-row ${stripeClass}${isEncrypted ? ' is-encrypted' : ''}" data-id="${escapeAttr(id)}" title="${escapeAttr(rawName)}" onclick="selectDocument('${escapeAttr(id)}')">
-        <span class="ai-doc-row__stripe"></span>
-        ${lockIconHtml}
-        <span class="ai-doc-row__filename">${escapeHtml(truncateKeepExtension(rawName))}</span>
-        ${showQGlyph ? `<span class="ai-doc-row__question-glyph" title="${escapeAttr(qTitle)}">?</span>` : ''}
-        ${endLabelHtml}
-        ${flagDotHtml}
+        <input type="checkbox" class="ai-bulk-select" onclick="event.stopPropagation()" data-id="${escapeAttr(id)}" data-client="${escapeAttr(item.client_id||'')}" data-template="${escapeAttr(item.matched_template_id||'')}" style="width:14px;height:14px;cursor:pointer;margin-inline-end:4px;flex-shrink:0;" aria-label="בחר למזג/להעביר">
+        <span class="ai-doc-row__stripe"></span>${lockIconHtml}<span class="ai-doc-row__filename">${escapeHtml(truncateKeepExtension(rawName))}</span>${showQGlyph ? `<span class="ai-doc-row__question-glyph" title="${escapeAttr(qTitle)}">?</span>` : ''}${endLabelHtml}${flagDotHtml}
     </div>`;
 }
 
