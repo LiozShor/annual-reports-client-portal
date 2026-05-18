@@ -126,12 +126,27 @@ window.renderContractMonthsInput = renderContractMonthsInput; window.isRentalTem
 
 ## 8. Implementation Notes
 
-Phase D shipped 2026-05-18.
+Phase D shipped 2026-05-18 in two passes.
+
+### Pass 1 (commit `664d99d8`)
 
 - **Window exports** (`script.js:3734`): appended `window.renderContractMonthsInput = renderContractMonthsInput; window.isRentalTemplate = isRentalTemplate;` to the existing DL-421 export line. **Zero net line growth** — `script.js` stays at baseline 16112.
 - **Module** (`dl421-bulk-classify.js`): added `_dl425MergeMonthsCtrl` state, `_dl425SyncMergeMonths(templateId, refItem)` mount/unmount fn, `<div id="dl421MergeContractMonths">` slot in modal body, hook calls in (a) combobox `onSelect` (both code paths), (b) expanded-picker `onPick`, (c) initial sync after `buildTemplatePicker`, and (d) cleanup in `closeMergeModal`. Submit gate `collectExtras(tplId)` mirrors DL-397's pattern — returns `{}` for non-rental, `{contract_period}` when valid, `null` (with toast) when invalid. `_dl421DoMerge` gained `contractPeriod` parameter; POST body now includes `contract_period: contractPeriod || undefined`.
 - **Backend** (`classifications.ts:3129-3500`): body type extended with `contract_period?: {startDate?, endDate?}`. New validation gate after the existing args check — for `T901`/`T902` only, calls `buildContractPeriod` (DL-397 SSOT). 400 on malformed dates. Synthetic `periodClsFields = {matched_template_id, contract_period: builtPeriod.json}` reused by both `applyPeriodSuffixToDocFields` callers — one on `docPatchFields` (existing-doc PATCH path) and one on `newDocRow` (new-doc CREATE path). Per-PC PATCH loop writes `contract_period: builtPeriod.json` when present. `logEvent.details` extended with `has_contract_period: boolean` (no PII).
 - **Cache-bust**: `index.html` bumped `dl421-bulk-classify.js?v=12 → ?v=13`.
-- **Verification**: `./node_modules/.bin/tsc --noEmit` shows only pre-existing errors (none touched by this DL). `wrangler deploy --dry-run` clean.
-- **No deviations** from the plan.
-- **DL-415 idempotency** carried us — admin can re-merge into an existing T901/T902 doc with a different period and the suffix replaces cleanly.
+
+### Pass 2 — parity fixes (commit `4abd9dfa`)
+
+Live testing surfaced two gaps where the period was correctly stored on the PC + doc rows but **not visible in two of the surfaces users actually read**:
+
+1. **OneDrive filename was missing the period suffix.** The merged file landed as `חוזה שכירות (הכנסה).pdf` instead of `חוזה שכירות (הכנסה).02.2025-04.2025.pdf`. Single-reassign at `classifications.ts:2380-2386` passes the period via the `suffix` parameter of `resolveOneDriveFilename` (computed by `getRentalPeriodLabel().filename` at L981-997). Bulk-merge wasn't doing this. **Fix:** inline a `bulkPeriodSuffix` computed from `builtPeriod.contractPeriod` (`MM.YYYY-MM.YYYY` from start/end month + endDate year, skipping `coversFullYear`) and pass it as `suffix:` to the `resolveOneDriveFilename` call at L3324.
+
+2. **Green chip in the required-docs panel showed the bare template title.** Single-reassign at `script.js:8048` routes rental approvals through `window.insertReassignedDocAndRefresh` (DL-410) which calls `periodLabel(extras.contract_period)` and writes `name`/`name_short` with the suffix into the local `aiClassificationsData[].all_docs[]`. The DL-227 chip renderer (`renderDocTag` at `script.js:9331-9335`) then parses the `<b>MM.YYYY-MM.YYYY</b>` from `d.name` and surfaces it. Bulk-merge called the generic `updateClientDocState` instead, which only flips status and never updates `name`/`name_short`. **Fix:** mirror the script.js:8048 conditional in the module — when `isRentalTemplate(templateId)` is true and `contractPeriod` is set, call `window.insertReassignedDocAndRefresh(firstItem, data, templateId, {contract_period: contractPeriod}, window.aiClassificationsData)` instead.
+
+3. **Backend response shape extended** to feed the helper: `{ok, doc_id, merged_page_count}` → `{ok, doc_id, merged_page_count, doc_title, matched_short_name, matched_template_id}`. `doc_title` + `matched_short_name` are the merged doc's `issuer_name` with `<b>` tags stripped. `insertReassignedDocAndRefresh` reads `data.matched_short_name || data.doc_title` to build the chip label, then re-attaches the period via `periodLabel(extras.contract_period)`. Computed via a single `airtable.getRecord(TABLES.DOCUMENTS, bulkDocId)` after the upload — fail-safe (`.catch(() => null)`).
+- **Cache-bust**: `?v=13 → ?v=14`.
+
+### Verification (live, CPA-XXX)
+
+- T901 merge with 02.2025-04.2025: PC `contract_period` = JSON, merged doc `issuer_name` = `... <b>02.2025-04.2025</b>`, OneDrive name = `חוזה שכירות (הכנסה).02.2025-04.2025.pdf`, green chip = `חוזה שכירות – דירה מושכרת (הכנסה) 02.2025-04.2025` ✓.
+- DL-415 idempotency carried us — re-merge into an existing T901/T902 doc with a different period replaces the suffix cleanly.

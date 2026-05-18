@@ -118,18 +118,22 @@ For outcome A (chip-pick, no new substitution), `issuerName` stays empty and the
 
 For uploads >25 MB the route uses the DL-419 `uploadToOneDrive` helper (which switches to `createUploadSession` chunked PUT). Smaller files use a single `putBinary`.
 
+**DL-425 — rental period suffix in filename:** when the target is T901/T902 and a valid `contract_period` (not full-year) is supplied, the route also passes `suffix: "MM.YYYY-MM.YYYY"` to `resolveOneDriveFilename`. Same mechanism single-reassign uses via `getRentalPeriodLabel().filename` at `classifications.ts:981-997`. The filename then reads e.g. `חוזה שכירות (הכנסה).02.2025-04.2025.pdf`. Skipped automatically when `coversFullYear=true`.
+
 ---
 
 ## 6. Frontend post-success behavior
 
-After `{ok: true, doc_id, merged_page_count}`:
+After `{ok, doc_id, merged_page_count, doc_title, matched_short_name, matched_template_id}`:
 
 1. **Toast:** `המסמכים מוזגו (<N> עמ')`
 2. **Per-card transition** (`window.transitionCardToReviewed(id, 'approved', data)`) — instant in-place DOM swap to the green "אושר" state, no fetch.
-3. **Required-docs list refresh** (`window.updateClientDocState(clientName, data.doc_id)`) — flips the matching template's chip to its received-state badge.
+3. **Required-docs list refresh** — branched by template type (DL-425):
+   - **Rental (T901/T902)** with `contract_period` set → `window.insertReassignedDocAndRefresh(firstItem, data, templateId, {contract_period}, window.aiClassificationsData)` (DL-410). Writes `name`/`name_short` with the `<b>MM.YYYY-MM.YYYY</b>` suffix into the local `all_docs[]` so `renderDocTag` (`script.js:9331-9335`) re-attaches the period in the green badge.
+   - **Non-rental** → `window.updateClientDocState(clientName, data.doc_id)` (status-flip only).
 4. **Auto-advance** within the same client. If all-on-client done → "client review done" prompt.
 
-Mirrors single-card approve (`script.js:6818-6823`).
+Mirrors single-card approve / reassign (`script.js:6818-6823` + `script.js:8048` rental conditional). Backend response shape extended in DL-425 to include `doc_title` / `matched_short_name` / `matched_template_id` so the rental-aware helper can render the chip label without a refetch.
 
 ---
 
@@ -161,3 +165,6 @@ Each gotcha cost a deploy cycle during the 2026-05-18 testing session — record
 | Chip-pick rendered with `{var}` placeholders | Backend ignored `target_doc_record_id`; created a new doc with no `issuer_name`. Fix: respect `target_doc_record_id` + fill `issuer_name` when existing one is empty/placeholder | `728a3ece` |
 | docs row missing `review_status`, `source_*`, `ai_*`, `uploaded_at` | Bulk path wasn't writing the full field set that single-reassign writes (`script.js:2279-2292`) | `728a3ece` |
 | OneDrive filename doubled the template title (`ניכוי בט"ל – ניכוי בט"ל – לקוח.pdf`) | Passed the already-substituted plain display name as `issuerName` to `resolveOneDriveFilename`. `buildShortName` then substituted it into the template's `… – {issuer}` slot — doubling the prefix. Fix: pass the existing doc's `issuer_name` (which carries `<b>…</b>` tags around the var values so `buildShortName` extracts only the variable, not the prefix). For create-new with no existing doc, pass empty so the template's title is used as-is | `0a9835d7` |
+| DL-425: bulk-merge into T901/T902 left `contract_period=null` on every merged PC | Bulk-merge route never accepted `contract_period` in the body and never collected it in the modal. Fix: add a DL-397-style `renderContractMonthsInput` mount in the modal, send `contract_period` in the POST, validate via `buildContractPeriod` and write to each PC + apply `applyPeriodSuffixToDocFields` to the merged doc | `664d99d8` |
+| DL-425: OneDrive name missing the period (`חוזה שכירות (הכנסה).pdf` instead of `…02.2025-04.2025.pdf`) | `resolveOneDriveFilename` accepts an optional `suffix:` (single-reassign passes `getRentalPeriodLabel().filename` at L2385) — bulk-merge wasn't passing it. Fix: compute `MM.YYYY-MM.YYYY` from `builtPeriod.contractPeriod` and pass as `suffix:` | `4abd9dfa` |
+| DL-425: green chip in required-docs panel showed bare template title without the period | Bulk-merge called the generic `window.updateClientDocState` which only flips status. Single-reassign rentals route through `window.insertReassignedDocAndRefresh` (DL-410) which writes `name`/`name_short` with the `<b>…</b>` suffix into local `all_docs[]` so `renderDocTag` (script.js:9331-9335) re-attaches the period. Fix: mirror the script.js:8048 conditional + extend backend response with `doc_title` / `matched_short_name` / `matched_template_id` so the helper can build the label without a refetch | `4abd9dfa` |
