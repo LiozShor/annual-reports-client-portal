@@ -3321,11 +3321,20 @@ classifications.post('/bulk-merge-classifications', async (c) => {
       const bulkTemplateMap = buildTemplateMap(bulkTemplateRecs);
       const existingIssuerForFilename =
         (existingReceivedDoc?.fields.issuer_name as string) || '';
+      // DL-425: pass the period as a filename suffix so OneDrive name includes
+      // MM.YYYY-MM.YYYY. Same pattern as single-reassign at L2385 (getRentalPeriodLabel().filename).
+      const bulkPeriodSuffix = (builtPeriod && !builtPeriod.contractPeriod.coversFullYear) ? (() => {
+        const sM = String(new Date(builtPeriod.contractPeriod.startDate).getMonth() + 1).padStart(2, '0');
+        const eM = String(new Date(builtPeriod.contractPeriod.endDate).getMonth() + 1).padStart(2, '0');
+        const yr = String(new Date(builtPeriod.contractPeriod.endDate).getFullYear());
+        return `${sM}.${yr}-${eM}.${yr}`;
+      })() : null;
       const mergedFilename = resolveOneDriveFilename({
         templateId: bulkTemplateId,
         issuerName: existingIssuerForFilename,
         attachmentName: null,
         templateMap: bulkTemplateMap,
+        suffix: bulkPeriodSuffix,
       });
       const uploadResult = await uploadToOneDrive(
         msGraphBulk,
@@ -3506,7 +3515,22 @@ classifications.post('/bulk-merge-classifications', async (c) => {
       'pending-classifications:all',
     );
 
-    return c.json({ ok: true, doc_id: bulkDocId, merged_page_count: mergedPageCount });
+    // DL-425: include doc_title (stripped of <b> tags) + matched_template_id so
+    // the frontend's insertReassignedDocAndRefresh (DL-410) can render the
+    // rental period chip correctly without a refetch.
+    const finalDocFields = bulkDocId
+      ? ((await airtable.getRecord(TABLES.DOCUMENTS, bulkDocId).catch(() => null) as { fields?: Record<string, unknown> } | null)?.fields || {})
+      : {};
+    const finalIssuer = (finalDocFields.issuer_name as string) || '';
+    const docTitle = finalIssuer.replace(/<\/?b>/g, '').trim();
+    return c.json({
+      ok: true,
+      doc_id: bulkDocId,
+      merged_page_count: mergedPageCount,
+      doc_title: docTitle || null,
+      matched_short_name: docTitle || null,
+      matched_template_id: bulkTemplateId,
+    });
   } catch (err) {
     logError(c.executionCtx, c.env, {
       endpoint: '/webhook/bulk-merge-classifications',

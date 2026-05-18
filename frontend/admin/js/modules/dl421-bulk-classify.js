@@ -465,11 +465,18 @@
             //    mutates aiClassificationsData, swaps the thin row, updates
             //    stats, auto-advances within the same client.
             var clientNameForRefresh = '';
+            var firstItemForRefresh = null;
             (window.aiClassificationsData || []).some(function (i) {
-                if (String(i.id) === String(orderedIds[0])) { clientNameForRefresh = i.client_name || ''; return true; }
+                if (String(i.id) === String(orderedIds[0])) { clientNameForRefresh = i.client_name || ''; firstItemForRefresh = i; return true; }
                 return false;
             });
-            if (data.doc_id && clientNameForRefresh && typeof window.updateClientDocState === 'function') {
+            // DL-425: rental targets (T901/T902) need the period-aware refresh helper
+            // (mirrors single-reassign at script.js:8048). Without it, the green badge
+            // shows the bare template title with no MM.YYYY-MM.YYYY suffix.
+            var _isRentalRefresh = (typeof window.isRentalTemplate === 'function') && window.isRentalTemplate(templateId);
+            if (data.doc_id && firstItemForRefresh && _isRentalRefresh && typeof window.insertReassignedDocAndRefresh === 'function' && contractPeriod) {
+                try { window.insertReassignedDocAndRefresh(firstItemForRefresh, data, templateId, { contract_period: contractPeriod }, window.aiClassificationsData); } catch (e) { /* keep going */ }
+            } else if (data.doc_id && clientNameForRefresh && typeof window.updateClientDocState === 'function') {
                 try { window.updateClientDocState(clientNameForRefresh, data.doc_id); } catch (e) { /* keep going */ }
             }
             if (typeof window.transitionCardToReviewed === 'function') {
