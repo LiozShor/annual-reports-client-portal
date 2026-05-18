@@ -395,7 +395,18 @@
                 return;
             }
             window._dl421ClearAll();
-            silentRefresh();
+            // Per-card in-place transition (mirrors approve/reject — single-card
+            // path at script.js:6823, 7329, 7368, 7453). Each call mutates
+            // aiClassificationsData[id] + swaps the thin row + updates stats +
+            // auto-advances within the same client. No fetch, instant feedback.
+            if (typeof window.transitionCardToReviewed === 'function') {
+                orderedIds.forEach(function (id) {
+                    try { window.transitionCardToReviewed(id, 'approved', data); } catch (e) { /* keep going */ }
+                });
+            } else {
+                // Fallback to the (silent) network refetch if helper missing.
+                silentRefresh();
+            }
             if (typeof window.showAIToast === 'function') {
                 window.showAIToast(
                     'המסמכים מוזגו (' + (data.merged_page_count || '?') + ' עמ\')',
