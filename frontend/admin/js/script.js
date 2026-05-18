@@ -4505,7 +4505,7 @@ function renderDocRow(item) {
     // .ai-doc-row__filename. Earlier dir="auto" flipped flex alignment on
     // pure-Latin filenames — removed.
     return `<div class="ai-doc-row ${stripeClass}${isEncrypted ? ' is-encrypted' : ''}" data-id="${escapeAttr(id)}" title="${escapeAttr(rawName)}" onclick="selectDocument('${escapeAttr(id)}')">
-        <input type="checkbox" class="ai-bulk-select" onclick="event.stopPropagation()" data-id="${escapeAttr(id)}" data-client="${escapeAttr(item.client_id||'')}" data-template="${escapeAttr(item.matched_template_id||'')}" style="width:14px;height:14px;cursor:pointer;margin-inline-end:4px;flex-shrink:0;" aria-label="בחר למזג/להעביר">
+        ${(item.review_status || 'pending') === 'pending' ? `<input type="checkbox" class="ai-bulk-select" onclick="event.stopPropagation()" data-id="${escapeAttr(id)}" data-client="${escapeAttr(item.client_id||'')}" data-template="${escapeAttr(item.matched_template_id||'')}" style="width:14px;height:14px;cursor:pointer;margin-inline-end:4px;flex-shrink:0;" aria-label="בחר למזג/להעביר">` : ''}
         <span class="ai-doc-row__stripe"></span>${lockIconHtml}<span class="ai-doc-row__filename">${escapeHtml(truncateKeepExtension(rawName))}</span>${showQGlyph ? `<span class="ai-doc-row__question-glyph" title="${escapeAttr(qTitle)}">?</span>` : ''}${endLabelHtml}${flagDotHtml}
     </div>`;
 }
@@ -6245,7 +6245,7 @@ function renderAICard(item) {
                     ${item.pre_questionnaire ? '<span class="ai-pre-questionnaire-badge" title="הלקוח טרם מילא את השאלון — הסיווג בוצע מול הקטלוג המלא">טרם מולא שאלון</span>' : ''}
                     ${isEncrypted ? `<span class="ai-encrypted-badge" title="קובץ מוגן בסיסמה — לחצו לפתיחה">${icon('lock','icon-xs')} נעול</span>` : ''}
                 </div>
-                ${viewFileBtn}<input type="checkbox" class="ai-bulk-select" onclick="event.stopPropagation()" data-id="${escapeAttr(item.id)}" data-client="${escapeAttr(item.client_id||'')}" data-template="${escapeAttr(item.matched_template_id||'')}" data-filename="${escapeAttr(item.attachment_name||'')}" style="width:16px;height:16px;cursor:pointer;margin-inline-start:6px;flex-shrink:0;" aria-label="בחר למזג/להעביר">
+                ${viewFileBtn}${(item.review_status || 'pending') === 'pending' ? `<input type="checkbox" class="ai-bulk-select" onclick="event.stopPropagation()" data-id="${escapeAttr(item.id)}" data-client="${escapeAttr(item.client_id||'')}" data-template="${escapeAttr(item.matched_template_id||'')}" data-filename="${escapeAttr(item.attachment_name||'')}" style="width:16px;height:16px;cursor:pointer;margin-inline-start:6px;flex-shrink:0;" aria-label="בחר למזג/להעביר">` : ''}
             </div>
             <div class="ai-card-body">
                 <div class="ai-classification-result">
