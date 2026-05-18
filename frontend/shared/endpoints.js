@@ -57,6 +57,7 @@ const ENDPOINTS = {
     DISMISS_CLASSIFICATIONS:   `${CF_BASE}/dismiss-classifications`,
     ASSIGN_UNIDENTIFIED:       `${CF_BASE}/assign-unidentified`, // DL-361
     MOVE_CLASSIFICATION_CLIENT: `${CF_BASE}/move-classification-client`, // DL-369
+    BULK_MOVE_CLASSIFICATION_CLIENT: `${CF_BASE}/bulk-move-classification-client`, // DL-421
 
     // --- Notifications (migrated to Cloudflare Workers — DL-174, hybrid) ---
     ADMIN_REMINDERS:           `${CF_BASE}/admin-reminders`,
