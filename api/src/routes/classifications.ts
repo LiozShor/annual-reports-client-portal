@@ -3312,11 +3312,30 @@ classifications.post('/bulk-merge-classifications', async (c) => {
     // Documents table fields (verified live 2026-05-18): file_url, onedrive_item_id,
     // file_hash. NO file_sha256, file_size, page_count — those live on
     // pending_classifications. Don't try to write them here.
+    // Aggregate provenance from all merged PCs. Mirrors single-reassign's doc
+    // PATCH (classifications.ts:2279-2292) so admin/UI see the same field set
+    // regardless of single vs bulk path.
+    const firstClsForDoc = clsRecords[0].fields as Record<string, unknown>;
+    const allAttachmentNames = clsRecords
+      .map(r => (r.fields as Record<string, unknown>).attachment_name as string)
+      .filter(Boolean)
+      .join(', ');
+    const aiConfFirst = firstClsForDoc.ai_confidence as number | undefined;
+    const senderFirst = firstClsForDoc.sender_email as string | undefined;
+    const receivedFirst = firstClsForDoc.received_at as string | undefined;
     const docPatchFields: Record<string, unknown> = {
+      status: 'Received',
+      review_status: 'confirmed',
+      reviewed_by: 'Natan',
+      reviewed_at: new Date().toISOString(),
       file_url: mergedWebUrl,
       onedrive_item_id: mergedItemId,
       file_hash: mergedHash,
-      status: 'Received',
+      ai_confidence: aiConfFirst ?? null,
+      ai_reason: `[bulk_merge] ${clsRecords.length} attachments merged into ${bulkTemplateId}`,
+      source_attachment_name: allAttachmentNames || null,
+      source_sender_email: senderFirst || null,
+      uploaded_at: receivedFirst || new Date().toISOString(),
     };
     // When admin picked an existing chip and the chip's underlying doc has empty
     // issuer_name (template placeholder leaks `{var}` into the UI), fill it from
@@ -3366,6 +3385,11 @@ classifications.post('/bulk-merge-classifications', async (c) => {
         file_url: mergedWebUrl,
         onedrive_item_id: mergedItemId,
         file_hash: mergedHash,
+        ai_confidence: aiConfFirst ?? null,
+        ai_reason: `[bulk_merge] ${clsRecords.length} attachments merged into ${bulkTemplateId}`,
+        source_attachment_name: allAttachmentNames || null,
+        source_sender_email: senderFirst || null,
+        uploaded_at: receivedFirst || new Date().toISOString(),
         ...(reportId ? { report: [reportId] } : {}),
         ...docExtraFields,
       };
