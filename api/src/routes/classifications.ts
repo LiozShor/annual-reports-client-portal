@@ -3284,14 +3284,24 @@ classifications.post('/bulk-merge-classifications', async (c) => {
       const yearBulk = String((firstCls.year as number) || new Date().getFullYear());
       const filingTypeBulk = (firstCls.filing_type as string) || 'annual_report';
       // DL-355 canonical filename — same helper single-approve/reassign use, so
-      // bulk-merge files look identical to office. For general_doc the picker's
-      // typed name flows in as the issuer.
+      // bulk-merge files look identical to office.
+      // buildShortName expects issuerName to be EITHER the existing doc's
+      // issuer_name (with <b>…</b> tags around var values) OR the bare var value
+      // (e.g. "לקוח"). It does NOT expect the already-substituted full display
+      // name — that would double-substitute into the template's "… – {issuer}"
+      // pattern (e.g. "ניכוי בט"ל – ניכוי בט"ל – לקוח").
+      // Resolution:
+      //   chip-pick   → use existing doc's issuer_name (has <b>) if present.
+      //   create-new  → pass empty so buildShortName uses the template title only;
+      //                 the typed name lands as issuer_name on the row but is not
+      //                 baked into the filename.
       const bulkTemplateRecs = await airtable.listAllRecords(TABLES.TEMPLATES);
       const bulkTemplateMap = buildTemplateMap(bulkTemplateRecs);
-      const issuerForFilename = (bulkNewDocName || '').trim();
+      const existingIssuerForFilename =
+        (existingReceivedDoc?.fields.issuer_name as string) || '';
       const mergedFilename = resolveOneDriveFilename({
         templateId: bulkTemplateId,
-        issuerName: issuerForFilename,
+        issuerName: existingIssuerForFilename,
         attachmentName: null,
         templateMap: bulkTemplateMap,
       });
