@@ -12024,7 +12024,7 @@ async function approveAndSendFromQueue(reportId, clientName) {
 
         try {
             const resp = await fetchWithTimeout(
-                `${ENDPOINTS.APPROVE_AND_SEND}?report_id=${encodeURIComponent(reportId)}&confirm=1&respond=json`,
+                `${ENDPOINTS.APPROVE_AND_SEND}?report_id=${encodeURIComponent(reportId)}&confirm=1&respond=json${sentDate ? '&force=1' : ''}`,
                 { headers: { 'Authorization': `Bearer ${authToken}` } },
                 FETCH_TIMEOUTS.mutate
             );
@@ -12092,7 +12092,7 @@ async function approveAndSendFromAIReview(reportId, clientName) {
     showConfirmDialog(msg, async () => {
         try {
             const resp = await fetchWithTimeout(
-                `${ENDPOINTS.APPROVE_AND_SEND}?report_id=${encodeURIComponent(reportId)}&confirm=1&respond=json`,
+                `${ENDPOINTS.APPROVE_AND_SEND}?report_id=${encodeURIComponent(reportId)}&confirm=1&respond=json${sentDate ? '&force=1' : ''}`,
                 { headers: { 'Authorization': `Bearer ${authToken}` } },
                 FETCH_TIMEOUTS.mutate
             );

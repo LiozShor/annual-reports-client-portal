@@ -2834,7 +2834,7 @@ function approveAndSendToClient() {
             const sendBtn = document.getElementById('approveSendBtn');
             setBtnState(sendBtn, 'loading', 'שולח ללקוח...');
             try {
-                const url = `${ENDPOINTS.APPROVE_AND_SEND}?report_id=${REPORT_ID}&confirm=1&respond=json`;
+                const url = `${ENDPOINTS.APPROVE_AND_SEND}?report_id=${REPORT_ID}&confirm=1&respond=json${sentDate ? '&force=1' : ''}`;
                 console.log('[approve-and-send] fetching:', url);
                 const res = await fetchWithTimeout(url, {
                     headers: { 'Authorization': `Bearer ${ADMIN_TOKEN}` }
