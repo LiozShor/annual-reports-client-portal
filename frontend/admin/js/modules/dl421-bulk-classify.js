@@ -395,10 +395,20 @@
                 return;
             }
             window._dl421ClearAll();
-            // Per-card in-place transition (mirrors approve/reject — single-card
-            // path at script.js:6823, 7329, 7368, 7453). Each call mutates
-            // aiClassificationsData[id] + swaps the thin row + updates stats +
-            // auto-advances within the same client. No fetch, instant feedback.
+            // Mirror single-card approve flow at script.js:6818-6823:
+            // 1) updateClientDocState(clientName, docId) — refreshes the
+            //    required-docs list (green ✓ on the matched template).
+            // 2) transitionCardToReviewed(id, 'approved', data) per merged id —
+            //    mutates aiClassificationsData, swaps the thin row, updates
+            //    stats, auto-advances within the same client.
+            var clientNameForRefresh = '';
+            (window.aiClassificationsData || []).some(function (i) {
+                if (String(i.id) === String(orderedIds[0])) { clientNameForRefresh = i.client_name || ''; return true; }
+                return false;
+            });
+            if (data.doc_id && clientNameForRefresh && typeof window.updateClientDocState === 'function') {
+                try { window.updateClientDocState(clientNameForRefresh, data.doc_id); } catch (e) { /* keep going */ }
+            }
             if (typeof window.transitionCardToReviewed === 'function') {
                 orderedIds.forEach(function (id) {
                     try { window.transitionCardToReviewed(id, 'approved', data); } catch (e) { /* keep going */ }
