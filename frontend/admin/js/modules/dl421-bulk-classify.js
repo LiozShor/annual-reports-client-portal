@@ -177,7 +177,9 @@
     function buildTemplatePicker(containerEl, item) {
         // Use createDocCombobox if available (same as reassign modal)
         if (typeof window.createDocCombobox === 'function' && item) {
+            // Mirror showAIReassignModal exactly (script.js:7466-7468)
             var ownDocs = item.all_docs || item.missing_docs || [];
+            console.log('[DL-421] template picker — item:', item.id, 'tpl:', item.matched_template_id, 'all_docs:', (item.all_docs||[]).length, 'missing_docs:', (item.missing_docs||[]).length, 'sibling counts:', (window.aiClassificationsData||[]).filter(function(i){return i.client_id===item.client_id;}).map(function(i){return {id:i.id,all:(i.all_docs||[]).length,miss:(i.missing_docs||[]).length};}));
             window.createDocCombobox(containerEl, ownDocs, {
                 currentMatchId: item.matched_template_id || null,
                 allowCreate: true,
