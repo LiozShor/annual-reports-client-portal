@@ -3294,13 +3294,15 @@ classifications.post('/bulk-merge-classifications', async (c) => {
     }
 
     // ---- Step 6: Airtable writes — Drive first, then Airtable (atomicity rule) ----
+    // Documents table fields (verified live 2026-05-18): file_url, onedrive_item_id,
+    // file_hash. NO file_sha256, file_size, page_count — those live on
+    // pending_classifications. Don't try to write them here.
     const docPatchFields: Record<string, unknown> = {
       file_url: mergedWebUrl,
       onedrive_item_id: mergedItemId,
-      file_sha256: mergedHash,
-      file_size: mergedSize,
-      page_count: mergedPageCount || null,
+      file_hash: mergedHash,
     };
+    void mergedSize; // computed for API response only — schema-absent on documents
 
     if (!bulkDocId) {
       // Create new documents row — derive reportId from first classification (Fix 2: scope-leak fix)
@@ -3331,10 +3333,7 @@ classifications.post('/bulk-merge-classifications', async (c) => {
         reviewed_at: new Date().toISOString(),
         file_url: mergedWebUrl,
         onedrive_item_id: mergedItemId,
-        file_sha256: mergedHash,
-        file_size: mergedSize,
-        page_count: mergedPageCount || null,
-        received_at: new Date().toISOString(),
+        file_hash: mergedHash,
         ...(reportId ? { report: [reportId] } : {}),
         ...generalDocFields,
       };
