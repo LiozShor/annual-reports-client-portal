@@ -3198,13 +3198,12 @@ classifications.post('/bulk-merge-classifications', async (c) => {
     // do not include typecast-created fields (file_sha256, file_size, page_count)
     // in `fields:[]` — they 422 with UNKNOWN_FIELD_NAME until first PATCH creates
     // them. Drop the allowlist entirely; we read what's there post-fetch.
-    // For general_doc (new doc creation), skip the lookup — each general_doc is
-    // unique-by-name and we always create a fresh row.
-    // Filter by report_record_id (the documents→reports link), not by a
-    // nonexistent client_id_lookup field. Mirrors the canonical pattern at
-    // classifications.ts:1818.
+    // For general_doc OR any templated pick with new_doc_name (admin used the
+    // expanded picker / typed a custom name → wants a NEW instance, mirrors
+    // reassign DL-391 at classifications.ts:1437-1469), skip the lookup.
+    // Filter by report_record_id (the documents→reports link).
     const lookupReportId = getField((clsRecords[0].fields as Record<string, unknown>).report) as string;
-    const existingDocsForMerge = bulkTemplateId === 'general_doc' || !lookupReportId
+    const existingDocsForMerge = (bulkTemplateId === 'general_doc' || !!bulkNewDocName || !lookupReportId)
       ? []
       : await airtable.listAllRecords(TABLES.DOCUMENTS, {
           filterByFormula: `AND({type} = '${escapeAirtableValue(bulkTemplateId)}', FIND('${escapeAirtableValue(lookupReportId)}', ARRAYJOIN({report_record_id})), {status} = 'Received')`,
@@ -3284,9 +3283,7 @@ classifications.post('/bulk-merge-classifications', async (c) => {
       // typed name flows in as the issuer.
       const bulkTemplateRecs = await airtable.listAllRecords(TABLES.TEMPLATES);
       const bulkTemplateMap = buildTemplateMap(bulkTemplateRecs);
-      const issuerForFilename = bulkTemplateId === 'general_doc'
-        ? (bulkNewDocName || '').trim()
-        : '';
+      const issuerForFilename = (bulkNewDocName || '').trim();
       const mergedFilename = resolveOneDriveFilename({
         templateId: bulkTemplateId,
         issuerName: issuerForFilename,
@@ -3320,23 +3317,24 @@ classifications.post('/bulk-merge-classifications', async (c) => {
     if (!bulkDocId) {
       // Create new documents row — derive reportId from first classification (Fix 2: scope-leak fix)
       const reportId = getField((clsRecords[0].fields as Record<string, unknown>).report) as string;
-      // For general_doc, copy the issuer_name/category/document_key pattern from
-      // the single-reassign "Path 2" branch (classifications.ts:2057-2079) so the
-      // new row renders correctly on the admin + portal surfaces.
-      const isGeneralDocBulk = bulkTemplateId === 'general_doc';
-      const generalDocFields = isGeneralDocBulk && bulkNewDocName ? (() => {
+      // When new_doc_name is set (general_doc OR templated pick with vars
+      // filled in via the expanded picker), write issuer_name + key + uid so the
+      // doc renders the substituted name on admin + portal surfaces. Mirrors
+      // single-reassign DL-391 (classifications.ts:1454-1466).
+      const docExtraFields = bulkNewDocName ? (() => {
         const trimmed = bulkNewDocName.trim();
         const issuerKey = trimmed.toLowerCase().replace(/[^a-zA-Zא-ת0-9\s]/g, '').replace(/\s+/g, '_');
-        const docUid = `${reportId}_general_doc_client_${issuerKey}`;
-        return {
+        const docUid = `${reportId}_${bulkTemplateId.toLowerCase()}_client_${issuerKey}_${Date.now()}`;
+        const f: Record<string, unknown> = {
           issuer_name: trimmed,
           issuer_name_en: trimmed,
           issuer_key: trimmed,
-          category: 'general',
           person: 'client',
           document_uid: docUid,
           document_key: docUid,
         };
+        if (bulkTemplateId === 'general_doc') f.category = 'general';
+        return f;
       })() : {};
       const newDocRow: Record<string, unknown> = {
         type: bulkTemplateId,
@@ -3348,7 +3346,7 @@ classifications.post('/bulk-merge-classifications', async (c) => {
         onedrive_item_id: mergedItemId,
         file_hash: mergedHash,
         ...(reportId ? { report: [reportId] } : {}),
-        ...generalDocFields,
+        ...docExtraFields,
       };
       const stripEmpBulk = (obj: Record<string, unknown>): Record<string, unknown> =>
         Object.fromEntries(Object.entries(obj).filter(([, v]) => v != null && v !== ''));
