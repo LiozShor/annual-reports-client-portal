@@ -246,7 +246,22 @@
         overlay.id = 'dl421MergeOverlay';
         overlay.className = 'ai-modal-overlay show';
         overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:9999;display:flex;align-items:center;justify-content:center;';
-        overlay.onclick = function (e) { if (e.target === overlay) closeMergeModal(); };
+        // Click-outside-to-close must NOT fire when the user clicked an option
+        // inside the combobox dropdown — the combobox closes the dropdown
+        // synchronously, which detaches the original target and causes the
+        // browser to retarget the click event to the overlay itself, making
+        // `e.target === overlay` true and incorrectly closing the modal.
+        // Fix: only close if BOTH mousedown AND click landed on the overlay
+        // backdrop. Mousedown happens BEFORE the dropdown is removed, so its
+        // target is the original element and reliable.
+        var _dl421MouseDownOnBackdrop = false;
+        overlay.addEventListener('mousedown', function (e) {
+            _dl421MouseDownOnBackdrop = (e.target === overlay);
+        });
+        overlay.onclick = function (e) {
+            if (e.target === overlay && _dl421MouseDownOnBackdrop) closeMergeModal();
+            _dl421MouseDownOnBackdrop = false;
+        };
 
         var listRowsHtml = items.map(function (it, i) {
             var fname = esc(it.attachment_name || it.expected_filename || ('מסמך ' + (i + 1)));
@@ -405,7 +420,15 @@
         overlay.id = 'dl421MoveOverlay';
         overlay.className = 'ai-modal-overlay show';
         overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:9999;display:flex;align-items:center;justify-content:center;';
-        overlay.onclick = function (e) { if (e.target === overlay) closeMoveModal(); };
+        // Same fix as merge modal — see comment near line 249.
+        var _dl421MoveMouseDownOnBackdrop = false;
+        overlay.addEventListener('mousedown', function (e) {
+            _dl421MoveMouseDownOnBackdrop = (e.target === overlay);
+        });
+        overlay.onclick = function (e) {
+            if (e.target === overlay && _dl421MoveMouseDownOnBackdrop) closeMoveModal();
+            _dl421MoveMouseDownOnBackdrop = false;
+        };
 
         overlay.innerHTML =
             '<div class="ai-modal-panel ai-move-client-modal" style="width:min(520px,94vw);max-height:85vh;display:flex;flex-direction:column;" onclick="event.stopPropagation()">' +
