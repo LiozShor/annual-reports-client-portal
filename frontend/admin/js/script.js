@@ -999,7 +999,7 @@ let recentMessagesLoaded = false;
 let _allMessages = []; // DL-271: full message list for client-side pagination
 let _messagesVisible = 10; // DL-271: how many to show (DL-396: now counts client-groups, not raw messages)
 let _searchCache = null; // DL-273: cached all-years messages for instant client-side search
-const _expandedClients = new Set(); // DL-396: composite-key set of client groups left expanded across re-renders
+const _expandedClients = new Set(); window._expandedClients = _expandedClients; window._findRecentMessage = function (id) { return _allMessages.find(m => m.id === id); }; // DL-396 group expansion set + DL-422 live accessors for modules/dl422-group-reply.js
 
 function formatRelativeTime(dateStr) {
     if (!dateStr) return '';
@@ -1252,7 +1252,7 @@ function renderMessages() {
                 </div>
                 <div class="msg-group-preview" onclick="toggleGroup(this)">"${escapeHtml(previewText)}"</div>
                 <div class="msg-group-actions">
-                    <button class="msg-action-btn" title="השב להודעה האחרונה" onclick="event.stopPropagation(); showReplyInput('${latestNoteId}', '${latestReportId}')">${icon('message-square', 'icon-xs')}</button>
+                    <button class="msg-action-btn" title="השב להודעה האחרונה" onclick="event.stopPropagation(); showGroupReply('${groupKeyAttr}', '${latestNoteId}', '${latestReportId}')">${icon('message-square', 'icon-xs')}</button>
                     <button class="msg-action-btn" title="פתח בניהול מסמכים" onclick="event.stopPropagation(); window.open('../document-manager.html?${navParam}', '_blank')">${icon('folder-open', 'icon-xs')}</button>
                     <button class="msg-action-btn msg-action-btn--success" title="סמן את כל ההודעות כטופלו" onclick="event.stopPropagation(); markGroupHandled('${groupKeyAttr}')">${icon('check', 'icon-sm')}</button>
                 </div>
