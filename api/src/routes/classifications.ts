@@ -3376,9 +3376,15 @@ classifications.post('/bulk-merge-classifications', async (c) => {
         // live 2026-05-18). merged_into is a multipleRecordLinks field (created
         // via Schema API on 2026-05-18, fldJ4MsZdxHflXbbf) — must send an array
         // of record IDs, not a bare string.
+        // Also overwrite matched_template_id / matched_doc_name on every merged
+        // PC so the AI Review "תואם ל" label reflects the admin's chosen target
+        // (was: PCs the classifier didn't match showed "לא ידוע" post-merge).
         await airtable.updateRecord(TABLES.CLASSIFICATIONS, rec.id, {
           review_status: 'approved',
           merged_into: [bulkDocId],
+          matched_template_id: bulkTemplateId,
+          matched_doc_name: bulkTemplateId === 'general_doc' ? (bulkNewDocName || '') : '',
+          reviewed_at: new Date().toISOString(),
         }, { typecast: true });
       } catch (clsPatchErr) {
         // Log loudly but continue — partial state is alarmed, not fatal
