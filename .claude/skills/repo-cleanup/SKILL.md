@@ -87,7 +87,13 @@ This phase exists so the "main-only" goal never silently destroys real work. Bui
 2. Local branch delete — `git branch -D <name>` (force is expected here because Phase 2 already verified each branch is either patch-id-merged or explicitly discarded). The `-D` form is required for squash-merged branches that `git branch -d` would refuse.
 3. Remote branch delete — batch: `git push origin --delete <name1> <name2> …`. Single push avoids per-branch prompts.
 4. After deletes, run `git fetch --prune origin && git branch -vv && git branch -r && git worktree list` and report the final state.
-5. **Verify against goal.** Confirm the final state is exactly `1 local (main) + 1 remote (origin/main) + 1 worktree (canonical clone) + any user-kept exceptions`. If extras remain, list them and ask the user how to proceed.
+5. **Stale-directory cleanup (filesystem).** `git worktree remove` only deletes git metadata — on Windows the actual session directory under `C:/Users/liozm/Desktop/moshe/worktrees/<name>/` often survives because of open file handles. After git-level cleanup, run:
+   ```bash
+   ls C:/Users/liozm/Desktop/moshe/worktrees/ 2>/dev/null
+   ```
+   Then for every entry that is NOT a currently-registered worktree (cross-check against `git worktree list`), nuke it with `rm -rf "C:/Users/liozm/Desktop/moshe/worktrees/<name>"`. Batch all deletes in one or two commands. If `rm -rf` errors with "Device or resource busy" / "Permission denied", note it — the user has another Claude tab / editor holding a handle. Tell them to close those and offer a retry, but do NOT loop indefinitely.
+   Also run `git worktree prune -v` once to clear residual `.git/worktrees/<name>/` metadata. Noisy "Permission denied" output there is harmless — re-check `git worktree list` to confirm.
+6. **Verify against goal.** Confirm the final state is exactly `1 local (main) + 1 remote (origin/main) + 1 worktree (canonical clone) + any user-kept exceptions` AND `ls C:/Users/liozm/Desktop/moshe/worktrees/` returns empty (or only user-kept entries). If extras remain, list them and ask the user how to proceed.
 
 ## Decision gates
 
