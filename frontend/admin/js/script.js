@@ -4385,7 +4385,7 @@ function applyAIFilters(keepPage) {
     const pageGroups = sortedGroups.slice((_aiPage - 1) * AI_PAGE_SIZE, _aiPage * AI_PAGE_SIZE);
     const pageItems = pageGroups.flatMap(([, items]) => items);
 
-    renderAICards(pageItems, _filteredAI);
+    renderAICards(pageItems, _filteredAI); if (!window._dl421Inited && typeof window.initBulkClassify === 'function') { window._dl421Inited = true; window.initBulkClassify(); } // DL-421
     renderPagination('aiPagination', totalGroups, _aiPage, AI_PAGE_SIZE, goToAIPage);
 }
 
@@ -6249,7 +6249,7 @@ function renderAICard(item) {
                     ${item.pre_questionnaire ? '<span class="ai-pre-questionnaire-badge" title="הלקוח טרם מילא את השאלון — הסיווג בוצע מול הקטלוג המלא">טרם מולא שאלון</span>' : ''}
                     ${isEncrypted ? `<span class="ai-encrypted-badge" title="קובץ מוגן בסיסמה — לחצו לפתיחה">${icon('lock','icon-xs')} נעול</span>` : ''}
                 </div>
-                ${viewFileBtn}
+                ${viewFileBtn}<input type="checkbox" class="ai-bulk-select" onclick="event.stopPropagation()" data-id="${escapeAttr(item.id)}" data-client="${escapeAttr(item.client_id||'')}" data-template="${escapeAttr(item.matched_template_id||'')}" data-filename="${escapeAttr(item.attachment_name||'')}" style="width:16px;height:16px;cursor:pointer;margin-inline-start:6px;flex-shrink:0;" aria-label="בחר למזג/להעביר">
             </div>
             <div class="ai-card-body">
                 <div class="ai-classification-result">
