@@ -1,14 +1,16 @@
 ---
 name: repo-cleanup
-description: "Periodic cleanup of accumulated cruft in the annual-reports repo: stray untracked files, merged Claude-session worktrees, merged local/remote branches. Trigger phrases: 'let's do cleanup', 'do cleanup', 'clean up branches', 'clean up worktrees', 'prune branches', 'prune worktrees', 'cleanup repo', 'tidy the repo'. Also trigger after a burst of merged DLs (≥5 fresh commits on main) or when `git branch -r` exceeds ~15 stale refs. Three user-gated phases: untracked-file triage, branch/worktree inventory, verified delete (patch-id + DL-renumber detection). Do NOT trigger for: single-file `rm` requests, single-branch deletes (the user can do those directly), reverting a specific commit, fixing an active branch (use git-ship), or for non-git cleanup like clearing tmp/ caches. Sibling: git-ship handles single-commit/merge/push flows — do not invoke for routine commits."
+description: "Full cleanup of the annual-reports repo to a 'main-only' end state: removes ALL untracked junk, ALL session worktrees, and ALL non-main branches (local + remote). Trigger phrases: 'let's do cleanup', 'do cleanup', 'clean up branches', 'clean up worktrees', 'prune branches', 'prune worktrees', 'cleanup repo', 'tidy the repo'. Also trigger after a burst of merged DLs (≥5 fresh commits on main) or when `git branch -r` exceeds ~15 stale refs. Four user-gated phases: untracked-file triage, WIP discovery (unmerged commits + dirty worktrees), branch/worktree inventory, verified delete (patch-id + DL-renumber detection). WIP is never silently dropped — each unmerged commit / dirty worktree forces an explicit merge/discard/keep decision. Do NOT trigger for: single-file `rm` requests, single-branch deletes (the user can do those directly), reverting a specific commit, fixing an active branch (use git-ship), or for non-git cleanup like clearing tmp/ caches. Sibling: git-ship handles single-commit/merge/push flows — do not invoke for routine commits."
 allowed-tools: Bash, Read, Edit, Write, Glob, Grep, Skill
 ---
 
 # Repo Cleanup
 
-Periodic, user-gated cleanup of the annual-reports CRM repo. Designed for the parallel-Claude-session workflow that accumulates dozens of `claude-session-*` worktrees and `DL-NNN-*` branches across days, many of which are merged via squash/rebase under different SHAs.
+Full, user-gated cleanup of the annual-reports CRM repo. **Target end state: only `main` exists** — no session worktrees, no DL branches (local or remote), no stray untracked files. Designed for the parallel-Claude-session workflow that accumulates dozens of `claude-session-*` worktrees and `DL-NNN-*` branches across days, many of which are merged via squash/rebase under different SHAs.
 
 The skill exists because plain `--merged` checks miss squash-merges, plain `worktree remove --force` ignores dirty trees (real wipe-active-session incident, 2026-05-02), and plain bulk delete doesn't recognize when a DL number was renumbered before merge (e.g. DL-387→DL-343 in this repo).
+
+**WIP is never silently dropped.** Before deletion, the skill identifies every active worktree with uncommitted changes AND every branch with unmerged commits (vs main), then forces an explicit per-item decision: **merge to main**, **discard** (with reflog recoverability noted), or **keep** (overrides the main-only goal for that item).
 
 ## When this triggers
 
@@ -39,7 +41,7 @@ Confirm before starting:
 
 ## Workflow
 
-The skill runs in three **user-gated** phases. After each phase, present findings and **wait for explicit approval** before proceeding to the next.
+The skill runs in four **user-gated** phases. After each phase, present findings and **wait for explicit approval** before proceeding to the next. The end-state goal is **only `main` exists** (1 local branch, 1 remote branch, 1 worktree). Anything that would prevent that — uncommitted work, unmerged commits, branches the user explicitly wants to keep — is surfaced as a blocker in Phase 2 and resolved before Phase 4 runs.
 
 ### Phase 1 — Untracked-file triage
 
@@ -52,35 +54,50 @@ The skill runs in three **user-gated** phases. After each phase, present finding
 4. Run `python3 .claude/hooks/agent-pii-guard.py <commit-worthy paths>` before staging anything from `.agent/`.
 5. Present the categorized list to the user. **Wait for explicit "yes" before deleting junk or staging commits.**
 
-### Phase 2 — Branch & worktree inventory
+### Phase 2 — WIP discovery (the safety phase)
+
+This phase exists so the "main-only" goal never silently destroys real work. Build a single combined list of every item that blocks the goal, then resolve each with the user.
+
+1. **Dirty worktrees.** For every worktree in `git worktree list` (including the canonical clone), run `git -C <path> status --porcelain`. Filter out the known orphan-PII pattern (`docs/Samples/`, `docs/templates/`, `Meeting With Natan.docx`, Hebrew xls/xlsx — these mirror parent FS, not real WIP). What remains is genuine uncommitted work.
+2. **Unmerged commits.** For every local branch ≠ `main` and every `origin/*` ≠ `origin/main`, run `git cherry main <ref>` to find unique commits. For each `+ <sha>`, capture the commit subject AND grep main for a likely squash-rename: `git log main --oneline --grep="<DL-NNN>"` and `git log main --oneline --grep="<key phrase from subject>"`. DL numbers get renumbered (DL-387→DL-343, DL-388→DL-389 are real cases) — a `+` from `cherry` does NOT prove the commit is missing from main.
+3. **Codex / external worktrees.** Worktrees under paths the skill does not own (e.g. `~/.codex/worktrees/`) are listed but flagged `external-tool` — surface them, but default to "keep" unless the user explicitly says otherwise.
+4. Present a combined WIP table — one row per blocker — with columns: location (worktree path or branch ref) | type (dirty / unmerged-commit / external-worktree) | summary (file count or commit subject) | already-in-main? (yes/no/unknown).
+5. For each row, propose one of three resolutions:
+   - **merge** — commit + push from inside the worktree, then `git push origin <branch>:main` (FF-push, see git-ship skill). Use for real WIP the user wants to keep.
+   - **discard** — note that the commit will be recoverable from `git reflog` for ~90 days, then proceed. Use for abandoned experiments.
+   - **keep** — keep the branch and/or worktree as an explicit exception to the main-only goal. The skill records it in the "Risks or gaps" section of the final report.
+6. **Wait for an explicit resolution per row.** Do not move to Phase 3 until every blocker is resolved or explicitly kept.
+
+### Phase 3 — Branch & worktree inventory (verification pass)
 
 1. Run `bash .claude/skills/repo-cleanup/scripts/inventory.sh`. It outputs:
    - Local branches with `[merged-in-main]`, `[ahead-N-behind-M]`, or `[no-remote]` annotation.
    - Remote branches not in main with patch-id check result.
    - Worktrees with `[clean]` or `[DIRTY: <count> files]` annotation.
-2. For each worktree marked dirty, run `git -C <path> status --porcelain | head -5` and inspect — distinguish real WIP from orphan untracked PII (same `docs/Samples/`, `docs/templates/` pattern that exists in every tree).
-3. For each remote branch flagged "ahead-N", run `git cherry main origin/<branch>` and capture the `+` (not-in-main) commit subjects.
-4. For each `+` commit, search main's log for a likely squash-rename: `git log main --oneline --grep="<DL-NNN>"` and `git log main --oneline --grep="<key phrase from subject>"`. DL numbers in this repo get renumbered (DL-387→DL-343, DL-388→DL-389 are real cases).
-5. Present a 4-column table: branch | merged-locally | content-in-main-by-patch-id-or-rename | verdict (delete / keep / investigate).
-6. **Wait for explicit "yes" before any deletion.**
+2. Cross-check against Phase 2: every branch flagged `[ahead-N]` must already have a Phase 2 resolution. If a new blocker appeared between phases (e.g. a parallel session committed), loop back to Phase 2 for that item.
+3. Build the final delete batch: every branch ≠ `main`, every remote ref ≠ `origin/main`, every worktree ≠ canonical clone — minus the items the user chose to **keep** in Phase 2.
+4. Present a 4-column table: ref/path | merged-locally | content-in-main-by-patch-id-or-rename | verdict (delete / kept-by-user).
+5. **Wait for explicit "yes" before any deletion.**
 
-### Phase 3 — Verified delete
+### Phase 4 — Verified delete
 
-1. Worktree removal — for each worktree marked safe (clean OR confirmed orphan-PII-only):
+1. Worktree removal — for each worktree marked for deletion:
    - `git worktree remove <path>` (NEVER `--force` without explicit user approval — see gotchas).
-   - If user has manually deleted the directory already, run `git worktree prune -v` to clean metadata.
-2. Local branch delete — `git branch -d <name>` for branches with no remote ref or with remote-merged. Use `git branch -D` ONLY after confirming via Phase 2 patch-id/rename check that content is in main.
+   - If the user has manually deleted the directory already, run `git worktree prune -v` to clean metadata.
+2. Local branch delete — `git branch -D <name>` (force is expected here because Phase 2 already verified each branch is either patch-id-merged or explicitly discarded). The `-D` form is required for squash-merged branches that `git branch -d` would refuse.
 3. Remote branch delete — batch: `git push origin --delete <name1> <name2> …`. Single push avoids per-branch prompts.
 4. After deletes, run `git fetch --prune origin && git branch -vv && git branch -r && git worktree list` and report the final state.
+5. **Verify against goal.** Confirm the final state is exactly `1 local (main) + 1 remote (origin/main) + 1 worktree (canonical clone) + any user-kept exceptions`. If extras remain, list them and ask the user how to proceed.
 
 ## Decision gates
 
-- **Stop and ask the user** if `git status --porcelain` is non-empty in the canonical clone — never proceed with cleanup on top of dirty state.
+- **Stop and ask the user** if `git status --porcelain` is non-empty in the canonical clone — never proceed with cleanup on top of dirty state. (Phase 2 will surface this as a blocker.)
 - **Stop and ask** if a worktree shows >5 modified/untracked files that don't match the known orphan-PII pattern (`docs/Samples/`, `docs/templates/`, `Meeting With Natan.docx`, Hebrew xls/xlsx). Real WIP looks different from orphan PII.
-- **Stop and ask** before any `git branch -D` (force-delete), `git worktree remove --force`, or remote-branch batch delete with >20 entries.
+- **Stop and ask** before any `git worktree remove --force`, or remote-branch batch delete with >20 entries. (`git branch -D` is expected at this skill's scale and does NOT need a per-batch gate beyond the Phase 3 approval — Phase 2 already verified content safety.)
 - **Refuse** to delete the branch the user is currently checked out in any worktree.
 - **Refuse** to run on platforms other than the canonical clone — if `pwd` is under `worktrees/`, abort.
-- **Escalate** if a `+` commit on a remote branch has no semantic match in main's log — that's genuine WIP, do not delete.
+- **Escalate** if a `+` commit on a remote branch has no semantic match in main's log — that's genuine WIP. Treat as a Phase 2 blocker, never silently delete.
+- **Honor user-kept exceptions.** If the user said "keep" for a branch/worktree in Phase 2, do not delete it in Phase 4 even if it otherwise looks merged.
 
 ## Output format
 
@@ -91,21 +108,23 @@ After the skill completes, return:
 
 ## Summary
 - Phase 1: <N> junk deleted, <N> committed, <N> PII gitignored
-- Phase 2: <N> worktrees + <N> local + <N> remote inventoried
-- Phase 3: <N> worktrees pruned, <N> local deleted, <N> remote deleted
+- Phase 2: <N> WIP blockers — <N> merged, <N> discarded, <N> kept
+- Phase 3: <N> worktrees + <N> local + <N> remote inventoried for deletion
+- Phase 4: <N> worktrees removed, <N> local deleted, <N> remote deleted
 
 ## Decisions
-- <branches/files kept and why>
+- <per-blocker resolution: "DL-424 branch — merged to main", "DL-NNN — discarded (reflog: <sha>)", "DL-NNN — kept by user request">
 
-## Final state
+## Final state (target: main-only)
 ```
-git branch:       <count> local (just main + active sessions)
-git branch -r:    <count> remote (just main + active session)
-git worktree list: <count> trees (canonical + active sessions)
+git branch:        <count> local (main + <kept exceptions>)
+git branch -r:     <count> remote (origin/main + <kept exceptions>)
+git worktree list: <count> trees (canonical + <kept exceptions> + <external e.g. codex>)
 ```
 
 ## Risks or gaps
-- <branches the user manually owns and skill could not auto-classify>
+- <user-kept exceptions and why>
+- <external worktrees (codex etc.) left in place>
 ```
 
 ## Gotchas
@@ -124,11 +143,13 @@ git worktree list: <count> trees (canonical + active sessions)
 
 - Does the skill run only in the canonical clone, never a session worktree?
 - Does Phase 1 distinguish junk, commit-worthy, and PII correctly on a known-bad input?
-- Does Phase 2 correctly flag a squash-merged branch as "in main" via cherry + grep, even when DL was renumbered?
-- Does the skill stop and ask before every destructive batch?
-- Does Phase 3 use `--force` only after explicit per-batch user approval?
-- Does the final report match the actual `git branch -vv` and `git worktree list` state?
-- Does it skip worktrees with non-PII dirty content (real WIP)?
+- Does Phase 2 surface EVERY dirty worktree and EVERY unmerged commit as an explicit blocker before any delete?
+- Does Phase 2 correctly flag a squash-merged branch as "already in main" via cherry + grep, even when DL was renumbered?
+- For each Phase 2 blocker, does the user get a real merge/discard/keep choice — not a silent default?
+- Does Phase 3 honor user-kept exceptions from Phase 2 (no surprise deletes)?
+- Does `git worktree remove --force` require explicit per-call approval?
+- Does the final state match the main-only target (1 local + 1 remote + 1 worktree) plus only the exceptions the user explicitly kept?
+- Does the final report list user-kept exceptions AND external worktrees (codex etc.) under "Risks or gaps"?
 
 ## Scripts
 
