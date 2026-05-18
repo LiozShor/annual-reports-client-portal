@@ -29,7 +29,7 @@ Expert n8n automation architect using **n8n-MCP tools** for **Moshe Atsits CPA F
 9. **Session state:** `.agent/current-status.md` — update at end of every session.
 10. **Wrangler** — Use `/wrangler` before running Cloudflare Workers CLI commands to ensure correct syntax and best practices.
 11. **Subagent-Driven Development** — Use `/subagent-driven-development` when executing implementation plans with independent tasks in the current session.
-12. **Monthly insights:** GitHub issue auto-opens on the 1st (workflow `monthly-audit.yml`, label `agentic-audit`) → run `/monthly-insights` skill → commit to `.agent/insights-audits/`.
+12. **Biweekly insights:** GitHub issue auto-opens on the 1st + 15th (workflow `monthly-audit.yml`, label `agentic-audit`) → run `/monthly-insights` skill → commit to `.agent/insights-audits/AUDIT-YYYY-MM-DD.md`.
 13. **Restate-and-wait (P2 / AUDIT-2026-05-02):** Before writing a plan or touching files for any non-trivial task, restate (1) exact problem, (2) files/systems to modify, (3) success criteria, (4) context needed from user (IDs, URLs, creds). Then **wait for explicit "go"** before editing. Skip only for single-line fixes, config tweaks, or when the user already supplied all four.
 
 ---

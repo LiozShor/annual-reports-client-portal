@@ -1,15 +1,15 @@
 ---
 name: monthly-insights
-description: Run the monthly agentic-architecture audit. Triggered by the GitHub issue auto-opened on the 1st of each month by `.github/workflows/monthly-audit.yml`. Produces `.agent/insights-audits/YYYY-MM.md` and flags stale memory entries.
+description: Run the biweekly agentic-architecture audit. Triggered by the GitHub issue auto-opened on the 1st and 15th of each month by `.github/workflows/monthly-audit.yml`. Produces `.agent/insights-audits/AUDIT-YYYY-MM-DD.md` and flags stale memory entries.
 ---
 
 # /monthly-insights
 
-Triggered when the agentic-audit issue fires on the 1st of the month. Goal: produce a one-month audit file in the same shape as the baseline `.agent/insights-audits/agentic-architecture-audit-2026-04-27.md`, plus a memory-decay pass.
+Triggered when the agentic-audit issue fires (1st + 15th of each month). Goal: produce a two-week audit file in the same shape as the baseline `.agent/insights-audits/agentic-architecture-audit-2026-04-27.md`, plus a memory-decay pass.
 
 ## Inputs (gather before writing)
 
-1. **Git activity since last audit.** `git log --since='1 month ago' --pretty=oneline` — count merges to main, reverts, "fix" commits.
+1. **Git activity since last audit.** `git log --since='2 weeks ago' --pretty=oneline` — count merges to main, reverts, "fix" commits.
 2. **Design-log window.** Files in `.agent/design-logs/**/*.md` with a `Last Updated` or commit timestamp inside the window. Bucket by domain folder. Flag any with status `[REVERTED]` or follow-up "fix-of-fix" pattern.
 3. **Memory diff.** New files in `C:/Users/liozm/.claude/projects/C--Users-liozm-Desktop-moshe-annual-reports/memory/` since the last audit. List filename + one-line summary.
 4. **Prior audit's proposals.** Read the previous file in `.agent/insights-audits/` and check each proposal's success metric.
@@ -18,7 +18,7 @@ Triggered when the agentic-audit issue fires on the 1st of the month. Goal: prod
 
 ## Outputs
 
-Write `.agent/insights-audits/YYYY-MM.md` (where YYYY-MM matches the issue's tag) with sections in this order:
+Write `.agent/insights-audits/AUDIT-YYYY-MM-DD.md` (where YYYY-MM-DD matches the issue's tag) with sections in this order:
 
 1. **TL;DR** (5 bullets max).
 2. **Prior-proposal review.** For each proposal from the prior audit: `Shipped` / `Partial` / `Abandoned` / `In-progress`, with evidence (commit SHA, file path, or "no signal").

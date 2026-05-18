@@ -1,9 +1,9 @@
-name: Monthly agentic audit
+name: Biweekly agentic audit
 
 on:
   schedule:
-    # 06:00 UTC on the 1st of each month = 09:00 Israel local (winter) / 08:00 (summer)
-    - cron: '0 6 1 * *'
+    # 06:00 UTC on the 1st and 15th of each month = 09:00 Israel local (winter) / 08:00 (summer)
+    - cron: '0 6 1,15 * *'
   workflow_dispatch:
 
 permissions:
@@ -22,8 +22,9 @@ jobs:
             const now = new Date();
             const yyyy = now.getUTCFullYear();
             const mm = String(now.getUTCMonth() + 1).padStart(2, '0');
-            const tag = `${yyyy}-${mm}`;
-            const title = `Monthly agentic audit — ${tag}`;
+            const dd = String(now.getUTCDate()).padStart(2, '0');
+            const tag = `${yyyy}-${mm}-${dd}`;
+            const title = `Biweekly agentic audit — ${tag}`;
 
             // Find prior audit file in .agent/insights-audits/ to link to
             const fs = require('fs');
@@ -39,7 +40,7 @@ jobs:
             } catch (_) {}
 
             const body = [
-              `Auto-opened by \`.github/workflows/monthly-audit.yml\` on the 1st of ${tag}.`,
+              `Auto-opened by \`.github/workflows/monthly-audit.yml\` on ${tag} (biweekly: 1st + 15th).`,
               ``,
               `**Prior audit:** ${prior}`,
               ``,
@@ -50,7 +51,7 @@ jobs:
               `## Tracking signals (from baseline 2026-04-27)`,
               ``,
               `1. Did Proposal 1 (CI gate) ship? broken-build commit count delta.`,
-              `2. Did Proposal 2 (monthly audit) ship and fire at least once? file in \`.agent/insights-audits/${tag}.md\`?`,
+              `2. Did Proposal 2 (biweekly audit) ship and fire? file in \`.agent/insights-audits/AUDIT-${tag}.md\`?`,
               `3. Did Proposal 3 (perms + sniff) ship? false-positive count, blocked-tool count.`,
               `4. Memory churn: new files in the project memory dir; any decayed/removed?`,
               `5. New design logs in window with category "revert" or "fix-of-fix" — friction signal.`,
