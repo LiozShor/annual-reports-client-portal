@@ -3279,7 +3279,20 @@ classifications.post('/bulk-merge-classifications', async (c) => {
       const clientNameBulk = (getField(firstCls.client_name) as string) || bulkClientId;
       const yearBulk = String((firstCls.year as number) || new Date().getFullYear());
       const filingTypeBulk = (firstCls.filing_type as string) || 'annual_report';
-      const mergedFilename = `merged_${bulkTemplateId}_${Date.now()}.pdf`;
+      // DL-355 canonical filename — same helper single-approve/reassign use, so
+      // bulk-merge files look identical to office. For general_doc the picker's
+      // typed name flows in as the issuer.
+      const bulkTemplateRecs = await airtable.listAllRecords(TABLES.TEMPLATES);
+      const bulkTemplateMap = buildTemplateMap(bulkTemplateRecs);
+      const issuerForFilename = bulkTemplateId === 'general_doc'
+        ? (bulkNewDocName || '').trim()
+        : '';
+      const mergedFilename = resolveOneDriveFilename({
+        templateId: bulkTemplateId,
+        issuerName: issuerForFilename,
+        attachmentName: null,
+        templateMap: bulkTemplateMap,
+      });
       const uploadResult = await uploadToOneDrive(
         msGraphBulk,
         oneDriveRootBulk,
@@ -3360,10 +3373,12 @@ classifications.post('/bulk-merge-classifications', async (c) => {
     for (const rec of clsRecords) {
       try {
         // pending_classifications uses `review_status` not `status` (verified
-        // live 2026-05-18). merged_into is a new field auto-created by typecast.
+        // live 2026-05-18). merged_into is a multipleRecordLinks field (created
+        // via Schema API on 2026-05-18, fldJ4MsZdxHflXbbf) — must send an array
+        // of record IDs, not a bare string.
         await airtable.updateRecord(TABLES.CLASSIFICATIONS, rec.id, {
           review_status: 'approved',
-          merged_into: bulkDocId,
+          merged_into: [bulkDocId],
         }, { typecast: true });
       } catch (clsPatchErr) {
         // Log loudly but continue — partial state is alarmed, not fatal
