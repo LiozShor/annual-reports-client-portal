@@ -3135,6 +3135,8 @@ classifications.post('/bulk-merge-classifications', async (c) => {
     action?: string;
     client_id?: string;
     target_template_id?: string;
+    new_doc_name?: string;
+    target_doc_record_id?: string;
     ordered_classification_ids?: string[];
   };
   try { body = await c.req.json(); } catch { return c.json({ ok: false, error: 'Invalid JSON' }, 400); }
@@ -3147,13 +3149,16 @@ classifications.post('/bulk-merge-classifications', async (c) => {
   }
 
   // ---- Validate body ----
-  const { client_id: bulkClientId, target_template_id: bulkTemplateId, ordered_classification_ids: orderedIds } = body;
+  const { client_id: bulkClientId, target_template_id: bulkTemplateId, new_doc_name: bulkNewDocName, ordered_classification_ids: orderedIds } = body;
 
   if (!bulkClientId || typeof bulkClientId !== 'string') {
     return c.json({ ok: false, error: 'invalid_request', detail: 'client_id required' }, 400);
   }
   if (!bulkTemplateId || typeof bulkTemplateId !== 'string') {
     return c.json({ ok: false, error: 'invalid_request', detail: 'target_template_id required' }, 400);
+  }
+  if (bulkTemplateId === 'general_doc' && (!bulkNewDocName || typeof bulkNewDocName !== 'string' || !bulkNewDocName.trim())) {
+    return c.json({ ok: false, error: 'invalid_request', detail: 'new_doc_name required when target_template_id is general_doc' }, 400);
   }
   if (!Array.isArray(orderedIds) || orderedIds.length < 1 || orderedIds.length > 20) {
     return c.json({ ok: false, error: 'invalid_request', detail: 'ordered_classification_ids must be an array of 1..20 ids' }, 400);
@@ -3189,12 +3194,16 @@ classifications.post('/bulk-merge-classifications', async (c) => {
     }
 
     // ---- Step 3: check for existing Received doc for this client + template ----
-    // DL-404 typecast gate: do NOT reference merged_into in filterByFormula
-    const existingDocsForMerge = await airtable.listAllRecords(TABLES.DOCUMENTS, {
-      filterByFormula: `AND({type} = '${escapeAirtableValue(bulkTemplateId)}', FIND('${escapeAirtableValue(bulkClientId)}', ARRAYJOIN({client_id_lookup})), {status} = 'Received')`,
-      fields: ['status', 'onedrive_item_id', 'file_url', 'file_sha256', 'file_size', 'page_count'],
-      maxRecords: 1,
-    });
+    // DL-404 typecast gate: do NOT reference merged_into in filterByFormula.
+    // For general_doc (new doc creation), skip the lookup — each general_doc is
+    // unique-by-name and we always create a fresh row.
+    const existingDocsForMerge = bulkTemplateId === 'general_doc'
+      ? []
+      : await airtable.listAllRecords(TABLES.DOCUMENTS, {
+          filterByFormula: `AND({type} = '${escapeAirtableValue(bulkTemplateId)}', FIND('${escapeAirtableValue(bulkClientId)}', ARRAYJOIN({client_id_lookup})), {status} = 'Received')`,
+          fields: ['status', 'onedrive_item_id', 'file_url', 'file_sha256', 'file_size', 'page_count'],
+          maxRecords: 1,
+        });
 
     let bulkDocId: string;
     let finalMergedBytes: Uint8Array;
@@ -3290,6 +3299,24 @@ classifications.post('/bulk-merge-classifications', async (c) => {
     if (!bulkDocId) {
       // Create new documents row — derive reportId from first classification (Fix 2: scope-leak fix)
       const reportId = getField((clsRecords[0].fields as Record<string, unknown>).report) as string;
+      // For general_doc, copy the issuer_name/category/document_key pattern from
+      // the single-reassign "Path 2" branch (classifications.ts:2057-2079) so the
+      // new row renders correctly on the admin + portal surfaces.
+      const isGeneralDocBulk = bulkTemplateId === 'general_doc';
+      const generalDocFields = isGeneralDocBulk && bulkNewDocName ? (() => {
+        const trimmed = bulkNewDocName.trim();
+        const issuerKey = trimmed.toLowerCase().replace(/[^a-zA-Zא-ת0-9\s]/g, '').replace(/\s+/g, '_');
+        const docUid = `${reportId}_general_doc_client_${issuerKey}`;
+        return {
+          issuer_name: trimmed,
+          issuer_name_en: trimmed,
+          issuer_key: trimmed,
+          category: 'general',
+          person: 'client',
+          document_uid: docUid,
+          document_key: docUid,
+        };
+      })() : {};
       const newDocRow: Record<string, unknown> = {
         type: bulkTemplateId,
         status: 'Received',
@@ -3303,6 +3330,7 @@ classifications.post('/bulk-merge-classifications', async (c) => {
         page_count: mergedPageCount || null,
         received_at: new Date().toISOString(),
         ...(reportId ? { report: [reportId] } : {}),
+        ...generalDocFields,
       };
       const stripEmpBulk = (obj: Record<string, unknown>): Record<string, unknown> =>
         Object.fromEntries(Object.entries(obj).filter(([, v]) => v != null && v !== ''));

@@ -280,10 +280,23 @@
             ? Array.from(listEl.querySelectorAll('.dl421-sort-item')).map(function (li) { return li.dataset.id; })
             : Array.from(selectedSet);
 
-        // Get selected template
+        // Get selected template — mirror confirmAIReassign (script.js:7960-7977).
+        // The combobox writes selectedValue / selectedDocId / newDocName onto the
+        // .doc-combobox child; selectedValue==='__NEW__' means "create a new doc
+        // with newDocName" → server-side template_id='general_doc'.
         var pickerEl = document.getElementById('dl421TemplatePicker');
-        var templateId = (pickerEl && pickerEl.dataset.selectedTemplate) || '';
-
+        var combobox = pickerEl ? pickerEl.querySelector('.doc-combobox') : null;
+        var selectedValue = combobox ? (combobox.dataset.selectedValue || '') : '';
+        var docRecordId = combobox ? (combobox.dataset.selectedDocId || '') : '';
+        var newDocName = combobox ? (combobox.dataset.newDocName || '').trim() : '';
+        var templateId = selectedValue;
+        if (selectedValue === '__NEW__') {
+            if (!newDocName) {
+                if (typeof window.showAIToast === 'function') window.showAIToast('יש להזין שם למסמך החדש', 'danger');
+                return;
+            }
+            templateId = 'general_doc';
+        }
         if (!templateId) {
             if (typeof window.showAIToast === 'function') {
                 window.showAIToast('יש לבחור תבנית יעד למסמך הממוזג', 'danger');
@@ -304,6 +317,8 @@
                     action: 'bulk_merge',
                     client_id: firstClientId,
                     target_template_id: templateId,
+                    new_doc_name: newDocName || undefined,
+                    target_doc_record_id: docRecordId || undefined,
                     ordered_classification_ids: orderedIds
                 })
             });
