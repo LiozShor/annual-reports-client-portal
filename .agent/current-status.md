@@ -1,6 +1,6 @@
 # Annual Reports CRM - Current Status
 
-**Last Updated:** 2026-05-17 evening (DL-420 shipped in 3 phases + drive-link backup + admin/pc-patch ops endpoint — inbound pipeline now hits "every attachment in OneDrive AND PC queue" invariant end-to-end. Verified live on CPA-XXX 2nd retry: real Hebrew filenames via Content-Disposition, U13779324.tax.zip auto-extracted into 3 inner PCs, U9744004.tax.zip (68 MB) landed as too_large fallback with real size + Drive button.)
+**Last Updated:** 2026-05-18 (DL-422 COMPLETED — group-header reply button fixed + toggle-on-second-click, verified live by user)
 
 ## OPEN: DL-420 — Inbound never silently drops attachments
 
@@ -17,27 +17,6 @@ Verified live on second CPA-XXX retry: 15 real-named attachments arrived; U13779
 - [ ] **HTML attachments don't classify well.** Consider adding `.html` to skip-extensions or building a small HTML→text adapter (follow-up).
 - [ ] **Mobile preview pane** — DL-420 too_large badge fires but the drive-backup link injection only wires the desktop preview header.
 - [ ] **Drive streaming for >50 MB files (DL-421 candidate).** Stream Drive → OneDrive upload session without buffering in Worker memory. ~80-100 lines.
-**Last Updated:** 2026-05-18 (DL-422 implemented — fix stuck reply button on grouped recent-messages cards; toggle-off on second click; latest msg-row synthesized on demand)
-
-## OPEN: DL-422 — Recent Messages Group Header Reply Button Stuck
-
-DL: `.agent/design-logs/admin-ui/422-recent-messages-group-reply-stuck.md`
-Status: **IMPLEMENTED — NEED TESTING**
-
-DL-396 follow-up renders only `g.messages.slice(1)` inside `.msg-group-older`, so the latest message of a multi-message group has no `.msg-row` in the DOM. The group header 💬 button called `showReplyInput(latestNoteId)`, which `querySelector('.msg-row[data-note-id=…]')` → `null` → silent `return`. Looked "stuck" to the user. Fix: new `showGroupReply(clientKey, noteId, reportId)` (`script.js:1162`) — second click closes the open reply zone (satisfies the user's "double-click closes" follow-up), else auto-expands the group, synthesizes the latest row via existing `_renderMessageRowHtml`, prepends to `.msg-group-older`, and delegates to `showReplyInput` with the synthesized row as `containerEl`. ✓ markGroupHandled + 📁 folder-open verified working (no DOM-row dependency). Cache-bust `script.js?v=432→433`.
-
-### Active TODOs (validation — Phase E)
-- [ ] **V1 — Open reply from group header.** Click 💬 on a 2+ message group → group auto-expands, latest message appears at top of `.msg-group-older`, reply textarea focused.
-- [ ] **V2 — Send a reply.** Type text, click "שלח תגובה" → comment sent (or queued), `showPostReplyPrompt` appears, group refreshes.
-- [ ] **V3 — Toggle closed.** Click 💬 again while reply zone is open → reply zone removed; group stays expanded.
-- [ ] **V4 — Double-click stability.** Rapid double-click on 💬 → opens then closes; no stuck state, no doubled zones.
-- [ ] **V5 — Single-message regression.** Click 💬 on a non-grouped single-message row → unchanged inline reply (today's behavior).
-- [ ] **V6 — ✓ + 📁 regression on group header.** Both still work as before.
-- [ ] **V7 — Post-reply re-render.** After successful send, the group's older list re-renders without the synthesized latest row (returns to DL-396 idle state).
-- [ ] **V8 — Cache-bust verification.** DevTools shows `script.js?v=433`; live: `curl -s https://docs.moshe-atsits.com/admin/ | grep 'script.js?v='`.
-- [ ] **V9 — Console + RTL.** No console errors / Lucide warnings; textarea right-aligned in Hebrew RTL.
-- [ ] **V10 — Mobile <900px.** Synthesized row + reply zone don't overflow.
-- [ ] **V11 — Script-size ratchet passes.** Net +31 lines on `script.js`; verify no baseline bump at commit (else extract to `frontend/admin/js/modules/recent-messages-group-reply.js`).
 
 ## OPEN: DL-419 — Inbound Large-File Passthrough (Upload Sessions + Classifier Skip)
 

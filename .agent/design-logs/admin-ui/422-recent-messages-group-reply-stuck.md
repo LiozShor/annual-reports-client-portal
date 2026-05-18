@@ -1,6 +1,6 @@
 # Design Log 422: Recent Messages — Group Header Reply Button Stuck
 
-**Status:** [IMPLEMENTED — NEED TESTING — 2026-05-18]
+**Status:** [COMPLETED — 2026-05-18 — 2026-05-18]
 **Date:** 2026-05-18
 **Branch:** `claude-session-20260518-093925`
 **Related Logs:** DL-261 (panel), DL-289 (✓/threads/reply UX), DL-396 (group-by-client + follow-up redesign)
