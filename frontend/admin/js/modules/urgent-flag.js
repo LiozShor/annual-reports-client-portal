@@ -121,7 +121,10 @@
   }
 
   function toggle(reportId, currentValue) {
-    var token = (typeof window.authToken !== 'undefined' && window.authToken) || '';
+    // `authToken` is a top-level `let` in script.js — not on window — so read from localStorage.
+    var tokenKey = (typeof window.ADMIN_TOKEN_KEY !== 'undefined' && window.ADMIN_TOKEN_KEY) || 'admin_token';
+    var token = '';
+    try { token = localStorage.getItem(tokenKey) || ''; } catch (_) {}
     var newValue = !currentValue;
     var url = (window.ENDPOINTS && window.ENDPOINTS.ADMIN_UPDATE_CLIENT) ||
               'https://annual-reports-api.liozshor1.workers.dev/webhook/admin-update-client';
