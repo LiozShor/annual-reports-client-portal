@@ -126,6 +126,9 @@
     var url = (window.ENDPOINTS && window.ENDPOINTS.ADMIN_UPDATE_CLIENT) ||
               'https://annual-reports-api.liozshor1.workers.dev/webhook/admin-update-client';
     var fetcher = (typeof window.fetchWithTimeout === 'function') ? window.fetchWithTimeout : window.fetch;
+    console.log('[UrgentFlag] toggle →', { reportId: reportId, currentValue: currentValue, newValue: newValue, url: url, hasToken: !!token });
+    var _status = 0;
+    var _statusText = '';
     return fetcher(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
@@ -136,15 +139,21 @@
         is_urgent: newValue
       })
     }).then(function (r) {
-      return r.json().catch(function () { return { ok: false }; });
+      _status = r.status;
+      _statusText = r.statusText;
+      console.log('[UrgentFlag] HTTP', _status, _statusText);
+      return r.text().then(function (raw) {
+        console.log('[UrgentFlag] body raw:', raw);
+        try { return JSON.parse(raw); } catch (_) { return { ok: false, _raw: raw }; }
+      });
     }).then(function (res) {
+      console.log('[UrgentFlag] parsed response:', res);
       if (!res || res.ok === false) {
-        if (typeof window.showAIToast === 'function') {
-          window.showAIToast('שמירת דחיפות נכשלה', 'error');
-        }
+        var msg = 'שמירת דחיפות נכשלה' + (res && res.error ? ' — ' + res.error : '') + ' (HTTP ' + _status + ')';
+        console.error('[UrgentFlag] save FAILED:', { status: _status, statusText: _statusText, response: res });
+        if (typeof window.showAIToast === 'function') window.showAIToast(msg, 'error');
         return false;
       }
-      // Silent refresh: mutate in place then re-render.
       var c = _findClient(reportId);
       if (c) c.is_urgent = newValue;
       _silentRefresh();
@@ -152,9 +161,10 @@
         window.showAIToast(newValue ? 'הלקוח סומן כדחוף' : 'סימון דחיפות הוסר', 'success');
       }
       return true;
-    }).catch(function () {
+    }).catch(function (err) {
+      console.error('[UrgentFlag] fetch threw:', err);
       if (typeof window.showAIToast === 'function') {
-        window.showAIToast('שמירת דחיפות נכשלה', 'error');
+        window.showAIToast('שמירת דחיפות נכשלה — ' + (err && err.message ? err.message : 'network error'), 'error');
       }
       return false;
     });
