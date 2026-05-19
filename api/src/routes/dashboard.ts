@@ -65,6 +65,11 @@ dashboard.get('/admin-dashboard', async (c) => {
       airtable.listAllRecords('tbls7m3hmHC4hhQVy', { fields: ['year'] })
     ),
     airtable.listAllRecords('tblFFttFScDRZ7Ah5', {
+      // DL-426: `is_urgent` is intentionally NOT in the fields[] list — until
+      // the typecast first-PATCH creates the Airtable column, requesting it
+      // would 422 (`UNKNOWN_FIELD_NAME`), per memory rule
+      // feedback_airtable_typecast_field_existence. We read it
+      // opportunistically from `cr.fields.is_urgent` below; absent → false.
       fields: ['cc_email', 'email_bounced', 'last_bounced_email', 'email_bounce_reason', 'email_bounce_at'],
     }),
   ]);
@@ -76,6 +81,8 @@ dashboard.get('/admin-dashboard', async (c) => {
     email_bounce_reason: string;
     email_bounce_at: string;
   }>();
+  // DL-426: manual urgent flag, keyed by clients-table record ID.
+  const urgentByClientId = new Map<string, boolean>();
   for (const cr of clientsCcRecords) {
     const cc = (cr.fields.cc_email as string | undefined) || '';
     if (cc) ccEmailByClientId.set(cr.id, cc);
@@ -89,6 +96,7 @@ dashboard.get('/admin-dashboard', async (c) => {
         email_bounce_at: (cr.fields.email_bounce_at as string | undefined) || '',
       });
     }
+    if (cr.fields.is_urgent === true) urgentByClientId.set(cr.id, true);
   }
 
   // Distinct years
@@ -132,10 +140,13 @@ dashboard.get('/admin-dashboard', async (c) => {
     const clientRecId = Array.isArray(clientLink) ? String(clientLink[0] ?? '') : '';
     const ccEmail = clientRecId ? (ccEmailByClientId.get(clientRecId) || '') : '';
     const bounce = clientRecId ? bounceByClientId.get(clientRecId) : undefined;
+    // DL-426: manual urgent flag from clients table, defaults to false.
+    const isUrgent = clientRecId ? (urgentByClientId.get(clientRecId) === true) : false;
 
     clients.push({
       report_id: report.id,
       client_id: String(getField(f.client_id) || ''),
+      client_rec_id: clientRecId,
       name: getField(f.client_name) || 'Unknown',
       email: getField(f.client_email) || '',
       cc_email: ccEmail,
@@ -143,6 +154,7 @@ dashboard.get('/admin-dashboard', async (c) => {
       last_bounced_email: bounce?.last_bounced_email || '',
       email_bounce_reason: bounce?.email_bounce_reason || '',
       email_bounce_at: bounce?.email_bounce_at || '',
+      is_urgent: isUrgent,
       year: f.year,
       stage,
       docs_received: parseInt(String(f.docs_received_count)) || 0,
@@ -292,7 +304,49 @@ dashboard.get('/admin-recent-messages', async (c) => {
     }
   );
 
-  return c.json({ ok: true, messages });
+  // DL-426: flagged-urgent clients, surfaced for WF07's daily-digest section.
+  // Small parallel read; cached 60s so a fresh toggle propagates quickly.
+  // Read-only: never references `is_urgent` in filterByFormula (typecast
+  // propagation safety per feedback_airtable_typecast_field_existence) —
+  // filters in JS instead.
+  const urgent_clients = await getCachedOrFetch(
+    c.env.CACHE_KV,
+    `cache:urgent_clients:${year}`,
+    60,
+    async () => {
+      const clientsRecs = await airtable.listAllRecords('tblFFttFScDRZ7Ah5', {
+        fields: ['client_id', 'name', 'is_active'],
+      });
+      const flaggedRecIds = new Set<string>();
+      for (const cr of clientsRecs) {
+        if (cr.fields.is_urgent === true && cr.fields.is_active !== false) {
+          flaggedRecIds.add(cr.id);
+        }
+      }
+      if (flaggedRecIds.size === 0) return [];
+
+      const reportsRecs = await airtable.listAllRecords('tbls7m3hmHC4hhQVy', {
+        filterByFormula: `{year}=${year}`,
+        fields: ['client', 'client_id', 'client_name', 'stage'],
+      });
+      const first = (v: unknown) => Array.isArray(v) ? v[0] : (v || '');
+      const out: Array<{ client_id: string; name: string; stage: string; report_id: string }> = [];
+      for (const rec of reportsRecs) {
+        const clientLink = rec.fields.client;
+        const clientRecId = Array.isArray(clientLink) ? String(clientLink[0] ?? '') : '';
+        if (!flaggedRecIds.has(clientRecId)) continue;
+        out.push({
+          client_id: String(first(rec.fields.client_id) || ''),
+          name: String(first(rec.fields.client_name) || ''),
+          stage: String(rec.fields.stage || ''),
+          report_id: rec.id,
+        });
+      }
+      return out;
+    }
+  );
+
+  return c.json({ ok: true, messages, urgent_clients });
 });
 
 // POST /webhook/admin-send-comment (DL-266)

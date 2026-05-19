@@ -91,6 +91,14 @@
             },
 
             // ---- Group 3: Edit actions ----
+            // DL-426: urgent toggle. Label flips on current state.
+            {
+                group: 'edit',
+                show: isActive,
+                icon: 'flame',
+                label: (window.UrgentFlag && window.UrgentFlag.isUrgent(client)) ? 'הסר סימון דחוף' : 'סמן כדחוף',
+                onClick: `window.UrgentFlag && window.UrgentFlag.toggle('${rid}', ${(window.UrgentFlag && window.UrgentFlag.isUrgent(client)) ? 'true' : 'false'})`,
+            },
             {
                 group: 'edit',
                 show: isActive,

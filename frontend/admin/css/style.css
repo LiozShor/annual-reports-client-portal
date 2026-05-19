@@ -10765,3 +10765,61 @@ tr:hover .client-edit-link {
     letter-spacing: 0.03em;
 }
 
+/* DL-426 — Manual urgent flag. WCAG 1.4.1: color is always paired with the
+   🔥 glyph + Hebrew aria-label / title, never color alone. */
+.urgent-badge {
+    display: inline-flex;
+    align-items: center;
+    font-size: 0.95em;
+    line-height: 1;
+    margin-inline-start: 6px;
+    vertical-align: middle;
+    filter: drop-shadow(0 0 0.5px rgba(220, 38, 38, 0.35));
+}
+.urgent-toggle-btn {
+    background: transparent;
+    border: 1px solid var(--gray-300, #d1d5db);
+    border-radius: 8px;
+    padding: 2px 6px;
+    cursor: pointer;
+    font-size: 0.95em;
+    line-height: 1;
+    color: var(--gray-500, #6b7280);
+    margin-inline-start: 4px;
+    transition: background-color 120ms ease, border-color 120ms ease, transform 100ms ease;
+    filter: grayscale(0.85) opacity(0.6);
+}
+.urgent-toggle-btn:hover { transform: scale(1.08); }
+.urgent-toggle-btn--on {
+    background: #fef2f2;
+    border-color: #fecaca;
+    color: var(--red-600, #dc2626);
+    filter: none;
+}
+.urgent-toggle-btn:disabled { cursor: progress; opacity: 0.5; }
+
+.client-row--urgent,
+.mobile-card--urgent,
+.pa-card--urgent,
+.ai-client-row--urgent,
+.msg-group--urgent,
+.msg-row--urgent {
+    background: linear-gradient(to right, rgba(220, 38, 38, 0.06), transparent 40%);
+    border-inline-start: 3px solid var(--red-500, #ef4444);
+}
+.msg-group--urgent .msg-group-header,
+.msg-row--urgent .msg-content { background-color: transparent; }
+
+.urgent-filter-count {
+    background: var(--red-600, #dc2626);
+    color: #fff;
+    border-radius: 999px;
+    padding: 0 6px;
+    font-size: 0.8em;
+    margin-inline-start: 4px;
+    display: none;
+}
+#urgentFilterBtn[aria-pressed="true"] .urgent-filter-count {
+    display: inline-block;
+}
+

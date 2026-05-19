@@ -51,6 +51,7 @@ company_links (standalone — insurance company URLs for client portal)
 | last_bounced_email | singleLineText | DL-399: Audit trail — the bad address that bounced. Preserved after `email` is cleared. |
 | email_bounce_reason | multilineText | DL-399: Human-readable bounce reason (`DNS not found` / `Mailbox not found` / `Domain rejected` / `Delivery failed`). |
 | email_bounce_at | dateTime | DL-399: When the NDR was processed (Asia/Jerusalem). |
+| is_urgent | checkbox | DL-426: Manual urgent flag. Office toggles via client-row kebab, PA queue card, or AI Review header. Drives red 🔥 badge + pin-to-top across clients table, Moshe-Review queue, PA queue, AI Review, dashboard messages widget. Auto-created on first PATCH via Airtable `typecast` (DL-420 pattern). |
 | file_number | singleLineText | Legacy VAT-registry file number (`מספר תיק מע"מ`). Nullable. Added 2026-05-10 for shared Mishimit schema. |
 | address | singleLineText | Client postal address. Nullable. Added 2026-05-10 for shared Mishimit schema. Single-line to keep the admin panel row layout intact. |
 | notes | multilineText | Free-text Hebrew notes. Nullable. Added 2026-05-10 for shared Mishimit schema. **PII reminder:** never quote `notes` content in design logs — refer to the client by Airtable record ID instead. |

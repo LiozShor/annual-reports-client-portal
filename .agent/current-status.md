@@ -1,6 +1,27 @@
 # Annual Reports CRM - Current Status
 
-**Last Updated:** 2026-05-18 (DL-422 COMPLETED — group-header reply button fixed + toggle-on-second-click, verified live by user)
+**Last Updated:** 2026-05-19 (DL-426 IMPLEMENTED — NEED TESTING — manual urgent flag across clients table, Moshe-Review, PA, AI Review, dashboard messages widget; new red 🔥 badge + pin-to-top; urgent-only filter on main clients table; activity log + WF07 digest payload wired)
+
+## OPEN: DL-426 — Mark Client as Urgent (manual flag, promoted everywhere)
+
+DL: `.agent/design-logs/admin-ui/426-mark-client-urgent.md`
+Status: **IMPLEMENTED — NEED TESTING**
+
+Boolean `is_urgent` on `clients` (auto-created via DL-420 typecast on first PATCH). Toggle entry: client-row kebab + 🔥 button on PA cards + 🔥 button on AI Review per-client header. Visual: red 🔥 badge + `border-inline-start` red stripe + Hebrew `דחוף` tooltip (WCAG 1.4.1 dual-encoding). Pin-to-top across clients table (D+M, triple-tier with DL-399 bounce-pin), Moshe-Review queue (overrides FIFO), PA queue, AI Review groups, dashboard messages widget. New urgent-only filter button on main clients table. Silent refresh after PATCH (CLAUDE.md P6). WF07 digest gains `urgent_clients` payload from `/webhook/admin-recent-messages` (60s cache). Activity log emits `client_urgent_set`/`client_urgent_cleared` (ADMIN, client_id only). All helpers in new `frontend/admin/js/modules/urgent-flag.js`; `script.js` net delta is **negative** (16112 → 16109 — ratchet auto-shrunk). Cache-bust `script.js?v=440→441`, `style.css?v=389→390`, `client-row-actions.js?v=1→2`, NEW `urgent-flag.js?v=1`.
+
+### Active TODOs (DL-426)
+- [ ] **Live: toggle urgent on a test client from kebab** → badge appears in clients table without reload, row pins to top of `_filteredClients`. Confirm `client_urgent_set` event in CF Workers Logs.
+- [ ] **Live: toggle from PA card** → PA queue re-orders urgent-first, dashboard messages widget shows red stripe on matching group.
+- [ ] **Live: toggle from AI Review per-client header** → AI Review re-orders, badge on `.ai-client-row`.
+- [ ] **Live: untoggle** → badge disappears, row returns to its natural sort slot, `client_urgent_cleared` activity event.
+- [ ] **Combined flag stack** — flag a client who is ALSO `email_bounced` → urgent wins the pin, both badges render side-by-side.
+- [ ] **Moshe-Review (`מוכנים להכנה`) pin** — flag a Stage-Review client → confirm row jumps to top of that tab too (FIFO override is intentional per user direction; not a bug).
+- [ ] **Urgent-only filter** — click `🔥 דחופים` button in clients filter bar → table narrows to flagged clients only, button shows `btn-primary` styling, `aria-pressed="true"`.
+- [ ] **WCAG check** — Tab-focus the badge → screen reader announces "דחוף". Keyboard-only flow.
+- [ ] **Typecast first-write** — confirm Airtable schema auto-grew the `is_urgent` checkbox column; subsequent `/admin-dashboard` fetch returns the field without 422.
+- [ ] **WF07 digest** — manually trigger the daily digest workflow → confirm "🔥 לקוחות דחופים" section appears at top with N=1 (the test client); unflag → section is suppressed (no zero-state noise). **WF07 node edit is out-of-band (n8n MCP), pending after Worker deploy.**
+- [ ] **React `ClientDetailModal.tsx` (out of scope v1):** if office requests, add an `is_urgent` checkbox there too — same `/admin-update-client` endpoint, no Worker change.
+- [ ] **Telegram bot surfacing (out of scope v1):** if requested, extend `formatClientLookup` in `api/src/lib/bot/tools.ts` to include `🔥 דחוף` line.
 
 ## OPEN: DL-420 — Inbound never silently drops attachments
 

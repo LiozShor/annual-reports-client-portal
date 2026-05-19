@@ -9,7 +9,7 @@
     <title>פורטל ניהול - משרד רו"ח משה עציץ</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📋</text></svg>">
     <link rel="stylesheet" href="../assets/css/design-system.css">
-    <link rel="stylesheet" href="css/style.css?v=389">
+    <link rel="stylesheet" href="css/style.css?v=390">
 
 </head>
 
@@ -500,6 +500,12 @@
                                 <select id="yearFilter" onchange="loadDashboard()">
                                     <option value="">הכל</option>
                                 </select>
+                            </div>
+                            <!-- DL-426: urgent-only toggle -->
+                            <div class="filter-group">
+                                <button type="button" id="urgentFilterBtn" class="btn btn-sm btn-ghost" aria-pressed="false" onclick="toggleUrgentFilter()" title="הצג רק לקוחות דחופים">
+                                    🔥 דחופים <span id="urgentFilterCount" class="urgent-filter-count"></span>
+                                </button>
                             </div>
                         </div>
 
@@ -1556,8 +1562,9 @@
     <script src="js/modules/review-tab.js?v=1"></script>
     <script src="js/modules/print-merged-questionnaires.js?v=1"></script>
     <script src="js/modules/merge-clients.js?v=2"></script>
-    <script src="js/modules/client-row-actions.js?v=1"></script>
+    <script src="js/modules/client-row-actions.js?v=2"></script>
     <script src="js/modules/aging-colors.js?v=1"></script>
+    <script src="js/modules/urgent-flag.js?v=1"></script><!-- DL-426 -->
     <script src="js/modules/dl410-silent-refresh.js?v=4"></script>
     <script src="js/modules/dl412-spouse-suffix.js?v=1"></script>
     <script src="js/modules/xlsx-loader.js?v=1"></script>
@@ -1565,7 +1572,7 @@
     <script src="js/modules/dl420-too-large-badge.js?v=2"></script>
     <script src="js/modules/dl422-group-reply.js?v=1"></script>
     <script src="js/modules/dl421-bulk-classify.js?v=14"></script>
-    <script src="js/script.js?v=440"></script>
+    <script src="js/script.js?v=441"></script>
     <script src="../assets/js/idle-refresh.js?v=281" defer></script>
     <script src="js/chatbot.js"></script>
     <!-- React islands (loads after shared scripts) -->

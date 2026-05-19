@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 import { verifyToken } from '../lib/token';
 import { AirtableClient } from '../lib/airtable';
 import { logAudit } from '../lib/audit-log';
+import { logEvent } from '../lib/activity-logger'; // DL-426
 import { invalidateCache } from '../lib/cache';
 import type { Env } from '../lib/types';
 
@@ -47,6 +48,7 @@ client.post('/admin-update-client', async (c) => {
     name?: string; email?: string; cc_email?: string; phone?: string; notes?: string; client_notes?: string;
     rejected_uploads_log?: string;
     note_id?: string; mode?: string;
+    is_urgent?: boolean; // DL-426
   }>();
 
   // DL-306 React island sends camelCase reportId, no body.token (uses Bearer
@@ -70,7 +72,7 @@ client.post('/admin-update-client', async (c) => {
     return c.json({ ok: false, error: 'invalid_input' });
   }
 
-  if (action === 'update' && body.name === undefined && body.email === undefined && body.cc_email === undefined && body.phone === undefined) {
+  if (action === 'update' && body.name === undefined && body.email === undefined && body.cc_email === undefined && body.phone === undefined && body.is_urgent === undefined) {
     return c.json({ ok: false, error: 'invalid_input' });
   }
 
@@ -203,8 +205,31 @@ client.post('/admin-update-client', async (c) => {
   if (body.phone !== undefined) updateFields.phone = body.phone;
   // DL-399: lower bounce flag when office fixes the email
   if (typeof body.email === 'string' && body.email.trim() !== '') updateFields.email_bounced = false;
+  // DL-426: manual urgent flag. Coerce to true boolean; field auto-creates on
+  // first PATCH via typecast (DL-420 pattern).
+  const isUrgentTouched = body.is_urgent !== undefined;
+  if (isUrgentTouched) updateFields.is_urgent = body.is_urgent === true;
 
-  await airtable.updateRecord('tblFFttFScDRZ7Ah5', clientId, updateFields);
+  // DL-426: typecast on every PATCH so the `is_urgent` checkbox auto-creates
+  // the first time anyone toggles it. No-op once the column exists.
+  await airtable.updateRecord('tblFFttFScDRZ7Ah5', clientId, updateFields, { typecast: true });
+
+  // DL-426: dedicated activity events for urgent toggles, alongside the
+  // generic client_updated audit.
+  if (isUrgentTouched) {
+    try {
+      logEvent({
+        event_type: body.is_urgent === true ? 'client_urgent_set' : 'client_urgent_cleared',
+        category: 'ADMIN',
+        client_id: clientId,
+        details: { report_id, new_value: body.is_urgent === true },
+      });
+    } catch { /* never fail the request on a log error */ }
+  }
+
+  // DL-426: bust the urgent_clients cache so the next recent-messages /
+  // digest call sees fresh state.
+  try { invalidateCache(c.env.CACHE_KV, `cache:urgent_clients:${new Date().getFullYear()}`); } catch {}
 
   logAudit(c.executionCtx, airtable, {
     action: 'client_updated', report_id,

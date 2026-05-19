@@ -1128,7 +1128,7 @@ function _renderMessageRowHtml(m) {
                 <div class="msg-reply-date">${formatRelativeTime(r.date)}</div>
             </div>`).join('')}</div>`
         : '';
-    return `<div class="msg-row ${window.AgingColors.ageTier(m.date, window.AgingColors.TIERS_MESSAGES).cls}" data-note-id="${noteId}" data-client-name="${escapeAttr(m.client_name)}" data-year="${escapeAttr(String(m.year || ''))}">
+    return `<div class="msg-row ${window.AgingColors.ageTier(m.date, window.AgingColors.TIERS_MESSAGES).cls}${window.UrgentFlag && window.UrgentFlag.isUrgentByClientId(m.client_id) ? ' msg-row--urgent' : ''}" data-note-id="${noteId}" data-client-name="${escapeAttr(m.client_name)}" data-year="${escapeAttr(String(m.year || ''))}">
         <div class="msg-content" onclick="this.parentElement.classList.toggle('expanded')">
             <div class="msg-meta">
                 <span class="msg-client">${escapeHtml(m.client_name)}</span>
@@ -1215,12 +1215,8 @@ function renderMessages() {
         }
         bucket.messages.push(m);
     }
-    // Belt-and-suspenders: explicit sort by latest-message date desc.
-    const groups = Array.from(groupsMap.values()).sort((a, b) => {
-        const da = String(a.messages[0]?.date || '');
-        const db = String(b.messages[0]?.date || '');
-        return db.localeCompare(da);
-    });
+    // Belt-and-suspenders: explicit sort by latest-message date desc. DL-426: urgent first.
+    const groups = Array.from(groupsMap.values()).sort((a, b) => (window.UrgentFlag ? window.UrgentFlag.cmpByClientId(a, b) : 0) || String(b.messages[0]?.date || '').localeCompare(String(a.messages[0]?.date || '')));
 
     const visibleGroups = groups.slice(0, _messagesVisible);
     const hasMore = _messagesVisible < groups.length;
@@ -1242,7 +1238,7 @@ function renderMessages() {
         const navParam = latest.client_id ? `client_id=${encodeURIComponent(latest.client_id)}` : `report_id=${encodeURIComponent(latest.report_id)}`;
         const groupKeyAttr = escapeAttr(g.key);
         const childrenHtml = older.map(m => _renderMessageRowHtml(m)).join('');
-        return `<div class="msg-group ${window.AgingColors.ageTier(latest.date, window.AgingColors.TIERS_MESSAGES).cls}${isExpanded ? ' expanded' : ''}" data-client-key="${groupKeyAttr}">
+        return `<div class="msg-group ${window.AgingColors.ageTier(latest.date, window.AgingColors.TIERS_MESSAGES).cls}${isExpanded ? ' expanded' : ''}${window.UrgentFlag && window.UrgentFlag.isUrgentByClientId(g.client_id) ? ' msg-group--urgent' : ''}" data-client-key="${groupKeyAttr}">
             <div class="msg-group-header">
                 <div class="msg-group-header-row" onclick="toggleGroup(this)">
                     <span class="msg-client">${escapeHtml(g.client_name || '')}</span>
@@ -1649,7 +1645,7 @@ function renderClientsTable(clients) {
             const cName = escapeAttr(client.name);
             const isActive = client.is_active !== false;
 
-            html += `<li class="mobile-card" data-report-id="${rid}" data-stage="${escapeAttr(client.stage)}" data-is-active="${isActive}">
+            html += `<li class="mobile-card${window.UrgentFlag && window.UrgentFlag.isUrgent(client) ? ' mobile-card--urgent' : ''}" data-report-id="${rid}" data-stage="${escapeAttr(client.stage)}" data-is-active="${isActive}">
             <div class="mobile-card-primary">
                 <span class="mobile-card-checkbox"><input type="checkbox" class="dashboard-client-checkbox" value="${rid}" aria-label="בחר ${escapeHtml(client.name)}" onchange="updateClientSelectedCount()"></span>
                 <div class="mobile-card-info">
@@ -1658,7 +1654,7 @@ function renderClientsTable(clients) {
                         onclick="openStageDropdown(event, '${rid}', '${escapeAttr(client.stage)}')"
                         title="לחץ לשינוי שלב">
                         ${icon(stage.icon, 'icon-sm')} ${stage.label}
-                    </span>${bounceBadgeHTML(client)}
+                    </span>${window.UrgentFlag ? window.UrgentFlag.badgeHtml(client) : ''}${bounceBadgeHTML(client)}
                 </div>
             </div>
             <div class="mobile-card-secondary">
@@ -1717,7 +1713,7 @@ function renderClientsTable(clients) {
             const isActive = client.is_active !== false;
 
             html += `
-            <tr data-report-id="${rid}" data-client-name="${cName}" data-stage="${escapeAttr(client.stage)}" data-is-active="${isActive}">
+            <tr class="${window.UrgentFlag && window.UrgentFlag.isUrgent(client) ? 'client-row--urgent' : ''}" data-report-id="${rid}" data-client-name="${cName}" data-stage="${escapeAttr(client.stage)}" data-is-active="${isActive}">
                 <td><input type="checkbox" class="dashboard-client-checkbox" value="${rid}" aria-label="בחר ${escapeHtml(client.name)}" onchange="updateClientSelectedCount()"></td>
                 <td>
                     <div class="client-name-cell">
@@ -1738,7 +1734,7 @@ function renderClientsTable(clients) {
                         onclick="openStageDropdown(event, '${rid}', '${escapeAttr(client.stage)}')"
                         title="לחץ לשינוי שלב">
                         ${icon(stage.icon, 'icon-sm')} ${stage.label} <span class="stage-caret">&#x25BE;</span>
-                    </span>${bounceBadgeHTML(client)}
+                    </span>${window.UrgentFlag ? window.UrgentFlag.badgeHtml(client) : ''}${bounceBadgeHTML(client)}
                 </td>
                 <td>
                     ${stageNum <= 3
@@ -1805,7 +1801,7 @@ function filterClients(keepPage) {
     if (year) {
         filtered = filtered.filter(c => String(c.year) === year);
     }
-
+    if (window._urgentFilterActive && window.UrgentFlag) filtered = filtered.filter(c => window.UrgentFlag.isUrgent(c)); // DL-426
     _filteredClients = sortClients(filtered);
     if (!keepPage) _clientsPage = 1;
 
@@ -1820,6 +1816,8 @@ function goToClientsPage(page) {
     filterClients(true);
     document.getElementById('clientsTableContainer')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
+
+window._urgentFilterActive = false; // DL-426 — toggle impl in modules/urgent-flag.js
 
 // DL-214: Mobile collapsible filter bar
 function toggleMobileFilters() {
@@ -1897,13 +1895,16 @@ function toggleSort(column) {
 }
 
 function sortClients(clients) {
-    // DL-399: pin email_bounced clients to top regardless of sort selection
-    if (!currentSort.column) return [...clients].sort((a, b) => (a.email_bounced ? 1 : 0) !== (b.email_bounced ? 1 : 0) ? (a.email_bounced ? -1 : 1) : 0);
+    // DL-426 urgent → DL-399 bounced → column sort. Stable.
+    const _u = (c) => (window.UrgentFlag && window.UrgentFlag.isUrgent(c)) ? 1 : 0;
+    const _b = (c) => c.email_bounced ? 1 : 0;
+    if (!currentSort.column) return [...clients].sort((a, b) => (_u(b) - _u(a)) || (_b(b) - _b(a)));
     const config = SORT_CONFIG[currentSort.column];
     if (!config) return clients;
 
     return [...clients].sort((a, b) => {
-        if ((a.email_bounced ? 1 : 0) !== (b.email_bounced ? 1 : 0)) return a.email_bounced ? -1 : 1;
+        const pin = (_u(b) - _u(a)) || (_b(b) - _b(a));
+        if (pin) return pin;
         const aVal = config.accessor(a);
         const bVal = config.accessor(b);
         let cmp;
@@ -3259,6 +3260,7 @@ async function sendQuestionnaires(reportIds) {
 function renderReviewTable(queue) {
     const container = document.getElementById('reviewTableContainer');
     if (queue) queue = queue.filter(c => c.is_active !== false);
+    if (queue && window.UrgentFlag) queue = [...queue].sort(window.UrgentFlag.sortPin); // DL-426 pin urgent atop FIFO
     reviewState.queueCache = queue || [];
     queue = filterReviewQueue(queue);
 
@@ -3291,11 +3293,11 @@ function renderReviewTable(queue) {
             const waitingText = formatWaiting(diffDays);
             const dateStr = completedAt.toLocaleDateString('he-IL', { day: '2-digit', month: '2-digit', year: 'numeric' });
 
-            html += `<li class="mobile-card">
+            html += `<li class="mobile-card${window.UrgentFlag && window.UrgentFlag.isUrgent(client) ? ' mobile-card--urgent' : ''}">
             <div class="mobile-card-primary">
                 <span class="fifo-number">${fifoOffset + i + 1}</span>
                 <div class="mobile-card-info">
-                    <span class="mobile-card-name" onclick="viewClientDocs('${escapeAttr(client.report_id)}')">${escapeHtml(client.name)}</span>
+                    <span class="mobile-card-name" onclick="viewClientDocs('${escapeAttr(client.report_id)}')">${escapeHtml(client.name)}${window.UrgentFlag ? window.UrgentFlag.badgeHtml(client) : ''}</span>
                     <span class="waiting-badge ${waitingClass}">${waitingText}</span>
                 </div>
             </div>
@@ -3350,15 +3352,10 @@ function renderReviewTable(queue) {
             const dateStr = completedAt.toLocaleDateString('he-IL', { day: '2-digit', month: '2-digit', year: 'numeric' });
 
             html += `
-            <tr>
+            <tr class="${window.UrgentFlag && window.UrgentFlag.isUrgent(client) ? 'client-row--urgent' : ''}">
                 <td><span class="fifo-number">${fifoOffset + i + 1}</span></td>
                 <td>
-                    <strong
-                        class="client-link"
-                        onclick="viewClientDocs('${escapeAttr(client.report_id)}')"
-                    >
-                        ${escapeHtml(client.name)}
-                    </strong>
+                    <strong class="client-link" onclick="viewClientDocs('${escapeAttr(client.report_id)}')">${escapeHtml(client.name)}</strong>${window.UrgentFlag ? window.UrgentFlag.badgeHtml(client) : ''}
                 </td>
                 <td>
                     <div class="email-cell">
@@ -5597,15 +5594,16 @@ function buildClientListRowHtml(clientName, clientItems, isActive) {
         ? `<span class="ai-pre-questionnaire-badge" title="הלקוח טרם מילא את השאלון">טרם מולא שאלון</span>`
         : '';
 
+    const _uSynth2 = window.UrgentFlag ? window.UrgentFlag.syntheticByReportId(((clientsData || []).find(c => c.client_id === clientId)?.report_id) || '') : null; // DL-426
     return `
-        <div class="ai-client-row ai-accordion-header${isActive ? ' active' : ''}${isComplete ? ' is-complete' : ''}"
+        <div class="ai-client-row ai-accordion-header${isActive ? ' active' : ''}${isComplete ? ' is-complete' : ''}${_uSynth2 && _uSynth2.is_urgent ? ' ai-client-row--urgent' : ''}"
              data-client="${escapeHtml(clientName)}"
              data-client-id="${escapeAttr(clientId || '')}"
              onclick="selectClient(this.dataset.client)">
-            <div class="ai-accordion-actions">${docManagerBtn}</div>
+            <div class="ai-accordion-actions">${_uSynth2 && _uSynth2.report_id ? window.UrgentFlag.toggleButtonHtml(_uSynth2) : ''}${docManagerBtn}</div>
             <div class="ai-accordion-title" style="min-width: 0; flex: 1;">
                 <div style="min-width: 0;">
-                    <div style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-weight:500;">${escapeHtml(clientName)}</div>
+                    <div style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-weight:500;">${escapeHtml(clientName)}${_uSynth2 ? window.UrgentFlag.badgeHtml(_uSynth2) : ''}</div>
                     <div class="ai-client-progress">${reviewedCount}/${total} נבדקו</div>
                     ${stageWarningChip}
                 </div>
@@ -5849,11 +5847,9 @@ function renderAICards(items, allFilteredItems) {
     const clientsList = document.getElementById('aiClientsList');
     const renderTarget = clientsList || clientsPane;
 
-    // DL-361: split out unidentified groups so they render at the top.
-    const orderedGroupKeys = [
-        ...unidentifiedKeys,
-        ...Object.keys(groups).filter(k => !k.startsWith('__unidentified__:')),
-    ];
+    const _idKeys = Object.keys(groups).filter(k => !k.startsWith('__unidentified__:')); // DL-361 + DL-426 urgent pin
+    if (window.UrgentFlag) _idKeys.sort((a, b) => window.UrgentFlag.cmpByClientId(groups[a][0] || {}, groups[b][0] || {}));
+    const orderedGroupKeys = [...unidentifiedKeys, ..._idKeys];
 
     if (isMobile) {
         // Mobile: render legacy grouped accordions into the clients list (docs/detail panes hidden by CSS)
@@ -10164,7 +10160,7 @@ function renderPendingApprovalCards() {
     const emptyState = document.getElementById('paEmptyState');
     if (!container) return;
 
-    const items = _paFilteredData;
+    const items = window.UrgentFlag ? [..._paFilteredData].sort(window.UrgentFlag.cmpByReportId) : _paFilteredData; // DL-426
 
     if (items.length === 0) {
         container.innerHTML = pendingApprovalData.length > 0
@@ -10265,13 +10261,14 @@ function buildPaCard(item) {
 
     const header = `<div class="pa-card__header" onclick="togglePaCard('${item.report_id}', event)">
         <div class="pa-card__header-main">
-            <div class="pa-card__name">${escapedName}</div>
+            <div class="pa-card__name">${escapedName}${window.UrgentFlag ? window.UrgentFlag.badgeHtml(window.UrgentFlag.syntheticByReportId(item.report_id)) : ''}</div>
             <div class="pa-card__meta">
                 ${priorityHtml}
             </div>
         </div>
         <div class="pa-card__header-badges">${countBadges}</div>
         <div class="pa-card__header-actions">
+            ${window.UrgentFlag ? window.UrgentFlag.toggleButtonHtml(window.UrgentFlag.syntheticByReportId(item.report_id)) : ''}
             ${docMgrLink}
             <button class="pa-card__chevron" aria-label="${isExpanded ? 'כווץ' : 'הרחב'}" onclick="togglePaCard('${item.report_id}', event)">
                 ${icon(isExpanded ? 'chevron-up' : 'chevron-down', 'icon-sm')}
@@ -10316,7 +10313,7 @@ function buildPaCard(item) {
     // Empty payload (older cached responses) → frontend falls back to "doc has no
     // template id at all" definition.
     const mappedTids = Array.isArray(item.mapped_template_ids) ? item.mapped_template_ids.join(',') : '';
-    return `<div class="pa-card pa-card--stack${isExpanded ? ' pa-card--expanded' : ' pa-card--collapsed'}" data-report-id="${item.report_id}" data-mapped-tids="${escapeAttr(mappedTids)}">
+    return `<div class="pa-card pa-card--stack${isExpanded ? ' pa-card--expanded' : ' pa-card--collapsed'}${window.UrgentFlag && window.UrgentFlag.isUrgentByReportId(item.report_id) ? ' pa-card--urgent' : ''}" data-report-id="${item.report_id}" data-mapped-tids="${escapeAttr(mappedTids)}">
         ${header}
         ${body}
     </div>`;
