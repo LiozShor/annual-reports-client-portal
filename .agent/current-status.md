@@ -9,6 +9,13 @@ Status: **IMPLEMENTED — NEED TESTING**
 
 Boolean `is_urgent` on `clients` (auto-created via DL-420 typecast on first PATCH). Toggle entry: client-row kebab + 🔥 button on PA cards + 🔥 button on AI Review per-client header. Visual: red 🔥 badge + `border-inline-start` red stripe + Hebrew `דחוף` tooltip (WCAG 1.4.1 dual-encoding). Pin-to-top across clients table (D+M, triple-tier with DL-399 bounce-pin), Moshe-Review queue (overrides FIFO), PA queue, AI Review groups, dashboard messages widget. New urgent-only filter button on main clients table. Silent refresh after PATCH (CLAUDE.md P6). WF07 digest gains `urgent_clients` payload from `/webhook/admin-recent-messages` (60s cache). Activity log emits `client_urgent_set`/`client_urgent_cleared` (ADMIN, client_id only). All helpers in new `frontend/admin/js/modules/urgent-flag.js`; `script.js` net delta is **negative** (16112 → 16109 — ratchet auto-shrunk). Cache-bust `script.js?v=440→441`, `style.css?v=389→390`, `client-row-actions.js?v=1→2`, NEW `urgent-flag.js?v=1`.
 
+### 🌅 Tomorrow morning — FIRST THING (DL-426 UX polish)
+- [ ] **Rework the fire-emoji UX** — user dislikes the current state (2026-05-19 EOD). Open questions to resolve with them first thing:
+  1. Hide the off-state toggle button on non-urgent cards? (Currently every card shows a grey 🔥 button — visually noisy.)
+  2. Replace 🔥 emoji with a Lucide icon (`flame`, `alert-triangle`, `zap`, `flag`) for visual consistency with the rest of the admin?
+  3. Adjust badge size + row tint intensity (too subtle / too loud)?
+- [ ] **Deploy Worker after the fire-emoji rework lands** — also: the 2026-05-19 `is_urgent` dashboard-fields fix (commit `80c5662c`) was merged to main but the Worker was NOT redeployed (deploy step was interrupted). Until then, Moshe-Review pin + clients-table pin won't pick up the field on the live API. Run `cd /c/Users/liozm/Desktop/moshe/annual-reports && bash .claude/workflows/deploy-worker.sh`.
+
 ### Active TODOs (DL-426)
 - [ ] **Live: toggle urgent on a test client from kebab** → badge appears in clients table without reload, row pins to top of `_filteredClients`. Confirm `client_urgent_set` event in CF Workers Logs.
 - [ ] **Live: toggle from PA card** → PA queue re-orders urgent-first, dashboard messages widget shows red stripe on matching group.
