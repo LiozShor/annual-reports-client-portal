@@ -13,16 +13,19 @@
  *
  * Env (source .env first):
  *   CLOUDFLARE_ACCOUNT_ID
- *   CLOUDFLARE_API_TOKEN  (needs Account > Workers Observability > Read)
+ *   CF_LOGS_TOKEN (preferred — long-lived, scoped Workers Observability: Read)
+ *   CLOUDFLARE_API_TOKEN (fallback — deploy-side token, cleared between deploys)
  */
 
 const ACCOUNT_ID = process.env.CLOUDFLARE_ACCOUNT_ID;
-const API_TOKEN  = process.env.CLOUDFLARE_API_TOKEN;
+// Prefer CF_LOGS_TOKEN so log queries keep working when deploys clear
+// CLOUDFLARE_API_TOKEN (see memory: feedback_wrangler_token_stale.md).
+const API_TOKEN  = process.env.CF_LOGS_TOKEN || process.env.CLOUDFLARE_API_TOKEN;
 const WORKER     = 'annual-reports-api';
 const BASE_URL   = `https://api.cloudflare.com/client/v4/accounts/${ACCOUNT_ID}/workers/observability/telemetry`;
 
 if (!ACCOUNT_ID || !API_TOKEN) {
-  console.error('missing CLOUDFLARE_API_TOKEN or CLOUDFLARE_ACCOUNT_ID in env — source .env first');
+  console.error('missing CF_LOGS_TOKEN (or CLOUDFLARE_API_TOKEN) or CLOUDFLARE_ACCOUNT_ID in env — source .env first');
   process.exit(1);
 }
 
