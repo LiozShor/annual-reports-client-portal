@@ -65,12 +65,12 @@ dashboard.get('/admin-dashboard', async (c) => {
       airtable.listAllRecords('tbls7m3hmHC4hhQVy', { fields: ['year'] })
     ),
     airtable.listAllRecords('tblFFttFScDRZ7Ah5', {
-      // DL-426: `is_urgent` is intentionally NOT in the fields[] list — until
-      // the typecast first-PATCH creates the Airtable column, requesting it
-      // would 422 (`UNKNOWN_FIELD_NAME`), per memory rule
-      // feedback_airtable_typecast_field_existence. We read it
-      // opportunistically from `cr.fields.is_urgent` below; absent → false.
-      fields: ['cc_email', 'email_bounced', 'last_bounced_email', 'email_bounce_reason', 'email_bounce_at'],
+      // DL-426: `is_urgent` field created via Airtable Meta API on 2026-05-19
+      // (fldNC5sCvZuGYCn3f). Listed explicitly here — when a `fields:[]` is
+      // passed, Airtable returns ONLY those fields, so omitting it would make
+      // `cr.fields.is_urgent` always undefined regardless of the underlying
+      // record state. (Earlier comment about "opportunistic read" was wrong.)
+      fields: ['cc_email', 'email_bounced', 'last_bounced_email', 'email_bounce_reason', 'email_bounce_at', 'is_urgent'],
     }),
   ]);
 
