@@ -129,9 +129,7 @@
     var url = (window.ENDPOINTS && window.ENDPOINTS.ADMIN_UPDATE_CLIENT) ||
               'https://annual-reports-api.liozshor1.workers.dev/webhook/admin-update-client';
     var fetcher = (typeof window.fetchWithTimeout === 'function') ? window.fetchWithTimeout : window.fetch;
-    console.log('[UrgentFlag] toggle →', { reportId: reportId, currentValue: currentValue, newValue: newValue, url: url, hasToken: !!token });
     var _status = 0;
-    var _statusText = '';
     return fetcher(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
@@ -143,17 +141,11 @@
       })
     }).then(function (r) {
       _status = r.status;
-      _statusText = r.statusText;
-      console.log('[UrgentFlag] HTTP', _status, _statusText);
-      return r.text().then(function (raw) {
-        console.log('[UrgentFlag] body raw:', raw);
-        try { return JSON.parse(raw); } catch (_) { return { ok: false, _raw: raw }; }
-      });
+      return r.json().catch(function () { return { ok: false }; });
     }).then(function (res) {
-      console.log('[UrgentFlag] parsed response:', res);
       if (!res || res.ok === false) {
         var msg = 'שמירת דחיפות נכשלה' + (res && res.error ? ' — ' + res.error : '') + ' (HTTP ' + _status + ')';
-        console.error('[UrgentFlag] save FAILED:', { status: _status, statusText: _statusText, response: res });
+        console.error('[UrgentFlag] save FAILED', { status: _status, response: res });
         if (typeof window.showAIToast === 'function') window.showAIToast(msg, 'error');
         return false;
       }
